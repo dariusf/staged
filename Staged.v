@@ -1,11 +1,30 @@
 
-From Coq Require Import ZArith Lia Bool List String Program.Equality Classes.RelationClasses.
-From CDF Require Import Common Sequences Separation Tactics HeapTactics.
+(* From Coq Require Import ZArith Lia Bool List String Program.Equality Classes.RelationClasses. *)
+From Coq Require Import Classes.RelationClasses.
+
+Set Implicit Arguments.
+From SLF Require Export LibString LibCore.
+(* From SLF Require Export LibSepFmap. *)
+From SLF Require Export LibSepTLCbuffer LibSepFmap.
+Module Fmap := LibSepFmap.
+(* From SLF Require Heap. *)
+(* From SLF Require Export Heap. *)
+(* From SLF Require Export LibSepMinimal. *)
+
+From SLF Require Import Tactics.
+
+(* From CDF Require Import Common Sequences Separation Tactics HeapTactics. *)
+
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
 Local Open Scope Z_scope.
 Local Open Scope list_scope.
+
+
+Definition ident : Type := string.
+Definition ident_eq := String.string_dec.
+
 
 (* Definition var := string. *)
 (* Definition var_eq := string_dec. *)
@@ -32,6 +51,7 @@ expr : Type :=
   | pcall (x: val) (a: val)
   .
 
+
 Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   let aux t := subst y w t in
   let if_y_eq x t1 t2 := if ident_eq x y then t1 else t2 in
@@ -49,6 +69,11 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
 Inductive eresult : Type :=
   | enorm : val -> eresult
 .
+
+Definition loc : Type := nat.
+Definition heap : Type := fmap loc val.
+
+
 
 (* Reserved Notation " 'eval[' s ',' h ',' e ']' '=>' '[' s1 ',' h1 ',' r ']' " (at level 50, left associativity). *)
 
@@ -111,8 +136,347 @@ Module ProgramExamples.
 
 End ProgramExamples.
 
-Definition precond := assertion.
-Definition postcond := val -> assertion.
+(* copied from LibSepMinimal *)
+
+Implicit Types Q : val->heap->Prop.
+
+(* ================================================================= *)
+(** ** Automation for Heap Equality and Heap Disjointness *)
+
+(** For goals asserting equalities between heaps, i.e., of the form [h1 = h2],
+    we set up automation so that it performs some tidying: substitution,
+    removal of empty heaps, normalization with respect to associativity. *)
+
+#[global] Hint Rewrite union_assoc union_empty_l union_empty_r : fmap.
+#[global] Hint Extern 1 (_ = _ :> heap) => subst; autorewrite with fmap.
+
+(** For goals asserting disjointness between heaps, i.e., of the form
+    [Fmap.disjoint h1 h2], we set up automation to perform simplifications:
+    substitution, exploit distributivity of the disjointness predicate over
+    unions of heaps, and exploit disjointness with empty heaps. The tactic
+    [jauto_set] used here comes from the TLC library; essentially, it destructs
+    conjunctions and existentials. *)
+
+#[global] Hint Resolve Fmap.disjoint_empty_l Fmap.disjoint_empty_r.
+#[global] Hint Rewrite disjoint_union_eq_l disjoint_union_eq_r : disjoint.
+#[global] Hint Extern 1 (Fmap.disjoint _ _) =>
+  subst; autorewrite with rew_disjoint in *; jauto_set.
+
+(* ################################################################# *)
+(** * Heap Predicates and Entailment *)
+
+(* ================================================================= *)
+(** ** Extensionality Axioms *)
+
+(** Extensionality axioms are essential to assert equalities between heap
+    predicates of type [hprop], and between postconditions, of type
+    [val->hprop]. *)
+
+Axiom functional_extensionality : forall A B (f g:A->B),
+  (forall x, f x = g x) ->
+  f = g.
+
+Axiom propositional_extensionality : forall (P Q:Prop),
+  (P <-> Q) ->
+  P = Q.
+
+(* ================================================================= *)
+(** ** Core Heap Predicates *)
+
+(** The type of heap predicates is named [hprop]. *)
+
+Definition hprop := heap -> Prop.
+
+(** We bind a few more meta-variables. *)
+
+Implicit Types P : Prop.
+Implicit Types H : hprop.
+
+(** Core heap predicates, and their associated notations:
+
+    - [\[]] denotes the empty heap predicate
+    - [\[P]] denotes a pure fact
+    - [p ~~> v] denotes a singleton heap
+    - [H1 \* H2] denotes the separating conjunction
+    - [Q1 \*+ H2] denotes the separating conjunction extending a postcondition
+    - [\exists x, H] denotes an existential
+    - [\forall x, H] denotes a universal. *)
+
+Definition hempty : hprop :=
+  fun h => (h = Fmap.empty).
+
+Definition hsingle (p:loc) (v:val) : hprop :=
+  fun h => (h = Fmap.single p v).
+
+Definition hstar (H1 H2 : hprop) : hprop :=
+  fun h => exists h1 h2, H1 h1
+                              /\ H2 h2
+                              /\ Fmap.disjoint h1 h2
+                              /\ h = Fmap.union h1 h2.
+
+Definition hexists A (J:A->hprop) : hprop :=
+  fun h => exists x, J x h.
+
+Definition hforall (A : Type) (J : A -> hprop) : hprop :=
+  fun h => forall x, J x h.
+
+Definition hpure (P:Prop) : hprop := (* encoded as [\exists (p:P), \[]] *)
+  hexists (fun (p:P) => hempty).
+
+Declare Scope hprop_scope.
+
+Notation "\[]" := (hempty)
+  (at level 0) : hprop_scope.
+
+Notation "\[ P ]" := (hpure P)
+  (at level 0, format "\[ P ]") : hprop_scope.
+
+Notation "p '~~>' v" := (hsingle p v) (at level 32) : hprop_scope.
+
+Notation "H1 '\*' H2" := (hstar H1 H2)
+  (at level 41, right associativity) : hprop_scope.
+
+Notation "Q \*+ H" := (fun x => hstar (Q x) H)
+  (at level 40) : hprop_scope.
+
+Notation "'\exists' x1 .. xn , H" :=
+  (hexists (fun x1 => .. (hexists (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '\exists' '/ '  x1  ..  xn , '/ '  H ']'") : hprop_scope.
+
+Notation "'\forall' x1 .. xn , H" :=
+  (hforall (fun x1 => .. (hforall (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '\forall' '/ '  x1  ..  xn , '/ '  H ']'") : hprop_scope.
+
+(* ================================================================= *)
+(** ** Entailment *)
+
+Declare Scope hprop_scope.
+Open Scope hprop_scope.
+
+(** Entailment for heap predicates, written [H1 ==> H2]. *)
+
+Definition himpl (H1 H2:hprop) : Prop :=
+  forall h, H1 h -> H2 h.
+
+Notation "H1 ==> H2" := (himpl H1 H2) (at level 55) : hprop_scope.
+
+(** Entailment between postconditions, written [Q1 ===> Q2] *)
+
+Definition qimpl A (Q1 Q2:A->hprop) : Prop :=
+  forall (v:A), Q1 v ==> Q2 v.
+
+Notation "Q1 ===> Q2" := (qimpl Q1 Q2) (at level 55) : hprop_scope.
+
+(** Entailment defines an order on heap predicates *)
+
+Lemma himpl_refl : forall H,
+  H ==> H.
+Proof. introv M. auto. Qed.
+
+Lemma himpl_trans : forall H2 H1 H3,
+  (H1 ==> H2) ->
+  (H2 ==> H3) ->
+  (H1 ==> H3).
+Proof. introv M1 M2. unfolds* himpl. Qed.
+
+Lemma himpl_antisym : forall H1 H2,
+  (H1 ==> H2) ->
+  (H2 ==> H1) ->
+  (H1 = H2).
+Proof. introv M1 M2. applys pred_ext_1. intros h. iff*. Qed.
+
+Lemma qimpl_refl : forall Q,
+  Q ===> Q.
+Proof. intros Q v. applys himpl_refl. Qed.
+
+#[global] Hint Resolve himpl_refl qimpl_refl.
+
+(* ================================================================= *)
+(** ** Properties of [hstar] *)
+
+Lemma hstar_intro : forall H1 H2 h1 h2,
+  H1 h1 ->
+  H2 h2 ->
+  Fmap.disjoint h1 h2 ->
+  (H1 \* H2) (Fmap.union h1 h2).
+Proof. intros. exists* h1 h2. Qed.
+
+Lemma hstar_comm : forall H1 H2,
+   H1 \* H2 = H2 \* H1.
+Proof.
+  unfold hprop, hstar. intros H1 H2. applys himpl_antisym.
+  { intros h (h1&h2&M1&M2&D&U).
+    rewrite* Fmap.union_comm_of_disjoint in U. exists* h2 h1. }
+  { intros h (h1&h2&M1&M2&D&U).
+    rewrite* Fmap.union_comm_of_disjoint in U. exists* h2 h1. }
+Qed.
+
+Lemma hstar_assoc : forall H1 H2 H3,
+  (H1 \* H2) \* H3 = H1 \* (H2 \* H3).
+Proof.
+  intros H1 H2 H3. applys himpl_antisym; intros h.
+  { intros (h'&h3&(h1&h2&M3&M4&D'&U')&M2&D&U). subst h'.
+    exists h1 (h2 \+ h3). splits*. { applys* hstar_intro. } }
+  { intros (h1&h'&M1&(h2&h3&M3&M4&D'&U')&D&U). subst h'.
+    exists (h1 \+ h2) h3. splits*. { applys* hstar_intro. } }
+Qed.
+
+Lemma hstar_hempty_l : forall H,
+  \[] \* H = H.
+Proof.
+  intros. applys himpl_antisym; intros h.
+  { intros (h1&h2&M1&M2&D&U). hnf in M1. subst. rewrite* Fmap.union_empty_l. }
+  { intros M. exists (@Fmap.empty loc val) h. splits*. { hnfs*. } }
+Qed.
+
+Lemma hstar_hexists : forall A (J:A->hprop) H,
+  (hexists J) \* H = hexists (fun x => (J x) \* H).
+Proof.
+  intros. applys himpl_antisym; intros h.
+  { intros (h1&h2&(x&M1)&M2&D&U). exists* x h1 h2. }
+  { intros (x&(h1&h2&M1&M2&D&U)). exists h1 h2. splits*. { exists* x. } }
+Qed.
+
+Lemma hstar_hforall : forall H A (J:A->hprop),
+  (hforall J) \* H ==> hforall (J \*+ H).
+Proof.
+  intros. intros h M. destruct M as (h1&h2&M1&M2&D&U). intros x. exists* h1 h2.
+Qed.
+
+Lemma himpl_frame_l : forall H2 H1 H1',
+  H1 ==> H1' ->
+  (H1 \* H2) ==> (H1' \* H2).
+Proof. introv W (h1&h2&?). exists* h1 h2. Qed.
+
+(** Additional, symmetric results, useful for tactics *)
+
+Lemma hstar_hempty_r : forall H,
+  H \* \[] = H.
+Proof.
+  applys neutral_r_of_comm_neutral_l. applys* hstar_comm. applys* hstar_hempty_l.
+Qed.
+
+Lemma himpl_frame_r : forall H1 H2 H2',
+  H2 ==> H2' ->
+  (H1 \* H2) ==> (H1 \* H2').
+Proof.
+  introv M. do 2 rewrite (@hstar_comm H1). applys* himpl_frame_l.
+Qed.
+
+(* ================================================================= *)
+(** ** Properties of [hpure] *)
+
+Lemma hstar_hpure_l : forall P H h,
+  (\[P] \* H) h = (P /\ H h).
+Proof.
+  intros. apply prop_ext. unfold hpure.
+  rewrite hstar_hexists. rewrite* hstar_hempty_l.
+  iff (p&M) (p&M). { split*. } { exists* p. }
+Qed.
+
+Lemma himpl_hstar_hpure_r : forall P H H',
+  P ->
+  (H ==> H') ->
+  H ==> (\[P] \* H').
+Proof. introv HP W. intros h K. rewrite* hstar_hpure_l. Qed.
+
+Lemma himpl_hstar_hpure_l : forall P H H',
+  (P -> H ==> H') ->
+  (\[P] \* H) ==> H'.
+Proof. introv W Hh. rewrite hstar_hpure_l in Hh. applys* W. Qed.
+
+(* ================================================================= *)
+(** ** Properties of [hexists] *)
+
+Lemma himpl_hexists_l : forall A H (J:A->hprop),
+  (forall x, J x ==> H) ->
+  (hexists J) ==> H.
+Proof. introv W. intros h (x&Hh). applys* W. Qed.
+
+Lemma himpl_hexists_r : forall A (x:A) H J,
+  (H ==> J x) ->
+  H ==> (hexists J).
+Proof. introv W. intros h. exists x. apply* W. Qed.
+
+Lemma himpl_hexists : forall A (J1 J2:A->hprop),
+  J1 ===> J2 ->
+  hexists J1 ==> hexists J2.
+Proof.
+  introv W. applys himpl_hexists_l. intros x. applys himpl_hexists_r W.
+Qed.
+
+(* ================================================================= *)
+(** ** Properties of [hforall] *)
+
+Lemma himpl_hforall_r : forall A (J:A->hprop) H,
+  (forall x, H ==> J x) ->
+  H ==> (hforall J).
+Proof. introv M. intros h Hh x. apply* M. Qed.
+
+Lemma himpl_hforall_l : forall A x (J:A->hprop) H,
+  (J x ==> H) ->
+  (hforall J) ==> H.
+Proof. introv M. intros h Hh. apply* M. Qed.
+
+Lemma himpl_hforall : forall A (J1 J2:A->hprop),
+  J1 ===> J2 ->
+  hforall J1 ==> hforall J2.
+Proof.
+  introv W. applys himpl_hforall_r. intros x. applys himpl_hforall_l W.
+Qed.
+
+(* ================================================================= *)
+(** ** Properties of [hsingle] *)
+
+Lemma hstar_hsingle_same_loc : forall p v1 v2,
+  (p ~~> v1) \* (p ~~> v2) ==> \[False].
+Proof.
+  intros. unfold hsingle. intros h (h1&h2&E1&E2&D&E). false.
+  subst. applys* Fmap.disjoint_single_single_same_inv.
+Qed.
+
+(* ================================================================= *)
+(** ** Basic Tactics for Simplifying Entailments *)
+
+(** [xsimpl] performs immediate simplifications on entailment relations. *)
+
+#[global] Hint Rewrite hstar_assoc hstar_hempty_l hstar_hempty_r : hstar.
+
+Tactic Notation "xsimpl" :=
+  try solve [ apply qimpl_refl ];
+  try match goal with |- _ ===> _ => intros ? end;
+  autorewrite with hstar; repeat match goal with
+  | |- ?H \* _ ==> ?H \* _ => apply himpl_frame_r
+  | |- _ \* ?H ==> _ \* ?H => apply himpl_frame_l
+  | |- _ \* ?H ==> ?H \* _ => rewrite hstar_comm; apply himpl_frame_r
+  | |- ?H \* _ ==> _ \* ?H => rewrite hstar_comm; apply himpl_frame_l
+  | |- ?H ==> ?H => apply himpl_refl
+  | |- ?H ==> ?H' => is_evar H'; apply himpl_refl end.
+
+Tactic Notation "xsimpl" "*" := xsimpl; auto_star.
+
+(** [xchange] helps rewriting in entailments. *)
+
+Lemma xchange_lemma : forall H1 H1',
+  H1 ==> H1' -> forall H H' H2,
+  H ==> H1 \* H2 ->
+  H1' \* H2 ==> H' ->
+  H ==> H'.
+Proof.
+  introv M1 M2 M3. applys himpl_trans M2. applys himpl_trans M3.
+  applys himpl_frame_l. applys M1.
+Qed.
+
+Tactic Notation "xchange" constr(M) :=
+  forwards_nounfold_then M ltac:(fun K =>
+    eapply xchange_lemma; [ eapply K | xsimpl | ]).
+
+(* end LibSepMinimal *)
+
+Definition precond := hprop.
+Definition postcond := val -> hprop.
 (* Definition env := val -> flow. *)
 
 Inductive result : Type :=
@@ -158,11 +522,11 @@ Definition env := ident -> option ufun.
 Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
 
   | s_req : forall env p h1 h2 r,
-    (exists h3, h1 = hunion h2 h3 /\ hdisjoint h2 h3 /\ p h3) ->
+    (exists h3, h1 = Fmap.union h2 h3 /\ Fmap.disjoint h2 h3 /\ p h3) ->
     satisfies env (req p) h1 h2 r
 
   | s_ens : forall env q h1 h2 r,
-    (exists v h3, r = norm v /\ q v h3 /\ h2 = hunion h1 h3 /\ hdisjoint h1 h3) ->
+    (exists v h3, r = norm v /\ q v h3 /\ h2 = Fmap.union h1 h3 /\ Fmap.disjoint h1 h3) ->
     satisfies env (ens q) h1 h2 r
 
   | s_seq : forall env f1 f2 h1 h2 r,
@@ -221,8 +585,8 @@ Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 r env,
     satisfies env f1 h1 h2 r <-> satisfies env f2 h1 h2 r.
 
-Lemma req_sep_combine : forall P Q,
-  entails (req P;; req Q) (req (P ** Q)).
+Lemma req_sep_combine : forall H1 H2,
+  entails (req H1;; req H2) (req (H1 \* H2)).
 Proof.
   unfold entails.
   intros.
@@ -656,221 +1020,3 @@ Section ForwardExamples.
   Qed.
 
 End ForwardExamples.
-
-(*
-
-Definition wellformed (f:flow) s1 h1 s2 h2 r :=
-  (* satisfies s1 h1 s2 h2 r f -> substore s1 s2. *)
-  f s1 h1 s2 h2 r -> substore s1 s2.
-
-Lemma replace_ret_wellformed : forall x f s1 h1 s2 h2 v,
-  Some v = s1 x ->
-  wellformed f s1 h1 s2 h2 (norm v) ->
-  (wellformed (replace_ret x f)) s1 h1 s2 h2 (norm v).
-Proof.
-  intros.
-  unfold wellformed.
-  intros.
-  (* unfold satisfies in H1. *)
-  unfold replace_ret in H1; destr H1.
-  apply H0.
-  (* unfolds. *)
-  congruence.
-Qed.
-
-(* we could prove _wellformed lemmas for all req, ens, etc., but currently we're doing it only for the structures generated from the forward rules *)
-
-Lemma forward_wellformed : forall e f s1 h1 s2 h2 r,
-forward e f -> (wellformed f) s1 h1 s2 h2 r.
-Proof.
-intros e f s1 h1 s2 h2 r H.
-revert s1 h1 s2 h2 r.
-induction H; intros.
-- unfold wellformed; intros.
-  unfold ens in H; destr H; subst.
-  apply substore_refl.
-- unfold wellformed; intros.
-  unfold ens in H; destr H; subst.
-  apply substore_refl.
--
-  unfold wellformed; intros.
-  unfold fex in H2. destruct H2 as [? [v H5]]. subst.
-  unfold seq in H5. destruct H5 as [s3 [h3 [? [Hrr Hf2]]]]. subst.
-
-  (* introduce well-formed lemma on replace_ret *)
-  pose proof (replace_ret_wellformed x f1 (supdate x v s1) h1 s3 h3 v) as Hret.
-  rewrite supdate_same in Hret.
-  assert (Some v = Some v) as triv. reflexivity.
-  specialize (Hret triv); clear triv.
-
-  (* assuming f1 is wf using the IH, replace_ret f1 is wf *)
-  specialize (IHforward1 (supdate x v s1) h1 s3 h3 (norm v)).
-  specialize (Hret IHforward1).
-  unfold wellformed in Hret.
-  specialize (Hret Hrr).
-
-  unfold wellformed in IHforward2.
-  specialize (IHforward2 s3 h3 s2 h2 r Hf2).
-
-  unfold wellformed in IHforward1.
-  unfold replace_ret in Hrr; destruct Hrr as [? [? Hf1]]; rewrite supdate_same in H1; inj H1.
-  specialize (IHforward1 Hf1).
-  assert (substore s1 (supdate x v s1)).
-  apply substore_extension; ok.
-  apply substore_trans with (s2 := supdate x v s1); ok.
-  apply substore_trans with (s2 := s3); ok.
-Qed.
-
-(* {ens emp} e {\phi}, 
-SH = { (check, s1, h1, R1)   |  [check, S, h] ~~>m [check, s1, h2, R1] |= \phi }, and 
-[S, h, e] -----> [S2, h2, R2], R2!=\bot, 
-such that: 
-\exists (check, s3, h3, R3) \in SH, s3 \subset s2, h3 \subset h2, R2=R1 *)
-  Theorem soundness :
-  forall se1 he1 e se2 he2 re (**) f ss1 hs1 ss2 hs2 rs,
-    bigstep se1 he1 e se2 he2 re ->
-    substore se1 ss1 ->
-    (* he1 = hs1 -> *)
-    forward e f ->
-    f ss1 hs1 ss2 hs2 rs ->
-    substore se2 ss2
-    (* /\ he2 = hs2 *)
-    /\ compatible rs re.
-  Proof.
-    intros se1 he1 e se2 he2 re
-            f ss1 hs1 ss2 hs2 rs
-            Hb.
-    revert f ss1 hs1 ss2 hs2 rs.
-    induction Hb;
-    intros f ss1 hs1 ss2 hs2 rs;
-    intros Hsub Hf Hs.
-    - (* var. the proof comes down to the fact that both spec and program read
-          s(x) and leave the heap unchanged. *)
-      inv Hf.
-      unfold ens in Hs; destr Hs. subst.
-      unfold emp in H9.
-      unfold compatible.
-      heap.
-      unfold substore in Hsub.
-      symmetry in H.
-      specialize (Hsub v x H).
-      congruence.
-    -
-      inv Hf.
-      unfold ens in Hs; destr Hs; subst.
-      unfold compatible.
-      unfold pureconj in H6.
-      intuition auto.
-
-    -
-    (* we have an IH for each subexpr *)
-    (* v is the intermediate result of evaluating e1 *)
-    (* r is the final result *)
-    (* invp Hf [H2 H4]. *)
-    inv Hf.
-    (* invp Hf [ | |Hff1 Hff2]. *)
-    (* inversion Hf as [ Hy Hz |  |Hff1 Hff2 Hz]. subst; clear Hf. *)
-    (* the spec is of the form ex x. f1[x/r];f2 *)
-    unfold fex in Hs. destruct Hs as [Hnotin [v1 Hseq]].
-    (* see how it evaluates *)
-    unfold seq in Hseq. destruct Hseq as [s3 [h3 [? [Hrr ?]]]].
-    unfold replace_ret in Hrr; destruct Hrr as [H10 [H9 H13]].
-
-
-    (* OLD NOW FIXED now the problem is the IH requires the eval of e1 to take place in the initial stack. but due to the existential adding something to the stack, the evaluation takes place in an extended stack, so we can't apply the IH for e1 *)
-
-    (* OLD NOW FIXED the problem is the positioning of the existential has changed. in the program, it's in the e2 initial stack. in the spec, it's right at the front, in the e1 initial stack, for f1 to assign its ret value to. so somehow need to generalise it, using compiler simulation techniques? there should be an initial relation too, so the spec is allowed to execute in an extended stack. so there's a sim rel between configurations *)
-
-    (* try to meet in the middle *)
-    (* apply IHHb2. *)
-    (* with (f:=f2) (ss2:=s2) (ss1:=s2) (hs1:=hs2). *)
-    (* easy. *)
-    (* specialize (IHHb1 f1 (supdate x v s) hs1 s1 h1 (norm v) ). *)
-    pose proof (substore_extension_trans _ s ss1 v1 x Hsub Hnotin) as Hha.
-    specialize (IHHb1 f1 (supdate x v1 ss1) hs1 s3 h3 (norm H10) Hha H2 H13).
-    destruct IHHb1 as [IH1 IH2].
-    (* we know that evaluation of e1 preserves substore *)
-
-    (* now try to use IH2 *)
-    specialize (IHHb2 f2 s3 h3 ss2 hs2 rs).
-    apply IHHb2; auto.
-    apply (substore_extension_left _ s1 s3 v x IH1).
-    unfold compatible in IH2.
-    rewrite <- IH2.
-    rewrite H9.
-    rewrite supdate_same in H9.
-    rewrite supdate_same.
-    (* need to know substore (supdate x v1 ss1) H6 is preserved by all spec/f eval *)
-    (* but how to know that, as we can give any f *)
-    pose proof (forward_wellformed _ _ (supdate x v1 ss1) hs1 s3 h3 (norm H10) H2) as Hf1wf.
-    unfold wellformed in Hf1wf.
-
-    (* assert (Hpreserve : substore (supdate x v1 ss1) s3). admit. *)
-    (* apply Hf1wf. *)
-    (* unfold substore in Hpreserve. *)
-    (* apply Hpreserve. *)
-    apply Hf1wf.
-    ok.
-    rewrite supdate_same.
-    reflexivity.
-
-(* https://xavierleroy.org/courses/EUTypes-2019/slides.pdf *)
-
-  Qed.
-
-(** * Semantic flows *)
-Definition triple (pre:flow) (e:expr) (spec:flow) : Prop :=
-  forall s1 h1 s2 h2 r sr s0 h0 r0 s3 h3,
-      pre s0 h0 s1 h1 r0 ->
-      bigstep s1 h1 e s2 h2 r ->
-      spec s0 h0 s3 h3 sr ->
-      compatible sr r /\ h2 = h3.
-
-Definition triple_tabula_rasa (e:expr) (spec:flow) : Prop :=
-  triple empty e spec.
-  
-  (*
-    {pre} e {spec}
-    s,h |= pre
-    s,h,e -> s1,h1,v
-    -------------------
-    s,h,e ~> s1,h1,v |= spec
-  *)
-(* . *)
-
-Lemma flow_det : forall s h s1 h1 r1 s2 h2 r2 (f:flow),
-    f s h s1 h1 r1 ->
-    f s h s2 h2 r2 ->
-    s1 = s2 /\ h1 = h2 /\ r1 = r2.
-Proof.
-  intros.
-  (* destruct H. *)
-  admit.
-Admitted.
-
-Lemma fw_const1 : forall p n,
-  triple p (pconst n) (p ;; ens (fun res => (res = n) //\\ emp)).
-Proof.
-  intros.
-  unfold triple.
-  intros.
-  match goal with | H : bigstep _ _ _ _ _ _ |- _ => inv H end.
-  split.
-  - felim.
-    felim.
-    felim.
-    unfold compatible.
-    ok.
-  - felim.
-  felim.
-  felim.
-  specialize (flow_det s0 h0 s2 h2 r0 s3 H1 H2 p H H3).
-  destr flow_det.
-  unfold emp in H4.
-  subst.
-  heap.
-  (* TODO substore then needs simulation relation *)
-Abort.
-(* Qed. *)
-
-*)
