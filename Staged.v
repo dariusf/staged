@@ -438,6 +438,7 @@ Ltac felim H :=
   | satisfies _ (fex _) _ _ _ => inverts H as H
   | satisfies _ (_ ;; _) _ _ _ => inverts H as H
   | satisfies _ (ens (fun _ => \[_])) _ _ _ => apply extract_pure in H
+  (* | satisfies _ (unk _ _ _) _ _ _ => inverts H as H *)
   end.
   
 (* Backward reasoning *)
@@ -675,14 +676,24 @@ Module SemanticsExamples.
       (* H2: call to sum *)
       (* H3: shape of res *)
 
+
         unfold sum_env in H2.
+  (* inverts H2. *)
+  (* rewrite fmap_read_update in H1. *)
+        (* felim H2. *)
+  inverts H2 as H4 Hr.
+  rewrite fmap_read_update in H4. inj H4.
+
+
+      (* felim H2. *)
         (* Check satisfies_fn_in_env. *)
-        pose proof (@satisfies_fn_in_env _ _ _ _ _ sum _ _ H2) as H4.
+        (* pose proof (@satisfies_fn_in_env _ _ _ _ _ sum _ _ H2) as H4.
         forward H4. rew_fmap. reflexivity.
         apply fmap_indom_empty. easy.
         clear H2.
-        fold sum_env in H4.
-        (* H4: known call to sum *)
+        fold sum_env in H4. *)
+
+        (* Hr: known call to sum *)
 
       felim H1. destr H1.
       subst.
@@ -695,11 +706,13 @@ Module SemanticsExamples.
         specialize (IH (vint (v-1)) (vint v0)).
         forward IH. math.
         forward IH. reflexivity.
-        specialize (IH _ _ _ H4).
+        specialize (IH _ _ _ Hr).
 
       felim IH. destr IH. inj H0.
       rewrite one_plus_minus_one_r in H3.
-      exact H3. }
+      exact H3.
+      apply fmap_indom_empty.
+      }
   Qed.
 
   Definition foldr :=
