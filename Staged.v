@@ -32,6 +32,7 @@ with expr : Type :=
   | pfix (f: ident) (x: ident) (e: expr)
   | pfun (x: ident) (e: expr)
   | padd (x y: val)
+  | pminus (x y: val)
   (* | pref (x: ident) *)
   (* | pderef (x: ident) *)
   (* | passign (x1: ident) (x2: ident) *)
@@ -48,6 +49,7 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   match e with
   | pval v => pval v
   | padd x y => padd x y
+  | pminus x y => pminus x y
   | pvar x => if_y_eq x (pval w) e
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
@@ -70,6 +72,9 @@ Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
 
   | eval_padd : forall h x y,
     bigstep h (padd (vint x) (vint y)) h (enorm (vint (x + y)))
+
+  | eval_pminus : forall h x y,
+    bigstep h (pminus (vint x) (vint y)) h (enorm (vint (x - y)))
 
   | eval_pfun : forall h x e,
     bigstep h (pfun x e) h (enorm (vfun x e))
@@ -529,12 +534,14 @@ Module SemanticsExamples.
     apply entails_refl.
   Qed.
 
+  (* quantification over coq values *)
   (* a lfp interpretation *)
   Definition sum :=
-    disj
-      (ens (fun r => \[r = vint 1]))
-      (fex (fun r1 =>
-        (unk "sum" (vint 1) r1;; ens (fun r => \[r = r1])))).
+    fall (fun n =>
+      disj
+        (ens (fun r => \[n = vint 0 /\ r = vint 0]))
+        (fex (fun n1 => ens (fun r => \[n = vint 0]);; fex (fun r1 =>
+          (unk "sum" n r1;; ens (fun r => \[r = r1])))))).
 
   Definition foldr :=
   ens (fun _ => \[True]) ;;
