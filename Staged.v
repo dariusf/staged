@@ -3,7 +3,7 @@
 From Coq Require Import Classes.RelationClasses.
 
 Set Implicit Arguments.
-From SLF Require Export LibString LibCore.
+(* From SLF Require Export LibString LibCore. *)
 From SLF Require Export LibSepTLCbuffer LibSepFmap.
 From SLF Require Export Heap.
 Module Fmap := LibSepFmap.
@@ -28,9 +28,10 @@ Inductive val :=
 with expr : Type :=
   | pvar (x: ident)
   | pval (v: val)
-  | plet (x: ident) (e1: expr) (e2: expr)
+  | plet (x: ident) (e1 e2: expr)
   | pfix (f: ident) (x: ident) (e: expr)
   | pfun (x: ident) (e: expr)
+  | padd (x y: val)
   (* | pref (x: ident) *)
   (* | pderef (x: ident) *)
   (* | passign (x1: ident) (x2: ident) *)
@@ -46,6 +47,7 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   let if_y_eq x t1 t2 := if ident_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
+  | padd x y => padd x y
   | pvar x => if_y_eq x (pval w) e
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
@@ -65,6 +67,9 @@ Definition empty_heap : heap := Fmap.empty.
 Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
   | eval_pval : forall h v,
     bigstep h (pval v) h (enorm v)
+
+  | eval_padd : forall h x y,
+    bigstep h (padd (vint x) (vint y)) h (enorm (vint (x + y)))
 
   | eval_pfun : forall h x e,
     bigstep h (pfun x e) h (enorm (vfun x e))
@@ -129,30 +134,12 @@ Inductive flow :=
 | req : precond -> flow
 | ens : postcond -> flow
 | seq : flow -> flow -> flow
-(* | ffex : forall (A:Type), (A -> flow) -> flow *)
-| ffex : (val -> flow) -> flow
+| fex : (val -> flow) -> flow
+| fall : (val -> flow) -> flow
 | unk : ident -> val -> val -> flow (* f(x, r) *)
-| disj : flow -> flow -> flow
-.
+| disj : flow -> flow -> flow.
 
 Infix ";;" := seq (at level 80, right associativity).
-
-(* Definition fex {A:Type} (f:A -> flow) : flow :=
-  ffex A f. *)
-
-Definition fex (f:val -> flow) : flow :=
-  ffex f.
-
-
-(* Fixpoint satisfies (env:env) (f:flow) (h1 h2:heap) (r:result) : Prop :=
-  match f with
-  | req p => exists h3, h1 = hunion h2 h3 /\ hdisjoint h2 h3 /\ p h3
-  | ens q => exists v h3, r = norm v /\ q v h3 /\ h2 = hunion h1 h3 /\ hdisjoint h1 h3
-  | seq f1 f2 => exists h3 r1, satisfies env f1 h1 h3 r1 /\ satisfies env f2 h3 h2 r
-  | ffex a f => exists v, satisfies env (f v) h1 h2 r
-  | unk f => satisfies env (env f) h1 h2 r
-  end
-  . *)
 
 Definition ufun := val -> val -> flow.
 Definition env := ident -> option ufun.
@@ -170,10 +157,14 @@ Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
   | s_seq env f1 f2 h1 h2 r
     (H: exists h3 r1, satisfies env f1 h1 h3 r1 /\ satisfies env f2 h3 h2 r) : satisfies env (seq f1 f2) h1 h2 r
 
-  (* | s_ffex (a:Type) (f:a->flow) : forall env h1 h2 r x, *)
-  | s_ffex env f h1 h2 r
+  | s_fex env f h1 h2 r
     (H: exists v, satisfies env (f v) h1 h2 r) :
-    satisfies env (ffex f) h1 h2 r
+    satisfies env (fex f) h1 h2 r
+
+  | s_fall env f h1 h2 r
+    (H: forall v, satisfies env (f v) h1 h2 r) :
+    satisfies env (fex f) h1 h2 r
+
 
   | s_unk env fn h1 h2 r f x
     (He: env fn = Some f)
@@ -186,9 +177,7 @@ Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
 
   | s_disj_r env h1 h2 r f1 f2
     (H: satisfies env f2 h1 h2 r) :
-    satisfies env (disj f1 f2) h1 h2 r
-
-  .
+    satisfies env (disj f1 f2) h1 h2 r.
 
 Definition entails (f1 f2:flow) : Prop :=
   forall h1 h2 r env,
@@ -413,7 +402,7 @@ Module SemanticsExamples.
     exists empty_heap.
     exists empty_env.
     unfold f2.
-    apply (s_ffex).
+    apply (s_fex).
     eexists.
     constructor.
     eexists.
@@ -475,7 +464,7 @@ Module SemanticsExamples.
     easy.
     fmap_eq.
     -
-    eapply s_ffex.
+    eapply s_fex.
     exists (vint 1).
     eapply s_unk.
     (* with (fl := (fun _ _ => ens (fun x : val => pure (x = vint 1)))). *)
@@ -540,8 +529,6 @@ Module SemanticsExamples.
     apply entails_refl.
   Qed.
 
-  (* TODO plus *)
-  (* TODO forall *)
   (* a lfp interpretation *)
   Definition sum :=
     disj
