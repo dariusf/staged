@@ -980,7 +980,6 @@ Definition empty_env : env := fun _ => None.
 Definition eupdate (x: ident) (v: ufun) (s: env) : env :=
   fun y => if string_dec x y then Some v else s y.
 
-
   Lemma eupdate_same: forall env v l,
     (eupdate l v env) l = Some v.
   Proof.
@@ -1232,6 +1231,15 @@ Module SemanticsExamples.
     rewrite ex6_ent.
     apply entails_refl.
   Qed.
+
+  (* TODO plus *)
+  (* TODO forall *)
+  (* a lfp interpretation *)
+  Definition sum :=
+    disj
+      (ens (fun r => \[r = vint 1]))
+      (fex (fun r1 =>
+        (unk "sum" (vint 1) r1;; ens (fun r => \[r = r1])))).
 
   Definition foldr :=
   ens (fun _ => \[True]) ;;
