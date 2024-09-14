@@ -17,6 +17,36 @@ Local Open Scope string_scope.
 Local Open Scope Z_scope.
 Local Open Scope list_scope.
 
+(* extra map lemmas *)
+
+Lemma fmap_indom_empty : forall A B (k:A),
+  ~ Fmap.indom (@Fmap.empty A B) k.
+Proof.
+  intros.
+  unfold not; intros.
+  hnf in H.
+  unfold Fmap.empty in H.
+  apply H.
+  simpl.
+  reflexivity.
+Qed.
+
+Lemma fmap_read_update : forall A B {IB:Inhab B} (k:A) (v:B) m,
+  ~ Fmap.indom m k ->
+  Fmap.read (Fmap.update m k v) k = v.
+Proof.
+  intros.
+  unfold Fmap.update.
+  rewrite Fmap.read_union_l.
+  apply Fmap.read_single.
+  apply Fmap.indom_single.
+Qed.
+
+#[global]
+Hint Rewrite fmap_read_update : rew_fmap rew_fmap_for_fmap_eq.
+
+(* begin formalization *)
+
 Definition ident : Type := string.
 Definition ident_eq := String.string_dec.
 
@@ -147,7 +177,7 @@ Inductive flow :=
 Infix ";;" := seq (at level 80, right associativity).
 
 Definition ufun := val -> val -> flow.
-Definition env := ident -> option ufun.
+Definition env := fmap ident (option ufun).
 
 Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
 
@@ -171,7 +201,7 @@ Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
     satisfies env (@fall A f) h1 h2 r
 
   | s_unk env fn h1 h2 r f x
-    (He: env fn = Some f)
+    (He: Fmap.read env fn = Some f)
     (Hr: satisfies env (f x r) h1 h2 (norm r)) :
     satisfies env (unk fn x r) h1 h2 (norm r)
 
@@ -286,18 +316,9 @@ Definition flow_res (f:flow) (v:val) : Prop :=
 
 Definition empty := ens (fun r => \[True]).
 
-Definition empty_env : env := fun _ => None.
+(* Definition empty_env : env := fun _ => None. *)
+Definition empty_env : env := Fmap.empty.
 
-Definition eupdate (x: ident) (v: ufun) (s: env) : env :=
-  fun y => if string_dec x y then Some v else s y.
-
-  Lemma eupdate_same: forall env v l,
-    (eupdate l v env) l = Some v.
-  Proof.
-    intros; cbn.
-    unfold eupdate.
-    destruct (string_dec l l); congruence.
-  Qed.
 
 (* Definition satisfies s1 h1 s2 h2 r (f:flow) := f s1 h1 s2 h2 r. *)
 
@@ -372,7 +393,7 @@ Qed. *)
 
   Lemma satisfies_fn_in_env : forall env h1 h2 r1 x f1 f r,
     satisfies env (unk f x r1) h1 h2 r ->
-    Some f1 = env f ->
+    Fmap.read env f = Some f1 ->
     satisfies env (f1 x r1) h1 h2 r.
   Proof.
     intros.
@@ -481,7 +502,7 @@ Module SemanticsExamples.
   Qed.
 
   Definition f4 : flow := empty ;; fex (fun r => unk "f" (vint 1) r).
-  Definition f4_env : env := eupdate "f" (fun _ r => ens (fun r1 => \[r = vint 2])) empty_env.
+  Definition f4_env : env := Fmap.update empty_env "f" (Some (fun _ r => ens (fun r1 => \[r = vint 2]))).
 
   (* has to be 2 *)
   Example ex5_f_ret: flow_res f4 (vint 2).
@@ -503,6 +524,18 @@ Module SemanticsExamples.
     exists (vint 2).
     econstructor.
     unfold f4_env.
+
+    unfold Fmap.update.
+    rew_fmap.
+    apply Fmap.read_single.
+    simpl.
+
+    fintro.
+    reflexivity.
+
+    (* Search (Fmap.read (Fmap.update _ _ _) _).
+    (* apply Fmap.read_update. *)
+
     apply eupdate_same.
     constructor.
     exists (vint 2).
@@ -512,10 +545,10 @@ Module SemanticsExamples.
     apply hpure_intro_hempty.
     apply hempty_intro.
     reflexivity.
-    fmap_eq.
+    fmap_eq. *)
   Qed.
 
-  Example ex4: forall h, satisfies (eupdate "f" (fun x r1 => ens (fun r => \[r1 = r /\ r = x])) empty_env) f4 h h (norm (vint 1)).
+  Example ex4: forall h, satisfies (Fmap.update empty_env "f" (Some (fun x r1 => ens (fun r => \[r1 = r /\ r = x])))) f4 h h (norm (vint 1)).
   Proof.
     intros.
     constructor.
@@ -535,13 +568,12 @@ Module SemanticsExamples.
     eapply s_fex.
     exists (vint 1).
     eapply s_unk.
-    (* with (fl := (fun _ _ => ens (fun x : val => pure (x = vint 1)))). *)
-    (* Check eupdate_same. *)
-    (* rewrite eupdate_same. *)
-    eapply eupdate_same.
-    (* auto. *)
+    rew_fmap.
+    reflexivity.
 
+    apply fmap_indom_empty.
     constructor.
+
     eexists.
     exists empty_heap.
     intuition.
@@ -614,7 +646,7 @@ Module SemanticsExamples.
             (* )) *)
             .
 
-  Definition sum_env := (eupdate "sum" sum empty_env).
+  Definition sum_env := (Fmap.update empty_env "sum" (Some sum)).
   Definition sum_property (n res:val) := ens (fun _ => \[res = n]).
 
   Lemma ex_sum : forall n1 n res, n1 >= 0 -> n = vint n1 -> entails_under sum_env (sum n res) (sum_property n res).
@@ -646,7 +678,8 @@ Module SemanticsExamples.
         unfold sum_env in H2.
         (* Check satisfies_fn_in_env. *)
         pose proof (@satisfies_fn_in_env _ _ _ _ _ sum _ _ H2) as H4.
-        forward H4. rewrite eupdate_same. reflexivity.
+        forward H4. rew_fmap. reflexivity.
+        apply fmap_indom_empty. easy.
         clear H2.
         fold sum_env in H4.
         (* H4: known call to sum *)
