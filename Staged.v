@@ -17,26 +17,17 @@ Local Open Scope string_scope.
 Local Open Scope Z_scope.
 Local Open Scope list_scope.
 
-
 Definition ident : Type := string.
 Definition ident_eq := String.string_dec.
 
-
-(* Definition var := string. *)
-(* Definition var_eq := string_dec. *)
-
-(* Definition val := Z. *)
 Inductive val :=
   | vint : Z -> val
   | vfun : ident -> expr -> val
   | vfix : ident -> ident -> expr -> val
 
-(* Inductive *)
-with
-expr : Type :=
+with expr : Type :=
   | pvar (x: ident)
   | pval (v: val)
-  (* | pconst (n: val) *)
   | plet (x: ident) (e1: expr) (e2: expr)
   | pfix (f: ident) (x: ident) (e: expr)
   | pfun (x: ident) (e: expr)
@@ -44,9 +35,7 @@ expr : Type :=
   (* | pderef (x: ident) *)
   (* | passign (x1: ident) (x2: ident) *)
   | pif (x: val) (e1: expr) (e2: expr)
-  | pcall (x: val) (a: val)
-  .
-
+  | pcall (x: val) (a: val).
 
 Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   let aux t := subst y w t in
@@ -63,20 +52,13 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   end.
 
 Inductive eresult : Type :=
-  | enorm : val -> eresult
-.
+  | enorm : val -> eresult.
 
 Definition loc : Type := nat.
 Definition heap : Type := fmap loc val.
 
 Definition empty_heap : heap := Fmap.empty.
 
-
-(* Reserved Notation " 'eval[' s ',' h ',' e ']' '=>' '[' s1 ',' h1 ',' r ']' " (at level 50, left associativity). *)
-
-(* Definition store := store Z. *)
-
-(* Inductive bigstep : store -> heap -> expr -> store -> heap -> eresult -> Prop := *)
 Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
   | eval_pval : forall h v,
     bigstep h (pval v) h (enorm v)
@@ -97,17 +79,13 @@ Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
     bigstep h (subst x v2 (subst f v1 e)) h r ->
     bigstep h (pcall v1 v2) h r
 
-    (* no var rule *)
-  (* | eval_pvar : forall s h x v,
-    (* Some v = s x -> *)
-    bigstep s *)
-    (* eval[ s, h, pvar x ]=>[ s, h, enorm v] *)
-  (* | eval_pconst : forall s h x,
-    eval[ s, h, pconst x ] => [ s, h, enorm x] *)
+  (* there is no var rule *)
+
   (* | eval_plet : forall x e1 e2 v s h h2 s2 s1 h1 r,
     eval[ s, h, e1 ] => [ s1, h1, enorm v] ->
     eval[ supdate x v s1, h1, e2 ] => [ s2, h2, r] ->
     eval[ s, h, plet x e1 e2 ] => [ s2, h2, r ] *)
+
   (* | eval_pref : forall x s (h:heap) l,
     h l = None ->
     eval[ s, h, pref x ] => [ s, hupdate l (s x) h, enorm l]
@@ -116,8 +94,6 @@ Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
     eval[ s, h, pderef x ] => [ s, h, enorm v]
   | eval_assign : forall x1 x2 s h,
     eval[ s, h, passign x1 x2 ] => [ s, hupdate (s x1) (s x2) h, enorm 0] *)
-
-  (* where " 'eval[' s ',' h ',' e ']' '=>' '[' s1 ',' h1 ',' r ']' " := (bigstep s h e s1 h1 r) *)
 .
 
 Module ProgramExamples.
@@ -135,6 +111,7 @@ End ProgramExamples.
 
 (* copied from LibSepReference *)
 
+(* this notation is missing for some reason *)
 Notation "h1 \u h2" := (Fmap.union h1 h2)
   (at level 37, right associativity).
 
@@ -981,9 +958,6 @@ Qed. *)
 
 Definition flow_res (f:flow) (v:val) : Prop :=
   exists h1 h2 env, satisfies env f h1 h2 (norm v).
-
-(* Definition replace_ret (v:val) (f:flow) : flow :=
-  f ;; ens (fun r => pure (r = v)). *)
 
 Definition empty := ens (fun r => \[True]).
 
