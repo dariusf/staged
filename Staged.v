@@ -407,27 +407,30 @@ Qed. *)
   Qed.
 
 (* For reasoning forward from flows in the context *)
-(* Ltac felim :=
-  match goal with
-  | H : seq _ _ _ _ _ _ _ |- _ => unfold seq in H; destr H
-  | H : req _ _ _ _ _ _ |- _ => unfold req in H; destr H; subst
-  | H : ens _ _ _ _ _ _ |- _ => unfold ens in H; destr H; subst
-  | H : pureconj _ _ _ _ |- _ => unfold pureconj in H; destr H; subst
-  end. *)
 
-(* Ltac fintro :=
+Ltac felim H :=
+  match type of H with
+  (* | H : seq _ _ _ _ _ _ _ |- _ => unfold seq in H; destr H
+  | H : req _ _ _ _ _ _ |- _ => unfold req in H; destr H; subst
+  | H : ens _ _ _ _ _ _ |- _ => unfold ens in H; destr H; subst *)
+  (* | H : pureconj _ _ _ _ |- _ => unfold pureconj in H; destr H; subst *)
+  | satisfies _ (fex _) _ _ _ => inverts H as H
+  | satisfies _ (_ ;; _) _ _ _ => inverts H as H
+  | satisfies _ (ens (fun _ => \[_])) _ _ _ => apply extract_pure in H
+  end.
+  
+(* Backward reasoning *)
+Ltac fintro :=
   match goal with
   (* | |- ens _ _ _ (norm ?v) => unfold ens; do 2 eexists; intuition *)
-  | |- satisfies (ens _) _ _ _ (norm ?v) => econstructor; eexists; intuition
-  | |- pure _ _ => unfold pure; intuition
+  | |- satisfies _ (ens (fun _ => \[_])) _ _ _ => apply embed_pure
+  (* | |- pure _ _ => unfold pure; intuition *)
   end.
 
-Ltac fexists v :=
+(* Ltac fexists v :=
   match goal with
-  | |- fex _ _ _ _ => unfold fex; exists v
+  | |- satisfies _ (fex _) _ _ _ => unfold fex; exists v
   end. *)
-
-
 
 Module SemanticsExamples.
 
@@ -486,9 +489,7 @@ Module SemanticsExamples.
     unfold flow_res.
     exists empty_heap. exists empty_heap. exists f4_env.
     unfold f4.
-    (* fintro. *)
     constructor. exists empty_heap. exists (norm (vint 7)). intuition.
-    (* fintro. *)
     constructor.
     eexists.
     exists empty_heap.
@@ -628,26 +629,16 @@ Module SemanticsExamples.
     intros.
     inverts H1 as H1.
     (* base case *)
-    {
-      apply extract_pure in H1.
-      destr H1.
-      subst.
-      inj H2.
-      apply embed_pure.
+    { felim H1. destr H1. subst. inj H2.
+      fintro.
       f_equal.
-      math.
-      }
+      math. }
     (* recursive case *)
-    {
-      inverts H1 as H1.
-      destruct H1 as (v&H1).
-      inverts H1 as H1.
-      destruct H1 as (h3&r1&H1&H2).
+    { felim H1. destruct H1 as (v&H1).
+      felim H1. destruct H1 as (h3&r1&H1&H2).
 
-      inverts H2 as H2.
-      destruct H2 as (v0&H2).
-      inverts H2 as H2.
-      destruct H2 as (h0&r0&H2&H3).
+      felim H2. destruct H2 as (v0&H2).
+      felim H2. destruct H2 as (h0&r0&H2&H3).
       (* H1: shape of input *)
       (* H2: call to sum *)
       (* H3: shape of res *)
@@ -660,7 +651,7 @@ Module SemanticsExamples.
         fold sum_env in H4.
         (* H4: known call to sum *)
 
-      apply extract_pure in H1. destr H1.
+      felim H1. destr H1.
       subst.
       inj H1.
 
@@ -673,9 +664,7 @@ Module SemanticsExamples.
         forward IH. reflexivity.
         specialize (IH _ _ _ H4).
 
-      apply extract_pure in IH.
-      destr IH.
-      inj H0.
+      felim IH. destr IH. inj H0.
       rewrite one_plus_minus_one_r in H3.
       exact H3. }
   Qed.
