@@ -441,6 +441,40 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma ens_sep_split : forall H Q,
+  entails (ens (Q \*+ H)) (ens (fun _ => H);; ens Q).
+Proof.
+  unfold entails.
+  unfold entails_under.
+  intros.
+  inverts H0 as H0.
+  destruct H0 as (v & h3 & H1 & H2 & H3 & H4).
+  (* h3 is the part satisfying both *)
+  apply hstar_inv in H2.
+  destruct H2 as (h0 & h4 & ? & ? & ? & ?).
+  (* h0 is the part satisfying Q, h4 H *)
+
+  constructor.
+  exists (h1 \u h4).
+  exists (norm v). (* anything? *)
+  split.
+
+  constructor.
+  eexists.
+  eexists.
+  intuition.
+  auto.
+
+  constructor.
+  exists v.
+  exists h0.
+  intuition.
+  subst.
+  rew_fmap.
+  assert (h0 \u h4 = h4 \u h0). fmap_eq.
+  rewrite H1.
+  reflexivity.
+Qed.
 
 Module SemanticsExamples.
 
