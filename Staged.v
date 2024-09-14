@@ -254,6 +254,24 @@ Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 r env,
     satisfies env f1 h1 h2 r <-> satisfies env f2 h1 h2 r.
 
+Instance bientails_equiv : Equivalence bientails.
+Proof.
+  constructor.
+  - unfold Reflexive.
+    unfold bientails.
+    reflexivity.
+  - unfold Symmetric.
+    unfold bientails.
+    symmetry.
+    auto.
+  - unfold Transitive.
+    unfold bientails.
+    intros.
+    split.
+    + intros. apply H0. apply H. easy.
+    + intros. apply H. apply H0. easy.
+Qed.
+
 Lemma req_sep_combine : forall H1 H2,
   entails (req H1;; req H2) (req (H1 \* H2)).
 Proof.
