@@ -183,9 +183,12 @@ Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
     (H: satisfies env f2 h1 h2 r) :
     satisfies env (disj f1 f2) h1 h2 r.
 
-Definition entails (f1 f2:flow) : Prop :=
-  forall h1 h2 r env,
+Definition entails_under env (f1 f2:flow) : Prop :=
+  forall h1 h2 r,
     satisfies env f1 h1 h2 r -> satisfies env f2 h1 h2 r.
+
+Definition entails (f1 f2:flow) : Prop :=
+  forall env, entails_under env f1 f2.
 
 Infix "⊑" := entails (at level 90, right associativity
   , only parsing
@@ -197,7 +200,9 @@ Infix "⊑" := entails (at level 90, right associativity
 Instance entails_refl : Reflexive entails.
 Proof.
   unfold Reflexive.
-  unfold entails. intros.
+  unfold entails.
+  unfold entails_under.
+  intros.
   exact H.
 Qed.
 
@@ -206,6 +211,7 @@ Proof.
   unfold Transitive.
   intros.
   unfold entails in *.
+  unfold entails_under in *.
   intros.
   apply H0.
   apply H.
@@ -220,6 +226,7 @@ Lemma req_sep_combine : forall H1 H2,
   entails (req H1;; req H2) (req (H1 \* H2)).
 Proof.
   unfold entails.
+  unfold entails_under.
   intros.
   inverts H as H.
   destruct H as (h3 & r1 & H3 & H4).
@@ -245,6 +252,7 @@ Lemma req_sep_split : forall H1 H2,
   entails (req (H1 \* H2)) (req H1;; req H2).
 Proof.
   unfold entails.
+  unfold entails_under.
   intros.
   inverts H as H.
   (* h3 is the piece satisfying H1*H2 *)
@@ -493,6 +501,7 @@ Module SemanticsExamples.
   Example ex6_ent : f5 ⊑ f6.
   Proof.
     unfold entails.
+    unfold entails_under.
     unfold f5.
     unfold f6.
     intros.
@@ -534,12 +543,134 @@ Module SemanticsExamples.
   Qed.
 
   (* a lfp interpretation *)
-  Definition sum :=
-    fall (fun n =>
+  (*
+    forall n res, sum(n, res) =
+         n=0/\res=0
+      \/ ex n1. ens n=n1/\n1>0; ex r1. sum(n-1,r1); ens res=1+r1
+  *)
+  Definition sum n res :=
+    (* fall (fun n => fall (fun res => *)
       disj
-        (ens (fun r => \[n = vint 0 /\ r = vint 0]))
-        (fex (fun n1 => ens (fun r => \[n = vint n1]);; fex (fun r1 =>
-          (unk "sum" n r1;; ens (fun r => \[r = r1])))))).
+        (ens (fun _ => \[exists n1, n = vint n1 /\ n1 <= 0 /\ res = vint 0]))
+        (fex (fun n1 => ens (fun r => \[n = vint n1 /\ n1 > 0]);; fex (fun r1 =>
+          (unk "sum" (vint (n1-1)) (vint r1);;
+            ens (fun _ => \[res = vint (1 + r1)])))))
+            (* )) *)
+            .
+
+  Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
+      (forall v, Q1 v ==> Q2 v) ->
+      satisfies env (ens Q1) h1 h2 r ->
+      satisfies env (ens Q2) h1 h2 r.
+  Proof.
+    intros.
+    inverts H0.
+    constructor.
+    destruct H3 as (v&h3&?&?&?&?).
+    exists v.
+    exists h3.
+    intuition.
+    apply H.
+    easy.
+  Qed.
+
+  Lemma entail_ens : forall Q1 Q2,
+    (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
+  Proof.
+    unfold entails.
+    unfold entails_under.
+    intros.
+    applys* satisfies_ens.
+  Qed.
+
+  Lemma satisfies_fn_in_env : forall env h1 h2 r1 x f1 f r,
+    satisfies env (unk f x r1) h1 h2 r ->
+    Some f1 = env f ->
+    satisfies env (f1 x r1) h1 h2 r.
+  Proof.
+  Admitted.
+
+  Definition sum_env := (eupdate "sum" sum empty_env).
+  Definition sum_property (n res:val) := ens (fun _ => \[res = n]).
+
+  Ltac fstep :=
+    match goal with
+    | |- satisfies (ens _) _ _ _ (norm ?v) => econstructor; eexists; intuition
+    | |- entails_under _ (disj _ _) _ => unfold pure; intuition
+    end.
+
+  Lemma ex_sum : forall n1 n res, n1 > 0 -> n = vint n1 -> entails_under sum_env (sum n res) (sum_property n res).
+  Proof.
+    intros n.
+    unfold sum_property.
+    induction_wf IH: (downto 0) n.
+    unfold sum.
+    intros.
+    unfold entails_under.
+    intros.
+    inverts H1 as H1.
+    (* base case *)
+    { apply satisfies_ens with (Q1 := (fun _ => \[exists n1, n0 = vint n1 /\ n1 <= 0 /\ res = vint 0])); auto.
+      intros.
+      xsimpl.
+      intuition.
+      destr H2.
+      (* TODO try to make sum total for simplicity *)
+(* H2 exists n1 : int, n0 = vint n1 /\ n1 <= 0 /\ res = vint 0 *)
+      (* TODO why does congr solve this? *)
+      congruence.
+      (* subst.  f_equal. math. *)
+
+      }
+    (* recursive case *)
+    {
+      inverts H1 as H1.
+      destruct H1 as (v&H1).
+      inverts H1 as H1.
+      destruct H1 as (h3&r1&H1&H2).
+      inverts H2 as H2.
+      destruct H2 as (v0&H2).
+      inverts H2 as H2.
+      destruct H2 as (h0&r0&H2&H3).
+      (* H1: shape of input *)
+      (* H2: call to sum *)
+      (* H3: shape of res *)
+
+        unfold sum_env in H2.
+        Check satisfies_fn_in_env.
+        pose proof (@satisfies_fn_in_env _ _ _ _ _ sum _ _ H2) as H4.
+        forward H4. rewrite eupdate_same. reflexivity.
+        clear H2.
+        fold sum_env in H4.
+        (* H4: known call to sum *)
+
+        unfold entails_under in IH.
+        apply (@IH (n - 1)).
+        (* unfold downto.
+        split.
+        admit.
+        math. *)
+        - unfold downto. math.
+        - admit.
+        - admit.
+        - admit.
+
+
+
+        (* _ _ _ _ _ _ _ _ H8). *)
+        (* apply (satisfies_fn_in_env H8. *)
+
+
+
+
+
+
+    }
+
+    (* { inverts H7. admit. } *)
+    (* { admit. } *)
+  (* Qed. *)
+  Admitted.
 
   Definition foldr :=
   ens (fun _ => \[True]) ;;
