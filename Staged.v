@@ -139,8 +139,8 @@ Inductive flow :=
 | req : precond -> flow
 | ens : postcond -> flow
 | seq : flow -> flow -> flow
-| fex : (val -> flow) -> flow
-| fall : (val -> flow) -> flow
+| fex : forall A, (A -> flow) -> flow
+| fall : forall A, (A -> flow) -> flow
 | unk : ident -> val -> val -> flow (* f(x, r) *)
 | disj : flow -> flow -> flow.
 
@@ -162,14 +162,13 @@ Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
   | s_seq env f1 f2 h1 h2 r
     (H: exists h3 r1, satisfies env f1 h1 h3 r1 /\ satisfies env f2 h3 h2 r) : satisfies env (seq f1 f2) h1 h2 r
 
-  | s_fex env f h1 h2 r
+  | s_fex env h1 h2 r (A:Type) (f:A->flow)
     (H: exists v, satisfies env (f v) h1 h2 r) :
-    satisfies env (fex f) h1 h2 r
+    satisfies env (@fex A f) h1 h2 r
 
-  | s_fall env f h1 h2 r
+  | s_fall env h1 h2 r (A:Type) (f:A->flow)
     (H: forall v, satisfies env (f v) h1 h2 r) :
-    satisfies env (fex f) h1 h2 r
-
+    satisfies env (@fall A f) h1 h2 r
 
   | s_unk env fn h1 h2 r f x
     (He: env fn = Some f)
@@ -534,13 +533,12 @@ Module SemanticsExamples.
     apply entails_refl.
   Qed.
 
-  (* quantification over coq values *)
   (* a lfp interpretation *)
   Definition sum :=
     fall (fun n =>
       disj
         (ens (fun r => \[n = vint 0 /\ r = vint 0]))
-        (fex (fun n1 => ens (fun r => \[n = vint 0]);; fex (fun r1 =>
+        (fex (fun n1 => ens (fun r => \[n = vint n1]);; fex (fun r1 =>
           (unk "sum" n r1;; ens (fun r => \[r = r1])))))).
 
   Definition foldr :=
