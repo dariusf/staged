@@ -155,7 +155,6 @@ End ProgramExamples.
 
 Definition precond := hprop.
 Definition postcond := val -> hprop.
-(* Definition env := val -> flow. *)
 
 Inductive result : Type :=
   | norm : val -> result.
@@ -337,53 +336,6 @@ Definition empty := ens (fun r => \[True]).
 (* Definition empty_env : env := fun _ => None. *)
 Definition empty_env : env := Fmap.empty.
 
-
-(* Definition satisfies s1 h1 s2 h2 r (f:flow) := f s1 h1 s2 h2 r. *)
-
-(* Lemma empty_noop : forall s h r,
-  empty s h s h (norm r).
-Proof.
-  intros.
-  unfold empty.
-  unfold ens.
-  intuition.
-  exists r.
-  intuition.
-  exists hempty.
-  intuition heap.
-  unfold pure.
-  intuition.
-Qed. *)
-
-
-(* solve a heap goal.
-  termination is guaranteed by ordering of lemmas to use *)
-(* Ltac hstep :=
-  match goal with
-  (* | [ H: _ = hunion hempty _ |- _ ] =>
-      rewrite hunion_empty in H
-  | [ H: _ = hunion _ hempty |- _ ] =>
-      rewrite hunion_comm in H;
-      rewrite hunion_empty in H *)
-  | [ |- ?h = hunion hempty ?h ] =>
-      rewrite hunion_empty; reflexivity
-  | [ |- ?h = hunion ?h hempty ] =>
-      rewrite hunion_comm; hstep
-  | [ |- hdisjoint hempty _ ] =>
-      apply hdisjoint_empty
-  | [ |- hdisjoint _ hempty ] =>
-      rewrite hdisjoint_sym; hstep
-  (* | [ |- hunion hempty _ = _ ] =>
-      rewrite hunion_empty
-  | [ |- _ = hunion _ hempty ] =>
-      rewrite hunion_comm; rewrite hunion_empty
-  | [ |- hunion _ hempty = _ ] =>
-      rewrite hunion_comm;
-      rewrite hunion_empty *)
-  (* | [ |- ?g ] => idtac *)
-  end. *)
-
-
   Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
       (forall v, Q1 v ==> Q2 v) ->
       satisfies env (ens Q1) h1 h2 r ->
@@ -449,10 +401,6 @@ Qed. *)
 
 Ltac felim H :=
   match type of H with
-  (* | H : seq _ _ _ _ _ _ _ |- _ => unfold seq in H; destr H
-  | H : req _ _ _ _ _ _ |- _ => unfold req in H; destr H; subst
-  | H : ens _ _ _ _ _ _ |- _ => unfold ens in H; destr H; subst *)
-  (* | H : pureconj _ _ _ _ |- _ => unfold pureconj in H; destr H; subst *)
   | satisfies _ (fex _) _ _ _ => inverts H as H
   | satisfies _ (_ ;; _) _ _ _ => inverts H as H
   | satisfies _ (ens (fun _ => \[_])) _ _ _ => apply extract_pure in H
@@ -462,9 +410,7 @@ Ltac felim H :=
 (* Backward reasoning *)
 Ltac fintro :=
   match goal with
-  (* | |- ens _ _ _ (norm ?v) => unfold ens; do 2 eexists; intuition *)
   | |- satisfies _ (ens (fun _ => \[_])) _ _ _ => apply embed_pure
-  (* | |- pure _ _ => unfold pure; intuition *)
   end.
 
 (* Ltac fexists v :=
@@ -544,27 +490,13 @@ Module SemanticsExamples.
     econstructor.
     unfold f4_env.
 
-    unfold Fmap.update.
-    rew_fmap.
-    apply Fmap.read_single.
-    simpl.
+    rewrite fmap_read_update.
+    reflexivity.
+    apply fmap_indom_empty.
 
+    simpl.
     fintro.
     reflexivity.
-
-    (* Search (Fmap.read (Fmap.update _ _ _) _).
-    (* apply Fmap.read_update. *)
-
-    apply eupdate_same.
-    constructor.
-    exists (vint 2).
-    exists empty_heap.
-    intuition.
-
-    apply hpure_intro_hempty.
-    apply hempty_intro.
-    reflexivity.
-    fmap_eq. *)
   Qed.
 
   Example ex4: forall h, satisfies (Fmap.update empty_env "f" (Some (fun x r1 => ens (fun r => \[r1 = r /\ r = x])))) f4 h h (norm (vint 1)).
@@ -574,32 +506,33 @@ Module SemanticsExamples.
     exists h.
     exists (norm (vint 4)).
     split.
+
     - constructor.
-    eexists.
-    exists empty_heap.
-    intuition.
+      eexists.
+      exists empty_heap.
+      intuition.
 
-    apply hpure_intro_hempty.
-    apply hempty_intro.
-    easy.
-    fmap_eq.
-    -
-    eapply s_fex.
-    exists (vint 1).
-    eapply s_unk.
-    rew_fmap.
-    reflexivity.
+      apply hpure_intro_hempty.
+      apply hempty_intro.
+      easy.
+      fmap_eq.
 
-    apply fmap_indom_empty.
-    constructor.
+    - eapply s_fex.
+      exists (vint 1).
+      eapply s_unk.
+      rew_fmap.
+      reflexivity.
 
-    eexists.
-    exists empty_heap.
-    intuition.
-    apply hpure_intro_hempty.
-    apply hempty_intro.
-    intuition.
-    fmap_eq.
+      apply fmap_indom_empty.
+      constructor.
+
+      eexists.
+      exists empty_heap.
+      intuition.
+      apply hpure_intro_hempty.
+      apply hempty_intro.
+      intuition.
+      fmap_eq.
   Qed.
 
   Definition f5 : flow := ens (fun r => \[r = vint 2]).
