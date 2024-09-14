@@ -271,63 +271,6 @@ Proof.
     + intros. apply H. apply H0. easy.
 Qed.
 
-Lemma req_sep_combine : forall H1 H2,
-  entails (req H1;; req H2) (req (H1 \* H2)).
-Proof.
-  unfold entails.
-  unfold entails_under.
-  intros.
-  inverts H as H.
-  destruct H as (h3 & r1 & H3 & H4).
-
-  inverts H3 as H3.
-  inverts H4 as H4.
-  destruct H3 as (h4 & ? & ? & ?).
-  destruct H4 as (h5 & ? & ? & ?).
-  (* h4 is the part satisfying P, same for h5/Q *)
-  constructor.
-  (* union h4/h5 to get the part satisfying P*Q *)
-
-  exists (h4 \+ h5).
-  subst h1 h3.
-  rew_disjoint.
-  (* fmap_disjoint. *)
-  intuition.
-  fmap_eq.
-  apply hstar_intro; easy.
-Qed.
-
-Lemma req_sep_split : forall H1 H2,
-  entails (req (H1 \* H2)) (req H1;; req H2).
-Proof.
-  unfold entails.
-  unfold entails_under.
-  intros.
-  inverts H as H.
-  (* h3 is the piece satisfying H1*H2 *)
-  destruct H as (h3 & r1 & H3 & H4).
-  apply hstar_inv in H4.
-  destruct H4 as (h0 & h4 & ? & ? & ? & ?).
-  (* split h3. h0 is for H1, h4 for H2 *)
-  subst h1.
-  constructor.
-  exists (h2 \u h4).
-  exists r.
-  split; constructor.
-  exists h0. intuition fmap_eq.
-  fmap_eq.
-  exists h4. intuition fmap_eq.
-Qed.
-
-Lemma req_sep : forall H1 H2,
-  bientails (req (H1 \* H2)) (req H1;; req H2).
-Proof.
-  intros.
-  split.
-  - apply req_sep_split.
-  - apply req_sep_combine.
-Qed.
-
 Definition flow_res (f:flow) (v:val) : Prop :=
   exists h1 h2 env, satisfies env f h1 h2 (norm v).
 
@@ -417,6 +360,87 @@ Ltac fintro :=
   match goal with
   | |- satisfies _ (fex _) _ _ _ => unfold fex; exists v
   end. *)
+
+Lemma req_sep_combine : forall H1 H2,
+  entails (req H1;; req H2) (req (H1 \* H2)).
+Proof.
+  unfold entails.
+  unfold entails_under.
+  intros.
+  inverts H as H.
+  destruct H as (h3 & r1 & H3 & H4).
+
+  inverts H3 as H3.
+  inverts H4 as H4.
+  destruct H3 as (h4 & ? & ? & ?).
+  destruct H4 as (h5 & ? & ? & ?).
+  (* h4 is the part satisfying P, same for h5/Q *)
+  constructor.
+  (* union h4/h5 to get the part satisfying P*Q *)
+
+  exists (h4 \+ h5).
+  subst h1 h3.
+  rew_disjoint.
+  (* fmap_disjoint. *)
+  intuition.
+  fmap_eq.
+  apply hstar_intro; easy.
+Qed.
+
+Lemma req_sep_split : forall H1 H2,
+  entails (req (H1 \* H2)) (req H1;; req H2).
+Proof.
+  unfold entails.
+  unfold entails_under.
+  intros.
+  inverts H as H.
+  (* h3 is the piece satisfying H1*H2 *)
+  destruct H as (h3 & r1 & H3 & H4).
+  apply hstar_inv in H4.
+  destruct H4 as (h0 & h4 & ? & ? & ? & ?).
+  (* split h3. h0 is for H1, h4 for H2 *)
+  subst h1.
+  constructor.
+  exists (h2 \u h4).
+  exists r.
+  split; constructor.
+  exists h0. intuition fmap_eq.
+  fmap_eq.
+  exists h4. intuition fmap_eq.
+Qed.
+
+Lemma req_sep : forall H1 H2,
+  bientails (req (H1 \* H2)) (req H1;; req H2).
+Proof.
+  intros.
+  split.
+  - apply req_sep_split.
+  - apply req_sep_combine.
+Qed.
+
+Lemma ens_sep_combine : forall Q1 Q2,
+  entails (ens Q1;; ens Q2) (ens (fun r => \exists r1, Q1 r1 \* Q2 r)).
+Proof.
+  unfold entails.
+  unfold entails_under.
+  intros.
+  felim H.
+  destruct H as (h3 & r1 & H1 & H2).
+
+  constructor. destruct r.
+  exists v.
+  inverts H1 as H1. destruct H1 as (v0 & h0 & ? & ? & ? & ?).
+  inverts H2 as H2. destruct H2 as (v1 & h4 & ? & ? & ? & ?).
+  exists (h0 \u h4).
+  intuition.
+  apply hexists_intro with (x := v0).
+
+  apply hstar_intro; auto.
+  subst. inj H2. assumption.
+  subst. rew_fmap.
+  reflexivity.
+Qed.
+
 
 Module SemanticsExamples.
 
