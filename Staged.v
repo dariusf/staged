@@ -940,21 +940,35 @@ Proof.
   apply hstar_intro; easy.
 Qed.
 
-(* Lemma req_sep : forall P Q,
-  bientails (req (P ** Q)) (req P;; req Q).
+Lemma req_sep_split : forall H1 H2,
+  entails (req (H1 \* H2)) (req H1;; req H2).
+Proof.
+  unfold entails.
+  intros.
+  inverts H as H.
+  (* h3 is the piece satisfying H1*H2 *)
+  destruct H as (h3 & r1 & H3 & H4).
+  apply hstar_inv in H4.
+  destruct H4 as (h0 & h4 & ? & ? & ? & ?).
+  (* split h3. h0 is for H1, h4 for H2 *)
+  subst h1.
+  constructor.
+  exists (h2 \u h4).
+  exists r.
+  split; constructor.
+  exists h0. intuition fmap_eq.
+  fmap_eq.
+  exists h4. intuition fmap_eq.
+Qed.
+
+Lemma req_sep : forall H1 H2,
+  bientails (req (H1 \* H2)) (req H1;; req H2).
 Proof.
   intros.
-  unfold bientails.
   split.
-  intros.
-  (* h1 is initial heap *)
-  (* h2 is final *)
-  (* h3 is the part taken off by P * Q *)
-  { inv H. destruct H2 as (h3 & H1 & H2 & H3).
-    constructor.
-    admit. }
-  { admit. }
-Qed. *)
+  - apply req_sep_split.
+  - apply req_sep_combine.
+Qed.
 
 Definition flow_res (f:flow) (v:val) : Prop :=
   exists h1 h2 env, satisfies env f h1 h2 (norm v).
