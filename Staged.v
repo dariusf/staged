@@ -194,6 +194,8 @@ Infix "⊑" := entails (at level 90, right associativity
   , only parsing
   ).
 
+Notation " '[' env ',' h1 ',' h2 ',' r ']' '|=' f" := (satisfies env f h1 h2 r) (at level 30, only printing).
+
 (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 (* Check (forall f1 f2 f3, f1 ;; f3 ⊑ f2). *)
 
@@ -593,16 +595,42 @@ Module SemanticsExamples.
   Definition sum_env := (eupdate "sum" sum empty_env).
   Definition sum_property (n res:val) := ens (fun _ => \[res = n]).
 
-  Ltac fstep :=
+  (* Ltac fstep :=
     match goal with
     | |- satisfies (ens _) _ _ _ (norm ?v) => econstructor; eexists; intuition
     | |- entails_under _ (disj _ _) _ => unfold pure; intuition
-    end.
+    end. *)
 
-  Lemma ex_sum : forall n1 n res, n1 > 0 -> n = vint n1 -> entails_under sum_env (sum n res) (sum_property n res).
+  
+  Lemma extract_pure : forall P env h1 h2 r,
+    satisfies env (ens (fun _ => \[P])) h1 h2 r -> P /\ h1 = h2.
   Proof.
-    intros n.
+    intros.
+    inverts H as H.
+    destr H.
+    inverts H2.
+    inverts H4.
+    intuition.
+  Qed.
+
+  Lemma embed_pure : forall P env h r,
+    P -> satisfies env (ens (fun _ => \[P])) h h r.
+  Proof.
+    intros.
+    constructor.
+    destruct r.
+    exists v.
+    exists empty_heap.
+    intuition.
+    apply hpure_intro; easy.
+    fmap_eq.
+  Qed.
+
+  Lemma ex_sum : forall n1 n res, n1 >= 0 -> n = vint n1 -> entails_under sum_env (sum n res) (sum_property n res).
+  Proof.
     unfold sum_property.
+    (* do induction on the numeric value of n *)
+    intros n.
     induction_wf IH: (downto 0) n.
     unfold sum.
     intros.
@@ -610,17 +638,14 @@ Module SemanticsExamples.
     intros.
     inverts H1 as H1.
     (* base case *)
-    { apply satisfies_ens with (Q1 := (fun _ => \[exists n1, n0 = vint n1 /\ n1 <= 0 /\ res = vint 0])); auto.
-      intros.
-      xsimpl.
-      intuition.
-      destr H2.
-      (* TODO try to make sum total for simplicity *)
-(* H2 exists n1 : int, n0 = vint n1 /\ n1 <= 0 /\ res = vint 0 *)
-      (* TODO why does congr solve this? *)
-      congruence.
-      (* subst.  f_equal. math. *)
-
+    {
+      apply extract_pure in H1.
+      destr H1.
+      subst.
+      inj H2.
+      apply embed_pure.
+      f_equal.
+      math.
       }
     (* recursive case *)
     {
@@ -628,6 +653,7 @@ Module SemanticsExamples.
       destruct H1 as (v&H1).
       inverts H1 as H1.
       destruct H1 as (h3&r1&H1&H2).
+
       inverts H2 as H2.
       destruct H2 as (v0&H2).
       inverts H2 as H2.
@@ -644,33 +670,25 @@ Module SemanticsExamples.
         fold sum_env in H4.
         (* H4: known call to sum *)
 
+      apply extract_pure in H1. destr H1.
+      subst.
+      inj H1.
+
         unfold entails_under in IH.
-        apply (@IH (n - 1)).
-        (* unfold downto.
-        split.
-        admit.
-        math. *)
-        - unfold downto. math.
-        - admit.
-        - admit.
-        - admit.
 
+        specialize (IH (v-1)).
+        forward IH. unfold downto. math.
+        specialize (IH (vint (v-1)) (vint v0)).
+        forward IH. math.
+        forward IH. reflexivity.
+        specialize (IH _ _ _ H4).
 
-
-        (* _ _ _ _ _ _ _ _ H8). *)
-        (* apply (satisfies_fn_in_env H8. *)
-
-
-
-
-
-
-    }
-
-    (* { inverts H7. admit. } *)
-    (* { admit. } *)
-  (* Qed. *)
-  Admitted.
+      apply extract_pure in IH.
+      destr IH.
+      inj H0.
+      rewrite one_plus_minus_one_r in H3.
+      exact H3. }
+  Qed.
 
   Definition foldr :=
   ens (fun _ => \[True]) ;;
