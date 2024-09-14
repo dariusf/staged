@@ -299,37 +299,6 @@ Definition eupdate (x: ident) (v: ufun) (s: env) : env :=
     destruct (string_dec l l); congruence.
   Qed.
 
-
-(* For reasoning forward from flows in the context *)
-(* Ltac felim :=
-  match goal with
-  | H : seq _ _ _ _ _ _ _ |- _ => unfold seq in H; destr H
-  | H : req _ _ _ _ _ _ |- _ => unfold req in H; destr H; subst
-  | H : ens _ _ _ _ _ _ |- _ => unfold ens in H; destr H; subst
-  | H : pureconj _ _ _ _ |- _ => unfold pureconj in H; destr H; subst
-  end. *)
-
-(* Ltac fintro :=
-  match goal with
-  (* | |- ens _ _ _ (norm ?v) => unfold ens; do 2 eexists; intuition *)
-  | |- satisfies (ens _) _ _ _ (norm ?v) => econstructor; eexists; intuition
-  | |- pure _ _ => unfold pure; intuition
-  end.
-
-Ltac fexists v :=
-  match goal with
-  | |- fex _ _ _ _ => unfold fex; exists v
-  end. *)
-
-(* Ltac fsteps :=
-  match goal with
-  | H : seq _ _ _ _ _ _ _ |- _ => felim; fsteps
-  | H : req _ _ _ _ _ _ |- _ => felim; fsteps
-  | H : ens _ _ _ _ _ _ |- _ => felim; fsteps
-  | H : pureconj _ _ _ _ |- _ => felim; fsteps
-  | _ => idtac
-  end. *)
-
 (* Definition satisfies s1 h1 s2 h2 r (f:flow) := f s1 h1 s2 h2 r. *)
 
 (* Lemma empty_noop : forall s h r,
@@ -374,6 +343,90 @@ Qed. *)
       rewrite hunion_empty *)
   (* | [ |- ?g ] => idtac *)
   end. *)
+
+
+  Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
+      (forall v, Q1 v ==> Q2 v) ->
+      satisfies env (ens Q1) h1 h2 r ->
+      satisfies env (ens Q2) h1 h2 r.
+  Proof.
+    intros.
+    inverts H0.
+    constructor.
+    destruct H3 as (v&h3&?&?&?&?).
+    exists v.
+    exists h3.
+    intuition.
+    apply H.
+    easy.
+  Qed.
+
+  Lemma entail_ens : forall Q1 Q2,
+    (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
+  Proof.
+    unfold entails.
+    unfold entails_under.
+    intros.
+    applys* satisfies_ens.
+  Qed.
+
+  Lemma satisfies_fn_in_env : forall env h1 h2 r1 x f1 f r,
+    satisfies env (unk f x r1) h1 h2 r ->
+    Some f1 = env f ->
+    satisfies env (f1 x r1) h1 h2 r.
+  Proof.
+    intros.
+    inverts H as H.
+    rewrite H in H0.
+    inj H0.
+    easy.
+  Qed.
+
+  Lemma extract_pure : forall P env h1 h2 r,
+    satisfies env (ens (fun _ => \[P])) h1 h2 r -> P /\ h1 = h2.
+  Proof.
+    intros.
+    inverts H as H.
+    destr H.
+    inverts H2.
+    inverts H4.
+    intuition.
+  Qed.
+
+  Lemma embed_pure : forall P env h r,
+    P -> satisfies env (ens (fun _ => \[P])) h h r.
+  Proof.
+    intros.
+    constructor.
+    destruct r.
+    exists v.
+    exists empty_heap.
+    intuition.
+    apply hpure_intro; easy.
+    fmap_eq.
+  Qed.
+
+(* For reasoning forward from flows in the context *)
+(* Ltac felim :=
+  match goal with
+  | H : seq _ _ _ _ _ _ _ |- _ => unfold seq in H; destr H
+  | H : req _ _ _ _ _ _ |- _ => unfold req in H; destr H; subst
+  | H : ens _ _ _ _ _ _ |- _ => unfold ens in H; destr H; subst
+  | H : pureconj _ _ _ _ |- _ => unfold pureconj in H; destr H; subst
+  end. *)
+
+(* Ltac fintro :=
+  match goal with
+  (* | |- ens _ _ _ (norm ?v) => unfold ens; do 2 eexists; intuition *)
+  | |- satisfies (ens _) _ _ _ (norm ?v) => econstructor; eexists; intuition
+  | |- pure _ _ => unfold pure; intuition
+  end.
+
+Ltac fexists v :=
+  match goal with
+  | |- fex _ _ _ _ => unfold fex; exists v
+  end. *)
+
 
 
 Module SemanticsExamples.
@@ -560,71 +613,8 @@ Module SemanticsExamples.
             (* )) *)
             .
 
-  Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
-      (forall v, Q1 v ==> Q2 v) ->
-      satisfies env (ens Q1) h1 h2 r ->
-      satisfies env (ens Q2) h1 h2 r.
-  Proof.
-    intros.
-    inverts H0.
-    constructor.
-    destruct H3 as (v&h3&?&?&?&?).
-    exists v.
-    exists h3.
-    intuition.
-    apply H.
-    easy.
-  Qed.
-
-  Lemma entail_ens : forall Q1 Q2,
-    (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
-  Proof.
-    unfold entails.
-    unfold entails_under.
-    intros.
-    applys* satisfies_ens.
-  Qed.
-
-  Lemma satisfies_fn_in_env : forall env h1 h2 r1 x f1 f r,
-    satisfies env (unk f x r1) h1 h2 r ->
-    Some f1 = env f ->
-    satisfies env (f1 x r1) h1 h2 r.
-  Proof.
-  Admitted.
-
   Definition sum_env := (eupdate "sum" sum empty_env).
   Definition sum_property (n res:val) := ens (fun _ => \[res = n]).
-
-  (* Ltac fstep :=
-    match goal with
-    | |- satisfies (ens _) _ _ _ (norm ?v) => econstructor; eexists; intuition
-    | |- entails_under _ (disj _ _) _ => unfold pure; intuition
-    end. *)
-
-  
-  Lemma extract_pure : forall P env h1 h2 r,
-    satisfies env (ens (fun _ => \[P])) h1 h2 r -> P /\ h1 = h2.
-  Proof.
-    intros.
-    inverts H as H.
-    destr H.
-    inverts H2.
-    inverts H4.
-    intuition.
-  Qed.
-
-  Lemma embed_pure : forall P env h r,
-    P -> satisfies env (ens (fun _ => \[P])) h h r.
-  Proof.
-    intros.
-    constructor.
-    destruct r.
-    exists v.
-    exists empty_heap.
-    intuition.
-    apply hpure_intro; easy.
-    fmap_eq.
-  Qed.
 
   Lemma ex_sum : forall n1 n res, n1 >= 0 -> n = vint n1 -> entails_under sum_env (sum n res) (sum_property n res).
   Proof.
@@ -663,7 +653,7 @@ Module SemanticsExamples.
       (* H3: shape of res *)
 
         unfold sum_env in H2.
-        Check satisfies_fn_in_env.
+        (* Check satisfies_fn_in_env. *)
         pose proof (@satisfies_fn_in_env _ _ _ _ _ sum _ _ H2) as H4.
         forward H4. rewrite eupdate_same. reflexivity.
         clear H2.
