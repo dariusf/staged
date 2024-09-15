@@ -476,29 +476,31 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma ens_req_transpose : forall H Q Ha Qf ha hf,
+(* Lemma ens_req_transpose : forall H Q Ha Qf ha hf, *)
+Lemma ens_req_transpose : forall H Q v,
   (* the first two premises name the heaps satisfying Ha/Qf and ensure they exist *)
-  Ha ha -> (forall v, Qf v hf) ->
-  (forall v, Ha \* Q v ==> H \* Qf v) ->
-  entails (ens Q;; req H) (req Ha;; ens Qf).
+  (* Ha ha -> (forall v, Qf v hf) -> *)
+  (* (forall v, Ha \* Q v ==> H \* Qf v) -> *)
+  (Q v \-* H) \* Q v ==> H \* (H \-* Q v) ->
+  entails (ens Q;; req H) (req (Q v \-* H);; ens (fun r => H \-* Q r)).
 Proof.
   unfold entails.
   unfold entails_under.
-  introv Hanti Hframe Himpl H1.
+  (* introv Hanti Hframe Himpl H1. *)
 
 (* Qf = H -* Q *)
 (* Ha = Q -* H *)
 (* (Q -* H) * Q |- H * (H -* Q). this says constructively how to compute it basically *)
 (* normal frame inf: Q |- H * (H -* Q) *)
 
-  inverts H1 as H1. destruct H1 as (h3&r1&H1&H2).
+  (* inverts H1 as H1. destruct H1 as (h3&r1&H1&H2).
   inverts H1 as H1. destruct H1 as (v0&h4&?&?&?&?).
   (* h4 |= Q *)
   inverts H2 as H2. destruct H2 as (h0&?&?&?).
   (* h0 |= H *)
 
   unfold himpl in Himpl.
-  specialize (Himpl v0 (ha \u h4)).
+  specialize (Himpl v0 (ha \u h4)). *)
 
   (* h is h4 + the heap satisfying Ha *)
 
@@ -514,7 +516,7 @@ Proof.
   (* assert (exists h, h1 = h \u ha). *)
 
 
-  constructor.
+  (* constructor.
   (* exists (h1-ha) *)
   (* need to fill in h in H0. how to know what heap satisfies Ha? *)
   (* need heap minus and H0? *)
@@ -532,7 +534,7 @@ Proof.
   Search "hstar_".
 
 
-  Search himpl.
+  Search himpl. *)
 
 
 Qed.
