@@ -476,6 +476,67 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma ens_req_transpose : forall H Q Ha Qf ha hf,
+  (* the first two premises name the heaps satisfying Ha/Qf and ensure they exist *)
+  Ha ha -> (forall v, Qf v hf) ->
+  (forall v, Ha \* Q v ==> H \* Qf v) ->
+  entails (ens Q;; req H) (req Ha;; ens Qf).
+Proof.
+  unfold entails.
+  unfold entails_under.
+  introv Hanti Hframe Himpl H1.
+
+(* Qf = H -* Q *)
+(* Ha = Q -* H *)
+(* (Q -* H) * Q |- H * (H -* Q). this says constructively how to compute it basically *)
+(* normal frame inf: Q |- H * (H -* Q) *)
+
+  inverts H1 as H1. destruct H1 as (h3&r1&H1&H2).
+  inverts H1 as H1. destruct H1 as (v0&h4&?&?&?&?).
+  (* h4 |= Q *)
+  inverts H2 as H2. destruct H2 as (h0&?&?&?).
+  (* h0 |= H *)
+
+  unfold himpl in Himpl.
+  specialize (Himpl v0 (ha \u h4)).
+
+  (* h is h4 + the heap satisfying Ha *)
+
+
+
+  (* h1 -> h1+h4 -> h1+h4-h0 = h2 *)
+  (* h1 -> h1-?1 -> h1-?1+?2 = h2 *)
+  (* ?1 satisfies Ha *)
+  (* ?2 satisfies Qf *)
+
+  (* himpl says: h4+?1 is larger than h0+?2 *)
+
+  (* assert (exists h, h1 = h \u ha). *)
+
+
+  constructor.
+  (* exists (h1-ha) *)
+  (* need to fill in h in H0. how to know what heap satisfies Ha? *)
+  (* need heap minus and H0? *)
+  (* there is no map minus. so naming the heaps explicitly *)
+
+  eexists.
+  eexists.
+  split.
+  
+  constructor.
+  eexists.
+
+  (* unfold hstar in H0. *)
+
+  Search "hstar_".
+
+
+  Search himpl.
+
+
+Qed.
+
 Module SemanticsExamples.
 
   Definition f1 : flow := ens (fun r => \[r=vint 1]).
