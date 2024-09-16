@@ -476,16 +476,76 @@ Proof.
   reflexivity.
 Qed.
 
+Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
+
+  | b_pts_match : forall a b H1 H2 Ha Hf x,
+    biab Ha H1 H2 Hf ->
+    biab (\[a=b] \* Ha) (x~~>a \* H1) (x~~>b \* H2) Hf
+
+  | b_base_empty : forall Hf,
+    biab \[] Hf \[] Hf
+
+  .
+
+Module BiabductionExamples.
+
+  (* (a=3) * x->a*y->b |- x->3 * (y->b) *)
+  Example ex1_biab : forall x y,
+    exists Ha Hf a, biab Ha (x~~>vint a \* y~~>vint 2) (x~~>vint 3) Hf.
+  Proof.
+    intros.
+    eexists.
+    eexists.
+    eexists.
+    rewrite <- (hstar_hempty_r (x ~~> vint 3)) at 2.
+    apply b_pts_match.
+    apply b_base_empty.
+  Qed.
+
+  (* we can see the frame is y, and the abduced contraint is trivial but gives a value to a, which was immediately substituted *)
+  Print ex1_biab.
+
+End BiabductionExamples.
+
+Search (?a \-* (_ \* _)).
+
+Example aaa : forall x y,
+  (x ~~> vint 1 \* y ~~> vint 2) ==>
+  (x~~>vint 1 \* (x~~>vint 1 \-* (x~~>vint 1 \* y ~~> vint 2))).
+Proof.
+  xsimpl.
+
+  (* rewrite hwand_cancel.
+  unfold himpl.
+  intros. *)
+  (* Search hwand. *)
+  (* Search (?a \* (?a \-* ?b)). *)
+  (* rewrite hwand_cancel. *)
+  (* apply hwand_cancel. *)
+
+Qed.
+
 (* Lemma ens_req_transpose : forall H Q Ha Qf ha hf, *)
-Lemma ens_req_transpose : forall H Q v,
+Lemma ens_req_transpose : forall H Q v Ha Qf,
   (* the first two premises name the heaps satisfying Ha/Qf and ensure they exist *)
   (* Ha ha -> (forall v, Qf v hf) -> *)
   (* (forall v, Ha \* Q v ==> H \* Qf v) -> *)
-  (Q v \-* H) \* Q v ==> H \* (H \-* Q v) ->
-  entails (ens Q;; req H) (req (Q v \-* H);; ens (fun r => H \-* Q r)).
+  Ha = Q v \-* H ->
+  Qf = H \-* Q v ->
+  Ha \* Q v ==> H \* Qf ->
+  entails (ens Q;; req H) (req Ha;; ens (fun r => H \-* Q r)).
 Proof.
   unfold entails.
   unfold entails_under.
+
+  intros.
+  subst.
+  unfold himpl in H2.
+
+
+  (* Check hwand_inv. *)
+  (* apply (@hwand_inv _ _ (Q v \-* H \* H) _ _) in H0. *)
+
   (* introv Hanti Hframe Himpl H1. *)
 
 (* Qf = H -* Q *)
