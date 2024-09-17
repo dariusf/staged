@@ -1,16 +1,12 @@
 
-(* From Coq Require Import ZArith Lia Bool List String Program.Equality Classes.RelationClasses. *)
 From Coq Require Import Classes.RelationClasses.
 
 Set Implicit Arguments.
-(* From SLF Require Export LibString LibCore. *)
 From SLF Require Export LibSepTLCbuffer LibSepFmap.
 From SLF Require Export Heap.
 Module Fmap := LibSepFmap.
 
 From SLF Require Import Tactics.
-
-(* From CDF Require Import Common Sequences Separation Tactics HeapTactics. *)
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
@@ -69,10 +65,6 @@ with expr : Type :=
   | pif (x: val) (e1: expr) (e2: expr)
   | pcall (x: val) (a: val).
 
-Module Val.
-  Definition val := val.
-End Val.
-
 Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   let aux t := subst y w t in
   let if_y_eq x t1 t2 := if ident_eq x y then t1 else t2 in
@@ -84,13 +76,16 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
   | pcall t1 t2 => pcall t1 t2
-  (* | trm_seq t1 t2 => trm_seq (aux t1) (aux t2) *)
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
   | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
   end.
 
 Inductive eresult : Type :=
   | enorm : val -> eresult.
+
+Module Val.
+  Definition val := val.
+End Val.
 
 Module Export Heap := Heap.HeapSetup(Val).
 
@@ -138,20 +133,6 @@ Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
   | eval_assign : forall x1 x2 s h,
     eval[ s, h, passign x1 x2 ] => [ s, hupdate (s x1) (s x2) h, enorm 0] *)
 .
-
-Module ProgramExamples.
-
-  (* Example ex_ref :
-    eval[ sempty, hempty, plet "x" (pconst 1) (pref "x") ]=>[ sempty, hupdate 2 1 hempty, enorm 2 ].
-  Proof.
-    apply eval_plet with (v:=1) (s1:=sempty) (s2:=supdate "x" 1 sempty) (h1:=hempty).
-    apply eval_pconst.
-    apply eval_pref.
-    constructor.
-  Qed. *)
-
-End ProgramExamples.
-
 
 Definition precond := hprop.
 Definition postcond := val -> hprop.
@@ -276,7 +257,6 @@ Definition flow_res (f:flow) (v:val) : Prop :=
 
 Definition empty := ens (fun r => \[True]).
 
-(* Definition empty_env : env := fun _ => None. *)
 Definition empty_env : env := Fmap.empty.
 
   Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
@@ -525,11 +505,8 @@ Proof.
 
 Qed.
 
-(* Lemma ens_req_transpose : forall H Q Ha Qf ha hf, *)
 Lemma ens_req_transpose : forall H Q v Ha Qf,
-  (* the first two premises name the heaps satisfying Ha/Qf and ensure they exist *)
-  (* Ha ha -> (forall v, Qf v hf) -> *)
-  (* (forall v, Ha \* Q v ==> H \* Qf v) -> *)
+  (* TODO *)
   Ha = Q v \-* H ->
   Qf = H \-* Q v ->
   Ha \* Q v ==> H \* Qf ->
@@ -542,62 +519,7 @@ Proof.
   subst.
   unfold himpl in H2.
 
-
-  (* Check hwand_inv. *)
-  (* apply (@hwand_inv _ _ (Q v \-* H \* H) _ _) in H0. *)
-
-  (* introv Hanti Hframe Himpl H1. *)
-
-(* Qf = H -* Q *)
-(* Ha = Q -* H *)
-(* (Q -* H) * Q |- H * (H -* Q). this says constructively how to compute it basically *)
-(* normal frame inf: Q |- H * (H -* Q) *)
-
-  (* inverts H1 as H1. destruct H1 as (h3&r1&H1&H2).
-  inverts H1 as H1. destruct H1 as (v0&h4&?&?&?&?).
-  (* h4 |= Q *)
-  inverts H2 as H2. destruct H2 as (h0&?&?&?).
-  (* h0 |= H *)
-
-  unfold himpl in Himpl.
-  specialize (Himpl v0 (ha \u h4)). *)
-
-  (* h is h4 + the heap satisfying Ha *)
-
-
-
-  (* h1 -> h1+h4 -> h1+h4-h0 = h2 *)
-  (* h1 -> h1-?1 -> h1-?1+?2 = h2 *)
-  (* ?1 satisfies Ha *)
-  (* ?2 satisfies Qf *)
-
-  (* himpl says: h4+?1 is larger than h0+?2 *)
-
-  (* assert (exists h, h1 = h \u ha). *)
-
-
-  (* constructor.
-  (* exists (h1-ha) *)
-  (* need to fill in h in H0. how to know what heap satisfies Ha? *)
-  (* need heap minus and H0? *)
-  (* there is no map minus. so naming the heaps explicitly *)
-
-  eexists.
-  eexists.
-  split.
-  
-  constructor.
-  eexists.
-
-  (* unfold hstar in H0. *)
-
-  Search "hstar_".
-
-
-  Search himpl. *)
-
-
-Qed.
+Admitted.
 
 Module SemanticsExamples.
 
@@ -763,7 +685,7 @@ Module SemanticsExamples.
     apply entails_refl.
   Qed.
 
-  (* a lfp interpretation *)
+  (* lfp interpretation *)
   (*
     forall n res, sum(n, res) =
          n=0/\res=0
@@ -782,7 +704,9 @@ Module SemanticsExamples.
   Definition sum_env := (Fmap.update empty_env "sum" (Some sum)).
   Definition sum_property (n res:val) := ens (fun _ => \[res = n]).
 
-  Lemma ex_sum : forall n1 n res, n1 >= 0 -> n = vint n1 -> entails_under sum_env (sum n res) (sum_property n res).
+  Lemma ex_sum : forall n1 n res, n1 >= 0 ->
+    n = vint n1 ->
+    entails_under sum_env (sum n res) (sum_property n res).
   Proof.
     unfold sum_property.
     (* do induction on the numeric value of n *)
@@ -809,13 +733,12 @@ Module SemanticsExamples.
       (* H3: shape of res *)
 
 
-        unfold sum_env in H2.
+    unfold sum_env in H2.
   (* inverts H2. *)
   (* rewrite fmap_read_update in H1. *)
-        (* felim H2. *)
+  (* felim H2. *)
   inverts H2 as H4 Hr.
   rewrite fmap_read_update in H4. inj H4.
-
 
       (* felim H2. *)
         (* Check satisfies_fn_in_env. *)
