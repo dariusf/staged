@@ -322,11 +322,67 @@ Definition empty_env : env := Fmap.empty.
 
 (* For reasoning forward from flows in the context *)
 
+Lemma req_emp_inv : forall env h1 h2 r, satisfies env (req \[]) h1 h2 r ->
+  h1 = h2.
+Proof.
+  intros.
+  inverts H.
+  destruct H2 as (h3&H1&H2&H3).
+  inverts H3.
+  rewrite <- Fmap.union_empty_r.
+  exact H1.
+Qed.
+
+Lemma req_emp_intro : forall env h1 r, satisfies env (req \[]) h1 h1 r.
+Proof.
+  intros.
+  constructor.
+  exists empty_heap.
+  intuition fmap_eq.
+  constructor.
+Qed.
+
+Lemma ens_emp_intro : forall env h1 r, satisfies env (ens (fun r => \[])) h1 h1 r.
+Proof.
+  intros.
+  constructor.
+  destruct r.
+  exists v.
+  exists empty_heap.
+  intuition fmap_eq.
+  constructor.
+Qed.
+
+Lemma seq_req_emp_elim_l : forall env h1 h2 r Q,
+  satisfies env (req \[];; ens Q) h1 h2 r ->
+  satisfies env (ens Q) h1 h2 r.
+Proof.
+  intros.
+  inverts H.
+  destruct H6 as (h3&r1&H1&H2).
+  apply req_emp_inv in H1; subst.
+  exact H2.
+Qed.
+
+Lemma seq_req_emp_intro_l : forall env h1 h2 r Q,
+  satisfies env (ens Q) h1 h2 r ->
+  satisfies env (req \[];; ens Q) h1 h2 r.
+Proof.
+  intros.
+  constructor.
+  exists h1.
+  exists (norm (vint 1)).
+  split.
+  apply req_emp_intro.
+  exact H.
+Qed.
+
 Ltac felim H :=
   match type of H with
   | satisfies _ (fex _) _ _ _ => inverts H as H
   | satisfies _ (_ ;; _) _ _ _ => inverts H as H
   | satisfies _ (ens (fun _ => \[_])) _ _ _ => apply extract_pure in H
+  | satisfies _ (req \[]) _ _ _ => apply req_emp_inv in H; subst
   (* | satisfies _ (unk _ _ _) _ _ _ => inverts H as H *)
   end.
   
@@ -334,6 +390,9 @@ Ltac felim H :=
 Ltac fintro :=
   match goal with
   | |- satisfies _ (ens (fun _ => \[_])) _ _ _ => apply embed_pure
+  | |- satisfies _ (ens (fun _ => \[])) _ _ _ => apply ens_emp_intro
+  | |- satisfies _ (req \[]) _ _ _ => apply req_emp_intro
+  | |- satisfies _ (req \[];; _) _ _ _ => apply seq_req_emp_intro_l
   end.
 
 (* Ltac fexists v :=
@@ -482,12 +541,25 @@ Module BiabductionExamples.
     apply b_base_empty.
   Qed.
 
-  (* we can see the frame is y, and the abduced contraint is trivial but gives a value to a, which was immediately substituted *)
-  Print ex1_biab.
+  (* we can see from the ex_intro constrs that the frame is y->2, and the abduced contraint is trivial but gives a value to a, which was immediately substituted *)
+  (* Print ex1_biab. *)
+
+  Example ex2_biab :
+    exists Ha Hf,
+    exists r, biab Ha (\[r = 1]) hempty Hf.
+  Proof.
+    intros.
+    eexists.
+    eexists.
+    exists 1.
+    apply b_base_empty.
+  Qed.
+  (* Print ex2_biab. *)
+
 
 End BiabductionExamples.
 
-Search (?a \-* (_ \* _)).
+(* Search (?a \-* (_ \* _)). *)
 
 Example aaa : forall x y,
   (x ~~> vint 1 \* y ~~> vint 2) ==>
@@ -505,19 +577,27 @@ Proof.
 
 Qed.
 
-Lemma ens_req_transpose : forall H Q v Ha Qf,
-  (* TODO *)
-  Ha = Q v \-* H ->
-  Qf = H \-* Q v ->
-  Ha \* Q v ==> H \* Qf ->
-  entails (ens Q;; req H) (req Ha;; ens (fun r => H \-* Q r)).
+Lemma ens_req_transpose : forall H Q Ha Qf (v:val),
+  biab Ha (Q v) H (Qf v) ->
+  (* (exists (v1 v2:val), biab Ha (Q v1) H (Qf v2)) -> *)
+  entails (ens (fun _ => Q v);; req H)
+    (req Ha;; ens (fun _ => Qf v)).
 Proof.
   unfold entails.
   unfold entails_under.
+  introv Hbi. introv H1.
 
-  intros.
-  subst.
-  unfold himpl in H2.
+  inverts Hbi.
+  { admit. }
+  {
+    (* forward *)
+    inverts H1 as H1. destruct H1 as (h3&r1&H1&H2).
+    felim H2.
+
+    (* backward *)
+    fintro.
+    admit.
+   }
 
 Admitted.
 
