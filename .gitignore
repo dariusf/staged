@@ -6,3 +6,4 @@
 *.coq
 *.coq.*
 *.cache
+docs/*.html
