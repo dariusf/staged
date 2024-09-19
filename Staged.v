@@ -47,6 +47,7 @@ Definition ident : Type := string.
 Definition ident_eq := String.string_dec.
 
 Inductive val :=
+  | vunit : val
   | vint : Z -> val
   | vfun : ident -> expr -> val
   | vfix : ident -> ident -> expr -> val
@@ -162,7 +163,8 @@ Definition env := fmap ident (option ufun).
 Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
 
   | s_req env p h1 h2 r
-    (H: exists h3, h1 = Fmap.union h2 h3 /\ Fmap.disjoint h2 h3 /\ p h3) :
+    (H: exists h3, h1 = Fmap.union h2 h3 /\ Fmap.disjoint h2 h3 /\ p h3)
+    (Hr: r = norm vunit) :
     satisfies env (req p) h1 h2 r
 
   | s_ens env q h1 h2 r
@@ -333,16 +335,19 @@ Proof.
   exact H1.
 Qed.
 
-Lemma req_emp_intro : forall env h1 r, satisfies env (req \[]) h1 h1 r.
+Lemma req_emp_intro : forall env h1,
+  satisfies env (req \[]) h1 h1 (norm vunit).
 Proof.
   intros.
   constructor.
   exists empty_heap.
   intuition fmap_eq.
   constructor.
+  reflexivity.
 Qed.
 
-Lemma ens_emp_intro : forall env h1 r, satisfies env (ens (fun r => \[])) h1 h1 r.
+Lemma ens_emp_intro : forall env h1 r,
+  satisfies env (ens (fun r => \[])) h1 h1 r.
 Proof.
   intros.
   constructor.
@@ -371,7 +376,7 @@ Proof.
   intros.
   constructor.
   exists h1.
-  exists (norm (vint 1)).
+  exists (norm vunit).
   split.
   apply req_emp_intro.
   exact H.
@@ -424,6 +429,7 @@ Proof.
   intuition.
   fmap_eq.
   apply hstar_intro; easy.
+  reflexivity.
 Qed.
 
 Lemma req_sep_split : forall H1 H2,
@@ -441,11 +447,13 @@ Proof.
   subst h1.
   constructor.
   exists (h2 \u h4).
-  exists r.
+  exists (norm vunit).
   split; constructor.
   exists h0. intuition fmap_eq.
+  reflexivity.
   fmap_eq.
   exists h4. intuition fmap_eq.
+  reflexivity.
 Qed.
 
 Lemma req_sep : forall H1 H2,
@@ -577,6 +585,22 @@ Proof.
 
 Qed.
 
+Lemma seq_req_emp_elim_r : forall env h1 h2 r Q,
+  satisfies env (ens Q;; req \[]) h1 h2 r.
+  (* -> *)
+  (* satisfies env (ens (fun _ => Q r)) h1 h2 r. *)
+Proof.
+  intros.
+  (* inverts H.
+  destruct H6 as (h3&r1&H1&H2).
+  apply req_emp_inv in H2. subst. *)
+  (* constructor. *)
+
+  (* exact H0. *)
+  
+(* Qed. *)
+Admitted.
+
 Lemma ens_req_transpose : forall H Q Ha Qf (v:val),
   biab Ha (Q v) H (Qf v) ->
   (* (exists (v1 v2:val), biab Ha (Q v1) H (Qf v2)) -> *)
@@ -591,6 +615,7 @@ Proof.
   { admit. }
   {
     (* forward *)
+    (* apply seq_req_emp_elim_r in H1. *)
     inverts H1 as H1. destruct H1 as (h3&r1&H1&H2).
     felim H2.
 
@@ -634,7 +659,7 @@ Module SemanticsExamples.
     fmap_eq.
   Qed.
 
-  Example ex3_req_ret: flow_res f2 (vint 2).
+  Example ex3_req_ret: flow_res f2 vunit.
   Proof.
     unfold flow_res.
     exists empty_heap.
@@ -647,6 +672,7 @@ Module SemanticsExamples.
     eexists.
     intuition.
     fmap_eq.
+    reflexivity.
   Qed.
 
   Definition f4 : flow := empty ;; fex (fun r => unk "f" (vint 1) r).
