@@ -516,6 +516,46 @@ Proof.
   - apply req_sep_combine.
 Qed.
 
+Lemma sat_ens_void_sep_combine : forall H1 H2 env h1 h2 r,
+  satisfies env (ens_ H1;; ens_ H2) h1 h2 r <->
+  satisfies env (ens_ (H1 \* H2)) h1 h2 r.
+Proof.
+  intros.
+  split; intros.
+  { inverts H as H.
+    destruct H as (h3&r1&H3&H4).
+    (* inverts H3 as H3. *)
+    (* destruct H3 as (v&h0&H8&H5&H6&H7). *)
+    (* give up on careful reasoning *)
+    inv H3. destr H5. inv H4. destr H10. subst.
+    constructor.
+    exists H0.
+    exists (H3 \u H6).
+    rewrite hstar_hpure_l in H5.
+    rewrite hstar_hpure_l in H7.
+    intuition.
+    subst.
+    rewrite <- hstar_assoc.
+    apply hstar_intro.
+    rewrite hstar_hpure_l.
+    intuition.
+    intuition.
+    fmap_disjoint.
+    fmap_eq. }
+  { inverts H as H. destruct H as (v&h3&H3&H4&H5&H6).
+    rewrite hstar_hpure_l in H4. destruct H4 as (H4&H7).
+    (* h3 is the heap that H1 and H2 together add *)
+    (* find the intermediate heap *)
+    apply hstar_inv in H7. destruct H7 as (h0&h4&H8&H9&H10&H11).
+    (* H1 h0, H2 h4 *)
+    constructor.
+    exists (h1 \u h0).
+    exists (norm vunit).
+    split.
+    { constructor. exists vunit. exists h0. intuition. rewrite hstar_hpure_l. intuition. }
+    { constructor. exists v. exists h4. intuition. rewrite hstar_hpure_l. intuition. fmap_eq. } }
+Qed.
+
 Lemma sat_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
   satisfies env (ens Q1;; ens Q2) h1 h2 r ->
   satisfies env (ens (fun r0 : val => \exists r1 : val, Q1 r1 \* Q2 r0)) h1 h2 r.
@@ -546,11 +586,10 @@ Proof.
   apply sat_ens_sep_combine.
 Qed.
 
-Lemma ens_sep_split : forall H Q,
-  entails (ens (Q \*+ H)) (ens (fun _ => H);; ens Q).
+Lemma sat_ens_sep_split : forall H Q env h1 h2 r,
+  satisfies env (ens (Q \*+ H)) h1 h2 r  ->
+  satisfies env (ens (fun _ : val => H);; ens Q) h1 h2 r.
 Proof.
-  unfold entails.
-  unfold entails_under.
   intros.
   inverts H0 as H0.
   destruct H0 as (v & h3 & H1 & H2 & H3 & H4).
@@ -579,6 +618,14 @@ Proof.
   assert (h0 \u h4 = h4 \u h0). fmap_eq.
   rewrite H1.
   reflexivity.
+Qed.
+
+Lemma ens_sep_split : forall H Q,
+  entails (ens (Q \*+ H)) (ens (fun _ => H);; ens Q).
+Proof.
+  unfold entails.
+  unfold entails_under.
+  apply sat_ens_sep_split.
 Qed.
 
 Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
