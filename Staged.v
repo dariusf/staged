@@ -331,10 +331,11 @@ Proof.
 Qed.
 
 Lemma req_emp_inv : forall env h1 h2 r, satisfies env (req \[]) h1 h2 r ->
-  h1 = h2.
+  h1 = h2 /\ r = norm vunit.
 Proof.
   intros.
   inverts H.
+  split; only 2: reflexivity.
   destruct H2 as (h3&H1&H2&H3).
   inverts H3.
   rewrite <- Fmap.union_empty_r.
@@ -371,7 +372,7 @@ Proof.
   intros.
   inverts H.
   destruct H6 as (h3&r1&H1&H2).
-  apply req_emp_inv in H1; subst.
+  apply req_emp_inv in H1; destruct H1; subst.
   exact H2.
 Qed.
 
@@ -614,27 +615,32 @@ Proof.
   }
 Qed.
 
-Lemma ens_req_transpose : forall H Q Ha Qf (v:val),
-  biab Ha (Q v) H (Qf v) ->
-  (* (exists (v1 v2:val), biab Ha (Q v1) H (Qf v2)) -> *)
-  entails (ens (fun _ => Q v);; req H)
-    (req Ha;; ens (fun _ => Qf v)).
+Lemma ens_req_transpose : forall H H1 Ha Hf (v:val),
+  biab Ha (H1 v) H (Hf v) ->
+  entails (ens_ (H1 v);; req H)
+    (req Ha;; ens_ (Hf v)).
 Proof.
   unfold entails.
   unfold entails_under.
-  introv Hbi. introv H1.
+  introv Hbi. introv H2.
 
   inverts Hbi.
   { admit. }
   {
-    (* forward *)
-    (* apply seq_req_emp_elim_r in H1. *)
-    inverts H1 as H1. destruct H1 as (h3&r1&H1&H2).
-    felim H2.
-
-    (* backward *)
+    inverts H2.
+    destr H8.
+    felim H4.
+    pose proof (ens_ret_unit H0); subst.
     fintro.
-    admit.
+    constructor.
+    exists vunit.
+    clear H6.
+    inverts H0 as H0. destruct H4.
+    destruct H0 as (v0&h3&H5&H4&H7&H6).
+    exists h3.
+    intuition.
+    inj H5. auto.
+    fmap_eq.
    }
 
 Admitted.
