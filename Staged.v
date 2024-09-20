@@ -710,6 +710,23 @@ Proof.
   }
 Qed.
 
+Lemma biab_sem : forall x a b env h1 h2 r,
+  satisfies env (ens_ (x~~>a);; req (x~~>b)) h1 h2 r ->
+  satisfies env (req \[a = b]) h1 h2 r.
+Proof.
+  intros.
+(* constructor. *)
+  felim H.
+  destruct H as (h3&r1&H1&H2).
+  inv H1.
+  inv H2.
+  destr H1.
+  destr H3.
+  subst.
+  (* have to prove that a=b in h3 *)
+(* Qed. *)
+Admitted.
+
 Lemma ens_req_transpose : forall H H1 Ha Hf (v:val),
   biab Ha (H1 v) H (Hf v) ->
   entails (ens_ (H1 v);; req H)
@@ -721,8 +738,32 @@ Proof.
   induction Hbi.
   { intros.
     specialize (IHHbi env0).
+
+    (* assert (
+       satisfies env0 (ens_ (x~~>a \* H0);; req (x~~>b \* H2)) h1 h2 r
+       -> satisfies env0 (ens_ (x~~>a);; ens_ H0;; req (x~~>b \* H2)) h1 h2 r) as H4. admit. apply H4 in H. clear H4. *)
+
+    (* need to know that x~~>b and H0 are disjoint *)
+
+    (* swap req and ens if disjoint *)
+    (* ens and req should collapse semantically to a=b? *)
+    (* how do pure req and ens differ? condition holds of initial or final heap *)
+
+    assert (
+       satisfies env0 (ens_ (x~~>a \* H0);; req (x~~>b \* H2)) h1 h2 r
+       -> satisfies env0 ((ens_ (x~~>a);; req (x~~>b));; ens_ H0;; req H2) h1 h2 r) as H4. admit. apply H4 in H. clear H4.
+    inverts H.
+    destruct H9 as (h3&r1&?&?).
+
+    (* what can i get from an ens and req next to each other? *)
+    apply biab_sem in H.
+
+    Check req_sep.
+
+    inverts H.
+
     Check sat_ens_sep_combine.
-    (* rewrite sat_ens_sep_combine in H. *)
+    (* rewrite <- sat_ens_void_sep_combine in H. *)
     admit.
   }
   { introv H2.
