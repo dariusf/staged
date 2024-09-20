@@ -408,6 +408,30 @@ Proof.
   exact H.
 Qed.
 
+Lemma seq_assoc : forall env h1 h2 r f1 f2 f3,
+  satisfies env (f1;; f2;; f3) h1 h2 r <->
+  satisfies env ((f1;; f2);; f3) h1 h2 r.
+Proof.
+  intros.
+  split; intros H.
+  { inverts H as H. destruct H as (h3&r1&H1&H2).
+    inverts H2 as H2. destruct H2 as (h0&r0&H3&H4).
+    constructor.
+    exists h0. exists r0.
+    split; auto.
+    constructor.
+    exists h3. exists r1.
+    intuition. }
+  { inverts H as H. destruct H as (h3&r1&H1&H2).
+    inverts H1 as H1. destruct H1 as (h0&r0&H3&H4).
+    constructor.
+    exists h0. exists r0.
+    split; auto.
+    constructor.
+    exists h3. exists r1.
+    intuition. }
+Qed.
+
 Ltac felim H :=
   match type of H with
   | satisfies _ (fex _) _ _ _ => inverts H as H
@@ -492,11 +516,10 @@ Proof.
   - apply req_sep_combine.
 Qed.
 
-Lemma ens_sep_combine : forall Q1 Q2,
-  entails (ens Q1;; ens Q2) (ens (fun r => \exists r1, Q1 r1 \* Q2 r)).
+Lemma sat_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
+  satisfies env (ens Q1;; ens Q2) h1 h2 r ->
+  satisfies env (ens (fun r0 : val => \exists r1 : val, Q1 r1 \* Q2 r0)) h1 h2 r.
 Proof.
-  unfold entails.
-  unfold entails_under.
   intros.
   felim H.
   destruct H as (h3 & r1 & H1 & H2).
@@ -513,6 +536,14 @@ Proof.
   subst. inj H2. assumption.
   subst. rew_fmap.
   reflexivity.
+Qed.
+
+Lemma ens_sep_combine : forall Q1 Q2,
+  entails (ens Q1;; ens Q2) (ens (fun r => \exists r1, Q1 r1 \* Q2 r)).
+Proof.
+  unfold entails.
+  unfold entails_under.
+  apply sat_ens_sep_combine.
 Qed.
 
 Lemma ens_sep_split : forall H Q,
@@ -639,27 +670,28 @@ Lemma ens_req_transpose : forall H H1 Ha Hf (v:val),
 Proof.
   unfold entails.
   unfold entails_under.
-  introv Hbi. introv H2.
-
-  inverts Hbi.
-  { admit. }
-  {
-    inverts H2.
+  introv Hbi.
+  induction Hbi.
+  { intros.
+    specialize (IHHbi env0).
+    Check sat_ens_sep_combine.
+    (* rewrite sat_ens_sep_combine in H. *)
+    admit.
+  }
+  { introv H2.
+    inverts H2 as H8.
     destr H8.
     felim H4.
     pose proof (ens_ret_unit H0); subst.
     fintro.
     constructor.
     exists vunit.
-    clear H6.
     inverts H0 as H0. destruct H4.
     destruct H0 as (v0&h3&H5&H4&H7&H6).
     exists h3.
     intuition.
     inj H5. auto.
-    fmap_eq.
-   }
-
+    fmap_eq. }
 Admitted.
 
 (** * Tests *)
