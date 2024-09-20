@@ -1,47 +1,17 @@
 
 From Coq Require Import Classes.RelationClasses.
 
-Set Implicit Arguments.
-From SLF Require Export LibSepTLCbuffer LibSepFmap.
-From SLF Require Export Heap.
+From SLF Require Export LibSepFmap.
 Module Fmap := LibSepFmap.
 
-From SLF Require Import Tactics.
+From SLF Require Export Extra Heap Tactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
 Local Open Scope Z_scope.
 Local Open Scope list_scope.
 
-(* extra map lemmas *)
-
-Lemma fmap_indom_empty : forall A B (k:A),
-  ~ Fmap.indom (@Fmap.empty A B) k.
-Proof.
-  intros.
-  unfold not; intros.
-  hnf in H.
-  unfold Fmap.empty in H.
-  apply H.
-  simpl.
-  reflexivity.
-Qed.
-
-Lemma fmap_read_update : forall A B {IB:Inhab B} (k:A) (v:B) m,
-  ~ Fmap.indom m k ->
-  Fmap.read (Fmap.update m k v) k = v.
-Proof.
-  intros.
-  unfold Fmap.update.
-  rewrite Fmap.read_union_l.
-  apply Fmap.read_single.
-  apply Fmap.indom_single.
-Qed.
-
-#[global]
-Hint Rewrite fmap_read_update : rew_fmap rew_fmap_for_fmap_eq.
-
-(* begin formalization *)
+Set Implicit Arguments.
 
 Definition ident : Type := string.
 Definition ident_eq := String.string_dec.
@@ -141,19 +111,19 @@ Definition postcond := val -> hprop.
 Inductive result : Type :=
   | norm : val -> result.
 
-  Definition compatible r1 r2 :=
-    match (r1, r2) with
-    | (norm r3, enorm r4) => r3 = r4
-  end.
+Definition compatible r1 r2 :=
+  match (r1, r2) with
+  | (norm r3, enorm r4) => r3 = r4
+end.
 
 Inductive flow :=
-| req : precond -> flow
-| ens : postcond -> flow
-| seq : flow -> flow -> flow
-| fex : forall A, (A -> flow) -> flow
-| fall : forall A, (A -> flow) -> flow
-| unk : ident -> val -> val -> flow (* f(x, r) *)
-| disj : flow -> flow -> flow.
+  | req : precond -> flow
+  | ens : postcond -> flow
+  | seq : flow -> flow -> flow
+  | fex : forall A, (A -> flow) -> flow
+  | fall : forall A, (A -> flow) -> flow
+  | unk : ident -> val -> val -> flow (* f(x, r) *)
+  | disj : flow -> flow -> flow.
 
 Infix ";;" := seq (at level 80, right associativity).
 
@@ -163,23 +133,35 @@ Definition env := fmap ident (option ufun).
 Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
 
   | s_req env p h1 h2 r
-    (H: exists h3, h1 = Fmap.union h2 h3 /\ Fmap.disjoint h2 h3 /\ p h3)
+    (H: exists h3,
+      h1 = Fmap.union h2 h3 /\
+      Fmap.disjoint h2 h3 /\
+      p h3)
     (Hr: r = norm vunit) :
     satisfies env (req p) h1 h2 r
 
   | s_ens env q h1 h2 r
-    (H: exists v h3, r = norm v /\ q v h3 /\ h2 = Fmap.union h1 h3 /\ Fmap.disjoint h1 h3) :
+    (H: exists v h3,
+      r = norm v /\
+      q v h3 /\
+      h2 = Fmap.union h1 h3 /\
+      Fmap.disjoint h1 h3) :
     satisfies env (ens q) h1 h2 r
 
   | s_seq env f1 f2 h1 h2 r
-    (H: exists h3 r1, satisfies env f1 h1 h3 r1 /\ satisfies env f2 h3 h2 r) : satisfies env (seq f1 f2) h1 h2 r
+    (H: exists h3 r1,
+      satisfies env f1 h1 h3 r1 /\
+      satisfies env f2 h3 h2 r) :
+    satisfies env (seq f1 f2) h1 h2 r
 
   | s_fex env h1 h2 r (A:Type) (f:A->flow)
-    (H: exists v, satisfies env (f v) h1 h2 r) :
+    (H: exists v,
+      satisfies env (f v) h1 h2 r) :
     satisfies env (@fex A f) h1 h2 r
 
   | s_fall env h1 h2 r (A:Type) (f:A->flow)
-    (H: forall v, satisfies env (f v) h1 h2 r) :
+    (H: forall v,
+      satisfies env (f v) h1 h2 r) :
     satisfies env (@fall A f) h1 h2 r
 
   | s_unk env fn h1 h2 r f x
