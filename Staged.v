@@ -130,6 +130,8 @@ Infix ";;" := seq (at level 80, right associativity).
 Definition ufun := val -> val -> flow.
 Definition env := fmap ident (option ufun).
 
+Definition ens_ H := ens (fun r => \[r = vunit] \* H).
+
 Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
 
   | s_req env p h1 h2 r
