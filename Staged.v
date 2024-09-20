@@ -308,6 +308,28 @@ Definition empty_env : env := Fmap.empty.
 
 (* For reasoning forward from flows in the context *)
 
+(* the next two are technically just inversion lemmas but are less tedious *)
+Lemma ens_ret_unit : forall env h1 h2 H r,
+  satisfies env (ens_ H) h1 h2 r ->
+  r = norm vunit.
+Proof.
+  intros.
+  inverts H0 as H0.
+  destruct H0 as (v&h3&H1&H2&H3&H4).
+  rewrite hstar_hpure_l in H2.
+  destruct H2.
+  congruence.
+Qed.
+
+Lemma req_ret_unit : forall env h1 h2 H r,
+  satisfies env (req H) h1 h2 r ->
+  r = norm vunit.
+Proof.
+  intros.
+  inverts H0.
+  reflexivity.
+Qed.
+
 Lemma req_emp_inv : forall env h1 h2 r, satisfies env (req \[]) h1 h2 r ->
   h1 = h2.
 Proof.
@@ -551,39 +573,46 @@ Module BiabductionExamples.
 
 End BiabductionExamples.
 
-(* Search (?a \-* (_ \* _)). *)
-
 Example aaa : forall x y,
   (x ~~> vint 1 \* y ~~> vint 2) ==>
   (x~~>vint 1 \* (x~~>vint 1 \-* (x~~>vint 1 \* y ~~> vint 2))).
 Proof.
   xsimpl.
-
-  (* rewrite hwand_cancel.
-  unfold himpl.
-  intros. *)
-  (* Search hwand. *)
-  (* Search (?a \* (?a \-* ?b)). *)
-  (* rewrite hwand_cancel. *)
-  (* apply hwand_cancel. *)
-
 Qed.
 
-Lemma seq_req_emp_elim_r : forall env h1 h2 r Q,
-  satisfies env (ens Q;; req \[]) h1 h2 r.
-  (* -> *)
-  (* satisfies env (ens (fun _ => Q r)) h1 h2 r. *)
+Lemma seq_req_emp_equiv : forall env h1 h2 H,
+  satisfies env (ens_ H) h1 h2 (norm vunit) <->
+  satisfies env (ens_ H;; req \[]) h1 h2 (norm vunit).
 Proof.
   intros.
-  (* inverts H.
-  destruct H6 as (h3&r1&H1&H2).
-  apply req_emp_inv in H2. subst. *)
-  (* constructor. *)
-
-  (* exact H0. *)
-  
-(* Qed. *)
-Admitted.
+  split.
+  { intros. constructor.
+  eexists. exists (norm vunit).
+  split; only 2: apply req_emp_intro.
+  constructor.
+  inverts H0. destruct H3 as (v&h3&H1&H2&H3&H4).
+  exists vunit.
+  exists h3.
+  intuition.
+  inj H1.
+  auto. }
+  { intros.
+    inverts H0 as H0.
+    destruct H0 as (h3&r1&H1&H2).
+    pose proof (ens_ret_unit H1); subst.
+    inverts H2 as H2; destruct H2 as (h0&H4&H5&H6);
+      inverts H6;
+      rewrite Fmap.union_empty_r in H4;
+      subst.
+    inverts H1.
+    destruct H3 as (v&h3&H1&H2&H3&H4).
+    constructor.
+    exists vunit.
+    exists h3.
+    intuition.
+    inj H1; assumption.
+  }
+Qed.
 
 Lemma ens_req_transpose : forall H Q Ha Qf (v:val),
   biab Ha (Q v) H (Qf v) ->
