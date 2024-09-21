@@ -31,13 +31,10 @@ Tactic Notation "invp" constr(h) simple_intropattern(p) := inversion h as p; sub
 
 Ltac destr H :=
   match type of H with
-  | ex _ =>
-    let L := fresh in
+  | ex (fun x => _) =>
+    let L := fresh x in
     let R := fresh in
     destruct H as [L R]; destr R
-  (* | [ H: exists (name:_), _ |- _ ] =>
-    let name' := fresh name in
-    destruct H as [name' H] *)
   | _ /\ _ =>
     let L := fresh in
     let R := fresh in

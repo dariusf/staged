@@ -323,8 +323,8 @@ Proof.
   intros.
   inverts H as H.
   destr H.
+  inverts H.
   inverts H2.
-  inverts H4.
   intuition.
 Qed.
 
@@ -554,12 +554,12 @@ Proof.
     (* inverts H3 as H3. *)
     (* destruct H3 as (v&h0&H8&H5&H6&H7). *)
     (* give up on careful reasoning *)
-    inv H3. destr H5. inv H4. destr H10. subst.
+    inv H3. destr H5. inv H4. destr H8. subst.
     constructor.
-    exists H0.
-    exists (H3 \u H6).
-    rewrite hstar_hpure_l in H5.
-    rewrite hstar_hpure_l in H7.
+    exists v0.
+    exists (h0 \u h3).
+    rewrite hstar_hpure_l in H0.
+    rewrite hstar_hpure_l in H3.
     intuition.
     subst.
     rewrite <- hstar_assoc.
@@ -737,6 +737,13 @@ Proof.
   }
 Qed.
 
+(* Lemma heaplol : forall h3 h2 x, True. *)
+
+(* (\[v = vunit] \* x ~~> a) h0 /\
+h3 = h1 \u h0 /\ Fmap.disjoint h1 h0 
+H1 exists h0 : Fmap.fmap loc Val.val,
+  h3 = h2 \u h0 /\ Fmap.disjoint h2 h0 /\ (x ~~> b) h0 *)
+
 Lemma biab_sem : forall x a b env h1 h2 r,
   satisfies env (ens_ (x~~>a);; req (x~~>b)) h1 h2 r ->
   satisfies env (req \[a = b]) h1 h2 r.
@@ -747,10 +754,10 @@ Proof.
   destruct H as (h3&r1&H1&H2).
   inv H1.
   inv H2.
+  (* have to prove that a=b in h3 *)
   destr H1.
   destr H3.
   subst.
-  (* have to prove that a=b in h3 *)
   (* we have to deduce that a=b from the setup of the heaps *)
 (* Qed. *)
 Admitted.
@@ -799,17 +806,12 @@ Proof.
   { introv H2.
     inverts H2 as H8.
     destr H8.
-    felim H4.
-    pose proof (ens_ret_unit H0); subst.
+    felim H2.
+    pose proof (ens_ret_unit H); subst.
     fintro.
-    constructor.
-    exists vunit.
-    inverts H0 as H0. destruct H4.
-    destruct H0 as (v0&h3&H5&H4&H7&H6).
-    exists h3.
-    intuition.
-    inj H5. auto.
-    fmap_eq. }
+    intuition. subst.
+    unfold ens_ in H.
+    assumption. }
 Admitted.
 
 (** * Tests *)
