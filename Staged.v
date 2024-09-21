@@ -126,10 +126,8 @@ Inductive flow :=
   | seq : flow -> flow -> flow
   | fex : forall A, (A -> flow) -> flow
   | fall : forall A, (A -> flow) -> flow
-  | unk : ident -> val -> val -> flow (* f(x, r) *)
+  | unk : ident -> val -> val -> flow
   | disj : flow -> flow -> flow.
-
-Infix ";;" := seq (at level 80, right associativity).
 
 (** An [ens] which doesn't have a useful return value *)
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
@@ -142,6 +140,30 @@ Definition ufun := val -> val -> flow.
 Definition env := fmap ident (option ufun).
 
 Definition empty_env : env := Fmap.empty.
+
+Declare Scope flow_scope.
+Open Scope flow_scope.
+
+Infix ";;" := seq (at level 80, right associativity) : flow_scope.
+
+Notation "'∃' x1 .. xn , H" :=
+  (fex (fun x1 => .. (fex (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'",
+   only printing) : flow_scope.
+
+Notation "f '$' '(' x ',' r ')'" := (unk f x r)
+  (at level 80, format "f '$' '(' x ','  r ')'", only printing) : flow_scope.
+
+(* Notation "'ens' '[' r ']' Q" := (ens (fun r => Q))
+  (at level 80, format "'ens' '\[' r '\]' Q" , only printing) : flow_scope. *)
+(* square brackets will conflict with format notation for boxes https://coq.inria.fr/doc/V8.20.0/refman/user-extensions/syntax-extensions.html#displaying-symbolic-notations:~:text=well%2Dbracketed%20pairs%20of%20tokens%20of%20the%20form%20%27%5B%20%27%20and%20%27%5D%27 *)
+
+Notation "'ens' r '.' Q" := (ens (fun r => Q))
+  (at level 80, format "'ens'  r '.'  Q" , only printing) : flow_scope.
+
+Notation "'ens' Q" := (ens_ Q)
+  (at level 80, format "'ens'  Q" , only printing) : flow_scope.
 
 (** * Interpretation of a staged formula *)
 (** Differs from the paper's definition in:
@@ -197,7 +219,7 @@ Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
     (H: satisfies env f2 h1 h2 r) :
     satisfies env (disj f1 f2) h1 h2 r.
 
-Notation " '[' env ',' h1 ',' h2 ',' r ']' '|=' f" :=
+Notation "env ','  h1 ','  h2 ','  r  '|=' f" :=
   (satisfies env f h1 h2 r) (at level 30, only printing).
 
 (** The result of a staged formula, written in the paper as [Φ[r]]. *)
@@ -214,7 +236,10 @@ Definition entails_under env (f1 f2:flow) : Prop :=
 Definition entails (f1 f2:flow) : Prop :=
   forall env, entails_under env f1 f2.
 
-Infix "⊑" := entails (at level 90, right associativity, only parsing).
+Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
+
+Notation "env '⊢' f1 '⊑' f2" :=
+  (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
 
 (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 (* Check (forall f1 f2 f3, f1 ;; f3 ⊑ f2). *)
@@ -289,6 +314,8 @@ Proof.
   intros.
   applys* satisfies_ens.
 Qed.
+
+(* TODO contravariance *)
 
 Lemma extract_pure : forall P env h1 h2 r,
   satisfies env (ens (fun _ => \[P])) h1 h2 r -> P /\ h1 = h2.
@@ -724,6 +751,7 @@ Proof.
   destr H3.
   subst.
   (* have to prove that a=b in h3 *)
+  (* we have to deduce that a=b from the setup of the heaps *)
 (* Qed. *)
 Admitted.
 
@@ -739,6 +767,7 @@ Proof.
   { intros.
     specialize (IHHbi env0).
 
+    (* Check req_sep. *)
     (* assert (
        satisfies env0 (ens_ (x~~>a \* H0);; req (x~~>b \* H2)) h1 h2 r
        -> satisfies env0 (ens_ (x~~>a);; ens_ H0;; req (x~~>b \* H2)) h1 h2 r) as H4. admit. apply H4 in H. clear H4. *)
@@ -762,8 +791,9 @@ Proof.
 
     inverts H.
 
-    Check sat_ens_sep_combine.
-    (* rewrite <- sat_ens_void_sep_combine in H. *)
+    (* Check sat_ens_sep_split. *)
+    (* rewrite sat_ens_sep_split in H3. *)
+    (* rewrite <- sat_ens_void_sep_combine in H3. *)
     admit.
   }
   { introv H2.
@@ -968,6 +998,8 @@ Module SemanticsExamples.
 
   Definition sum_env := (Fmap.update empty_env "sum" (Some sum)).
   Definition sum_property (n res:val) := ens (fun _ => \[res = n]).
+
+  (* Close Scope flow_scope. *)
 
   Lemma ex_sum : forall n1 n res, n1 >= 0 ->
     n = vint n1 ->
