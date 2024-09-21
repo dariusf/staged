@@ -1,7 +1,7 @@
 
 From Coq Require Import Classes.RelationClasses.
 
-From SLF Require Export LibSepFmap.
+From SLF Require LibSepFmap.
 Module Fmap := LibSepFmap.
 
 From SLF Require Export Extra Heap Tactics.
@@ -37,6 +37,13 @@ with expr : Type :=
   (* | passign (x1: ident) (x2: ident) *)
   | pif (x: val) (e1: expr) (e2: expr)
   | pcall (x: val) (a: val).
+
+Global Instance Inhab_val : Inhab val.
+Proof.
+  constructor.
+  exists vunit.
+  constructor.
+Qed.
 
 Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   let aux t := subst y w t in
@@ -737,30 +744,67 @@ Proof.
   }
 Qed.
 
-(* Lemma heaplol : forall h3 h2 x, True. *)
-
-(* (\[v = vunit] \* x ~~> a) h0 /\
-h3 = h1 \u h0 /\ Fmap.disjoint h1 h0 
-H1 exists h0 : Fmap.fmap loc Val.val,
-  h3 = h2 \u h0 /\ Fmap.disjoint h2 h0 /\ (x ~~> b) h0 *)
-
+(* biabduction for a single location, semantically *)
 Lemma biab_sem : forall x a b env h1 h2 r,
   satisfies env (ens_ (x~~>a);; req (x~~>b)) h1 h2 r ->
   satisfies env (req \[a = b]) h1 h2 r.
 Proof.
   intros.
-(* constructor. *)
   felim H.
   destruct H as (h3&r1&H1&H2).
-  inv H1.
-  inv H2.
+  inverts H1 as H1.
+  inverts H2 as H2.
   (* have to prove that a=b in h3 *)
   destr H1.
-  destr H3.
-  subst.
-  (* we have to deduce that a=b from the setup of the heaps *)
-(* Qed. *)
-Admitted.
+  destr H2.
+  rewrite hstar_hpure_l in H0.
+  destruct H0.
+  apply hsingle_inv in H5.
+  apply hsingle_inv in H6.
+
+  assert (a = b).
+  (* factor this out into a new map lemma *)
+  { assert (Fmap.read h3 x = b) as ?.
+    { rewrite H2.
+      rewrite Fmap.read_union_r.
+      subst.
+      apply Fmap.read_single.
+      pose proof (@Fmap.disjoint_inv_not_indom_both _ _ _ _ x H3).
+      unfold not.
+      intros.
+      specialize (H7 H8).
+      apply H7.
+      subst h4.
+      apply Fmap.indom_single. }
+
+    assert (Fmap.read h3 x = a) as ?.
+    { rewrite H1.
+      rewrite Fmap.read_union_r.
+      subst.
+      apply Fmap.read_single.
+      pose proof (@Fmap.disjoint_inv_not_indom_both _ _ _ _ x H4).
+      unfold not.
+      intros.
+      specialize (H8 H9).
+      apply H8.
+      subst h0.
+      apply Fmap.indom_single. }
+
+    rewrite H8 in H7.
+    assumption. }
+
+  assert (h1 = h2).
+  { subst.
+    pose proof (Fmap.union_eq_inv_of_disjoint H4 H3).
+    apply H.
+    assumption. }
+
+  constructor.
+  exists empty_heap.
+  intuition fmap_eq.
+  apply hpure_intro; reflexivity.
+  reflexivity.
+Qed.
 
 Lemma ens_req_transpose : forall H H1 Ha Hf (v:val),
   biab Ha (H1 v) H (Hf v) ->
