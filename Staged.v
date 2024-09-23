@@ -408,10 +408,31 @@ Qed.
 Lemma entails_ens : forall Q1 Q2,
   (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
 Proof.
-  unfold entails.
-  unfold entails_under.
+  unfold entails, entails_under.
   intros.
   applys* satisfies_ens.
+Qed.
+
+Lemma satisfies_req : forall H1 H2 env h1 h2 r,
+  H1 ==> H2 ->
+  satisfies env (req H1) h1 h2 r ->
+  satisfies env (req H2) h1 h2 r.
+Proof.
+  intros.
+  inverts H0. destruct H5 as (h3&?&?&?).
+  constructor.
+  exists h3.
+  unfold himpl in H.
+  intuition.
+  easy.
+Qed.
+
+Lemma entails_req : forall H1 H2,
+  (H1 ==> H2) -> entails (req H1) (req H2).
+Proof.
+  unfold entails, entails_under.
+  intros.
+  applys* satisfies_req H1.
 Qed.
 
 (* TODO contravariance *)
