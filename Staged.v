@@ -360,29 +360,29 @@ Section Proprium.
   #[global]
   Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
   Proof.
-      unfold Proper, entails, entails_under, respectful.
-      intros.
-      inverts H1 as H1; destr H1.
-      constructor. exists h3. exists r1.
-      eauto.
+    unfold Proper, entails, entails_under, respectful.
+    intros.
+    inverts H1 as H1; destr H1.
+    constructor. exists h3. exists r1.
+    eauto.
   Qed.
 
   #[global]
   Instance Proper_seq_bi : Proper (bientails ====> bientails ====> bientails) seq.
   Proof.
-      unfold Proper, bientails, entails, entails_under, respectful.
-      intros.
-      split; intros.
-      { inverts H1 as H1; destr H1.
-        constructor. exists h3. exists r1.
-        split.
-        apply H; auto.
-        apply H0; auto. }
-      { inverts H1 as H1; destr H1.
-        constructor. exists h3. exists r1.
-        split.
-        apply H; auto.
-        apply H0; auto. }
+    unfold Proper, bientails, entails, entails_under, respectful.
+    intros.
+    split; intros.
+    { inverts H1 as H1; destr H1.
+      constructor. exists h3. exists r1.
+      split.
+      apply H; auto.
+      apply H0; auto. }
+    { inverts H1 as H1; destr H1.
+      constructor. exists h3. exists r1.
+      split.
+      apply H; auto.
+      apply H0; auto. }
   Qed.
 
 End Proprium.
@@ -889,15 +889,15 @@ Proof.
   intros.
   split.
   { intros. constructor.
-  eexists. exists (norm vunit).
-  split; only 2: apply req_emp_intro.
-  constructor.
-  inverts H0. destruct H3 as (v&h3&H1&H2&H3&H4).
-  exists vunit.
-  exists h3.
-  intuition.
-  inj H1.
-  auto. }
+    eexists. exists (norm vunit).
+    split; only 2: apply req_emp_intro.
+    constructor.
+    inverts H0. destruct H3 as (v&h3&H1&H2&H3&H4).
+    exists vunit.
+    exists h3.
+    intuition.
+    inj H1.
+    auto. }
   { intros.
     inverts H0 as H0.
     destruct H0 as (h3&r1&H1&H2).
@@ -912,8 +912,7 @@ Proof.
     exists vunit.
     exists h3.
     intuition.
-    inj H1; assumption.
-  }
+    inj H1; assumption. }
 Qed.
 
 (** Biabduction for a single location, semantically *)
@@ -960,7 +959,7 @@ Proof.
       apply Fmap.indom_single.
       apply fmap_disjoint_indom with (h1 := (Fmap.single x a)).
       auto.
-      apply Fmap.indom_single.  }
+      apply Fmap.indom_single. }
 
     rewrite H14 in H16.
     assumption. }
@@ -1028,7 +1027,7 @@ Proof.
     exists h1.
     eexists.
     split.
-    { apply req_pure_intro; reflexivity.  }
+    { apply req_pure_intro; reflexivity. }
     { apply IHHbi. apply H4. } }
   { introv H2.
     inverts H2 as H8.
@@ -1258,42 +1257,29 @@ Module SemanticsExamples.
       (* H2: call to sum *)
       (* H3: shape of res *)
 
+      unfold sum_env in H2.
+      inverts H2 as H4 Hr.
+      rewrite fmap_read_update in H4. inj H4.
 
-    unfold sum_env in H2.
-  (* inverts H2. *)
-  (* rewrite fmap_read_update in H1. *)
-  (* felim H2. *)
-  inverts H2 as H4 Hr.
-  rewrite fmap_read_update in H4. inj H4.
-
-      (* felim H2. *)
-        (* Check satisfies_fn_in_env. *)
-        (* pose proof (@satisfies_fn_in_env _ _ _ _ _ sum _ _ H2) as H4.
-        forward H4. rew_fmap. reflexivity.
-        apply fmap_indom_empty. easy.
-        clear H2.
-        fold sum_env in H4. *)
-
-        (* Hr: known call to sum *)
+      (* Hr: known call to sum *)
 
       felim H1. destr H1.
       subst.
       inj H1.
 
-        unfold entails_under in IH.
+      unfold entails_under in IH.
 
-        specialize (IH (v-1)).
-        forward IH. unfold downto. math.
-        specialize (IH (vint (v-1)) (vint v0)).
-        forward IH. math.
-        forward IH. reflexivity.
-        specialize (IH _ _ _ Hr).
+      specialize (IH (v-1)).
+      forward IH. unfold downto. math.
+      specialize (IH (vint (v-1)) (vint v0)).
+      forward IH. math.
+      forward IH. reflexivity.
+      specialize (IH _ _ _ Hr).
 
       felim IH. destr IH. inj H0.
       rewrite one_plus_minus_one_r in H3.
       exact H3.
-      apply fmap_indom_empty.
-      }
+      apply fmap_indom_empty. }
   Qed.
 
 (* TODO *)
