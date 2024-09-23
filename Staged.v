@@ -342,7 +342,6 @@ Section Proprium.
     auto.
   Qed.
 
-  (* Check seq. *)
   #[global]
   Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
   Proof.
@@ -351,6 +350,24 @@ Section Proprium.
       inverts H1 as H1; destr H1.
       constructor. exists h3. exists r1.
       eauto.
+  Qed.
+
+  #[global]
+  Instance Proper_seq_bi : Proper (bientails ====> bientails ====> bientails) seq.
+  Proof.
+      unfold Proper, bientails, entails, entails_under, respectful.
+      intros.
+      split; intros.
+      { inverts H1 as H1; destr H1.
+        constructor. exists h3. exists r1.
+        split.
+        apply H; auto.
+        apply H0; auto. }
+      { inverts H1 as H1; destr H1.
+        constructor. exists h3. exists r1.
+        split.
+        apply H; auto.
+        apply H0; auto. }
   Qed.
 
 End Proprium.
@@ -619,13 +636,20 @@ Qed.
 
 Section Examples.
   Example ex1_rewrite : forall H H1,
-    (* entails (req (H \* H1);; req H2) (req H;; req H1;; req H2). *)
+    entails (req (H \* H1)) (req H;; req H1).
+  Proof.
+    intros.
+    rewrite norm_req_req.
+    apply entails_refl.
+  Qed.
+
+  Example ex3_rewrite : forall H H1,
     bientails (req (H \* H1)) (req H;; req H1).
   Proof.
     intros.
-    split.
+    unfold bientails; split.
     { rewrite norm_req_sep_split.
-      apply entails_refl. }
+      trivial. }
     { rewrite norm_req_sep_combine.
       apply entails_refl. }
   Qed.
@@ -634,8 +658,8 @@ Section Examples.
     entails (req (H \* H1);; req H2) (req H;; (req (H1 \* H2))).
   Proof.
     intros.
-    rewrite norm_req_sep_split.
-    rewrite <- norm_req_sep_combine.
+    rewrite norm_req_req.
+    rewrite norm_req_req.
     rewrite norm_seq_assoc.
     apply entails_refl.
   Qed.
