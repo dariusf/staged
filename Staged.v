@@ -282,6 +282,13 @@ Proof.
   apply H1.
 Qed.
 
+Instance entails_preorder : PreOrder entails.
+Proof.
+  constructor.
+  apply entails_refl.
+  apply entails_trans.
+Qed.
+
 Instance bientails_equiv : Equivalence bientails.
 Proof.
   constructor.
@@ -547,7 +554,7 @@ Lemma norm_seq_assoc : forall f1 f2 f3,
   bientails (f1;; f2;; f3) ((f1;; f2);; f3).
 Proof.
   intros.
-  split; intros H; now apply seq_assoc.
+  split; intros; now apply seq_assoc.
 Qed.
 
 Ltac felim H :=
