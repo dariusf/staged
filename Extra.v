@@ -6,6 +6,14 @@ Module Fmap := LibSepFmap.
 
 (* extra things to add to SLF's formalization *)
 
+Lemma fmap_disjoint_indom : forall (A B: Type) (h1 h2 : fmap A B) x,
+  disjoint h1 h2 -> indom h1 x -> not (indom h2 x).
+Proof.
+  unfold not; intros.
+  apply (disjoint_inv_not_indom_both H H0).
+  auto.
+Qed.
+
 Lemma fmap_indom_empty : forall A B (k:A),
   ~ Fmap.indom (@Fmap.empty A B) k.
 Proof.

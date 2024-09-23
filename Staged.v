@@ -347,6 +347,17 @@ Section Proprium.
   Qed.
 
   #[global]
+  Instance Proper_satisfies_bi : Proper
+    (eq ====> bientails ====> eq ====> eq ====> eq ====> impl)
+    satisfies.
+  Proof.
+    unfold bientails, entails, entails_under, Proper, respectful, impl.
+    intros. subst.
+    apply H0.
+    auto.
+  Qed.
+
+  #[global]
   Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
   Proof.
       unfold Proper, entails, entails_under, respectful.
@@ -394,7 +405,7 @@ Proof.
   easy.
 Qed.
 
-Lemma entail_ens : forall Q1 Q2,
+Lemma entails_ens : forall Q1 Q2,
   (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
 Proof.
   unfold entails.
@@ -405,7 +416,7 @@ Qed.
 
 (* TODO contravariance *)
 
-Lemma extract_pure : forall P env h1 h2 r,
+Lemma ens_pure_inv : forall P env h1 h2 r,
   satisfies env (ens (fun _ => \[P])) h1 h2 r -> P /\ h1 = h2.
 Proof.
   intros.
@@ -414,6 +425,43 @@ Proof.
   inverts H.
   inverts H2.
   intuition.
+Qed.
+
+Lemma req_pure_inv : forall P env h1 h2 r,
+  satisfies env (req \[P]) h1 h2 r -> P /\ h1 = h2.
+Proof.
+  intros.
+  inverts H as H.
+  destr H.
+  inverts H2.
+  inverts H1.
+  intuition.
+Qed.
+
+Lemma req_pure_intro : forall P env h1,
+  P -> satisfies env (req \[P]) h1 h1 (norm vunit).
+Proof.
+  intros.
+  constructor.
+  exists empty_heap.
+  intuition.
+  rewrite Fmap.union_empty_r; reflexivity.
+  apply hpure_intro.
+  assumption.
+  reflexivity.
+Qed.
+
+Lemma ens_pure_intro : forall P env h r,
+  P -> satisfies env (ens (fun _ => \[P])) h h r.
+Proof.
+  intros.
+  constructor.
+  destruct r.
+  exists v.
+  exists empty_heap.
+  intuition.
+  apply hpure_intro; easy.
+  fmap_eq.
 Qed.
 
 (* the next two are technically just inversion lemmas but are less tedious *)
@@ -461,19 +509,6 @@ Proof.
   rewrite H in H0.
   inj H0.
   easy.
-Qed.
-
-Lemma embed_pure : forall P env h r,
-  P -> satisfies env (ens (fun _ => \[P])) h h r.
-Proof.
-  intros.
-  constructor.
-  destruct r.
-  exists v.
-  exists empty_heap.
-  intuition.
-  apply hpure_intro; easy.
-  fmap_eq.
 Qed.
 
 Lemma req_emp_intro : forall env h1,
@@ -558,14 +593,14 @@ Ltac felim H :=
   match type of H with
   | satisfies _ (fex _) _ _ _ => inverts H as H
   | satisfies _ (_ ;; _) _ _ _ => inverts H as H
-  | satisfies _ (ens (fun _ => \[_])) _ _ _ => apply extract_pure in H
+  | satisfies _ (ens (fun _ => \[_])) _ _ _ => apply ens_pure_inv in H
   | satisfies _ (req \[]) _ _ _ => apply req_emp_inv in H; subst
   (* | satisfies _ (unk _ _ _) _ _ _ => inverts H as H *)
   end.
 
 Ltac fintro :=
   match goal with
-  | |- satisfies _ (ens (fun _ => \[_])) _ _ _ => apply embed_pure
+  | |- satisfies _ (ens (fun _ => \[_])) _ _ _ => apply ens_pure_intro
   | |- satisfies _ (ens (fun _ => \[])) _ _ _ => apply ens_emp_intro
   | |- satisfies _ (req \[]) _ _ _ => apply req_emp_intro
   | |- satisfies _ (req \[];; _) _ _ _ => apply seq_req_emp_intro_l
@@ -576,7 +611,7 @@ Ltac fintro :=
   | |- satisfies _ (fex _) _ _ _ => unfold fex; exists v
   end. *)
 
-(** * Normalization rules and biabduction *)
+(** * Normalization rules *)
 
 Lemma norm_req_sep_combine : forall H1 H2,
   entails (req H1;; req H2) (req (H1 \* H2)).
@@ -670,11 +705,23 @@ Section Examples.
 End Examples.
 
 Lemma sat_ens_void_sep_combine : forall H1 H2 env h1 h2 r,
-  satisfies env (ens_ H1;; ens_ H2) h1 h2 r <->
-  satisfies env (ens_ (H1 \* H2)) h1 h2 r.
+  satisfies env (ens_ (H1 \* H2)) h1 h2 r <->
+  satisfies env (ens_ H1;; ens_ H2) h1 h2 r.
 Proof.
   intros.
   split; intros.
+  { inverts H as H. destruct H as (v&h3&H3&H4&H5&H6).
+    rewrite hstar_hpure_l in H4. destruct H4 as (H4&H7).
+    (* h3 is the heap that H1 and H2 together add *)
+    (* find the intermediate heap *)
+    apply hstar_inv in H7. destruct H7 as (h0&h4&H8&H9&H10&H11).
+    (* H1 h0, H2 h4 *)
+    constructor.
+    exists (h1 \u h0).
+    exists (norm vunit).
+    split.
+    { constructor. exists vunit. exists h0. intuition. rewrite hstar_hpure_l. intuition. }
+    { constructor. exists v. exists h4. intuition. rewrite hstar_hpure_l. intuition. fmap_eq. } }
   { inverts H as H.
     destruct H as (h3&r1&H3&H4).
     (* inverts H3 as H3. *)
@@ -695,18 +742,12 @@ Proof.
     intuition.
     fmap_disjoint.
     fmap_eq. }
-  { inverts H as H. destruct H as (v&h3&H3&H4&H5&H6).
-    rewrite hstar_hpure_l in H4. destruct H4 as (H4&H7).
-    (* h3 is the heap that H1 and H2 together add *)
-    (* find the intermediate heap *)
-    apply hstar_inv in H7. destruct H7 as (h0&h4&H8&H9&H10&H11).
-    (* H1 h0, H2 h4 *)
-    constructor.
-    exists (h1 \u h0).
-    exists (norm vunit).
-    split.
-    { constructor. exists vunit. exists h0. intuition. rewrite hstar_hpure_l. intuition. }
-    { constructor. exists v. exists h4. intuition. rewrite hstar_hpure_l. intuition. fmap_eq. } }
+Qed.
+
+Lemma norm_ens_ens_void : forall H1 H2,
+  bientails (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2).
+Proof.
+  intros; split; apply sat_ens_void_sep_combine.
 Qed.
 
 Lemma sat_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
@@ -780,6 +821,8 @@ Proof.
   unfold entails_under.
   apply sat_ens_sep_split.
 Qed.
+
+(** * Biabduction *)
 
 Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
 
@@ -863,69 +906,99 @@ Proof.
   }
 Qed.
 
-(* biabduction for a single location, semantically *)
-Lemma biab_sem : forall x a b env h1 h2 r,
-  satisfies env (ens_ (x~~>a);; req (x~~>b)) h1 h2 r ->
-  satisfies env (req \[a = b]) h1 h2 r.
+(** Biabduction for a single location, semantically *)
+Lemma biab_sem : forall x a b env h1 h2 r H1 H2,
+  satisfies env (ens_ (x~~>a \* H1);; req (x~~>b \* H2)) h1 h2 r ->
+  a = b /\ satisfies env (ens_ H1;; req H2) h1 h2 r.
 Proof.
   intros.
   felim H.
-  destruct H as (h3&r1&H1&H2).
-  inverts H1 as H1.
-  inverts H2 as H2.
+  destruct H as (h3&r1&H3&H4).
+  inverts H3 as H3.
+  inverts H4 as H4.
   (* have to prove that a=b in h3 *)
-  destr H1.
-  destr H2.
+  destr H3.
+  destr H4.
   rewrite hstar_hpure_l in H0.
   destruct H0.
-  apply hsingle_inv in H5.
-  apply hsingle_inv in H6.
+  apply hstar_inv in H7.
+  destr H7.
+  apply hstar_inv in H8.
+  destr H8.
+  apply hsingle_inv in H9.
+  apply hsingle_inv in H11.
 
   assert (a = b).
-  (* factor this out into a new map lemma *)
-  { assert (Fmap.read h3 x = b) as ?.
-    { rewrite H2.
+  (* factor this out into a new map lemma? *)
+  { assert (Fmap.read h3 x = b) as H16.
+    { rewrite H4.
       rewrite Fmap.read_union_r.
       subst.
+      rewrite Fmap.read_union_l.
       apply Fmap.read_single.
-      pose proof (@Fmap.disjoint_inv_not_indom_both _ _ _ _ x H3).
-      unfold not.
-      intros.
-      specialize (H7 H8).
-      apply H7.
-      subst h4.
+      apply Fmap.indom_single.
+      apply fmap_disjoint_indom with (h1 := (Fmap.single x b)).
+      auto.
       apply Fmap.indom_single. }
 
-    assert (Fmap.read h3 x = a) as ?.
-    { rewrite H1.
+    assert (Fmap.read h3 x = a) as H14.
+    { rewrite H3.
       rewrite Fmap.read_union_r.
       subst.
+      rewrite Fmap.read_union_l.
       apply Fmap.read_single.
-      pose proof (@Fmap.disjoint_inv_not_indom_both _ _ _ _ x H4).
-      unfold not.
-      intros.
-      specialize (H8 H9).
-      apply H8.
-      subst h0.
-      apply Fmap.indom_single. }
+      apply Fmap.indom_single.
+      apply fmap_disjoint_indom with (h1 := (Fmap.single x a)).
+      auto.
+      apply Fmap.indom_single.  }
 
-    rewrite H8 in H7.
-    assumption. }
-
-  assert (h1 = h2).
-  { subst.
-    pose proof (Fmap.union_eq_inv_of_disjoint H4 H3).
-    apply H.
+    rewrite H14 in H16.
     assumption. }
 
   constructor.
-  exists empty_heap.
-  intuition fmap_eq.
-  apply hpure_intro; reflexivity.
-  reflexivity.
+  assumption.
+
+  constructor.
+  exists (h1 \u h6).
+  exists (norm vunit).
+  subst.
+  split.
+  constructor.
+  exists vunit.
+  exists h6.
+  intuition.
+  rewrite hstar_hpure_l.
+  intuition auto.
+
+  constructor.
+  exists h8.
+  intuition.
+
+  subst.
+
+  rew_disjoint *.
+  destr H6.
+  destr H5.
+
+  rewrite <- Fmap.union_comm_of_disjoint in H4; auto.
+  rewrite Fmap.union_assoc in H4.
+
+  setoid_rewrite <- Fmap.union_assoc in H4 at 2.
+  rewrite (Fmap.union_comm_of_disjoint _ _ H3) in H4; auto.
+  setoid_rewrite Fmap.union_assoc in H4.
+
+  assert (Fmap.disjoint (h2 \u h8) (Fmap.single x b)) as H5.
+  { rew_disjoint. auto. }
+  assert (Fmap.disjoint (h1 \u h6) (Fmap.single x b) ) as H9.
+  { rew_disjoint. auto. }
+  apply (Fmap.union_eq_inv_of_disjoint H9 H5 ).
+  rewrite (Fmap.union_comm_of_disjoint (h2 \u h8) (Fmap.single x b)); auto.
+  rewrite (Fmap.union_comm_of_disjoint (h1 \u h6) (Fmap.single x b)); auto.
+  rewrite (Fmap.union_comm_of_disjoint h1 h6); auto.
+  auto.
 Qed.
 
-Lemma ens_req_transpose : forall H H1 Ha Hf (v:val),
+Lemma norm_ens_req_transpose : forall H H1 Ha Hf (v:val),
   biab Ha (H1 v) H (Hf v) ->
   entails (ens_ (H1 v);; req H)
     (req Ha;; ens_ (Hf v)).
@@ -936,38 +1009,17 @@ Proof.
   induction Hbi.
   { intros.
     specialize (IHHbi env0).
-
-    (* Check req_sep. *)
-    (* assert (
-       satisfies env0 (ens_ (x~~>a \* H0);; req (x~~>b \* H2)) h1 h2 r
-       -> satisfies env0 (ens_ (x~~>a);; ens_ H0;; req (x~~>b \* H2)) h1 h2 r) as H4. admit. apply H4 in H. clear H4. *)
-
-    (* need to know that x~~>b and H0 are disjoint *)
-
-    (* swap req and ens if disjoint *)
-    (* ens and req should collapse semantically to a=b? *)
-    (* how do pure req and ens differ? condition holds of initial or final heap *)
-
-    assert (
-       satisfies env0 (ens_ (x~~>a \* H0);; req (x~~>b \* H2)) h1 h2 r
-       -> satisfies env0 ((ens_ (x~~>a);; req (x~~>b));; ens_ H0;; req H2) h1 h2 r) as H4. admit. apply H4 in H. clear H4.
-    inverts H.
-    destruct H9 as (h3&r1&?&?).
-
-    (* what can i get from an ens and req next to each other? *)
-    apply biab_sem in H.
-
-    Check norm_req_req.
-    (* rewrite norm_req_req. *)
-
-    inverts H.
-
-
-    (* Check sat_ens_sep_split. *)
-    (* rewrite sat_ens_sep_split in H3. *)
-    (* rewrite <- sat_ens_void_sep_combine in H3. *)
-    admit.
-  }
+    pose proof (biab_sem H) as H4.
+    destruct H4.
+    subst.
+    rewrite norm_req_req.
+    rewrite <- seq_assoc.
+    constructor.
+    exists h1.
+    eexists.
+    split.
+    { apply req_pure_intro; reflexivity.  }
+    { apply IHHbi. apply H4. } }
   { introv H2.
     inverts H2 as H8.
     destr H8.
@@ -977,7 +1029,7 @@ Proof.
     intuition. subst.
     unfold ens_ in H.
     assumption. }
-Admitted.
+Qed.
 
 (** * Tests *)
 
