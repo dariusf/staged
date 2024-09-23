@@ -171,9 +171,6 @@ Notation "f '$' '(' x ',' r ')'" := (unk f x r)
 Notation "'ens' r '.' Q" := (ens (fun r => Q))
   (at level 80, format "'ens'  r '.'  Q" , only printing) : flow_scope.
 
-Notation "'ens' Q" := (ens_ Q)
-  (at level 80, format "'ens'  Q" , only printing) : flow_scope.
-
 (** * Interpretation of a staged formula *)
 (** Differs from the paper's definition in:
     
