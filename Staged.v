@@ -872,6 +872,16 @@ Module BiabductionExamples.
 
 End BiabductionExamples.
 
+Lemma biab_sound : forall Ha H1 H2 Hf,
+  biab Ha H1 H2 Hf ->
+  Ha \* H1 ==> H2 \* Hf.
+Proof.
+  intros.
+  induction H.
+  { xsimpl; auto. }
+  { xsimpl. }
+Qed.
+
 Lemma seq_req_emp_equiv : forall env h1 h2 H,
   satisfies env (ens_ H) h1 h2 (norm vunit) <->
   satisfies env (ens_ H;; req \[]) h1 h2 (norm vunit).
