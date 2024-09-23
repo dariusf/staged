@@ -1,5 +1,7 @@
 
 From Coq Require Import Classes.RelationClasses.
+(* From Coq Require Setoid Morphisms Program.Basics. *)
+From Coq Require Morphisms Program.Basics.
 
 From SLF Require LibSepFmap.
 Module Fmap := LibSepFmap.
@@ -245,13 +247,20 @@ Definition entails (f1 f2:flow) : Prop :=
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
+Definition entailed_by f1 f2 := entails f2 f1.
+
 Notation "env '⊢' f1 '⊑' f2" :=
   (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
 
 (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 (* Check (forall f1 f2 f3, f1 ;; f3 ⊑ f2). *)
 
-(** Rewriting *)
+Definition bientails (f1 f2:flow) : Prop :=
+  forall h1 h2 r env,
+    satisfies env f1 h1 h2 r <-> satisfies env f2 h1 h2 r.
+
+(** * Rewriting *)
+
 Instance entails_refl : Reflexive entails.
 Proof.
   unfold Reflexive.
@@ -273,10 +282,6 @@ Proof.
   apply H1.
 Qed.
 
-Definition bientails (f1 f2:flow) : Prop :=
-  forall h1 h2 r env,
-    satisfies env f1 h1 h2 r <-> satisfies env f2 h1 h2 r.
-
 Instance bientails_equiv : Equivalence bientails.
 Proof.
   constructor.
@@ -294,6 +299,61 @@ Proof.
     + intros. apply H0. apply H. easy.
     + intros. apply H. apply H0. easy.
 Qed.
+
+(** Incantations for setoid rewriting *)
+Section Proprium.
+
+  (* for sanity *)
+  Local Infix "====>" := Morphisms.respectful (at level 80, right associativity).
+
+  Local Notation Proper := Morphisms.Proper.
+  Local Notation respectful := Morphisms.respectful.
+  Local Notation impl := Program.Basics.impl.
+
+  (** This reflects how entailment is contravariant in the antecedent and covariant in the consequent *)
+  #[global]
+  Instance Proper_entails : Proper
+    (entailed_by ====> entails ====> impl)
+    entails.
+  Proof.
+    unfold entailed_by, entails, entails_under, Proper, respectful, impl.
+    intros.
+    auto.
+  Qed.
+
+  #[global]
+  Instance Proper_bientails : Proper
+    (bientails ====> bientails ====> iff)
+    entails.
+  Proof.
+    unfold bientails, entailed_by, entails, entails_under, Proper, respectful, impl.
+    split; intros.
+    { apply H0. apply H1. apply H. auto. }
+    { apply H0. apply H1. apply H. auto. }
+  Qed.
+
+  #[global]
+  Instance Proper_satisfies : Proper
+    (eq ====> entails ====> eq ====> eq ====> eq ====> impl)
+    satisfies.
+  Proof.
+    unfold entails, entails_under, Proper, respectful, impl.
+    intros. subst.
+    auto.
+  Qed.
+
+  (* Check seq. *)
+  #[global]
+  Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
+  Proof.
+      unfold Proper, entails, entails_under, respectful.
+      intros.
+      inverts H1 as H1; destr H1.
+      constructor. exists h3. exists r1.
+      eauto.
+  Qed.
+
+End Proprium.
 
 (** * Reasoning about flows *)
 (** Covariance of ens *)
@@ -466,6 +526,13 @@ Proof.
     intuition. }
 Qed.
 
+Lemma norm_seq_assoc : forall f1 f2 f3,
+  bientails (f1;; f2;; f3) ((f1;; f2);; f3).
+Proof.
+  intros.
+  split; intros H; now apply seq_assoc.
+Qed.
+
 Ltac felim H :=
   match type of H with
   | satisfies _ (fex _) _ _ _ => inverts H as H
@@ -490,7 +557,7 @@ Ltac fintro :=
 
 (** * Normalization rules and biabduction *)
 
-Lemma req_sep_combine : forall H1 H2,
+Lemma norm_req_sep_combine : forall H1 H2,
   entails (req H1;; req H2) (req (H1 \* H2)).
 Proof.
   unfold entails.
@@ -517,7 +584,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma req_sep_split : forall H1 H2,
+Lemma norm_req_sep_split : forall H1 H2,
   entails (req (H1 \* H2)) (req H1;; req H2).
 Proof.
   unfold entails.
@@ -541,14 +608,38 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma req_sep : forall H1 H2,
+Lemma norm_req_req : forall H1 H2,
   bientails (req (H1 \* H2)) (req H1;; req H2).
 Proof.
   intros.
   split.
-  - apply req_sep_split.
-  - apply req_sep_combine.
+  - apply norm_req_sep_split.
+  - apply norm_req_sep_combine.
 Qed.
+
+Section Examples.
+  Example ex1_rewrite : forall H H1,
+    (* entails (req (H \* H1);; req H2) (req H;; req H1;; req H2). *)
+    bientails (req (H \* H1)) (req H;; req H1).
+  Proof.
+    intros.
+    split.
+    { rewrite norm_req_sep_split.
+      apply entails_refl. }
+    { rewrite norm_req_sep_combine.
+      apply entails_refl. }
+  Qed.
+
+  Example ex2_rewrite : forall H H1 H2,
+    entails (req (H \* H1);; req H2) (req H;; (req (H1 \* H2))).
+  Proof.
+    intros.
+    rewrite norm_req_sep_split.
+    rewrite <- norm_req_sep_combine.
+    rewrite norm_seq_assoc.
+    apply entails_refl.
+  Qed.
+End Examples.
 
 Lemma sat_ens_void_sep_combine : forall H1 H2 env h1 h2 r,
   satisfies env (ens_ H1;; ens_ H2) h1 h2 r <->
@@ -838,9 +929,11 @@ Proof.
     (* what can i get from an ens and req next to each other? *)
     apply biab_sem in H.
 
-    Check req_sep.
+    Check norm_req_req.
+    (* rewrite norm_req_req. *)
 
     inverts H.
+
 
     (* Check sat_ens_sep_split. *)
     (* rewrite sat_ens_sep_split in H3. *)
