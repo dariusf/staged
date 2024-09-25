@@ -582,6 +582,7 @@ Proof.
   split; intros; now apply seq_assoc.
 Qed.
 
+(** Splitting and combining [req]s *)
 Lemma norm_req_sep_combine : forall H1 H2 f,
   entails (req H1 (req H2 f)) (req (H1 \* H2) f).
 Proof.
@@ -635,6 +636,7 @@ Proof.
   - apply norm_req_sep_combine.
 Qed.
 
+(** Splitting and combining [ens_]s *)
 Lemma satisfies_ens_ens_void : forall H1 H2 env h1 h2 r,
   satisfies env (ens_ (H1 \* H2)) h1 h2 r <->
   satisfies env (ens_ H1;; ens_ H2) h1 h2 r.
@@ -679,6 +681,7 @@ Proof.
   intros; split; apply satisfies_ens_ens_void.
 Qed.
 
+(** Splitting and combining [ens] with results is more complex, and there does not seem to be a single equivalence. *)
 Lemma satisfies_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
   satisfies env (ens Q1;; ens Q2) h1 h2 r ->
   satisfies env (ens (fun r0 : val => \exists r1 : val, Q1 r1 \* Q2 r0)) h1 h2 r.
