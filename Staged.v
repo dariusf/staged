@@ -635,7 +635,7 @@ Proof.
   - apply norm_req_sep_combine.
 Qed.
 
-Lemma sat_ens_void_sep_combine : forall H1 H2 env h1 h2 r,
+Lemma satisfies_ens_ens_void : forall H1 H2 env h1 h2 r,
   satisfies env (ens_ (H1 \* H2)) h1 h2 r <->
   satisfies env (ens_ H1;; ens_ H2) h1 h2 r.
 Proof.
@@ -655,8 +655,6 @@ Proof.
     { constructor. exists v. exists h4. intuition. rewrite hstar_hpure_l. intuition. fmap_eq. } }
   { inverts H as H.
     destruct H as (h3&r1&H3&H4).
-    (* inverts H3 as H3. *)
-    (* destruct H3 as (v&h0&H8&H5&H6&H7). *)
     (* give up on careful reasoning *)
     inv H3. destr H5. inv H4. destr H8. subst.
     constructor.
@@ -678,10 +676,10 @@ Qed.
 Lemma norm_ens_ens_void : forall H1 H2,
   bientails (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2).
 Proof.
-  intros; split; apply sat_ens_void_sep_combine.
+  intros; split; apply satisfies_ens_ens_void.
 Qed.
 
-Lemma sat_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
+Lemma satisfies_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
   satisfies env (ens Q1;; ens Q2) h1 h2 r ->
   satisfies env (ens (fun r0 : val => \exists r1 : val, Q1 r1 \* Q2 r0)) h1 h2 r.
 Proof.
@@ -703,14 +701,14 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma ens_sep_combine : forall Q1 Q2,
+Lemma norm_ens_ens_combine : forall Q1 Q2,
   entails (ens Q1;; ens Q2) (ens (fun r => \exists r1, Q1 r1 \* Q2 r)).
 Proof.
   unfold entails.
-  apply sat_ens_sep_combine.
+  apply satisfies_ens_sep_combine.
 Qed.
 
-Lemma sat_ens_sep_split : forall H Q env h1 h2 r,
+Lemma satisfies_ens_sep_split : forall H Q env h1 h2 r,
   satisfies env (ens (Q \*+ H)) h1 h2 r  ->
   satisfies env (ens (fun _ : val => H);; ens Q) h1 h2 r.
 Proof.
@@ -744,11 +742,11 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma ens_sep_split : forall H Q,
+Lemma norm_ens_split : forall H Q,
   entails (ens (Q \*+ H)) (ens (fun _ => H);; ens Q).
 Proof.
   unfold entails.
-  apply sat_ens_sep_split.
+  apply satisfies_ens_sep_split.
 Qed.
 
 (** * Biabduction *)
