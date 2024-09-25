@@ -257,126 +257,6 @@ Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 r env,
     satisfies env f1 h1 h2 r <-> satisfies env f2 h1 h2 r.
 
-Section SatisfiesExamples.
-  Example e1 : forall x,
-    satisfies empty_env (req_ \[x = 1]) empty_heap empty_heap (norm vunit).
-  Proof.
-    intros.
-    apply s_req.
-    intros.
-    apply hpure_inv in H as (?&?).
-    intuition fmap_eq.
-    constructor.
-    eexists.
-    eexists.
-    intuition.
-    rewrite hstar_hpure_l.
-    split. auto.
-    apply hpure_intro.
-    constructor.
-    assumption.
-  Qed.
-
-  Example e2 : forall x,
-    satisfies empty_env (req (x~~>vint 1) (ens_ (x~~>vint 1))) (Fmap.single x (vint 1)) (Fmap.single x (vint 1)) (norm vunit).
-  Proof.
-    intros.
-    apply s_req.
-    intros hp H.
-    intros.
-
-    apply hsingle_inv in H0. rew_fmap *.
-
-    constructor.
-    eexists.
-    exists (Fmap.single x (vint 1)).
-    intuition.
-    { rewrite hstar_hpure_l; split; auto.
-    apply hsingle_intro. }
-    { subst. assumption. }
-  Qed.
-
-  Example e3 : forall x,
-    satisfies empty_env ((ens_ (x~~>vint 1)) ;; req_ (x~~>vint 1)) empty_heap empty_heap (norm vunit).
-  Proof.
-    intros.
-    constructor.
-    exists (Fmap.single x (vint 1)).
-    exists (norm vunit).
-    split.
-    { constructor.
-      exists vunit.
-      exists (Fmap.single x (vint 1)).
-      intuition.
-      rewrite hstar_hpure_l; split; auto.
-      apply hsingle_intro.
-      fmap_eq. }
-    {
-      apply s_req.
-      intros.
-      {
-        constructor.
-        exists vunit.
-        exists empty_heap.
-        apply hsingle_inv in H.
-        intuition.
-        subst.
-        rewrite hstar_hpure_l; split; auto.
-        apply hpure_intro.
-        constructor.
-        fmap_eq.
-        rewrite <- Fmap.union_empty_l in H0 at 1.
-        apply Fmap.union_eq_inv_of_disjoint in H0.
-        fmap_eq.
-        unfold empty_heap; reflexivity.
-        fmap_disjoint.
-        fmap_disjoint.
-      }
-    }
-  Qed.
-
-  Example e4_req_false : forall x,
-    satisfies empty_env (req_ \[False])
-      (Fmap.single x (vint 1)) (Fmap.single x (vint 2)) (norm vunit).
-  Proof.
-    intros.
-    apply s_req.
-    intros.
-    apply hpure_inv in H.
-    destr H.
-    inv H0.
-    inv H2.
-  Qed.
-
-  Example e5_rew : forall x y,
-    entails (req (x~~>vint 1) (req_ (y~~>vint 2)))
-      (req_ (x~~>vint 1 \* y~~>vint 2)).
-  Proof.
-    unfold entails.
-    intros.
-
-    (* reason backwrds *)
-    apply s_req.
-    intros.
-    (* extract info from what we gained *)
-    rew_fmap.
-    apply hstar_inv in H0 as (hx&hy&Hx&Hy&?&?).
-
-    (* start going forward *)
-    inverts H as H.
-    specialize (H _ (hy \u hr) Hx).
-    forward H. fmap_eq.
-    forward H. fmap_disjoint.
-
-    inverts H as H12.
-    specialize (H12 hy hr Hy).
-    forward H12. fmap_eq.
-    forward H12. fmap_disjoint.
-
-    assumption.
-  Qed.
-End SatisfiesExamples.
-
 (** * Rewriting *)
 
 Instance entails_refl : Reflexive entails.
@@ -753,62 +633,6 @@ Proof.
   - apply norm_req_sep_combine.
 Qed.
 
-Section Examples.
-  Example ex1_rewrite : forall H H1 f,
-    entails (req (H \* H1) f) (req H (req H1 f)).
-  Proof.
-    intros.
-    rewrite norm_req_req.
-    apply entails_refl.
-  Qed.
-
-  Example ex3_rewrite : forall H H1 f,
-    bientails (req (H \* H1) f) (req H (req H1 f)).
-  Proof.
-    intros.
-    unfold bientails; split.
-    { rewrite norm_req_sep_split.
-      trivial. }
-    { rewrite norm_req_sep_combine.
-      apply entails_refl. }
-  Qed.
-
-  Example ex2_rewrite : forall H H1 H2 f,
-    entails (req (H \* H1) (req H2 f)) (req H (req (H1 \* H2) f)).
-  Proof.
-    intros.
-    rewrite <- norm_req_req.
-    rewrite <- norm_req_req.
-    rewrite hstar_assoc.
-    apply entails_refl.
-  Qed.
-
-  (* ensure that this can be done semantically *)
-  Example ex1_entail_co_contra : forall x y,
-    entails (req \[x>0] (ens_ \[y=1])) (req \[x=1] (ens_ \[y>0])).
-  Proof.
-    unfold entails.
-    intros.
-    (* get the condition in the req from the right *)
-    constructor.
-    intros.
-    finv H0.
-    (* use it to satisfy the req on the left *)
-    inverts H as H.
-    specialize (H hp hr).
-    forward H. subst hp. fintro. math.
-    specialize (H H1 H2).
-    (* do the same for ens, but from left to right, as per normal *)
-    inverts H as H. destr H. finv H. finv H. finv H6.
-    constructor. exists v. exists empty_heap.
-    intuition.
-    rewrite hstar_hpure_r.
-    split. fintro; auto. math.
-    fmap_eq.
-  Abort.
-
-End Examples.
-
 Lemma sat_ens_void_sep_combine : forall H1 H2 env h1 h2 r,
   satisfies env (ens_ (H1 \* H2)) h1 h2 r <->
   satisfies env (ens_ H1;; ens_ H2) h1 h2 r.
@@ -1045,9 +869,7 @@ Proof.
     assumption. }
 Qed.
 
-(** * Tests *)
-
-Module SemanticsExamples.
+Module Examples.
 
   Definition f1 : flow := ens (fun r => \[r=vint 1]).
   Definition f2 : flow := fex (fun x => req_ (\[x = vint 1])).
@@ -1222,6 +1044,177 @@ Module SemanticsExamples.
     apply entails_refl.
   Qed.
 
+  Example ex1_rewrite : forall H H1 f,
+    entails (req (H \* H1) f) (req H (req H1 f)).
+  Proof.
+    intros.
+    rewrite norm_req_req.
+    apply entails_refl.
+  Qed.
+
+  Example ex3_rewrite : forall H H1 f,
+    bientails (req (H \* H1) f) (req H (req H1 f)).
+  Proof.
+    intros.
+    unfold bientails; split.
+    { rewrite norm_req_sep_split.
+      trivial. }
+    { rewrite norm_req_sep_combine.
+      apply entails_refl. }
+  Qed.
+
+  Example ex2_rewrite : forall H H1 H2 f,
+    entails (req (H \* H1) (req H2 f)) (req H (req (H1 \* H2) f)).
+  Proof.
+    intros.
+    rewrite <- norm_req_req.
+    rewrite <- norm_req_req.
+    rewrite hstar_assoc.
+    apply entails_refl.
+  Qed.
+
+  (* ensure that this can be done semantically *)
+  Example ex1_entail_co_contra : forall x y,
+    entails (req \[x>0] (ens_ \[y=1])) (req \[x=1] (ens_ \[y>0])).
+  Proof.
+    unfold entails.
+    intros.
+    (* get the condition in the req from the right *)
+    constructor.
+    intros.
+    finv H0.
+    (* use it to satisfy the req on the left *)
+    inverts H as H.
+    specialize (H hp hr).
+    forward H. subst hp. fintro. math.
+    specialize (H H1 H2).
+    (* do the same for ens, but from left to right, as per normal *)
+    inverts H as H. destr H. finv H. finv H. finv H6.
+    constructor. exists v. exists empty_heap.
+    intuition.
+    rewrite hstar_hpure_r.
+    split. fintro; auto. math.
+    fmap_eq.
+  Abort.
+
+  Example e1 : forall x,
+    satisfies empty_env (req_ \[x = 1]) empty_heap empty_heap (norm vunit).
+  Proof.
+    intros.
+    apply s_req.
+    intros.
+    apply hpure_inv in H as (?&?).
+    intuition fmap_eq.
+    constructor.
+    eexists.
+    eexists.
+    intuition.
+    rewrite hstar_hpure_l.
+    split. auto.
+    apply hpure_intro.
+    constructor.
+    assumption.
+  Qed.
+
+  Example e2 : forall x,
+    satisfies empty_env (req (x~~>vint 1) (ens_ (x~~>vint 1))) (Fmap.single x (vint 1)) (Fmap.single x (vint 1)) (norm vunit).
+  Proof.
+    intros.
+    apply s_req.
+    intros hp H.
+    intros.
+
+    apply hsingle_inv in H0. rew_fmap *.
+
+    constructor.
+    eexists.
+    exists (Fmap.single x (vint 1)).
+    intuition.
+    { rewrite hstar_hpure_l; split; auto.
+    apply hsingle_intro. }
+    { subst. assumption. }
+  Qed.
+
+  Example e3 : forall x,
+    satisfies empty_env ((ens_ (x~~>vint 1)) ;; req_ (x~~>vint 1)) empty_heap empty_heap (norm vunit).
+  Proof.
+    intros.
+    constructor.
+    exists (Fmap.single x (vint 1)).
+    exists (norm vunit).
+    split.
+    { constructor.
+      exists vunit.
+      exists (Fmap.single x (vint 1)).
+      intuition.
+      rewrite hstar_hpure_l; split; auto.
+      apply hsingle_intro.
+      fmap_eq. }
+    {
+      apply s_req.
+      intros.
+      {
+        constructor.
+        exists vunit.
+        exists empty_heap.
+        apply hsingle_inv in H.
+        intuition.
+        subst.
+        rewrite hstar_hpure_l; split; auto.
+        apply hpure_intro.
+        constructor.
+        fmap_eq.
+        rewrite <- Fmap.union_empty_l in H0 at 1.
+        apply Fmap.union_eq_inv_of_disjoint in H0.
+        fmap_eq.
+        unfold empty_heap; reflexivity.
+        fmap_disjoint.
+        fmap_disjoint.
+      }
+    }
+  Qed.
+
+  Example e4_req_false : forall x,
+    satisfies empty_env (req_ \[False])
+      (Fmap.single x (vint 1)) (Fmap.single x (vint 2)) (norm vunit).
+  Proof.
+    intros.
+    apply s_req.
+    intros.
+    apply hpure_inv in H.
+    destr H.
+    inv H0.
+    inv H2.
+  Qed.
+
+  Example e5_rew : forall x y,
+    entails (req (x~~>vint 1) (req_ (y~~>vint 2)))
+      (req_ (x~~>vint 1 \* y~~>vint 2)).
+  Proof.
+    unfold entails.
+    intros.
+
+    (* reason backwrds *)
+    apply s_req.
+    intros.
+    (* extract info from what we gained *)
+    rew_fmap.
+    apply hstar_inv in H0 as (hx&hy&Hx&Hy&?&?).
+
+    (* start going forward *)
+    inverts H as H.
+    specialize (H _ (hy \u hr) Hx).
+    forward H. fmap_eq.
+    forward H. fmap_disjoint.
+
+    inverts H as H12.
+    specialize (H12 hy hr Hy).
+    forward H12. fmap_eq.
+    forward H12. fmap_disjoint.
+
+    assumption.
+  Qed.
+
   (* lfp interpretation *)
   (*
     forall n res, sum(n, res) =
@@ -1303,7 +1296,7 @@ Definition foldr :=
     (unk "foldr" (vint 1) (vint 1);;
       unk "f" (vint 2) (vint 1)).
 
-End SemanticsExamples.
+End Examples.
 
 (** * Hoare rules *)
 (* TODO define semantic triples, then define these as lemmas *)
@@ -1332,7 +1325,7 @@ Inductive forward : expr -> flow -> Prop :=
       (req (contains l v) ;;
       (ens (fun r => (r = v) //\\ contains l v))) *)
 
-Section ForwardExamples.
+Module ForwardExamples.
 
   (* let x = 1 in x *)
   Definition e1_let := (plet "x" (pval (vint 1)) (pvar "x")).
