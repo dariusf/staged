@@ -4,6 +4,7 @@ ALLVFILES := LibAxioms.v LibTactics.v LibEqual.v LibLogic.v LibOperation.v LibBo
 
 docs:
 	coq2html -base SLF -short-names -no-css -d docs *.glob *.v
+	perl -pi -e 's@/title>@/title><script src="coq2html.js"></script>@' docs/SLF.Staged.html
 
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq

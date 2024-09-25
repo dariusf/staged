@@ -1,25 +1,35 @@
+function buildTOC() {
+  const headers = document.querySelectorAll("h1:not(.title)");
 
-function toggleDisplay(id)
-{
-   var elt = document.getElementById(id);
-   if (elt.style.display == 'none') {
-     elt.style.display = 'block';
-   } else {
-     elt.style.display = 'none';
-   }
+  if (headers.length === 0) return;
+
+  const tocDiv = document.createElement("div");
+  tocDiv.style.maxWidth = "fit-content";
+  tocDiv.style.margin = "0 auto";
+
+  const tocList = document.createElement("ul");
+
+  headers.forEach((header, index) => {
+    const anchor = document.createElement("a");
+    const headerID = `header-${index}`;
+    anchor.setAttribute("href", `#${headerID}`);
+    anchor.textContent = header.textContent;
+    anchor.style.fontSize = "1.2em"; // matching existing
+
+    header.setAttribute("id", headerID);
+
+    const listItem = document.createElement("li");
+    listItem.appendChild(anchor);
+
+    tocList.appendChild(listItem);
+  });
+
+  tocDiv.appendChild(tocList);
+
+  document.body.insertBefore(
+    tocDiv,
+    document.querySelector(".title").nextSibling
+  );
 }
 
-function hideAll(cls)
-{
-  var testClass = new RegExp("(^|s)" + cls + "(s|$)");
-  var tag = tag || "*";
-  var elements = document.getElementsByTagName("div");
-  var current;
-  var length = elements.length;
-  for(var i=0; i<length; i++){
-    current = elements[i];
-    if(testClass.test(current.className)) {
-      current.style.display = 'none';
-    }
-  }
-}
+document.addEventListener("DOMContentLoaded", buildTOC);
