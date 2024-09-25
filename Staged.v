@@ -62,11 +62,11 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
   end.
 
-(** SLF's heap theory as a functor *)
 Module Val.
   Definition val := val.
 End Val.
 
+(** SLF's heap theory as a functor. *)
 Module Export Heap := Heap.HeapSetup(Val).
 
 Inductive eresult : Type :=
@@ -138,8 +138,9 @@ Inductive flow :=
   | unk : ident -> val -> val -> flow
   | disj : flow -> flow -> flow.
 
-(** An [ens] which doesn't have a useful return value *)
+(** An [ens] which doesn't have a useful return value.*)
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
+(** This carries more information than [ens (fun _ => H)], which has an #<i>arbitrary</i># return value. *)
 
 Definition empty := ens_ \[True].
 
@@ -177,6 +178,7 @@ Notation "'ens' r '.' Q" := (ens (fun r => Q))
     
 - the addition of an environment, to give interpretations for unknown functions
 - the removal of stores, to sidestep impredicativity problems
+- the definition of [req], whose variance has been fixed
 
 An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
 Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
@@ -386,7 +388,7 @@ Section Proprium.
 
 End Proprium.
 
-(** * Simple flow lemmas *)
+(** * Inversion/introduction lemmas *)
 Lemma ens_ret_inv : forall env h1 h2 H r,
   satisfies env (ens_ H) h1 h2 r ->
   r = norm vunit.
@@ -446,7 +448,58 @@ Proof.
   fmap_eq.
 Qed.
 
-(** * Entailment rules *)
+Lemma unk_inv : forall env h1 h2 r1 x f1 f r,
+  satisfies env (unk f x r1) h1 h2 r ->
+  Fmap.read env f = Some f1 ->
+  satisfies env (f1 x r1) h1 h2 r.
+Proof.
+  intros.
+  inverts H as H.
+  rewrite H in H0.
+  inj H0.
+  easy.
+Qed.
+
+(** * Tactics for reasoning about entailments *)
+Ltac felim H :=
+  match type of H with
+  | satisfies _ (fex _) _ _ _ => inverts H as H
+  | satisfies _ (_ ;; _) _ _ _ => inverts H as H
+  | satisfies _ (ens (fun _ => \[_])) _ _ _ => apply ens_pure_inv in H
+  (* | satisfies _ (req \[]) _ _ _ => apply req_empty_inv in H; subst *)
+  (* | satisfies _ (unk _ _ _) _ _ _ => inverts H as H *)
+  end.
+
+Ltac finv H :=
+  match type of H with
+  | \[] _ => apply hempty_inv in H
+  | \[_] _ => apply hpure_inv in H as (?&?)
+  | (_~~>_) _ => apply hsingle_inv in H
+  | (_ \* _) _ => apply hstar_inv in H as (?&?&?&?&?&?)
+  | (\[_] \* _) _ => rewrite hstar_hpure_l
+  | (_ \* \[_]) _ => rewrite hstar_hpure_r
+  end.
+
+Ltac fintro :=
+  match goal with
+  | |- satisfies _ (ens (fun _ => \[_])) _ _ _ => apply ens_pure_intro
+  | |- satisfies _ (ens (fun _ => \[])) _ _ _ => apply ens_empty_intro
+  | |- \[] _ => apply hempty_intro
+  | |- \[_] _ => apply hpure_intro
+  | |- (_ \* _) (_ \u _) => apply hstar_intro
+  | |- (\[_] \* \[_]) _ => idtac "use rewrite hstar_hpure_l or hstar_hpure_r"
+  | |- (\[_] \* _) _ => rewrite hstar_hpure_l
+  | |- (_ \* \[_]) _ => rewrite hstar_hpure_r
+  (* | |- satisfies _ (req \[]) _ _ _ => apply req_empty_intro *)
+  (* | |- satisfies _ (req \[];; _) _ _ _ => apply seq_req_emp_intro_l *)
+  end.
+
+(* Ltac fexists v :=
+  match goal with
+  | |- satisfies _ (fex _) _ _ _ => unfold fex; exists v
+  end. *)
+
+(** * Entailment/normalization rules *)
 (** Covariance of ens *)
 Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
   (forall v, Q1 v ==> Q2 v) ->
@@ -497,19 +550,7 @@ Proof.
   applys* satisfies_req H1.
 Qed.
 
-(** Miscellaneous rules *)
-Lemma satisfies_fn_in_env : forall env h1 h2 r1 x f1 f r,
-  satisfies env (unk f x r1) h1 h2 r ->
-  Fmap.read env f = Some f1 ->
-  satisfies env (f1 x r1) h1 h2 r.
-Proof.
-  intros.
-  inverts H as H.
-  rewrite H in H0.
-  inj H0.
-  easy.
-Qed.
-
+(** seq is associative *)
 Lemma seq_assoc : forall env h1 h2 r f1 f2 f3,
   satisfies env (f1;; f2;; f3) h1 h2 r <->
   satisfies env ((f1;; f2);; f3) h1 h2 r.
@@ -541,45 +582,6 @@ Proof.
   split; intros; now apply seq_assoc.
 Qed.
 
-Ltac felim H :=
-  match type of H with
-  | satisfies _ (fex _) _ _ _ => inverts H as H
-  | satisfies _ (_ ;; _) _ _ _ => inverts H as H
-  | satisfies _ (ens (fun _ => \[_])) _ _ _ => apply ens_pure_inv in H
-  (* | satisfies _ (req \[]) _ _ _ => apply req_empty_inv in H; subst *)
-  (* | satisfies _ (unk _ _ _) _ _ _ => inverts H as H *)
-  end.
-
-Ltac finv H :=
-  match type of H with
-  | \[] _ => apply hempty_inv in H
-  | \[_] _ => apply hpure_inv in H as (?&?)
-  | (_~~>_) _ => apply hsingle_inv in H
-  | (_ \* _) _ => apply hstar_inv in H as (?&?&?&?&?&?)
-  | (\[_] \* _) _ => rewrite hstar_hpure_l
-  | (_ \* \[_]) _ => rewrite hstar_hpure_r
-  end.
-
-Ltac fintro :=
-  match goal with
-  | |- satisfies _ (ens (fun _ => \[_])) _ _ _ => apply ens_pure_intro
-  | |- satisfies _ (ens (fun _ => \[])) _ _ _ => apply ens_empty_intro
-  | |- \[] _ => apply hempty_intro
-  | |- \[_] _ => apply hpure_intro
-  | |- (_ \* _) (_ \u _) => apply hstar_intro
-  | |- (\[_] \* \[_]) _ => idtac "use rewrite hstar_hpure_l or hstar_hpure_r"
-  | |- (\[_] \* _) _ => rewrite hstar_hpure_l
-  | |- (_ \* \[_]) _ => rewrite hstar_hpure_r
-  (* | |- satisfies _ (req \[]) _ _ _ => apply req_empty_intro *)
-  (* | |- satisfies _ (req \[];; _) _ _ _ => apply seq_req_emp_intro_l *)
-  end.
-
-(* Ltac fexists v :=
-  match goal with
-  | |- satisfies _ (fex _) _ _ _ => unfold fex; exists v
-  end. *)
-
-(** * Normalization rules *)
 Lemma norm_req_sep_combine : forall H1 H2 f,
   entails (req H1 (req H2 f)) (req (H1 \* H2) f).
 Proof.
@@ -750,7 +752,7 @@ Proof.
 Qed.
 
 (** * Biabduction *)
-
+(** Simplified definition following #<a href="http://www0.cs.ucl.ac.uk/staff/p.ohearn/papers/popl09.pdf">Compositional Shape Analysis by means of Bi-Abduction</a># (Fig 1). *)
 Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
 
   | b_pts_match : forall a b H1 H2 Ha Hf x,
@@ -762,7 +764,7 @@ Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
 
 Module BiabductionExamples.
 
-  (* (a=3) * x->a*y->b |- x->3 * (y->b) *)
+  (** [(a=3) * x->a*y->b |- x->3 * (y->b)] *)
   Example ex1_biab : forall x y,
     exists Ha Hf a, biab Ha (x~~>vint a \* y~~>vint 2) (x~~>vint 3) Hf.
   Proof.
@@ -778,25 +780,6 @@ Module BiabductionExamples.
   (* we can see from the ex_intro constrs that the frame is y->2, and the abduced contraint is trivial but gives a value to a, which was immediately substituted *)
   (* Print ex1_biab. *)
 
-  Example ex2_biab :
-    exists Ha Hf,
-    exists r, biab Ha (\[r = 1]) hempty Hf.
-  Proof.
-    intros.
-    eexists.
-    eexists.
-    exists 1.
-    apply b_base_empty.
-  Qed.
-  (* Print ex2_biab. *)
-
-  Example ex3_wand : forall x y,
-    (x ~~> vint 1 \* y ~~> vint 2) ==>
-    (x~~>vint 1 \* (x~~>vint 1 \-* (x~~>vint 1 \* y ~~> vint 2))).
-  Proof.
-    xsimpl.
-  Qed.
-
 End BiabductionExamples.
 
 Lemma biab_sound : forall Ha H1 H2 Hf,
@@ -809,8 +792,8 @@ Proof.
   { xsimpl. }
 Qed.
 
-(** Biabduction for a single location, semantically *)
-Lemma biab_sem : forall x a env h1 h2 r H1 H2 f,
+(** Biabduction for a single location. *)
+Lemma biab_single : forall x a env h1 h2 r H1 H2 f,
   satisfies env (ens_ (x~~>a \* H1);; req (x~~>a \* H2) f) h1 h2 r ->
   satisfies env (ens_ H1;; req H2 f) h1 h2 r.
 Proof.
@@ -836,6 +819,7 @@ Proof.
   { assumption. }
 Qed.
 
+(** The [Float Pre] rule from the paper. *)
 Lemma norm_ens_req_transpose : forall H2 H1 Ha Hf (v:val) f,
   biab Ha (H1 v) H2 (Hf v) ->
   entails (ens_ (H1 v);; (req H2 f))
@@ -852,7 +836,7 @@ Proof.
     constructor. intros. finv H3. subst. rew_fmap.
 
     apply IHHbi.
-    apply (biab_sem H). }
+    apply (biab_single H). }
 
   { introv H2.
     constructor. intros. finv H. subst hp. rew_fmap *. subst hr. clear H3.
@@ -869,6 +853,8 @@ Proof.
     assumption. }
 Qed.
 
+(** * Examples *)
+(** Examples of everything defined so far, which is enough for entailments to be defined and proved. *)
 Module Examples.
 
   Definition f1 : flow := ens (fun r => \[r=vint 1]).
