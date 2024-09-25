@@ -27,7 +27,15 @@ function buildTOC() {
   tocDiv.appendChild(tocList);
 
   document.body.insertBefore(
+    document.createElement("hr"),
+    document.querySelector(".title").nextSibling
+  );
+  document.body.insertBefore(
     tocDiv,
+    document.querySelector(".title").nextSibling
+  );
+  document.body.insertBefore(
+    document.createElement("hr"),
     document.querySelector(".title").nextSibling
   );
 }
