@@ -7,5 +7,7 @@
 *.coq.*
 *.cache
 docs/*.html
+docs/*.js
+docs/*.css
 html
 mlihtml

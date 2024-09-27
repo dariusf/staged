@@ -50,17 +50,17 @@ jobs:
               cd -
               rm -rf coq2html
             endGroup
-            #startGroup "Install Alectryon"
-            #  sudo apt-get update
-            #  sudo apt-get install -y pipx python3-pip
-            #  pipx install alectryon
-            #endGroup
+            startGroup "Install Alectryon"
+              sudo apt-get update
+              sudo apt-get install -y pipx python3-pip
+              pipx install alectryon
+            endGroup
 
           script: |
             startGroup "Build project"
               make
               make docs
-              #make alectryon
+              make alectryon
             endGroup
 
       # why does this take so long?

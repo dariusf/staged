@@ -6,6 +6,9 @@ docs:
 	coq2html -base SLF -short-names -no-css -d docs *.glob *.v
 	perl -pi -e 's@/title>@/title><script src="coq2html.js"></script>@' docs/SLF.Staged.html
 
+alectryon:
+	alectryon -R . SLF --frontend coqdoc --backend webpage Staged*.v --output-directory docs
+
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
