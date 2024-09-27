@@ -1,6 +1,5 @@
 
 From Coq Require Import Classes.RelationClasses.
-(* From Coq Require Setoid Morphisms Program.Basics. *)
 From Coq Require Morphisms Program.Basics.
 
 From SLF Require LibSepFmap.
@@ -580,6 +579,28 @@ Lemma norm_seq_assoc : forall f1 f2 f3,
 Proof.
   intros.
   split; intros; now apply seq_assoc.
+Qed.
+
+(** Reassociating req *)
+Lemma satisfies_reassoc : forall H f env h1 h2 r,
+  satisfies env (req_ H;; f) h1 h2 r ->
+  satisfies env (req H f) h1 h2 r.
+Proof.
+  intros.
+  inverts H0 as H0. destr H0.
+
+  (* find out about req *)
+  constructor. intros hp hr. intros.
+
+  (* prove the req *)
+  inverts H1 as H1.
+  specialize (H1 hp hr H0).
+  forward H1. fmap_eq.
+  forward H1. fmap_disjoint.
+
+  (* find out about hr *)
+  inverts H1 as H1. destr H1.
+  finv H1. finv H1. finv H7. subst. rew_fmap *.
 Qed.
 
 (** Splitting and combining [req]s *)
