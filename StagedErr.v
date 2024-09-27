@@ -419,7 +419,7 @@ Section Proprium.
     auto.
   Qed.
 
-  #[global]
+  (* #[global]
   Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
   Proof.
     unfold Proper, entails, respectful.
@@ -427,7 +427,7 @@ Section Proprium.
     inverts H1 as H1; destr H1.
     constructor. exists h3. exists r1.
     eauto.
-  Qed.
+  Qed. *)
 
   #[global]
   Instance Proper_seq_bi : Proper (bientails ====> bientails ====> bientails) seq.
@@ -576,7 +576,7 @@ Proof.
   easy.
 Qed.
 
-Lemma entails_ens : forall Q1 Q2,
+(* Lemma entails_ens : forall Q1 Q2,
   (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
 Proof.
   unfold entails.
@@ -613,7 +613,7 @@ Proof.
   unfold entails.
   intros.
   applys* satisfies_req H1.
-Qed.
+Qed. *)
 
 (** seq is associative *)
 Lemma seq_assoc : forall env h1 h2 r f1 f2 f3,
@@ -648,7 +648,7 @@ Proof.
 Qed.
 
 (** Reassociating req *)
-Lemma satisfies_reassoc : forall H f env h1 h2 r,
+(* Lemma satisfies_reassoc : forall H f env h1 h2 r,
   satisfies env (req_ H;; f) h1 h2 r ->
   satisfies env (req H f) h1 h2 r.
 Proof.
@@ -1432,4 +1432,4 @@ Module ForwardExamples.
       apply fw_val.
   Qed.
 
-End ForwardExamples.
+End ForwardExamples. *)
