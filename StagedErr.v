@@ -386,7 +386,7 @@ Section Proprium.
     { apply H0. apply H1. apply H. auto. }
   Qed. *)
 
-  #[global]
+  (* #[global]
   Instance Proper_satisfies : Proper
     (eq ====> entails ====> eq ====> eq ====> eq ====> impl)
     satisfies.
@@ -406,9 +406,9 @@ Section Proprium.
       { auto. }
       { auto. admit. } *)
     }
-  Abort.
+  Abort. *)
 
-  #[global]
+  (* #[global]
   Instance Proper_satisfies_bi : Proper
     (eq ====> bientails ====> eq ====> eq ====> eq ====> impl)
     satisfies.
@@ -417,7 +417,7 @@ Section Proprium.
     intros. subst.
     apply H0.
     auto.
-  Qed.
+  Qed. *)
 
   (* #[global]
   Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
@@ -576,44 +576,95 @@ Proof.
   easy.
 Qed.
 
-(* Lemma entails_ens : forall Q1 Q2,
+Lemma entails_ens : forall Q1 Q2,
   (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
 Proof.
   unfold entails.
   intros.
-  split.
-  { intros. left.
-  (* Check satisfies_ens. *)
-  (* rewrite satisfies_ens. *)
-  apply (satisfies_ens Q1).
-  }
-  applys* satisfies_ens.
-Qed.
+  split; intros.
+  { inverts H0 as H0. destr H0.
+    apply H in H0.
+    left.
+    constructor.
+    exists v0.
+    exists h3.
+    intuition. }
+  { inverts H0 as H0. destr H0.
+    inv H1. }
+Abort.
 
 (** Contravariance of req *)
-Lemma satisfies_req : forall H1 H2 env h1 h2 r f,
+Lemma satisfies_req : forall H1 H2 env h1 h2 r,
   H2 ==> H1 ->
-  satisfies env (req H1 f) h1 h2 r ->
-  satisfies env (req H2 f) h1 h2 r.
+  satisfies env (req H1) h1 h2 r ->
+  satisfies env (req H2) h1 h2 r.
 Proof.
   intros.
-  inverts H0 as H0.
-  apply s_req.
-  intros hH1 hr H3.
-  (* hH1 is the heap that satisfies H1 *)
-  (* hr is the starting heap of the continuation *)
-  apply H in H3.
-  specialize (H0 _ hr H3).
-  intuition.
-Qed.
+  constructor. (* unfold in the goal *)
+  split.
+  {
+    (* we have to prove hp |= H2 for some hp.
+      but the first premise tells us nothing about H2.
+      we can't apply H either, so the proof is stuck. *)
+    inverts H0 as H0. destr H0.
+    admit.
+  }
+  {
+    intros.
+    (* in this case, we have an assumption that H2 does not hold.
+      this doesn't help us use H either. *)
+    inverts H0 as H0. destr H0.
+    (* in order to prove r = top, we need to prove hp1 |/= H1 for some hp1. *)
 
-Lemma entails_req : forall H1 H2 f,
-  (H2 ==> H1) -> entails (req H1 f) (req H2 f).
+    (* the contrapositive of H doesn't help. *)
+    (* Search ((?a -> ?b) -> (not ?b -> not ?a)). *)
+    unfold himpl in H.
+    specialize (H hp). pose proof (contrapose H).
+    admit.
+  }
+Abort.
+
+Lemma entails_req : forall H1 H2,
+  (H2 ==> H1) -> entails (req H1) (req H2).
 Proof.
   unfold entails.
   intros.
-  applys* satisfies_req H1.
-Qed. *)
+  split.
+  {
+    intros.
+    left.
+    inverts H0 as H0. destr H0.
+    destruct (classic (H1 hp)).
+    {
+      clear H4.
+      specialize (H3 H0).
+      constructor.
+      split.
+      admit.
+      intros.
+      admit.
+    }
+    {
+      clear H3.
+      specializes H4 H0.
+      constructor.
+      split.
+      admit.
+      intros.
+      admit.
+    }
+  }
+  {
+    intros.
+    constructor.
+    split.
+    inverts H0 as H0.
+    destr H0.
+    admit.
+    admit.
+  }
+Abort.
+(* Qed. *)
 
 (** seq is associative *)
 Lemma seq_assoc : forall env h1 h2 r f1 f2 f3,
