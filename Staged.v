@@ -19,11 +19,14 @@ Set Implicit Arguments.
 Definition ident : Type := string.
 Definition ident_eq := String.string_dec.
 
+Definition loc := nat.
+
 Inductive val :=
   | vunit : val
   | vint : Z -> val
   | vfun : ident -> expr -> val
   | vfix : ident -> ident -> expr -> val
+  | vloc : loc -> val
 
 with expr : Type :=
   | pvar (x: ident)
@@ -162,6 +165,12 @@ Notation "'∃' x1 .. xn , H" :=
    format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'",
    only printing) : flow_scope.
 
+Notation "'∀' x1 .. xn , H" :=
+  (fall (fun x1 => .. (fall (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'",
+   only printing) : flow_scope.
+
 Notation "f '$' '(' x ',' r ')'" := (unk f x r)
   (at level 80, format "f '$' '(' x ','  r ')'", only printing) : flow_scope.
 
@@ -180,15 +189,15 @@ Notation "'ens' r '.' Q" := (ens (fun r => Q))
 - the definition of [req], whose variance has been fixed
 
 An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
-Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
+Inductive satisfies : env -> heap -> heap -> result -> flow -> Prop :=
 
   | s_req env p (h1 h2:heap) r f
     (H: forall hp hr, (* the heap satisfying p, and the remaining heap *)
       p hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies env f hr h2 r) :
-    satisfies env (req p f) h1 h2 r
+      satisfies env hr h2 r f) :
+    satisfies env h1 h2 r (req p f)
 
   | s_ens env q h1 h2 r
     (H: exists v h3,
@@ -196,57 +205,55 @@ Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
       q v h3 /\
       h2 = Fmap.union h1 h3 /\
       Fmap.disjoint h1 h3) :
-    satisfies env (ens q) h1 h2 r
+    satisfies env h1 h2 r (ens q)
 
   | s_seq env f1 f2 h1 h2 r
     (H: exists h3 r1,
-      satisfies env f1 h1 h3 r1 /\
-      satisfies env f2 h3 h2 r) :
-    satisfies env (seq f1 f2) h1 h2 r
+      satisfies env h1 h3 r1 f1 /\
+      satisfies env h3 h2 r f2) :
+    satisfies env h1 h2 r (seq f1 f2)
 
   | s_fex env h1 h2 r (A:Type) (f:A->flow)
     (H: exists v,
-      satisfies env (f v) h1 h2 r) :
-    satisfies env (@fex A f) h1 h2 r
+      satisfies env h1 h2 r (f v)) :
+    satisfies env h1 h2 r (@fex A f)
 
   | s_fall env h1 h2 r (A:Type) (f:A->flow)
     (H: forall v,
-      satisfies env (f v) h1 h2 r) :
-    satisfies env (@fall A f) h1 h2 r
+      satisfies env h1 h2 r (f v)) :
+    satisfies env h1 h2 r (@fall A f)
 
   | s_unk env fn h1 h2 r f x
     (He: Fmap.read env fn = Some f)
-    (Hr: satisfies env (f x r) h1 h2 (norm r)) :
-    satisfies env (unk fn x r) h1 h2 (norm r)
+    (Hr: satisfies env h1 h2 (norm r) (f x r)) :
+    satisfies env h1 h2 (norm r) (unk fn x r)
 
   | s_disj_l env h1 h2 r f1 f2
-    (H: satisfies env f1 h1 h2 r) :
-    satisfies env (disj f1 f2) h1 h2 r
+    (H: satisfies env h1 h2 r f1) :
+    satisfies env h1 h2 r (disj f1 f2)
 
   | s_disj_r env h1 h2 r f1 f2
-    (H: satisfies env f2 h1 h2 r) :
-    satisfies env (disj f1 f2) h1 h2 r.
+    (H: satisfies env h1 h2 r f2) :
+    satisfies env h1 h2 r (disj f1 f2).
 
 Notation "env ','  h1 ','  h2 ','  r  '|=' f" :=
-  (satisfies env f h1 h2 r) (at level 30, only printing).
+  (satisfies env h1 h2 r f) (at level 30, only printing).
 
 (** The result of a staged formula, written in the paper as [Φ[r]]. *)
 Definition flow_res (f:flow) (v:val) : Prop :=
-  exists h1 h2 env, satisfies env f h1 h2 (norm v).
+  exists h1 h2 env, satisfies env h1 h2 (norm v) f.
 
 (** * Entailment *)
 (** This is defined directly in terms of the semantics, in contrast to the paper's syntactic definition. *)
 (* TODO the paper's definition should later be implemented as an Inductive here and proved sound with respect to the lemmas we can write using this semantic definition *)
-Notation entails_under env f1 f2 :=
-  (forall h1 h2 r,
-    satisfies env f1 h1 h2 r -> satisfies env f2 h1 h2 r).
+Definition entails_under env f1 f2 :=
+  forall h1 h2 r,
+    satisfies env h1 h2 r f1 -> satisfies env h1 h2 r f2.
 
 Definition entails (f1 f2:flow) : Prop :=
   forall env, entails_under env f1 f2.
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
-
-Definition entailed_by f1 f2 := entails f2 f1.
 
 Notation "env '⊢' f1 '⊑' f2" :=
   (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
@@ -256,27 +263,22 @@ Notation "env '⊢' f1 '⊑' f2" :=
 
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 r env,
-    satisfies env f1 h1 h2 r <-> satisfies env f2 h1 h2 r.
+    satisfies env h1 h2 r f1 <-> satisfies env h1 h2 r f2.
 
 (** * Rewriting *)
 
 Instance entails_refl : Reflexive entails.
 Proof.
-  unfold Reflexive.
-  unfold entails.
+  unfold Reflexive, entails, entails_under.
   intros.
   exact H.
 Qed.
 
 Instance entails_trans : Transitive entails.
 Proof.
-  unfold Transitive.
+  unfold Transitive, entails, entails_under.
   intros.
-  unfold entails in *.
-  intros.
-  apply H0.
-  apply H.
-  apply H1.
+  auto.
 Qed.
 
 Instance entails_preorder : PreOrder entails.
@@ -284,6 +286,27 @@ Proof.
   constructor.
   apply entails_refl.
   apply entails_trans.
+Qed.
+
+Instance entails_under_refl : forall env, Reflexive (entails_under env).
+Proof.
+  unfold Reflexive, entails_under.
+  intros.
+  exact H.
+Qed.
+
+Instance entails_under_trans : forall env, Transitive (entails_under env).
+Proof.
+  unfold Transitive, entails_under.
+  intros.
+  auto.
+Qed.
+
+Instance entails_under_preorder : forall env, PreOrder (entails_under env).
+Proof.
+  constructor.
+  apply entails_under_refl.
+  apply entails_under_trans.
 Qed.
 
 Instance bientails_equiv : Equivalence bientails.
@@ -313,14 +336,25 @@ Section Proprium.
   Local Notation Proper := Morphisms.Proper.
   Local Notation respectful := Morphisms.respectful.
   Local Notation impl := Program.Basics.impl.
+  Local Notation flip := Basics.flip.
 
   (** This reflects how entailment is contravariant in the antecedent and covariant in the consequent *)
   #[global]
   Instance Proper_entails : Proper
-    (entailed_by ====> entails ====> impl)
+    (flip entails ====> entails ====> impl)
     entails.
   Proof.
-    unfold entailed_by, entails, Proper, respectful, impl.
+    unfold entails, entails_under, Proper, respectful, impl.
+    intros.
+    auto.
+  Qed.
+
+  #[global]
+  Instance Proper_entails_under : forall env, Proper
+    (flip (entails_under env) ====> entails_under env ====> impl)
+    (entails_under env).
+  Proof.
+    unfold entails, entails_under, Proper, respectful, impl.
     intros.
     auto.
   Qed.
@@ -330,42 +364,75 @@ Section Proprium.
     (bientails ====> bientails ====> iff)
     entails.
   Proof.
-    unfold bientails, entailed_by, entails, Proper, respectful, impl.
+    unfold bientails, entails, entails_under, Proper, respectful, impl.
     split; intros.
     { apply H0. apply H1. apply H. auto. }
     { apply H0. apply H1. apply H. auto. }
   Qed.
 
+  (** entails is proper wrt satisfies *)
   #[global]
   Instance Proper_satisfies : Proper
-    (eq ====> entails ====> eq ====> eq ====> eq ====> impl)
+    (eq ====> eq ====> eq ====> eq ====> entails ====> impl)
     satisfies.
   Proof.
-    unfold entails, Proper, respectful, impl.
+    unfold entails, entails_under, Proper, respectful, impl.
     intros. subst.
     auto.
   Qed.
 
   #[global]
   Instance Proper_satisfies_bi : Proper
-    (eq ====> bientails ====> eq ====> eq ====> eq ====> impl)
+    (eq ====> eq ====> eq ====> eq ====> bientails ====> impl)
     satisfies.
   Proof.
     unfold bientails, entails, Proper, respectful, impl.
     intros. subst.
-    apply H0.
+    apply H3.
+    auto.
+  Qed.
+
+  #[global]
+  Instance Proper_satisfies_under : forall env, Proper
+    (eq ====> eq ====> eq ====> entails_under env ====> impl)
+    (satisfies env).
+  Proof.
+    unfold entails_under, Proper, respectful, impl.
+    intros. subst.
     auto.
   Qed.
 
   #[global]
   Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
   Proof.
-    unfold Proper, entails, respectful.
+    unfold Proper, entails, entails_under, respectful.
     intros.
     inverts H1 as H1; destr H1.
     constructor. exists h3. exists r1.
     eauto.
   Qed.
+
+  #[global]
+  Instance Proper_seq_entails_under : forall env,
+    Proper (entails_under env ====> entails_under env ====> entails_under env) seq.
+  Proof.
+    unfold Proper, bientails, entails_under, respectful.
+    intros.
+    inverts H1 as H1; destr H1.
+    constructor. exists h3. exists r1.
+    split; auto.
+  Qed.
+
+  (* #[global]
+  Instance Proper_seq_entails_under1 : forall env,
+    Proper (flip (entails_under env) ====> flip (entails_under env) ====> flip (entails_under env)) seq.
+  Proof.
+    unfold Proper, flip, entails_under, respectful.
+    intros.
+    inverts H1 as H1; destr H1.
+    constructor. exists h3. exists r1.
+    split; auto.
+  Qed. *)
 
   #[global]
   Instance Proper_seq_bi : Proper (bientails ====> bientails ====> bientails) seq.
@@ -389,7 +456,7 @@ End Proprium.
 
 (** * Inversion/introduction lemmas *)
 Lemma ens_ret_inv : forall env h1 h2 H r,
-  satisfies env (ens_ H) h1 h2 r ->
+  satisfies env h1 h2 r (ens_ H) ->
   r = norm vunit.
 Proof.
   intros.
@@ -401,18 +468,18 @@ Proof.
 Qed.
 
 Lemma ens_empty_inv : forall env h1 h2 r,
-  satisfies env (ens (fun r => \[])) h1 h2 r -> h1 = h2.
+  satisfies env h1 h2 r (ens (fun r => \[])) -> h1 = h2.
 Proof.
   intros.
-  inverts H.
-  destr H2.
-  apply hempty_inv in H0.
+  inverts H as H.
+  destr H.
+  apply hempty_inv in H.
   subst.
   fmap_eq.
 Qed.
 
 Lemma ens_empty_intro : forall env h1 r,
-  satisfies env (ens (fun r => \[])) h1 h1 r.
+  satisfies env h1 h1 r (ens (fun r => \[])).
 Proof.
   intros.
   constructor.
@@ -424,7 +491,7 @@ Proof.
 Qed.
 
 Lemma ens_pure_inv : forall P env h1 h2 r,
-  satisfies env (ens (fun _ => \[P])) h1 h2 r -> P /\ h1 = h2.
+  satisfies env h1 h2 r (ens (fun _ => \[P])) -> P /\ h1 = h2.
 Proof.
   intros.
   inverts H as H.
@@ -435,7 +502,7 @@ Proof.
 Qed.
 
 Lemma ens_pure_intro : forall P env h r,
-  P -> satisfies env (ens (fun _ => \[P])) h h r.
+  P -> satisfies env h h r (ens (fun _ => \[P])).
 Proof.
   intros.
   constructor.
@@ -448,23 +515,34 @@ Proof.
 Qed.
 
 Lemma unk_inv : forall env h1 h2 r1 x f1 f r,
-  satisfies env (unk f x r1) h1 h2 r ->
   Fmap.read env f = Some f1 ->
-  satisfies env (f1 x r1) h1 h2 r.
+  satisfies env h1 h2 r (unk f x r1) ->
+  satisfies env h1 h2 r (f1 x r1).
 Proof.
   intros.
-  inverts H as H.
+  inverts H0 as H0.
   rewrite H in H0.
   inj H0.
   easy.
 Qed.
 
+Lemma norm_unk : forall env f x r1 f1,
+  Fmap.read env f = Some f1 ->
+  entails_under env (unk f x r1) (f1 x r1).
+Proof.
+  unfold entails_under.
+  intros.
+  eapply unk_inv.
+  exact H.
+  assumption.
+Qed.
+
 (** * Tactics for reasoning about entailments *)
 Ltac felim H :=
   match type of H with
-  | satisfies _ (fex _) _ _ _ => inverts H as H
-  | satisfies _ (_ ;; _) _ _ _ => inverts H as H
-  | satisfies _ (ens (fun _ => \[_])) _ _ _ => apply ens_pure_inv in H
+  | satisfies _ _ _ _ (fex _) => inverts H as H
+  | satisfies _ _ _ _ (_ ;; _) => inverts H as H
+  | satisfies _ _ _ _ (ens (fun _ => \[_])) => apply ens_pure_inv in H
   (* | satisfies _ (req \[]) _ _ _ => apply req_empty_inv in H; subst *)
   (* | satisfies _ (unk _ _ _) _ _ _ => inverts H as H *)
   end.
@@ -481,8 +559,8 @@ Ltac finv H :=
 
 Ltac fintro :=
   match goal with
-  | |- satisfies _ (ens (fun _ => \[_])) _ _ _ => apply ens_pure_intro
-  | |- satisfies _ (ens (fun _ => \[])) _ _ _ => apply ens_empty_intro
+  | |- satisfies _ _ _ _ (ens (fun _ => \[_])) => apply ens_pure_intro
+  | |- satisfies _ _ _ _ (ens (fun _ => \[])) => apply ens_empty_intro
   | |- \[] _ => apply hempty_intro
   | |- \[_] _ => apply hpure_intro
   | |- (_ \* _) (_ \u _) => apply hstar_intro
@@ -502,11 +580,11 @@ Ltac fintro :=
 (** Covariance of ens *)
 Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
   (forall v, Q1 v ==> Q2 v) ->
-  satisfies env (ens Q1) h1 h2 r ->
-  satisfies env (ens Q2) h1 h2 r.
+  satisfies env h1 h2 r (ens Q1)->
+  satisfies env h1 h2 r (ens Q2).
 Proof.
   intros.
-  inverts H0.
+  inverts H0 as H3.
   constructor.
   destruct H3 as (v&h3&?&?&?&?).
   exists v.
@@ -519,7 +597,7 @@ Qed.
 Lemma entails_ens : forall Q1 Q2,
   (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
 Proof.
-  unfold entails.
+  unfold entails, entails_under.
   intros.
   applys* satisfies_ens.
 Qed.
@@ -527,8 +605,8 @@ Qed.
 (** Contravariance of req *)
 Lemma satisfies_req : forall H1 H2 env h1 h2 r f,
   H2 ==> H1 ->
-  satisfies env (req H1 f) h1 h2 r ->
-  satisfies env (req H2 f) h1 h2 r.
+  satisfies env h1 h2 r (req H1 f) ->
+  satisfies env h1 h2 r (req H2 f).
 Proof.
   intros.
   inverts H0 as H0.
@@ -544,15 +622,15 @@ Qed.
 Lemma entails_req : forall H1 H2 f,
   (H2 ==> H1) -> entails (req H1 f) (req H2 f).
 Proof.
-  unfold entails.
+  unfold entails, entails_under.
   intros.
   applys* satisfies_req H1.
 Qed.
 
 (** seq is associative *)
 Lemma seq_assoc : forall env h1 h2 r f1 f2 f3,
-  satisfies env (f1;; f2;; f3) h1 h2 r <->
-  satisfies env ((f1;; f2);; f3) h1 h2 r.
+  satisfies env h1 h2 r (f1;; f2;; f3) <->
+  satisfies env h1 h2 r ((f1;; f2);; f3).
 Proof.
   intros.
   split; intros H.
@@ -582,9 +660,9 @@ Proof.
 Qed.
 
 (** Reassociating req *)
-Lemma satisfies_reassoc : forall H f env h1 h2 r,
-  satisfies env (req_ H;; f) h1 h2 r ->
-  satisfies env (req H f) h1 h2 r.
+Lemma satisfies_reassoc : forall H f1 f2 env h1 h2 r,
+  satisfies env h1 h2 r (req H f1;; f2) ->
+  satisfies env h1 h2 r (req H (f1;; f2)).
 Proof.
   intros.
   inverts H0 as H0. destr H0.
@@ -597,17 +675,25 @@ Proof.
   specialize (H1 hp hr H0).
   forward H1. fmap_eq.
   forward H1. fmap_disjoint.
+  
+  constructor.
+  exists h3.
+  exists r1.
+  split; auto.
+Qed.
 
-  (* find out about hr *)
-  inverts H1 as H1. destr H1.
-  finv H1. finv H1. finv H7. subst. rew_fmap *.
+Lemma norm_reassoc : forall H f1 f2,
+  entails (req H f1;; f2) (req H (f1;; f2)).
+Proof.
+  unfold entails, entails_under.
+  apply satisfies_reassoc.
 Qed.
 
 (** Splitting and combining [req]s *)
 Lemma norm_req_sep_combine : forall H1 H2 f,
   entails (req H1 (req H2 f)) (req (H1 \* H2) f).
 Proof.
-  unfold entails.
+  unfold entails, entails_under.
   intros.
   (* contravariance means we start reasoning from the assumptions in the goal *)
   apply s_req.
@@ -631,7 +717,7 @@ Qed.
 Lemma norm_req_sep_split : forall H1 H2 f,
   entails (req (H1 \* H2) f) (req H1 (req H2 f)).
 Proof.
-  unfold entails.
+  unfold entails, entails_under.
   intros.
 
   apply s_req.
@@ -659,8 +745,8 @@ Qed.
 
 (** Splitting and combining [ens_]s *)
 Lemma satisfies_ens_ens_void : forall H1 H2 env h1 h2 r,
-  satisfies env (ens_ (H1 \* H2)) h1 h2 r <->
-  satisfies env (ens_ H1;; ens_ H2) h1 h2 r.
+  satisfies env h1 h2 r (ens_ (H1 \* H2)) <->
+  satisfies env h1 h2 r (ens_ H1;; ens_ H2).
 Proof.
   intros.
   split; intros.
@@ -679,12 +765,13 @@ Proof.
   { inverts H as H.
     destruct H as (h3&r1&H3&H4).
     (* give up on careful reasoning *)
-    inv H3. destr H5. inv H4. destr H8. subst.
+    inverts H3 as H5. destr H5. inverts H4 as H8. destr H8.
+    rewrite hstar_hpure_l in H0.
+    rewrite hstar_hpure_l in H5.
+    intuition.
     constructor.
     exists v0.
-    exists (h0 \u h3).
-    rewrite hstar_hpure_l in H0.
-    rewrite hstar_hpure_l in H3.
+    exists (h0 \u h4).
     intuition.
     subst.
     rewrite <- hstar_assoc.
@@ -704,8 +791,8 @@ Qed.
 
 (** Splitting and combining [ens] with results is more complex, and there does not seem to be a single equivalence. *)
 Lemma satisfies_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
-  satisfies env (ens Q1;; ens Q2) h1 h2 r ->
-  satisfies env (ens (fun r0 : val => \exists r1 : val, Q1 r1 \* Q2 r0)) h1 h2 r.
+  satisfies env h1 h2 r (ens Q1;; ens Q2) ->
+  satisfies env h1 h2 r (ens (fun r0 : val => \exists r1 : val, Q1 r1 \* Q2 r0)).
 Proof.
   intros.
   felim H.
@@ -728,13 +815,13 @@ Qed.
 Lemma norm_ens_ens_combine : forall Q1 Q2,
   entails (ens Q1;; ens Q2) (ens (fun r => \exists r1, Q1 r1 \* Q2 r)).
 Proof.
-  unfold entails.
+  unfold entails, entails_under.
   apply satisfies_ens_sep_combine.
 Qed.
 
 Lemma satisfies_ens_sep_split : forall H Q env h1 h2 r,
-  satisfies env (ens (Q \*+ H)) h1 h2 r  ->
-  satisfies env (ens (fun _ : val => H);; ens Q) h1 h2 r.
+  satisfies env h1 h2 r (ens (Q \*+ H)) ->
+  satisfies env h1 h2 r (ens (fun _ : val => H);; ens Q).
 Proof.
   intros.
   inverts H0 as H0.
@@ -769,7 +856,7 @@ Qed.
 Lemma norm_ens_split : forall H Q,
   entails (ens (Q \*+ H)) (ens (fun _ => H);; ens Q).
 Proof.
-  unfold entails.
+  unfold entails, entails_under.
   apply satisfies_ens_sep_split.
 Qed.
 
@@ -816,8 +903,8 @@ Qed.
 
 (** Biabduction for a single location. *)
 Lemma biab_single : forall x a env h1 h2 r H1 H2 f,
-  satisfies env (ens_ (x~~>a \* H1);; req (x~~>a \* H2) f) h1 h2 r ->
-  satisfies env (ens_ H1;; req H2 f) h1 h2 r.
+  satisfies env h1 h2 r (ens_ (x~~>a \* H1);; req (x~~>a \* H2) f)->
+  satisfies env h1 h2 r (ens_ H1;; req H2 f).
 Proof.
   intros.
   inverts H as H. destruct H as (h3&r1&H3&H4).
@@ -847,7 +934,7 @@ Lemma norm_ens_req_transpose : forall H2 H1 Ha Hf (v:val) f,
   entails (ens_ (H1 v);; (req H2 f))
     (req Ha (ens_ (Hf v);; f)).
 Proof.
-  unfold entails.
+  unfold entails, entails_under.
   introv Hbi.
   induction Hbi.
 
@@ -883,7 +970,7 @@ Module Examples.
   Definition f2 : flow := fex (fun x => req_ (\[x = vint 1])).
   Definition f3 : flow := f1 ;; f2.
 
-  Example ex1: satisfies empty_env f1 Fmap.empty Fmap.empty (norm (vint 1)).
+  Example ex1: satisfies empty_env Fmap.empty Fmap.empty (norm (vint 1)) f1.
   Proof.
     intros.
     unfold f1.
@@ -969,7 +1056,7 @@ Module Examples.
   Qed.
 
   Example ex4: forall h,
-    satisfies (Fmap.update empty_env "f" (Some (fun x r1 => ens (fun r => \[r1 = r /\ r = x])))) f4 h h (norm (vint 1)).
+    satisfies (Fmap.update empty_env "f" (Some (fun x r1 => ens (fun r => \[r1 = r /\ r = x])))) h h (norm (vint 1)) f4.
   Proof.
     intros.
     constructor.
@@ -1011,11 +1098,11 @@ Module Examples.
 
   Example ex6_ent : f5 ⊑ f6.
   Proof.
-    unfold entails.
+    unfold entails, entails_under.
     unfold f5.
     unfold f6.
     intros.
-    inv H.
+    inverts H as H2.
     destruct H2 as (v & h3 & H1 & H2 & H3 & H4).
     subst r.
     constructor.
@@ -1106,7 +1193,7 @@ Module Examples.
   Abort.
 
   Example e1 : forall x,
-    satisfies empty_env (req_ \[x = 1]) empty_heap empty_heap (norm vunit).
+    satisfies empty_env empty_heap empty_heap (norm vunit) (req_ \[x = 1]).
   Proof.
     intros.
     apply s_req.
@@ -1125,7 +1212,7 @@ Module Examples.
   Qed.
 
   Example e2 : forall x,
-    satisfies empty_env (req (x~~>vint 1) (ens_ (x~~>vint 1))) (Fmap.single x (vint 1)) (Fmap.single x (vint 1)) (norm vunit).
+    satisfies empty_env (Fmap.single x (vint 1)) (Fmap.single x (vint 1)) (norm vunit) (req (x~~>vint 1) (ens_ (x~~>vint 1))).
   Proof.
     intros.
     apply s_req.
@@ -1144,7 +1231,7 @@ Module Examples.
   Qed.
 
   Example e3 : forall x,
-    satisfies empty_env ((ens_ (x~~>vint 1)) ;; req_ (x~~>vint 1)) empty_heap empty_heap (norm vunit).
+    satisfies empty_env empty_heap empty_heap (norm vunit) ((ens_ (x~~>vint 1)) ;; req_ (x~~>vint 1)).
   Proof.
     intros.
     constructor.
@@ -1183,8 +1270,9 @@ Module Examples.
   Qed.
 
   Example e4_req_false : forall x,
-    satisfies empty_env (req_ \[False])
-      (Fmap.single x (vint 1)) (Fmap.single x (vint 2)) (norm vunit).
+    satisfies empty_env
+      (Fmap.single x (vint 1)) (Fmap.single x (vint 2)) (norm vunit)
+      (req_ \[False]).
   Proof.
     intros.
     apply s_req.
@@ -1199,7 +1287,7 @@ Module Examples.
     entails (req (x~~>vint 1) (req_ (y~~>vint 2)))
       (req_ (x~~>vint 1 \* y~~>vint 2)).
   Proof.
-    unfold entails.
+    unfold entails, entails_under.
     intros.
 
     (* reason backwrds *)
@@ -1221,6 +1309,99 @@ Module Examples.
     forward H12. fmap_disjoint.
 
     assumption.
+  Qed.
+
+  Definition e6_env : env :=
+    Fmap.single "f" (Some (fun y r =>
+    match y with
+    | vloc x => req (x~~>vint 1) (ens_ (x~~>vint 2))
+    | _ => empty
+    end)).
+
+  Ltac resolve_fn_in_env1 f :=
+    match goal with
+    | |- Fmap.read (Fmap.single f (Some _)) ?k = _ =>
+      rewrite Fmap.read_single; reflexivity
+    | |- ?g => idtac g
+    end.
+
+  Ltac resolve_fn_in_env :=
+    match goal with
+    | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
+      rewrite Fmap.read_single; reflexivity
+    | |- ?g => idtac g
+    end.
+
+  Ltac funknown H :=
+    match type of H with
+    | satisfies ?e _ _ _ (unk _ _ _) =>
+      unfold e in H;
+      eapply unk_inv in H; only 2: resolve_fn_in_env; simpl;
+      fold e in H; simpl in H
+    end.
+
+  Example e6_fn_reassoc : forall x,
+    entails_under e6_env
+     (unk "f" (vloc x) vunit;; fall (fun a => req (x~~>vint a) (ens_ (x~~>vint a))))
+     (req (x~~>vint 1) (ens_ (x~~>vint 2))).
+  Proof.
+    (* Set Mangle Names. *)
+
+    unfold entails_under.
+    intros x h1 h2 r H.
+
+    (* first reason backward to access the req *)
+    constructor. intros hp hr H0 H1 H2. intros.
+
+    (* the function is unknown, so use its definition,
+      make it known, then build back up into a sequence *)
+    pose proof H as G.
+    inverts G as G. destruct G as (h3&r1&Hf&Hr).
+    funknown Hf.
+    pose proof (@s_seq e6_env _ _ h1 h2 r (ex_intro (fun h3 => _) h3 (ex_intro (fun x => _) r1 (conj Hf Hr)))) as G.
+    clear Hr. clear Hf.
+
+    (* this is quite inconvenient compared to rewriting, however *)
+    rewrites (>> norm_unk e6_env) in H. { unfold e6_env; resolve_fn_in_env. } simpl in H.
+    clear G.
+
+    (* reassociate *)
+    rewrite norm_reassoc in H.
+
+    (* discharge the req *)
+    pose proof (hsingle_inv H0) as H3.
+    (* finv H0. *)
+    rewrite H1 in H.
+    rewrite H3 in H.
+    inverts H as H.
+    specialize (H hp hr H0).
+    forward H. fmap_eq.
+    forward H. fmap_disjoint.
+    clear H3. clear H0. clear H1. clear H2.
+
+    (* seq *)
+    inverts H as H. destruct H as (h0&r2&He&Hr).
+
+    (* assume the ens *)
+    inverts He as He. destruct He as (?&h4&?&H3&H4&?).
+    rewrite hstar_hpure_l in H3. destruct H3 as [_ H6].
+    pose proof (hsingle_inv H6) as H5.
+    rewrite H4 in Hr.
+    rewrite H5 in Hr.
+    clear H4.
+
+    (* existential *)
+    inverts Hr as Hr.
+    (* destr H4. *)
+    specialize (Hr 2).
+
+    (* prove next req *)
+    inverts Hr as Hr.
+    specialize (Hr h4 hr H6).
+    forward Hr. fmap_eq.
+    forward Hr. fmap_disjoint.
+
+    auto.
   Qed.
 
   (* lfp interpretation *)
@@ -1252,7 +1433,7 @@ Module Examples.
     (* do induction on the numeric value of n *)
     intros n.
     induction_wf IH: (downto 0) n.
-    unfold sum.
+    unfold sum, entails_under.
     intros.
     inverts H1 as H1.
     (* base case *)
