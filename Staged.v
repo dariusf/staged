@@ -514,29 +514,6 @@ Proof.
   fmap_eq.
 Qed.
 
-Lemma unk_inv : forall env h1 h2 r1 x f1 f r,
-  Fmap.read env f = Some f1 ->
-  satisfies env h1 h2 r (unk f x r1) ->
-  satisfies env h1 h2 r (f1 x r1).
-Proof.
-  intros.
-  inverts H0 as H0.
-  rewrite H in H0.
-  inj H0.
-  easy.
-Qed.
-
-Lemma norm_unk : forall env f x r1 f1,
-  Fmap.read env f = Some f1 ->
-  entails_under env (unk f x r1) (f1 x r1).
-Proof.
-  unfold entails_under.
-  intros.
-  eapply unk_inv.
-  exact H.
-  assumption.
-Qed.
-
 (** * Tactics for reasoning about entailments *)
 Ltac felim H :=
   match type of H with
@@ -657,6 +634,79 @@ Lemma norm_seq_assoc : forall f1 f2 f3,
 Proof.
   intros.
   split; intros; now apply seq_assoc.
+Qed.
+
+Lemma unk_inv : forall env h1 h2 r1 x f1 f r,
+  Fmap.read env f = Some f1 ->
+  satisfies env h1 h2 r (unk f x r1) ->
+  satisfies env h1 h2 r (f1 x r1).
+Proof.
+  intros.
+  inverts H0 as H0.
+  rewrite H in H0.
+  inj H0.
+  easy.
+Qed.
+
+Lemma norm_unk : forall env f x r1 f1,
+  Fmap.read env f = Some f1 ->
+  entails_under env (unk f x r1) (f1 x r1).
+Proof.
+  unfold entails_under.
+  intros.
+  eapply unk_inv.
+  exact H.
+  assumption.
+Qed.
+
+Lemma norm_forall : forall (A:Type) f1 f2_ctx,
+  entails
+    (f1;; fall (fun (a:A) => f2_ctx a))
+    (fall (fun (a:A) => f1;; f2_ctx a)).
+Proof.
+  unfold entails.
+  intros.
+  constructor. intros v.
+  inverts H as H. destruct H as (h3&r1&?&?).
+  constructor.
+  exists h3. exists r1.
+  intuition.
+  inverts H0 as H0.
+  specializes H0 v.
+  auto.
+Qed.
+
+Lemma norm_req_pure : forall P f,
+  P -> entails (req \[P] f) f.
+Proof.
+  unfold entails.
+  intros.
+  inverts H0 as H0.
+  specializes H0 empty_heap h1.
+  forward H0. fintro. assumption.
+  rew_fmap *.
+Qed.
+
+(* The converse is not true as the result would change *)
+Lemma norm_seq_ens_empty : forall f,
+  entails (ens_ \[];; f) f.
+Proof.
+  unfold entails. intros.
+  inverts H as H. destruct H as (h3&r1&?&?).
+  inverts H as H.
+  destr H.
+  rew_heap in H.
+  finv H.
+  subst.
+  rew_fmap *.
+Qed.
+
+Lemma norm_seq_req_emp : forall f,
+  entails (req \[] f) f.
+Proof.
+  unfold entails. intros.
+  inverts H as H.
+  specializes H empty_heap h1 ___. fintro.
 Qed.
 
 (** Reassociating req *)
@@ -929,7 +979,7 @@ Proof.
 Qed.
 
 (** The [Float Pre] rule from the paper. *)
-Lemma norm_ens_req_transpose : forall H2 H1 Ha Hf (v:val) f,
+Lemma norm_ens_req_transpose : forall H1 H2 Ha Hf (v:val) f,
   biab Ha (H1 v) H2 (Hf v) ->
   entails (ens_ (H1 v);; (req H2 f))
     (req Ha (ens_ (Hf v);; f)).
@@ -1379,29 +1429,47 @@ Module Examples.
     forward H. fmap_disjoint.
     clear H3. clear H0. clear H1. clear H2.
 
-    (* seq *)
-    inverts H as H. destruct H as (h0&r2&He&Hr).
+    dup.
+    (* a semantic proof *)
+    { (* seq *)
+      inverts H as H. destruct H as (h0&r2&He&Hr).
 
-    (* assume the ens *)
-    inverts He as He. destruct He as (?&h4&?&H3&H4&?).
-    rewrite hstar_hpure_l in H3. destruct H3 as [_ H6].
-    pose proof (hsingle_inv H6) as H5.
-    rewrite H4 in Hr.
-    rewrite H5 in Hr.
-    clear H4.
+      (* assume the ens *)
+      inverts He as He. destruct He as (?&h4&?&H3&H4&?).
+      rewrite hstar_hpure_l in H3. destruct H3 as [_ H6].
+      pose proof (hsingle_inv H6) as H5.
+      rewrite H4 in Hr.
+      rewrite H5 in Hr.
+      clear H4.
 
-    (* existential *)
-    inverts Hr as Hr.
-    (* destr H4. *)
-    specialize (Hr 2).
+      (* existential *)
+      inverts Hr as Hr.
+      (* destr H4. *)
+      specialize (Hr 2).
 
-    (* prove next req *)
-    inverts Hr as Hr.
-    specialize (Hr h4 hr H6).
-    forward Hr. fmap_eq.
-    forward Hr. fmap_disjoint.
+      (* prove next req *)
+      inverts Hr as Hr.
+      specialize (Hr h4 hr H6).
+      forward Hr. fmap_eq.
+      forward Hr. fmap_disjoint.
 
-    auto.
+      auto. }
+
+    (* we can reason at a higher level with rewriting *)
+
+    rewrite norm_forall in H.
+    inverts H as H. specialize (H 2).
+
+    rewrites (>> norm_ens_req_transpose) in H.
+    { instantiate (1 := fun _ => hempty). simpl.
+      rewrite <- (hstar_hempty_r (x ~~> vint 2)).
+      apply b_pts_match.
+      apply b_base_empty. }
+
+    rew_heap in H.
+    rewrite norm_req_pure in H. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty in H.
+    assumption.
   Qed.
 
   (* lfp interpretation *)

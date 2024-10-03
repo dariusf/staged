@@ -87,3 +87,8 @@ Ltac unfolds_in_base H :=
    apply_to_head_of G ltac:(fun P => unfold P in H) end.
 (* Tactic Notation "unfolds" "in" hyp(H) :=
   unfolds_in_base H. *)
+
+Lemma dup_lemma : forall P, P -> P -> P.
+Proof using. auto. Qed.
+
+Tactic Notation "dup" := apply dup_lemma.
