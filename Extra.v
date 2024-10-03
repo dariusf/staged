@@ -1,7 +1,5 @@
 
-(* From SLF Require Export LibSepFmap. *)
 From SLF Require Import LibCore LibSepFmap.
-(* From SLF Require Export LibSepFmap. *)
 Module Fmap := LibSepFmap.
 
 (* extra things to add to SLF's formalization *)

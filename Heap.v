@@ -714,4 +714,16 @@ Ltac xsimpl_hook H ::=
 
 (* end LibSepReference *)
 
+Lemma hstar_hpure_conj : forall H1 H2,
+  (\[H1] \* \[H2]) = \[H1 /\ H2].
+Proof.
+  intros.
+  apply fun_ext_dep. intros h.
+  rewrite hstar_hpure_l.
+  apply prop_ext.
+  split; intros.
+  { destruct H. apply hpure_inv in H0. destruct H0. subst. apply hpure_intro. intuition. }
+  { apply hpure_inv in H. destruct H as ((?&?)&?). subst. intuition. now apply hpure_intro. }
+Qed.
+
 End HeapSetup.

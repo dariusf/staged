@@ -514,6 +514,52 @@ Proof.
   fmap_eq.
 Qed.
 
+Lemma ens_void_pure_inv : forall P env h1 h2 r,
+  satisfies env h1 h2 r (ens_ \[P]) -> P /\ h1 = h2 /\ r = norm vunit.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  rewrite hstar_hpure_l in H. destr H.
+  apply hpure_inv in H4. destr H4. subst.
+  intuition.
+Qed.
+
+Lemma ens_void_pure_intro : forall P env h,
+  P -> satisfies env h h (norm vunit) (ens_ \[P]).
+Proof.
+  intros.
+  unfold ens_.
+  constructor.
+  exists vunit.
+  exists empty_heap.
+  intuition.
+  rewrite hstar_hpure_r.
+  intuition.
+  apply hpure_intro.
+  reflexivity.
+  fmap_eq.
+Qed.
+
+Lemma seq_ens_pure_inv : forall P env h1 h2 r f,
+  satisfies env h1 h2 r (ens (fun _ => \[P]);; f) ->
+  P /\ satisfies env h1 h2 r f.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  apply ens_pure_inv in H0. destr H0. subst.
+  intuition.
+Qed.
+
+Lemma seq_ens_void_pure_inv : forall P env h1 h2 r f,
+  satisfies env h1 h2 r (ens_ \[P];; f) ->
+  P /\ satisfies env h1 h2 r f.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  apply ens_void_pure_inv in H0. destr H0. subst.
+  intuition.
+Qed.
+
 (** * Tactics for reasoning about entailments *)
 Ltac felim H :=
   match type of H with
@@ -1481,15 +1527,15 @@ Module Examples.
   Definition sum n res :=
     (* fall (fun n => fall (fun res => *)
     disj
-      (ens (fun _ => \[exists n1, n = vint n1 /\ n1 <= 0 /\ res = vint 0]))
-      (fex (fun n1 => ens (fun r => \[n = vint n1 /\ n1 > 0]);; fex (fun r1 =>
+      (ens_ \[exists n1, n = vint n1 /\ n1 <= 0 /\ res = vint 0])
+      (fex (fun n1 => ens_ \[n = vint n1 /\ n1 > 0];; fex (fun r1 =>
         (unk "sum" (vint (n1-1)) (vint r1);;
-          ens (fun _ => \[res = vint (1 + r1)])))))
+          ens_ \[res = vint (1 + r1)]))))
           (* )) *)
           .
 
   Definition sum_env := (Fmap.update empty_env "sum" (Some sum)).
-  Definition sum_property (n res:val) := ens (fun _ => \[res = n]).
+  Definition sum_property (n res:val) := ens_ \[res = n].
 
   (* Close Scope flow_scope. *)
 
@@ -1505,44 +1551,34 @@ Module Examples.
     intros.
     inverts H1 as H1.
     (* base case *)
-    { inverts H1 as H1. destr H1. finv H1. destr H1. subst. inj H1.
-      constructor.
-      exists v. exists empty_heap.
-      intuition.
-      fintro.
-      f_equal.
-      math. }
+    { apply ens_void_pure_inv in H1. destr H1. subst. inj H2.
+      apply ens_void_pure_intro.
+      f_equal. math. }
     (* recursive case *)
     { felim H1. destruct H1 as (v&H1).
-      felim H1. destruct H1 as (h3&r1&H1&H2).
+      apply seq_ens_void_pure_inv in H1. destruct H1 as ((?&?)&H1).
+      felim H1. destruct H1 as (r1&H1).
 
-      felim H2. destruct H2 as (v0&H2).
-      felim H2. destruct H2 as (h0&r0&H2&H3).
-      (* H1: shape of input *)
-      (* H2: call to sum *)
-      (* H3: shape of res *)
-
-      unfold sum_env in H2.
-      inverts H2 as H4 Hr.
-      rewrite fmap_read_update in H4. inj H4.
-
-      (* Hr: known call to sum *)
-
-      felim H1. destr H1.
-      subst.
-      inj H1.
+      rewrites (>> norm_unk sum_env) in H1.
+      { unfold sum_env; resolve_fn_in_env.
+        rew_fmap.
+        reflexivity.
+        auto. }
 
       specialize (IH (v-1)).
-      forward IH. unfold downto. math.
-      specialize (IH (vint (v-1)) (vint v0)).
+      forward IH. assert (v = n). congruence. unfold downto. math.
+      specialize (IH (vint (v-1)) (vint r1)).
       forward IH. math.
       forward IH. reflexivity.
-      specialize (IH _ _ _ Hr).
+      rewrite IH in H1.
+      clear IH.
 
-      felim IH. destr IH. inj H0.
-      rewrite one_plus_minus_one_r in H3.
-      exact H3.
-      apply fmap_indom_empty. }
+      rewrite <- norm_ens_ens_void in H1.
+      rewrite hstar_hpure_conj in H1.
+
+      apply ens_void_pure_inv in H1. destr H1. subst.
+      apply ens_void_pure_intro.
+      inj H2. inj H1. f_equal. math. }
   Qed.
 
 (* TODO *)
