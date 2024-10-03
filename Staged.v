@@ -251,7 +251,7 @@ Definition entails_under env f1 f2 :=
     satisfies env h1 h2 r f1 -> satisfies env h1 h2 r f2.
 
 Definition entails (f1 f2:flow) : Prop :=
-  forall env, entails_under env f1 f2.
+  forall env h1 h2 r, satisfies env h1 h2 r f1 -> satisfies env h1 h2 r f2.
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
@@ -269,14 +269,14 @@ Definition bientails (f1 f2:flow) : Prop :=
 
 Instance entails_refl : Reflexive entails.
 Proof.
-  unfold Reflexive, entails, entails_under.
+  unfold Reflexive, entails.
   intros.
   exact H.
 Qed.
 
 Instance entails_trans : Transitive entails.
 Proof.
-  unfold Transitive, entails, entails_under.
+  unfold Transitive, entails.
   intros.
   auto.
 Qed.
@@ -344,7 +344,7 @@ Section Proprium.
     (flip entails ====> entails ====> impl)
     entails.
   Proof.
-    unfold entails, entails_under, Proper, respectful, impl.
+    unfold entails, Proper, respectful, impl.
     intros.
     auto.
   Qed.
@@ -354,7 +354,7 @@ Section Proprium.
     (flip (entails_under env) ====> entails_under env ====> impl)
     (entails_under env).
   Proof.
-    unfold entails, entails_under, Proper, respectful, impl.
+    unfold entails_under, Proper, respectful, impl.
     intros.
     auto.
   Qed.
@@ -364,7 +364,7 @@ Section Proprium.
     (bientails ====> bientails ====> iff)
     entails.
   Proof.
-    unfold bientails, entails, entails_under, Proper, respectful, impl.
+    unfold bientails, entails, Proper, respectful, impl.
     split; intros.
     { apply H0. apply H1. apply H. auto. }
     { apply H0. apply H1. apply H. auto. }
@@ -376,7 +376,7 @@ Section Proprium.
     (eq ====> eq ====> eq ====> eq ====> entails ====> impl)
     satisfies.
   Proof.
-    unfold entails, entails_under, Proper, respectful, impl.
+    unfold entails, Proper, respectful, impl.
     intros. subst.
     auto.
   Qed.
@@ -405,7 +405,7 @@ Section Proprium.
   #[global]
   Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
   Proof.
-    unfold Proper, entails, entails_under, respectful.
+    unfold Proper, entails, respectful.
     intros.
     inverts H1 as H1; destr H1.
     constructor. exists h3. exists r1.
@@ -416,7 +416,7 @@ Section Proprium.
   Instance Proper_seq_entails_under : forall env,
     Proper (entails_under env ====> entails_under env ====> entails_under env) seq.
   Proof.
-    unfold Proper, bientails, entails_under, respectful.
+    unfold Proper, entails_under, respectful.
     intros.
     inverts H1 as H1; destr H1.
     constructor. exists h3. exists r1.
@@ -597,7 +597,7 @@ Qed.
 Lemma entails_ens : forall Q1 Q2,
   (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
 Proof.
-  unfold entails, entails_under.
+  unfold entails.
   intros.
   applys* satisfies_ens.
 Qed.
@@ -622,7 +622,7 @@ Qed.
 Lemma entails_req : forall H1 H2 f,
   (H2 ==> H1) -> entails (req H1 f) (req H2 f).
 Proof.
-  unfold entails, entails_under.
+  unfold entails.
   intros.
   applys* satisfies_req H1.
 Qed.
@@ -685,7 +685,7 @@ Qed.
 Lemma norm_reassoc : forall H f1 f2,
   entails (req H f1;; f2) (req H (f1;; f2)).
 Proof.
-  unfold entails, entails_under.
+  unfold entails.
   apply satisfies_reassoc.
 Qed.
 
@@ -693,7 +693,7 @@ Qed.
 Lemma norm_req_sep_combine : forall H1 H2 f,
   entails (req H1 (req H2 f)) (req (H1 \* H2) f).
 Proof.
-  unfold entails, entails_under.
+  unfold entails.
   intros.
   (* contravariance means we start reasoning from the assumptions in the goal *)
   apply s_req.
@@ -717,7 +717,7 @@ Qed.
 Lemma norm_req_sep_split : forall H1 H2 f,
   entails (req (H1 \* H2) f) (req H1 (req H2 f)).
 Proof.
-  unfold entails, entails_under.
+  unfold entails.
   intros.
 
   apply s_req.
@@ -815,7 +815,7 @@ Qed.
 Lemma norm_ens_ens_combine : forall Q1 Q2,
   entails (ens Q1;; ens Q2) (ens (fun r => \exists r1, Q1 r1 \* Q2 r)).
 Proof.
-  unfold entails, entails_under.
+  unfold entails.
   apply satisfies_ens_sep_combine.
 Qed.
 
@@ -856,7 +856,7 @@ Qed.
 Lemma norm_ens_split : forall H Q,
   entails (ens (Q \*+ H)) (ens (fun _ => H);; ens Q).
 Proof.
-  unfold entails, entails_under.
+  unfold entails.
   apply satisfies_ens_sep_split.
 Qed.
 
@@ -934,7 +934,7 @@ Lemma norm_ens_req_transpose : forall H2 H1 Ha Hf (v:val) f,
   entails (ens_ (H1 v);; (req H2 f))
     (req Ha (ens_ (Hf v);; f)).
 Proof.
-  unfold entails, entails_under.
+  unfold entails.
   introv Hbi.
   induction Hbi.
 
@@ -1098,7 +1098,7 @@ Module Examples.
 
   Example ex6_ent : f5 ⊑ f6.
   Proof.
-    unfold entails, entails_under.
+    unfold entails.
     unfold f5.
     unfold f6.
     intros.
@@ -1287,7 +1287,7 @@ Module Examples.
     entails (req (x~~>vint 1) (req_ (y~~>vint 2)))
       (req_ (x~~>vint 1 \* y~~>vint 2)).
   Proof.
-    unfold entails, entails_under.
+    unfold entails.
     intros.
 
     (* reason backwrds *)
