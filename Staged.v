@@ -27,6 +27,9 @@ Inductive val :=
   | vfun : ident -> expr -> val
   | vfix : ident -> ident -> expr -> val
   | vloc : loc -> val
+  | vtup : val -> val -> val
+  | vstr : string -> val
+  | vlist : list val -> val
 
 with expr : Type :=
   | pvar (x: ident)
@@ -36,6 +39,7 @@ with expr : Type :=
   | pfun (x: ident) (e: expr)
   | padd (x y: val)
   | pminus (x y: val)
+  (* | ptup (x y: val) *)
   (* | pref (x: ident) *)
   (* | pderef (x: ident) *)
   (* | passign (x1: ident) (x2: ident) *)
@@ -56,6 +60,7 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   | pval v => pval v
   | padd x y => padd x y
   | pminus x y => pminus x y
+  (* | ptup x y => ptup x y *)
   | pvar x => if_y_eq x (pval w) e
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
@@ -1679,16 +1684,16 @@ Module Examples.
       apply ens_void_pure_intro.
       f_equal. math. }
     (* recursive case *)
-    { felim H1. destruct H1 as (v&H1).
+    { felim H1. destruct H1 as (n1&H1).
       apply seq_ens_void_pure_inv in H1. destruct H1 as ((?&?)&H1).
       felim H1. destruct H1 as (r1&H1).
 
       rewrites (>> norm_unk sum_env) in H1.
       { unfold sum_env; resolve_fn_in_env. }
 
-      specialize (IH (v-1)).
-      forward IH. assert (v = n). congruence. unfold downto. math.
-      specialize (IH (vint (v-1)) (vint r1)).
+      specialize (IH (n1-1)).
+      forward IH. assert (n1 = n). congruence. unfold downto. math.
+      specialize (IH (vint (n1-1)) (vint r1)).
       forward IH. math.
       forward IH. reflexivity.
       rewrite IH in H1.
@@ -1701,13 +1706,19 @@ Module Examples.
       inj H2. inj H1. f_equal. math. }
   Qed.
 
-(* TODO *)
-Definition foldr :=
-  ens (fun _ => \[True]) ;;
-  disj
-    (unk "f" (vint 2) (vint 3))
-    (unk "foldr" (vint 1) (vint 1);;
-      unk "f" (vint 2) (vint 1)).
+  Definition foldr : ufun := fun args rr =>
+    match args with
+    | vtup (vstr f) (vtup (vint a) (vlist l)) =>
+      disj
+        (ens_ \[rr = vint a /\ l = nil])
+        (fex (fun x => fex (fun r => fex (fun l1 =>
+          ens_ \[l = cons x l1];;
+          unk "foldr" (vtup (vstr f) (vtup (vint a) (vlist l1))) r;;
+          unk f (vtup x r) rr))))
+    | _ => empty
+    end.
+
+  Definition foldr_env := (Fmap.update empty_env "foldr" (Some foldr)).
 
 End Examples.
 
