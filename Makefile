@@ -9,6 +9,8 @@ docs:
 alectryon:
 	alectryon -R . SLF --frontend coqdoc --backend webpage Staged*.v --output-directory docs
 
+coqdoc: install-doc
+
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
