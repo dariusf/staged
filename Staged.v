@@ -15,7 +15,7 @@ Local Open Scope list_scope.
 Set Implicit Arguments.
 
 (** * Programs *)
-(** The representation of programs, substitution, and the big-step semantics are mostly reused from SLF. *)
+(** The representation of programs and the use of substitution are mostly reused from SLF. *)
 Definition ident : Type := string.
 Definition ident_eq := String.string_dec.
 
@@ -29,6 +29,7 @@ Inductive val :=
   | vloc : loc -> val
   | vtup : val -> val -> val
   | vstr : string -> val
+  | vbool : bool -> val
   | vlist : list val -> val
 
 with expr : Type :=
@@ -39,6 +40,7 @@ with expr : Type :=
   | pfun (x: ident) (e: expr)
   | padd (x y: val)
   | pminus (x y: val)
+  | passert (b: val)
   (* | ptup (x y: val) *)
   (* | pref (x: ident) *)
   (* | pderef (x: ident) *)
@@ -62,6 +64,7 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   | pminus x y => pminus x y
   (* | ptup x y => ptup x y *)
   | pvar x => if_y_eq x (pval w) e
+  | passert b => passert b
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
   | pcall t1 t2 => pcall t1 t2
@@ -76,51 +79,6 @@ End Val.
 (** SLF's heap theory as a functor. *)
 Module Export Heap := Heap.HeapSetup(Val).
 
-Inductive eresult : Type :=
-  | enorm : val -> eresult.
-
-Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
-  | eval_pval : forall h v,
-    bigstep h (pval v) h (enorm v)
-
-  | eval_padd : forall h x y,
-    bigstep h (padd (vint x) (vint y)) h (enorm (vint (x + y)))
-
-  | eval_pminus : forall h x y,
-    bigstep h (pminus (vint x) (vint y)) h (enorm (vint (x - y)))
-
-  | eval_pfun : forall h x e,
-    bigstep h (pfun x e) h (enorm (vfun x e))
-
-  | eval_pfix : forall h x e f,
-    bigstep h (pfix f x e) h (enorm (vfix f x e))
-
-  | eval_app_fun : forall v1 v2 h x e r,
-    v1 = vfun x e ->
-    bigstep h (subst x v2 e) h r ->
-    bigstep h (pcall v1 v2) h r
-
-  | eval_app_fix : forall v1 v2 h x e r f,
-    v1 = vfun x e ->
-    bigstep h (subst x v2 (subst f v1 e)) h r ->
-    bigstep h (pcall v1 v2) h r.
-
-  (* there is no var rule *)
-
-  (* | eval_plet : forall x e1 e2 v s h h2 s2 s1 h1 r,
-    eval[ s, h, e1 ] => [ s1, h1, enorm v] ->
-    eval[ supdate x v s1, h1, e2 ] => [ s2, h2, r] ->
-    eval[ s, h, plet x e1 e2 ] => [ s2, h2, r ] *)
-
-  (* | eval_pref : forall x s (h:heap) l,
-    h l = None ->
-    eval[ s, h, pref x ] => [ s, hupdate l (s x) h, enorm l]
-  | eval_deref : forall x s (h:heap) v,
-    h (s x) = Some v ->
-    eval[ s, h, pderef x ] => [ s, h, enorm v]
-  | eval_assign : forall x1 x2 s h,
-    eval[ s, h, passign x1 x2 ] => [ s, hupdate (s x1) (s x2) h, enorm 0] *)
-
 Definition empty_heap : heap := Fmap.empty.
 
 Definition precond := hprop.
@@ -128,11 +86,6 @@ Definition postcond := val -> hprop.
 
 Inductive result : Type :=
   | norm : val -> result.
-
-Definition compatible r1 r2 :=
-  match (r1, r2) with
-  | (norm r3, enorm r4) => r3 = r4
-end.
 
 (** * Staged formulae *)
 (** Deeply embedded due to uninterpreted functions, which cannot immediately be given a semantics without an environment. *)
@@ -244,9 +197,12 @@ Inductive satisfies : env -> heap -> heap -> result -> flow -> Prop :=
 Notation "env ','  h1 ','  h2 ','  r  '|=' f" :=
   (satisfies env h1 h2 r f) (at level 30, only printing).
 
-(** The result of a staged formula, written in the paper as [Φ[r]]. *)
+(** The result of a staged formula, written in the paper as [Φ[r]]. Because it relates a formula and a value here (and not a variable, as in the paper), we need a model for the formula to talk about the value. *)
 Definition flow_res (f:flow) (v:val) : Prop :=
-  exists h1 h2 env, satisfies env h1 h2 (norm v) f.
+  forall h1 h2 env v1, satisfies env h1 h2 (norm v1) f -> v1 = v.
+
+Definition flow_res_in_env (f:flow) (v:val) env : Prop :=
+  forall h1 h2 v1, satisfies env h1 h2 (norm v1) f -> v1 = v.
 
 (** * Entailment *)
 (** This is defined directly in terms of the semantics, in contrast to the paper's syntactic definition. *)
@@ -428,17 +384,6 @@ Section Proprium.
     split; auto.
   Qed.
 
-  (* #[global]
-  Instance Proper_seq_entails_under1 : forall env,
-    Proper (flip (entails_under env) ====> flip (entails_under env) ====> flip (entails_under env)) seq.
-  Proof.
-    unfold Proper, flip, entails_under, respectful.
-    intros.
-    inverts H1 as H1; destr H1.
-    constructor. exists h3. exists r1.
-    split; auto.
-  Qed. *)
-
   #[global]
   Instance Proper_seq_bi : Proper (bientails ====> bientails ====> bientails) seq.
   Proof.
@@ -469,6 +414,26 @@ Proof.
   destruct H0 as (v&h3&H1&H2&H3&H4).
   rewrite hstar_hpure_l in H2.
   destruct H2.
+  congruence.
+Qed.
+
+Lemma req_pure_ret_inv : forall env h1 h2 P r,
+  P ->
+  satisfies env h1 h2 r (req_ \[P]) ->
+  r = norm vunit.
+Proof.
+  intros.
+  inverts H0 as H0.
+
+  forwards: H0 empty_heap h1.
+  apply hpure_intro.
+  assumption.
+  fmap_eq.
+  fmap_disjoint.
+
+  inverts H1 as H1. destr H1.
+  rewrite hstar_hpure_l in H1.
+  destruct H1.
   congruence.
 Qed.
 
@@ -506,6 +471,18 @@ Proof.
   intuition.
 Qed.
 
+Lemma ens_pure_inv_dep : forall P env h1 h2 v,
+  satisfies env h1 h2 (norm v) (ens (fun a => \[P a])) ->
+  P v /\ h1 = h2.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  inverts H.
+  inverts H2.
+  inj H0.
+  intuition.
+Qed.
+
 Lemma ens_pure_intro : forall P env h r,
   P -> satisfies env h h r (ens (fun _ => \[P])).
 Proof.
@@ -513,6 +490,18 @@ Proof.
   constructor.
   destruct r.
   exists v.
+  exists empty_heap.
+  intuition.
+  apply hpure_intro; easy.
+  fmap_eq.
+Qed.
+
+Lemma ens_pure_intro_dep : forall P env h r,
+  P r -> satisfies env h h (norm r) (ens (fun v => \[P v])).
+Proof.
+  intros.
+  constructor.
+  exists r.
   exists empty_heap.
   intuition.
   apply hpure_intro; easy.
@@ -594,6 +583,20 @@ Proof.
   intuition.
 Qed.
 
+Lemma seq_ens_pure_inv_dep : forall P env h1 h2 v f,
+  satisfies env h1 h2 (norm v) (ens (fun a => \[P a]);; f) ->
+  exists v1, P v1 /\ satisfies env h1 h2 (norm v) f.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  destruct r1.
+  lets H2: ens_pure_inv_dep P H0.
+  exists v0.
+  intuition.
+  subst.
+  intuition.
+Qed.
+
 Lemma seq_ens_void_pure_inv : forall P env h1 h2 r f,
   satisfies env h1 h2 r (ens_ \[P];; f) ->
   P /\ satisfies env h1 h2 r f.
@@ -637,6 +640,15 @@ Ltac fintro :=
   (* | |- satisfies _ (req \[]) _ _ _ => apply req_empty_intro *)
   (* | |- satisfies _ (req \[];; _) _ _ _ => apply seq_req_emp_intro_l *)
   end.
+
+  Ltac resolve_fn_in_env :=
+    match goal with
+    | |- Fmap.read (Fmap.update _ ?k (Some _)) ?k = _ =>
+      rewrite fmap_read_update; auto
+    | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
+      rewrite Fmap.read_single; reflexivity
+    | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g
+    end.
 
 (* Ltac fexists v :=
   match goal with
@@ -830,8 +842,7 @@ Qed.
 Lemma norm_ens_false : forall f,
   entails (ens_ \[False]) f.
 Proof.
-  unfold entails.
-  intros.
+  unfold entails. intros.
   apply ens_void_pure_inv in H.
   intuition.
 Qed.
@@ -839,7 +850,7 @@ Qed.
 Lemma norm_req_false : forall f f1,
   entails f (req \[False] f1).
 Proof.
-  unfold bientails.
+  unfold entails. intros.
   constructor. intros.
   apply hpure_inv in H0.
   intuition.
@@ -848,8 +859,7 @@ Qed.
 Lemma norm_req_pure : forall P f,
   P -> entails (req \[P] f) f.
 Proof.
-  unfold entails.
-  intros.
+  unfold entails. intros.
   inverts H0 as H0.
   specializes H0 empty_heap h1.
   forward H0. fintro. assumption.
@@ -901,7 +911,7 @@ Proof.
     apply empty_intro. }
 Qed.
 
-(** Compation rule 3 from the paper *)
+(** Compaction rule 3 from the paper *)
 Lemma norm_empty_r : forall f H,
   bientails (f;; ens_ H;; empty) (f;; ens_ H).
 Proof.
@@ -1053,22 +1063,38 @@ Qed.
 
 (** Compaction rule 5 from the paper *)
 Lemma norm_ens_ens_void_l : forall H Q,
-  entails (ens_ H;; ens Q) (ens (Q \*+ H)).
+  bientails (ens_ H;; ens Q) (ens (Q \*+ H)).
 Proof.
   unfold entails.
-  intros.
-  inverts H0 as H0. destr H0.
-  inverts H1 as H1. destr H1.
-  inverts H2 as H2. destr H2.
-
-  constructor.
-  exists v0.
-  exists (h0 \u h4).
-  intuition.
-  rewrite hstar_hpure_l in H1.
-  rewrite hstar_comm.
-  apply hstar_intro; intuition auto.
-  fmap_eq.
+  split; intros.
+  { inverts H0 as H0. destr H0.
+    inverts H1 as H1. destr H1.
+    inverts H2 as H2. destr H2.
+    constructor.
+    exists v0.
+    exists (h0 \u h4).
+    intuition.
+    rewrite hstar_hpure_l in H1.
+    rewrite hstar_comm.
+    apply hstar_intro; intuition auto.
+    fmap_eq. }
+  { inverts H0 as H0. destr H0.
+    apply hstar_inv in H0. destr H0.
+    constructor.
+    exists (h1 \u h4).
+    exists (norm vunit).
+    split.
+    { constructor.
+      exists vunit.
+      exists h4.
+      intuition.
+      rewrite hstar_hpure_l.
+      intuition. }
+    { constructor.
+      exists v.
+      exists h0.
+      intuition.
+      fmap_eq. } }
 Qed.
 
 (** Splitting and combining [ens] with results is more complex, and there does not seem to be a single equivalence. *)
@@ -1249,7 +1275,7 @@ Qed.
 Module Examples.
 
   Definition f1 : flow := ens (fun r => \[r=vint 1]).
-  Definition f2 : flow := fex (fun x => req_ (\[x = vint 1])).
+  Definition f2 : flow := fall (fun x => req_ (\[x = vint 1])).
   Definition f3 : flow := f1 ;; f2.
 
   Example ex1: satisfies empty_env Fmap.empty Fmap.empty (norm (vint 1)) f1.
@@ -1266,113 +1292,66 @@ Module Examples.
 
   Example ex2_ret: flow_res f1 (vint 1).
   Proof.
-    unfold flow_res.
-    exists empty_heap.
-    exists empty_heap.
-    exists empty_env.
-    unfold f1.
-    econstructor. eexists. eexists. intuition.
-    apply hpure_intro_hempty.
-    apply hempty_intro.
+    unfold f1, flow_res.
+    intros.
+    inverts H as H. destr H.
+    inj H0.
+    inv H.
     reflexivity.
-    fmap_eq.
+  Qed.
+
+  Lemma flow_res_inv: forall v v1 f h1 h2 env,
+    satisfies env h1 h2 (norm v) f ->
+    flow_res f v1 ->
+    v = v1.
+  Proof.
+    unfold flow_res.
+    intros.
+    specializes H0 H.
+    assumption.
+  Qed.
+
+  Example ex2_ret1: forall v, flow_res f1 v -> v = vint 1.
+  Proof.
+    unfold f1, flow_res.
+    intros.
+    forwards: H empty_heap empty_heap empty_env (vint 1).
+    { constructor.
+      exists (vint 1). exists empty_heap.
+      intuition.
+      apply hpure_intro. reflexivity.
+      fmap_eq. }
+      congruence.
   Qed.
 
   Example ex3_req_ret: flow_res f2 vunit.
   Proof.
-    unfold flow_res.
-    exists empty_heap.
-    exists empty_heap.
-    exists empty_env.
-    unfold f2.
-    apply (s_fex).
-    exists (vint 1).
-    constructor.
+    unfold flow_res, f2.
     intros.
-    constructor.
-    exists vunit.
-    exists empty_heap.
-    intuition.
-    fmap_eq.
-    rewrite hstar_hpure_r.
-    intuition.
-    fintro. reflexivity.
-    finv H.
-    subst. rew_fmap.
-    unfold empty_heap in *.
-    fmap_eq.
+    inverts H as H.
+    specializes H (vint 1).
+    apply req_pure_ret_inv in H.
+    congruence.
+    reflexivity.
   Qed.
 
-  Definition f4 : flow := empty ;; fex (fun r => unk "f" (vint 1) r).
+  Definition f4 : flow := empty;; fall (fun r => unk "f" (vint 1) r).
   Definition f4_env : env :=
-    Fmap.update empty_env "f" (Some (fun _ r => ens (fun r1 => \[r = vint 2]))).
+    Fmap.update empty_env "f" (Some (fun _ r => ens_ \[r = vint 2])).
 
   (* has to be 2 *)
-  Example ex5_f_ret: flow_res f4 (vint 2).
+  Example ex5_f_ret:
+    flow_res_in_env f4 (vint 2) f4_env.
   Proof.
-    unfold flow_res.
-    exists empty_heap. exists empty_heap. exists f4_env.
-    unfold f4.
-    constructor. exists empty_heap. exists (norm vunit). intuition.
-    constructor.
-    eexists.
-    exists empty_heap.
-    intuition.
-    rewrite hstar_hpure_l.
-    intuition.
-    fintro. constructor.
-    fmap_eq.
-
-    constructor.
-    exists (vint 2).
-    econstructor.
-    unfold f4_env.
-
-    rewrite fmap_read_update.
-    reflexivity.
-    apply fmap_indom_empty.
-
-    simpl.
-    fintro.
-    reflexivity.
-  Qed.
-
-  Example ex4: forall h,
-    satisfies (Fmap.update empty_env "f" (Some (fun x r1 => ens (fun r => \[r1 = r /\ r = x])))) h h (norm (vint 1)) f4.
-  Proof.
+    unfold flow_res_in_env, f4.
     intros.
-    constructor.
-    exists h.
-    exists (norm vunit).
-    split.
-
-    - constructor.
-      eexists.
-      exists empty_heap.
-      intuition.
-
-      rewrite hstar_hpure_l.
-      intuition.
-      fintro.
-      constructor.
-      fmap_eq.
-
-    - eapply s_fex.
-      exists (vint 1).
-      eapply s_unk.
-      rew_fmap.
-      reflexivity.
-
-      apply fmap_indom_empty.
-      constructor.
-
-      eexists.
-      exists empty_heap.
-      intuition.
-      apply hpure_intro_hempty.
-      apply hempty_intro.
-      intuition.
-      fmap_eq.
+    rewrite norm_empty_l in H.
+    inverts H as H. specializes H v1.
+    rewrite (@norm_unk f4_env) in H.
+    2: { unfold f4_env. resolve_fn_in_env. }
+    simpl in H.
+    apply ens_void_pure_inv in H.
+    intuition.
   Qed.
 
   Definition f5 : flow := ens (fun r => \[r = vint 2]).
@@ -1600,15 +1579,6 @@ Module Examples.
     | _ => empty
     end)).
 
-  Ltac resolve_fn_in_env :=
-    match goal with
-    | |- Fmap.read (Fmap.update _ ?k (Some _)) ?k = _ =>
-      rewrite fmap_read_update; auto
-    | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
-      rewrite Fmap.read_single; reflexivity
-    | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g
-    end.
-
   Example e6_fn_reassoc : forall x,
     entails_under e6_env
      (unk "f" (vloc x) vunit;; fall (fun a => req (x~~>vint a) (ens_ (x~~>vint a))))
@@ -1769,8 +1739,66 @@ Module Examples.
 
 End Examples.
 
+(** * Big-step semantics *)
+Inductive eresult : Type :=
+  | enorm : val -> eresult.
+
+Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
+  | eval_pval : forall h v,
+    bigstep h (pval v) h (enorm v)
+
+  (* there is no var rule *)
+
+  | eval_plet : forall h1 h3 h2 x e1 e2 v r,
+    bigstep h1 e1 h3 (enorm v) ->
+    bigstep h3 (subst x v e2) h2 r ->
+    bigstep h1 (plet x e1 e2) h2 r
+
+  | eval_padd : forall h x y,
+    bigstep h (padd (vint x) (vint y)) h (enorm (vint (x + y)))
+
+  | eval_pminus : forall h x y,
+    bigstep h (pminus (vint x) (vint y)) h (enorm (vint (x - y)))
+
+  | eval_pfun : forall h x e,
+    bigstep h (pfun x e) h (enorm (vfun x e))
+
+  | eval_pfix : forall h x e f,
+    bigstep h (pfix f x e) h (enorm (vfix f x e))
+
+  | eval_app_fun : forall v1 v2 h x e r,
+    v1 = vfun x e ->
+    bigstep h (subst x v2 e) h r ->
+    bigstep h (pcall v1 v2) h r
+
+  | eval_app_fix : forall v1 v2 h x e r f,
+    v1 = vfun x e ->
+    bigstep h (subst x v2 (subst f v1 e)) h r ->
+    bigstep h (pcall v1 v2) h r
+    
+  | eval_pif_true : forall h1 h2 r e1 e2,
+    bigstep h1 e1 h2 r ->
+    bigstep h1 (pif (vbool true) e1 e2) h2 r
+
+  | eval_pif_false : forall h1 h2 r e1 e2,
+    bigstep h1 e2 h2 r ->
+    bigstep h1 (pif (vbool false) e1 e2) h2 r.
+
+  (* | eval_pref : forall x s (h:heap) l,
+    h l = None ->
+    eval[ s, h, pref x ] => [ s, hupdate l (s x) h, enorm l]
+  | eval_deref : forall x s (h:heap) v,
+    h (s x) = Some v ->
+    eval[ s, h, pderef x ] => [ s, h, enorm v]
+  | eval_assign : forall x1 x2 s h,
+    eval[ s, h, passign x1 x2 ] => [ s, hupdate (s x1) (s x2) h, enorm 0] *)
+
+(* Definition compatible r1 r2 :=
+  match (r1, r2) with
+  | (norm r3, enorm r4) => r3 = r4
+end. *)
+
 (** * Hoare rules *)
-(* TODO define semantic triples, then define these as lemmas *)
 Inductive forward : expr -> flow -> Prop :=
   | fw_val: forall n,
     forward (pval n) (ens (fun res => \[res = n]))
@@ -1781,7 +1809,12 @@ Inductive forward : expr -> flow -> Prop :=
     forward e1 f1 ->
     flow_res f1 v ->
     forward (subst x v e2) f2 ->
-    forward (plet x e1 e2) (f1 ;; f2).
+    forward (plet x e1 e2) (f1 ;; f2)
+
+  | fw_if: forall b e1 e2 f1 f2,
+    forward e1 f1 ->
+    forward e2 f2 ->
+    forward (pif b e1 e2) (disj f1 f2).
 
   (* | fw_deref: forall x y,
     forward (pderef x) (fex y (req (pts x y);;
@@ -1795,6 +1828,84 @@ Inductive forward : expr -> flow -> Prop :=
     forward (GET l)
       (req (contains l v) ;;
       (ens (fun r => (r = v) //\\ contains l v))) *)
+
+
+(** aka what it means for a triple to be vaild. *)
+Definition sem_triple (e: expr) (f: flow) : Prop :=
+  forall env h1 h2 v,
+    bigstep h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
+
+Lemma sem_pval : forall n,
+  sem_triple (pval n) (ens (fun res => \[res = n])).
+Proof.
+  unfold sem_triple. intros.
+  (* appeal to how e executes to tell us about the heaps *)
+  inverts H as H.
+  (* justify that the staged formula describes the heap *)
+  apply ens_pure_intro_dep.
+  reflexivity.
+Qed.
+
+Lemma sem_plet : forall x e1 e2 f1 f2 v,
+  sem_triple e1 f1 ->
+  flow_res f1 v ->
+  sem_triple (subst x v e2) f2 ->
+  sem_triple (plet x e1 e2) (f1;; f2).
+Proof.
+  intros.
+  unfold sem_triple. intros.
+
+  (* reason about how the let executes *)
+  inverts H2 as H2.
+
+  (* use the semantic triple we have about e1 *)
+  lets H3: H env0 H2. clear H H2. sort.
+
+  (* we need to know that spec value and program value are the same *)
+  specializes H0 H3. subst.
+
+  (* know about f2 *)
+  specializes H1 env0 h3 h2 v0 H9. clear H9.
+
+  constructor. exists h3. exists (norm v).
+  intuition.
+Qed.
+
+Lemma sem_pif : forall b e1 e2 f1 f2,
+  sem_triple e1 f1 ->
+  sem_triple e2 f2 ->
+  sem_triple (pif b e1 e2) (disj f1 f2).
+Proof.
+  introv Ht Hf.
+  unfold sem_triple. intros.
+  inverts H as H.
+  { (* true *)
+    unfold sem_triple in Ht.
+    specializes Ht env0 H.
+    now apply s_disj_l. }
+  { (* false *)
+    unfold sem_triple in Hf.
+    specializes Hf env0 H.
+    now apply s_disj_r. }
+Qed.
+
+Module Soundness.
+
+  Local Notation derivable := forward.
+  Local Notation valid := sem_triple.
+
+  Theorem soundness : forall e f,
+    derivable e f -> valid e f.
+  Proof.
+    introv H.
+    induction H.
+    - apply sem_pval.
+    - apply sem_plet with (v := v); auto.
+    - apply sem_pif; auto.
+  Qed.
+  (* Admitted. *)
+
+End Soundness.
 
 Module ForwardExamples.
 
@@ -1810,20 +1921,10 @@ Module ForwardExamples.
     eapply fw_let.
     - apply fw_val.
     - unfold flow_res.
-      exists empty_heap.
-      exists empty_heap.
-      exists empty_env.
-      constructor.
-      intuition.
-      eexists.
-      eexists.
-      eexists.
-      auto.
-      intuition.
-      apply hpure_intro_hempty.
-      apply hempty_intro.
-      reflexivity.
-      fmap_eq.
+      intros.
+      apply ens_pure_inv_dep in H.
+      destruct H.
+      exact H.
     - simpl.
       apply fw_val.
   Qed.
