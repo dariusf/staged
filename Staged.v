@@ -669,6 +669,28 @@ Proof.
   applys* satisfies_ens.
 Qed.
 
+Lemma satisfies_ens_void : forall H1 H2 env h1 h2 r,
+  H1 ==> H2 ->
+  satisfies env h1 h2 r (ens_ H1) ->
+  satisfies env h1 h2 r (ens_ H2).
+Proof.
+  intros.
+  inverts H0 as H3. destruct H3 as (v&h3&?&?&?&?).
+  constructor. exists v. exists h3.
+  intuition.
+  rewrite hstar_hpure_l in H3.
+  rewrite hstar_hpure_l.
+  intuition.
+Qed.
+
+Lemma entails_ens_void : forall H1 H2,
+  H1 ==> H2 -> entails (ens_ H1) (ens_ H2).
+Proof.
+  unfold entails.
+  intros.
+  applys* satisfies_ens_void H.
+Qed.
+
 (** Contravariance of req *)
 Lemma satisfies_req : forall H1 H2 env h1 h2 r f,
   H2 ==> H1 ->
@@ -1093,6 +1115,32 @@ Lemma norm_ens_split : forall H Q,
 Proof.
   unfold entails.
   apply satisfies_ens_sep_split.
+Qed.
+
+(** Rule EntEns from the paper *)
+Lemma ent_ens_covariant : forall H1 H2 f1 f2,
+  H1 ==> H2 ->
+  entails f1 f2 ->
+  entails (ens_ H1;; f1) (ens_ H2;; f2).
+Proof.
+  unfold entails.
+  intros.
+  inverts H3 as H3. destr H3.
+  apply (satisfies_ens_void H) in H4.
+  constructor. exists h3. exists r1.
+  intuition.
+Qed.
+
+(** Rule EntReq from the paper *)
+Lemma ent_req_contravariant : forall H1 H2 f1 f2,
+  H2 ==> H1 ->
+  entails f1 f2 ->
+  entails (req H1 f1) (req H2 f2).
+Proof.
+  unfold entails.
+  intros.
+  constructor. intros hH2 h3. intros.
+  inverts H3 as H3. specializes H3 hH2 h3.
 Qed.
 
 (** * Biabduction *)
