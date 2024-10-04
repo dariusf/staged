@@ -691,6 +691,20 @@ Proof.
   applys* satisfies_ens_void H.
 Qed.
 
+(** Rule EntEns from the paper *)
+Lemma ent_ens_seq : forall H1 H2 f1 f2,
+  H1 ==> H2 ->
+  entails f1 f2 ->
+  entails (ens_ H1;; f1) (ens_ H2;; f2).
+Proof.
+  unfold entails.
+  intros.
+  inverts H3 as H3. destr H3.
+  apply (satisfies_ens_void H) in H4.
+  constructor. exists h3. exists r1.
+  intuition.
+Qed.
+
 (** Contravariance of req *)
 Lemma satisfies_req : forall H1 H2 env h1 h2 r f,
   H2 ==> H1 ->
@@ -714,6 +728,18 @@ Proof.
   unfold entails.
   intros.
   applys* satisfies_req H1.
+Qed.
+
+(** Rule EntReq from the paper *)
+Lemma ent_req_seq : forall H1 H2 f1 f2,
+  H2 ==> H1 ->
+  entails f1 f2 ->
+  entails (req H1 f1) (req H2 f2).
+Proof.
+  unfold entails.
+  intros.
+  constructor. intros hH2 h3. intros.
+  inverts H3 as H3. specializes H3 hH2 h3.
 Qed.
 
 (** seq is associative *)
@@ -938,14 +964,14 @@ Proof.
 
   (* start reasoning forward *)
   inverts H as H.
-  specialize (H _ (hr \u hH2) H0).
-  forward H. fmap_eq.
-  forward H. fmap_disjoint.
+  forwards: (H hH1 (hr \u hH2) H0).
+  fmap_eq.
+  fmap_disjoint.
 
-  inverts H as H.
-  specialize (H _ hr H5).
-  forward H. fmap_eq.
-  forward H. fmap_disjoint.
+  inverts H8 as H8.
+  specialize (H8 _ hr H5).
+  forward H8. fmap_eq.
+  forward H8. fmap_disjoint.
 
   assumption.
 Qed.
@@ -962,8 +988,7 @@ Proof.
   intros hH2 hr. intros.
 
   inverts H as H.
-  specialize (H (hH1 \u hH2) hr).
-  forward H. apply hstar_intro; auto.
+  specialize (H (hH1 \u hH2) hr ltac:(apply hstar_intro; auto)).
   forward H. fmap_eq.
   forward H. fmap_disjoint.
 
@@ -1115,32 +1140,6 @@ Lemma norm_ens_split : forall H Q,
 Proof.
   unfold entails.
   apply satisfies_ens_sep_split.
-Qed.
-
-(** Rule EntEns from the paper *)
-Lemma ent_ens_covariant : forall H1 H2 f1 f2,
-  H1 ==> H2 ->
-  entails f1 f2 ->
-  entails (ens_ H1;; f1) (ens_ H2;; f2).
-Proof.
-  unfold entails.
-  intros.
-  inverts H3 as H3. destr H3.
-  apply (satisfies_ens_void H) in H4.
-  constructor. exists h3. exists r1.
-  intuition.
-Qed.
-
-(** Rule EntReq from the paper *)
-Lemma ent_req_contravariant : forall H1 H2 f1 f2,
-  H2 ==> H1 ->
-  entails f1 f2 ->
-  entails (req H1 f1) (req H2 f2).
-Proof.
-  unfold entails.
-  intros.
-  constructor. intros hH2 h3. intros.
-  inverts H3 as H3. specializes H3 hH2 h3.
 Qed.
 
 (** * Biabduction *)
