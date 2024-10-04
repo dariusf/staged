@@ -762,7 +762,7 @@ Proof.
 Qed.
 
 (** Compaction rule 1 from the paper *)
-Lemma norm_ens_false : forall f,
+Lemma norm_ens_false_l : forall f,
   bientails (ens_ \[False]) (ens_ \[False];; f).
 Proof.
   unfold bientails.
@@ -772,6 +772,24 @@ Proof.
   { inverts H as H. destr H.
     apply ens_void_pure_inv in H0.
     intuition. }
+Qed.
+
+Lemma norm_ens_false : forall f,
+  entails (ens_ \[False]) f.
+Proof.
+  unfold entails.
+  intros.
+  apply ens_void_pure_inv in H.
+  intuition.
+Qed.
+
+Lemma norm_req_false : forall f f1,
+  entails f (req \[False] f1).
+Proof.
+  unfold bientails.
+  constructor. intros.
+  apply hpure_inv in H0.
+  intuition.
 Qed.
 
 Lemma norm_req_pure : forall P f,
