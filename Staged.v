@@ -514,6 +514,19 @@ Proof.
   fmap_eq.
 Qed.
 
+Lemma ens_void_inv : forall env h1 h2 r H,
+  satisfies env h1 h2 r (ens_ H) ->
+  r = norm vunit.
+Proof.
+  unfold empty, ens_.
+  intros.
+  inverts H0 as H0. destr H0.
+  rewrite hstar_hpure_l in H0.
+  subst.
+  intuition.
+  f_equal. assumption.
+Qed.
+
 Lemma ens_void_pure_inv : forall P env h1 h2 r,
   satisfies env h1 h2 r (ens_ \[P]) -> P /\ h1 = h2 /\ r = norm vunit.
 Proof.
@@ -537,6 +550,32 @@ Proof.
   intuition.
   apply hpure_intro.
   reflexivity.
+  fmap_eq.
+Qed.
+
+Lemma empty_inv : forall env h1 h2 r,
+  satisfies env h1 h2 r empty ->
+  h1 = h2 /\ r = norm vunit.
+Proof.
+  unfold empty.
+  intros.
+  apply ens_void_pure_inv in H.
+  intuition.
+Qed.
+
+Lemma empty_intro : forall env h1,
+  satisfies env h1 h1 (norm vunit) empty.
+Proof.
+  intros.
+  unfold empty, ens_.
+  constructor.
+  exists vunit.
+  exists empty_heap.
+  intuition.
+  rewrite hstar_hpure_l.
+  intuition.
+  apply hpure_intro.
+  constructor.
   fmap_eq.
 Qed.
 
@@ -722,6 +761,19 @@ Proof.
   auto.
 Qed.
 
+(** Compaction rule 1 from the paper *)
+Lemma norm_ens_false : forall f,
+  bientails (ens_ \[False]) (ens_ \[False];; f).
+Proof.
+  unfold bientails.
+  iff H.
+  { apply ens_void_pure_inv in H.
+    intuition. }
+  { inverts H as H. destr H.
+    apply ens_void_pure_inv in H0.
+    intuition. }
+Qed.
+
 Lemma norm_req_pure : forall P f,
   P -> entails (req \[P] f) f.
 Proof.
@@ -745,6 +797,49 @@ Proof.
   finv H.
   subst.
   rew_fmap *.
+Qed.
+
+(** Compaction rule 2 from the paper *)
+Lemma norm_empty_l : forall f,
+  bientails (empty;; f) f.
+Proof.
+  unfold bientails, empty.
+  iff H.
+  { inverts H as H. destr H.
+    apply ens_void_pure_inv in H0. destr H0. subst.
+    assumption. }
+  { constructor.
+    exists h1. exists (norm vunit).
+    intuition.
+    apply ens_void_pure_intro; constructor. }
+Qed.
+
+Lemma norm_ens_empty_r : forall H,
+  bientails (ens_ H;; empty) (ens_ H).
+Proof.
+  iff H1.
+  { inverts H1 as H1. destr H1.
+    apply empty_inv in H2. destr H2. subst.
+    pose proof (ens_void_inv H0). subst.
+    assumption. }
+  { constructor.
+    exists h2. exists r.
+    intuition.
+    apply ens_void_inv in H1.
+    subst.
+    apply empty_intro. }
+Qed.
+
+(** Compation rule 3 from the paper *)
+Lemma norm_empty_r : forall f H,
+  bientails (f;; ens_ H;; empty) (f;; ens_ H).
+Proof.
+  unfold bientails, empty.
+  iff H1.
+  { rewrite norm_ens_empty_r in H1.
+    assumption. }
+  { rewrite norm_ens_empty_r.
+    assumption. }
 Qed.
 
 Lemma norm_seq_req_emp : forall f,
@@ -830,6 +925,7 @@ Proof.
   auto.
 Qed.
 
+(** Compaction rule 4 from the paper *)
 Lemma norm_req_req : forall H1 H2 f,
   bientails (req (H1 \* H2) f) (req H1 (req H2 f)).
 Proof.
@@ -883,6 +979,26 @@ Lemma norm_ens_ens_void : forall H1 H2,
   bientails (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2).
 Proof.
   intros; split; apply satisfies_ens_ens_void.
+Qed.
+
+(** Compaction rule 5 from the paper *)
+Lemma norm_ens_ens_void_l : forall H Q,
+  entails (ens_ H;; ens Q) (ens (Q \*+ H)).
+Proof.
+  unfold entails.
+  intros.
+  inverts H0 as H0. destr H0.
+  inverts H1 as H1. destr H1.
+  inverts H2 as H2. destr H2.
+
+  constructor.
+  exists v0.
+  exists (h0 \u h4).
+  intuition.
+  rewrite hstar_hpure_l in H1.
+  rewrite hstar_comm.
+  apply hstar_intro; intuition auto.
+  fmap_eq.
 Qed.
 
 (** Splitting and combining [ens] with results is more complex, and there does not seem to be a single equivalence. *)
@@ -1024,7 +1140,7 @@ Proof.
   { assumption. }
 Qed.
 
-(** The [Float Pre] rule from the paper. *)
+(** The [Float Pre] rule (compaction 6) from the paper. *)
 Lemma norm_ens_req_transpose : forall H1 H2 Ha Hf (v:val) f,
   biab Ha (H1 v) H2 (Hf v) ->
   entails (ens_ (H1 v);; (req H2 f))
@@ -1561,6 +1677,7 @@ Module Examples.
 
       rewrites (>> norm_unk sum_env) in H1.
       { unfold sum_env; resolve_fn_in_env.
+        (* TODO improve tactic for solving map goals *)
         rew_fmap.
         reflexivity.
         auto. }
@@ -1575,7 +1692,6 @@ Module Examples.
 
       rewrite <- norm_ens_ens_void in H1.
       rewrite hstar_hpure_conj in H1.
-
       apply ens_void_pure_inv in H1. destr H1. subst.
       apply ens_void_pure_intro.
       inj H2. inj H1. f_equal. math. }
