@@ -1530,26 +1530,13 @@ Module Examples.
     | _ => empty
     end)).
 
-  Ltac resolve_fn_in_env1 f :=
-    match goal with
-    | |- Fmap.read (Fmap.single f (Some _)) ?k = _ =>
-      rewrite Fmap.read_single; reflexivity
-    | |- ?g => idtac g
-    end.
-
   Ltac resolve_fn_in_env :=
     match goal with
+    | |- Fmap.read (Fmap.update _ ?k (Some _)) ?k = _ =>
+      rewrite fmap_read_update; auto
     | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
       rewrite Fmap.read_single; reflexivity
-    | |- ?g => idtac g
-    end.
-
-  Ltac funknown H :=
-    match type of H with
-    | satisfies ?e _ _ _ (unk _ _ _) =>
-      unfold e in H;
-      eapply unk_inv in H; only 2: resolve_fn_in_env; simpl;
-      fold e in H; simpl in H
+    | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g
     end.
 
   Example e6_fn_reassoc : forall x,
@@ -1569,7 +1556,10 @@ Module Examples.
       make it known, then build back up into a sequence *)
     pose proof H as G.
     inverts G as G. destruct G as (h3&r1&Hf&Hr).
-    funknown Hf.
+    (* resolve the function *)
+    unfold e6_env in Hf;
+    eapply unk_inv in Hf; only 2: resolve_fn_in_env; simpl;
+    fold e6_env in Hf; simpl in Hf.
     pose proof (@s_seq e6_env _ _ h1 h2 r (ex_intro (fun h3 => _) h3 (ex_intro (fun x => _) r1 (conj Hf Hr)))) as G.
     clear Hr. clear Hf.
 
@@ -1676,11 +1666,7 @@ Module Examples.
       felim H1. destruct H1 as (r1&H1).
 
       rewrites (>> norm_unk sum_env) in H1.
-      { unfold sum_env; resolve_fn_in_env.
-        (* TODO improve tactic for solving map goals *)
-        rew_fmap.
-        reflexivity.
-        auto. }
+      { unfold sum_env; resolve_fn_in_env. }
 
       specialize (IH (v-1)).
       forward IH. assert (v = n). congruence. unfold downto. math.
