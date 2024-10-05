@@ -1789,6 +1789,9 @@ Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
     Fmap.indom h p ->
     bigstep h (passign (vloc p) v) (Fmap.update h p v) (enorm vunit)
 
+  | eval_passert : forall h,
+    bigstep h (passert (vbool true)) h (enorm vunit)
+
   .
 
 (* Definition compatible r1 r2 :=
@@ -1827,6 +1830,9 @@ Inductive forward : expr -> flow -> Prop :=
     forward (passign (vloc x) y)
       (req (x~~>v) (ens_ (x~~>y)))
 
+  | fw_assert: forall b,
+    forward (passert (vbool b)) (req_ \[b = true])
+
   .
 
 
@@ -1846,6 +1852,19 @@ Module Soundness.
     intros. subst. auto.
   Qed.
 
+  (** Structural rules *)
+  Lemma sem_consequence : forall f1 f2 e,
+    entails f2 f1 ->
+    sem_triple e f2 ->
+    sem_triple e f1.
+  Proof.
+    introv He H.
+    unfold sem_triple. intros.
+    rewrite He in H.
+    auto.
+  Qed.
+
+  (** Rules for program constructs *)
   Lemma sem_pval : forall n,
     sem_triple (pval n) (ens (fun res => \[res = n])).
   Proof.
@@ -1980,15 +1999,16 @@ Module Soundness.
       apply Fmap.indom_single. }
   Qed.
 
-  Lemma sem_consequence : forall f1 f2 e,
-    entails f2 f1 ->
-    sem_triple e f2 ->
-    sem_triple e f1.
+  Lemma sem_passert : forall b,
+    sem_triple (passert (vbool b)) (req_ \[b = true]).
   Proof.
-    introv He H.
+    intros.
     unfold sem_triple. intros.
-    rewrite He in H.
-    auto.
+    inverts H as H.
+    constructor.
+    intros.
+    apply hpure_inv in H. destruct H. rewrite H2 in H0. rew_fmap. rewrite H0.
+    apply empty_intro.
   Qed.
 
   Local Notation derivable := forward.
@@ -2005,6 +2025,7 @@ Module Soundness.
     - apply sem_pderef.
     - apply sem_pref.
     - apply sem_passign.
+    - apply sem_passert.
   Qed.
   (* Admitted. *)
 
