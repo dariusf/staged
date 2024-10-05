@@ -183,7 +183,7 @@ Inductive satisfies : env -> heap -> heap -> result -> flow -> Prop :=
       satisfies env h1 h2 r (f v)) :
     satisfies env h1 h2 r (@fall A f)
 
-  | s_unk env fn h1 h2 r f x
+  | s_unk env h1 h2 r fn f x
     (He: Fmap.read env fn = Some f)
     (Hr: satisfies env h1 h2 (norm r) (f x r)) :
     satisfies env h1 h2 (norm r) (unk fn x r)
@@ -786,26 +786,48 @@ Proof.
   split; intros; now apply seq_assoc.
 Qed.
 
-Lemma unk_inv : forall env h1 h2 r1 x f1 f r,
+Lemma unk_inv : forall env h1 h2 v x f1 f r,
   Fmap.read env f = Some f1 ->
-  satisfies env h1 h2 r (unk f x r1) ->
-  satisfies env h1 h2 r (f1 x r1).
+  satisfies env h1 h2 r (unk f x v) ->
+  satisfies env h1 h2 r (f1 x v).
 Proof.
   intros.
   inverts H0 as H0.
   rewrite H in H0.
   inj H0.
-  easy.
+  assumption.
 Qed.
 
-Lemma norm_unk : forall env f x r1 f1,
+Lemma unk_res_inv : forall env h1 h2 v x f1 f r,
   Fmap.read env f = Some f1 ->
-  entails_under env (unk f x r1) (f1 x r1).
+  satisfies env h1 h2 r (unk f x v) ->
+  r = norm v.
+Proof.
+  intros.
+  inverts H0 as H0.
+  reflexivity.
+Qed.
+
+Lemma norm_unk : forall env v f1 f x,
+  Fmap.read env f = Some f1 ->
+  entails_under env (unk f x v) (f1 x v).
 Proof.
   unfold entails_under.
   intros.
   eapply unk_inv.
   exact H.
+  assumption.
+Qed.
+
+Lemma norm_unk_conv : forall env h1 h2 v f1 f x,
+  Fmap.read env f = Some f1 ->
+  satisfies env h1 h2 (norm v) (f1 x v) ->
+  satisfies env h1 h2 (norm v) (unk f x v).
+Proof.
+  unfold entails_under.
+  intros.
+  apply (@s_unk env0 h1 h2 v f f1 x).
+  assumption.
   assumption.
 Qed.
 
@@ -1359,9 +1381,7 @@ Module Examples.
 
   Example ex6_ent : f5 ⊑ f6.
   Proof.
-    unfold entails.
-    unfold f5.
-    unfold f6.
+    unfold entails, f5, f6.
     intros.
     inverts H as H2.
     destruct H2 as (v & h3 & H1 & H2 & H3 & H4).
@@ -1737,65 +1757,70 @@ End Examples.
 Inductive eresult : Type :=
   | enorm : val -> eresult.
 
-Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
-  | eval_pval : forall h v,
-    bigstep h (pval v) h (enorm v)
+(** Program environment *)
+Definition penv := fmap ident (option (val -> expr)).
+Definition empty_prenv : env := Fmap.empty.
+
+Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
+  | eval_pval : forall h v env,
+    bigstep env h (pval v) h (enorm v)
 
   (* there is no var rule *)
 
-  | eval_plet : forall h1 h3 h2 x e1 e2 v r,
-    bigstep h1 e1 h3 (enorm v) ->
-    bigstep h3 (subst x v e2) h2 r ->
-    bigstep h1 (plet x e1 e2) h2 r
+  | eval_plet : forall h1 h3 h2 x e1 e2 v r env,
+    bigstep env h1 e1 h3 (enorm v) ->
+    bigstep env h3 (subst x v e2) h2 r ->
+    bigstep env h1 (plet x e1 e2) h2 r
 
-  | eval_padd : forall h x y,
-    bigstep h (padd (vint x) (vint y)) h (enorm (vint (x + y)))
+  | eval_padd : forall h x y env,
+    bigstep env h (padd (vint x) (vint y)) h (enorm (vint (x + y)))
 
-  | eval_pminus : forall h x y,
-    bigstep h (pminus (vint x) (vint y)) h (enorm (vint (x - y)))
+  | eval_pminus : forall h x y env,
+    bigstep env h (pminus (vint x) (vint y)) h (enorm (vint (x - y)))
 
-  | eval_pfun : forall h x e,
-    bigstep h (pfun x e) h (enorm (vfun x e))
+  | eval_pfun : forall h x e env,
+    bigstep env h (pfun x e) h (enorm (vfun x e))
 
-  | eval_pfix : forall h x e f,
-    bigstep h (pfix f x e) h (enorm (vfix f x e))
+  | eval_pfix : forall h x e f env,
+    bigstep env h (pfix f x e) h (enorm (vfix f x e))
 
-  | eval_app_fun : forall v1 v2 h x e r,
+  | eval_app_fun : forall v1 v2 h x e r env,
     v1 = vfun x e ->
-    bigstep h (subst x v2 e) h r ->
-    bigstep h (papp (pval v1) v2) h r
+    bigstep env h (subst x v2 e) h r ->
+    bigstep env h (papp (pval v1) v2) h r
 
-  | eval_app_fix : forall v1 v2 h x e r fn,
+  | eval_app_fix : forall v1 v2 h x e r fn env,
     v1 = vfix fn x e ->
-    bigstep h (subst x v2 (subst fn v1 e)) h r ->
-    bigstep h (papp (pval v1) v2) h r
+    bigstep env h (subst x v2 (subst fn v1 e)) h r ->
+    bigstep env h (papp (pval v1) v2) h r
 
-  (* there is no case for unknown functions, because only closed programs can be run *)
-    
-  | eval_pif_true : forall h1 h2 r e1 e2,
-    bigstep h1 e1 h2 r ->
-    bigstep h1 (pif (vbool true) e1 e2) h2 r
+  | eval_app_unk : forall va h r f fn env,
+    Fmap.read env fn = Some f ->
+    bigstep env h (f va) h r ->
+    bigstep env h (papp (pvar fn) va) h r
 
-  | eval_pif_false : forall h1 h2 r e1 e2,
-    bigstep h1 e2 h2 r ->
-    bigstep h1 (pif (vbool false) e1 e2) h2 r
+  | eval_pif_true : forall h1 h2 r e1 e2 env,
+    bigstep env h1 e1 h2 r ->
+    bigstep env h1 (pif (vbool true) e1 e2) h2 r
 
-  | eval_pref : forall h v p,
+  | eval_pif_false : forall h1 h2 r e1 e2 env,
+    bigstep env h1 e2 h2 r ->
+    bigstep env h1 (pif (vbool false) e1 e2) h2 r
+
+  | eval_pref : forall h v p env,
     ~ Fmap.indom h p ->
-    bigstep h (pref v) (Fmap.update h p v) (enorm (vloc p))
+    bigstep env h (pref v) (Fmap.update h p v) (enorm (vloc p))
 
-  | eval_pderef : forall h p,
+  | eval_pderef : forall h p env,
     Fmap.indom h p ->
-    bigstep h (pderef (vloc p)) h (enorm (Fmap.read h p))
+    bigstep env h (pderef (vloc p)) h (enorm (Fmap.read h p))
 
-  | eval_passign : forall h p v,
+  | eval_passign : forall h p v env,
     Fmap.indom h p ->
-    bigstep h (passign (vloc p) v) (Fmap.update h p v) (enorm vunit)
+    bigstep env h (passign (vloc p) v) (Fmap.update h p v) (enorm vunit)
 
-  | eval_passert : forall h,
-    bigstep h (passert (vbool true)) h (enorm vunit)
-
-    (* bigstep h (papp (pfun true)) h (enorm vunit) *)
+  | eval_passert : forall h env,
+    bigstep env h (passert (vbool true)) h (enorm vunit)
 
   .
 
@@ -1848,26 +1873,36 @@ Inductive forward : expr -> flow -> Prop :=
     forward (subst x va (subst fn vf e)) f ->
     forward (papp (pval vf) va) f
 
-  (* | fw_app_unk: forall f va,
-    forward (papp (pvar f) va) (fex (fun r => unk f va r)) *)
-
-  .
+  | fw_app_unk: forall f va,
+    forward (papp (pvar f) va) (fex (fun r => unk f va r)).
 
 
 Module Soundness.
 
-  (** aka what it means for a triple to be vaild. *)
+  Definition triple_valid_under penv env e f : Prop :=
+    forall h1 h2 v,
+      bigstep penv h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
+
+  (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid semantic triple. *)
+  Definition env_compatible penv env :=
+    forall pfn f x,
+      Fmap.read penv f = Some pfn ->
+      exists sfn, Fmap.read env f = Some sfn /\
+      forall v, triple_valid_under penv env (pfn x) (sfn x v).
+
+  (** A semantic triple ensures a program is overapproximated by a flow. This is also definition of validity for triples. *)
   Definition sem_triple (e: expr) (f: flow) : Prop :=
-    forall env h1 h2 v,
-      bigstep h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
+    forall penv env,
+      env_compatible penv env -> triple_valid_under penv env e f.
 
   #[global]
   Instance Proper_sem_triple : Proper
     (eq ====> entails ====> impl)
     sem_triple.
   Proof.
-    unfold entails, Proper, respectful, impl, sem_triple.
-    intros. subst. auto.
+    unfold entails, Proper, respectful, impl, sem_triple, triple_valid_under.
+    intros. subst.
+    eauto.
   Qed.
 
   (** Structural rules *)
@@ -1879,16 +1914,16 @@ Module Soundness.
     introv He H.
     unfold sem_triple. intros.
     rewrite He in H.
-    auto.
+    eauto.
   Qed.
 
   (** Rules for program constructs *)
   Lemma sem_pval: forall n,
     sem_triple (pval n) (ens (fun res => \[res = n])).
   Proof.
-    unfold sem_triple. intros.
+    unfold sem_triple. introv Hc Hb.
     (* appeal to how e executes to tell us about the heaps *)
-    inverts H as H.
+    inverts Hb as Hb.
     (* justify that the staged formula describes the heap *)
     apply ens_pure_intro_dep.
     reflexivity.
@@ -1901,19 +1936,20 @@ Module Soundness.
     sem_triple (plet x e1 e2) (f1;; f2).
   Proof.
     intros.
-    unfold sem_triple. intros.
+    unfold sem_triple, triple_valid_under. introv Hc Hb.
 
     (* reason about how the let executes *)
-    inverts H2 as H2.
+    inverts Hb as. introv He1 He2.
 
     (* use the semantic triple we have about e1 *)
-    lets H3: H env0 H2. clear H H2. sort.
+    unfold sem_triple in H.
+    lets H3: H env0 He1. exact Hc. clear H He1. sort.
 
     (* we need to know that spec value and program value are the same *)
     specializes H0 H3. subst.
 
     (* know about f2 *)
-    specializes H1 env0 h3 h2 v0 H9. clear H9.
+    specializes H1 env0 h3 h2 v0 He2. clear He2.
 
     constructor. exists h3. exists (norm v).
     intuition.
@@ -1925,15 +1961,15 @@ Module Soundness.
     sem_triple (pif b e1 e2) (disj f1 f2).
   Proof.
     introv Ht Hf.
-    unfold sem_triple. intros.
-    inverts H as H.
+    unfold sem_triple. introv Hc Hb.
+    inverts Hb as Hb.
     { (* true *)
       unfold sem_triple in Ht.
-      specializes Ht env0 H.
+      specializes Ht env0 Hb.
       now apply s_disj_l. }
     { (* false *)
       unfold sem_triple in Hf.
-      specializes Hf env0 H.
+      specializes Hf env0 Hb.
       now apply s_disj_r. }
   Qed.
 
@@ -1942,15 +1978,15 @@ Module Soundness.
       (fall (fun y => (req (x~~>y)
         (ens (fun res => \[res = y] \* x~~>y))))).
   Proof.
-    intros. unfold sem_triple. intros.
-    inverts H as H.
+    intros. unfold sem_triple. introv Hc Hb.
+    inverts Hb as Hb.
     constructor. intros v.
     constructor. intros.
     constructor. exists v. exists hp.
     intuition.
     { f_equal.
-      apply hsingle_inv in H0.
-      rewrite H0 in H1.
+      apply hsingle_inv in H.
+      rewrite H in H1.
       subst.
       rewrite Fmap.union_comm_of_disjoint; auto.
       rewrite Fmap.read_union_l.
@@ -1965,12 +2001,12 @@ Module Soundness.
       (ens (fun r => \[r = vloc y] \* y~~>v)))).
   Proof.
     intros.
-    unfold sem_triple. intros.
-    inverts H as H.
+    unfold sem_triple. introv Hc Hb.
+    inverts Hb as Hb.
     constructor. exists p.
     constructor. exists (vloc p). exists (Fmap.single p v).
     forwards H1: Fmap.disjoint_single_of_not_indom h1 p v.
-    { unfold not. exact H. }
+    { unfold not. exact Hb. }
 
     intuition.
     { rewrite hstar_hpure_l.
@@ -1985,8 +2021,8 @@ Module Soundness.
       (req (x~~>v) (ens_ (x~~>y))).
   Proof.
     intros.
-    unfold sem_triple. intros.
-    inverts H as H.
+    unfold sem_triple. introv Hc Hb.
+    inverts Hb as Hb.
     constructor. intros.
     constructor. exists vunit. exists (Fmap.update hp x y).
 
@@ -1994,17 +2030,16 @@ Module Soundness.
     intuition.
 
     { rewrite hstar_hpure_l. intuition.
-      apply hsingle_inv in H0.
-      rewrite H0.
+      apply hsingle_inv in H.
+      rewrite H.
       rewrite Fmap.update_single.
       apply hsingle_intro. }
 
-    { rewrite H1.
-      apply hsingle_inv in H0.
-      rewrite H0.
+    { rewrite H0.
+      apply hsingle_inv in H.
+      rewrite H.
       rewrites* Fmap.update_union_r.
-      { rewrite H1 in H.
-        rewrite H0 in H.
+      { rewrite H in H1.
         unfold not; applys Fmap.disjoint_inv_not_indom_both (Fmap.single x v) hr.
         - fmap_disjoint.
         - apply Fmap.indom_single. } }
@@ -2012,8 +2047,8 @@ Module Soundness.
     { apply Fmap.disjoint_sym.
       applys Fmap.disjoint_update_l.
       fmap_disjoint.
-      apply hsingle_inv in H0.
-      rewrite H0.
+      apply hsingle_inv in H.
+      rewrite H.
       apply Fmap.indom_single. }
   Qed.
 
@@ -2021,8 +2056,8 @@ Module Soundness.
     sem_triple (passert (vbool b)) (req_ \[b = true]).
   Proof.
     intros.
-    unfold sem_triple. intros.
-    inverts H as H.
+    unfold sem_triple. introv Hc Hb.
+    inverts Hb as Hb.
     constructor.
     intros.
     apply hpure_inv in H. destruct H. rewrite H2 in H0. rew_fmap. rewrite H0.
@@ -2035,12 +2070,13 @@ Module Soundness.
     sem_triple (papp (pval vf) va) f.
   Proof.
     intros. subst.
-    unfold sem_triple. intros.
-    inverts H as H.
-    { injection H; intros; subst e0 x0; clear H.
+    unfold sem_triple. introv Hc Hb.
+    inverts Hb as.
+    { introv H Hb.
+      injection H; intros; subst e0 x0; clear H.
       unfold sem_triple in H0.
-      specializes H0 env0 H6. }
-    { false. }
+      specializes H0 env0 Hb. }
+    { intros. false. }
   Qed.
 
   Lemma sem_papp_fix: forall vf x e va f fn,
@@ -2049,22 +2085,26 @@ Module Soundness.
     sem_triple (papp (pval vf) va) f.
   Proof.
     intros. subst.
-    unfold sem_triple. intros.
-    inverts H as H.
-    { false. }
-    { injection H; intros; subst e0 x0 fn0; clear H.
+    unfold sem_triple. introv Hc Hb.
+    inverts Hb as.
+    { intros. false. }
+    { introv H Hb. injection H; intros; subst e0 x0 fn0; clear H.
       unfold sem_triple in H0.
-      specializes H0 env0 H6. }
+      specializes H0 env0 Hb. }
   Qed.
 
   Lemma sem_papp_unk: forall f va,
     sem_triple (papp (pvar f) va) (fex (fun r => unk f va r)).
   Proof.
     intros.
-    unfold sem_triple. intros.
-    (* this is currently not backed up by any program-level semantics *)
-    now inv H.
-  Abort.
+    unfold sem_triple. introv Hc Hb.
+    inverts Hb as. introv Henv Hb.
+    constructor. exists v.
+    unfold env_compatible in Hc. specializes Hc va Henv. destr Hc.
+    eapply s_unk. { exact H0. }
+    specializes H1 Hb.
+    exact H1.
+  Qed.
 
   Local Notation derivable := forward.
   Local Notation valid := sem_triple.
@@ -2083,6 +2123,7 @@ Module Soundness.
     - apply sem_passert.
     - eapply sem_papp_fun; eauto.
     - eapply sem_papp_fix; eauto.
+    - eapply sem_papp_unk.
   Qed.
 
 End Soundness.
