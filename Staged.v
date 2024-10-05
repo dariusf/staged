@@ -290,16 +290,14 @@ Proof.
     + intros. apply H. apply H0. easy.
 Qed.
 
+Infix "====>" := Morphisms.respectful (at level 80, right associativity).
+Notation Proper := Morphisms.Proper.
+Notation respectful := Morphisms.respectful.
+Notation impl := Program.Basics.impl.
+Notation flip := Basics.flip.
+
 (** Incantations for setoid rewriting *)
 Section Proprium.
-
-  (* for sanity *)
-  Local Infix "====>" := Morphisms.respectful (at level 80, right associativity).
-
-  Local Notation Proper := Morphisms.Proper.
-  Local Notation respectful := Morphisms.respectful.
-  Local Notation impl := Program.Basics.impl.
-  Local Notation flip := Basics.flip.
 
   (** This reflects how entailment is contravariant in the antecedent and covariant in the consequent *)
   #[global]
@@ -1832,66 +1830,86 @@ Inductive forward : expr -> flow -> Prop :=
       (ens (fun r => (r = v) //\\ contains l v))) *)
 
 
-(** aka what it means for a triple to be vaild. *)
-Definition sem_triple (e: expr) (f: flow) : Prop :=
-  forall env h1 h2 v,
-    bigstep h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
-
-Lemma sem_pval : forall n,
-  sem_triple (pval n) (ens (fun res => \[res = n])).
-Proof.
-  unfold sem_triple. intros.
-  (* appeal to how e executes to tell us about the heaps *)
-  inverts H as H.
-  (* justify that the staged formula describes the heap *)
-  apply ens_pure_intro_dep.
-  reflexivity.
-Qed.
-
-Lemma sem_plet : forall x e1 e2 f1 f2 v,
-  sem_triple e1 f1 ->
-  flow_res f1 v ->
-  sem_triple (subst x v e2) f2 ->
-  sem_triple (plet x e1 e2) (f1;; f2).
-Proof.
-  intros.
-  unfold sem_triple. intros.
-
-  (* reason about how the let executes *)
-  inverts H2 as H2.
-
-  (* use the semantic triple we have about e1 *)
-  lets H3: H env0 H2. clear H H2. sort.
-
-  (* we need to know that spec value and program value are the same *)
-  specializes H0 H3. subst.
-
-  (* know about f2 *)
-  specializes H1 env0 h3 h2 v0 H9. clear H9.
-
-  constructor. exists h3. exists (norm v).
-  intuition.
-Qed.
-
-Lemma sem_pif : forall b e1 e2 f1 f2,
-  sem_triple e1 f1 ->
-  sem_triple e2 f2 ->
-  sem_triple (pif b e1 e2) (disj f1 f2).
-Proof.
-  introv Ht Hf.
-  unfold sem_triple. intros.
-  inverts H as H.
-  { (* true *)
-    unfold sem_triple in Ht.
-    specializes Ht env0 H.
-    now apply s_disj_l. }
-  { (* false *)
-    unfold sem_triple in Hf.
-    specializes Hf env0 H.
-    now apply s_disj_r. }
-Qed.
-
 Module Soundness.
+
+  (** aka what it means for a triple to be vaild. *)
+  Definition sem_triple (e: expr) (f: flow) : Prop :=
+    forall env h1 h2 v,
+      bigstep h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
+
+  #[global]
+  Instance Proper_sem_triple : Proper
+    (eq ====> entails ====> impl)
+    sem_triple.
+  Proof.
+    unfold entails, Proper, respectful, impl, sem_triple.
+    intros. subst. auto.
+  Qed.
+
+  Lemma sem_pval : forall n,
+    sem_triple (pval n) (ens (fun res => \[res = n])).
+  Proof.
+    unfold sem_triple. intros.
+    (* appeal to how e executes to tell us about the heaps *)
+    inverts H as H.
+    (* justify that the staged formula describes the heap *)
+    apply ens_pure_intro_dep.
+    reflexivity.
+  Qed.
+
+  Lemma sem_plet : forall x e1 e2 f1 f2 v,
+    sem_triple e1 f1 ->
+    flow_res f1 v ->
+    sem_triple (subst x v e2) f2 ->
+    sem_triple (plet x e1 e2) (f1;; f2).
+  Proof.
+    intros.
+    unfold sem_triple. intros.
+
+    (* reason about how the let executes *)
+    inverts H2 as H2.
+
+    (* use the semantic triple we have about e1 *)
+    lets H3: H env0 H2. clear H H2. sort.
+
+    (* we need to know that spec value and program value are the same *)
+    specializes H0 H3. subst.
+
+    (* know about f2 *)
+    specializes H1 env0 h3 h2 v0 H9. clear H9.
+
+    constructor. exists h3. exists (norm v).
+    intuition.
+  Qed.
+
+  Lemma sem_pif : forall b e1 e2 f1 f2,
+    sem_triple e1 f1 ->
+    sem_triple e2 f2 ->
+    sem_triple (pif b e1 e2) (disj f1 f2).
+  Proof.
+    introv Ht Hf.
+    unfold sem_triple. intros.
+    inverts H as H.
+    { (* true *)
+      unfold sem_triple in Ht.
+      specializes Ht env0 H.
+      now apply s_disj_l. }
+    { (* false *)
+      unfold sem_triple in Hf.
+      specializes Hf env0 H.
+      now apply s_disj_r. }
+  Qed.
+
+  Lemma sem_consequence : forall f1 f2 e,
+    entails f2 f1 ->
+    sem_triple e f2 ->
+    sem_triple e f1.
+  Proof.
+    introv He H.
+    unfold sem_triple. intros.
+    rewrite He in H.
+    auto.
+  Qed.
 
   Local Notation derivable := forward.
   Local Notation valid := sem_triple.
