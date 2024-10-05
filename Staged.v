@@ -5,7 +5,9 @@ From Coq Require Morphisms Program.Basics.
 From SLF Require LibSepFmap.
 Module Fmap := LibSepFmap.
 
+Set Warnings "-notation-incompatible-prefix".
 From SLF Require Export Extra Heap Tactics.
+Set Warnings "notation-incompatible-prefix".
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
