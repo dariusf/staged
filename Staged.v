@@ -41,10 +41,9 @@ with expr : Type :=
   | padd (x y: val)
   | pminus (x y: val)
   | passert (b: val)
-  (* | ptup (x y: val) *)
-  (* | pref (x: ident) *)
-  (* | pderef (x: ident) *)
-  (* | passign (x1: ident) (x2: ident) *)
+  | pref (v: val)
+  | pderef (v: val)
+  | passign (x: val) (v: val)
   | pif (x: val) (e1: expr) (e2: expr)
   | pcall (x: val) (a: val).
 
@@ -62,9 +61,11 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   | pval v => pval v
   | padd x y => padd x y
   | pminus x y => pminus x y
-  (* | ptup x y => ptup x y *)
   | pvar x => if_y_eq x (pval w) e
   | passert b => passert b
+  | pderef r => pderef r
+  | passign x y => passign x y
+  | pref v => pref v
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
   | pcall t1 t2 => pcall t1 t2
@@ -1507,8 +1508,7 @@ Module Examples.
     {
       apply s_req.
       intros.
-      {
-        constructor.
+      { constructor.
         exists vunit.
         exists empty_heap.
         apply hsingle_inv in H.
@@ -1523,9 +1523,7 @@ Module Examples.
         fmap_eq.
         unfold empty_heap; reflexivity.
         fmap_disjoint.
-        fmap_disjoint.
-      }
-    }
+        fmap_disjoint. } }
   Qed.
 
   Example e4_req_false : forall x,
@@ -1669,14 +1667,11 @@ Module Examples.
       \/ ex n1. ens n=n1/\n1>0; ex r1. sum(n-1,r1); ens res=1+r1
   *)
   Definition sum n res :=
-    (* fall (fun n => fall (fun res => *)
     disj
       (ens_ \[exists n1, n = vint n1 /\ n1 <= 0 /\ res = vint 0])
       (fex (fun n1 => ens_ \[n = vint n1 /\ n1 > 0];; fex (fun r1 =>
         (unk "sum" (vint (n1-1)) (vint r1);;
-          ens_ \[res = vint (1 + r1)]))))
-          (* )) *)
-          .
+          ens_ \[res = vint (1 + r1)])))).
 
   Definition sum_env := (Fmap.update empty_env "sum" (Some sum)).
   Definition sum_property (n res:val) := ens_ \[res = n].
@@ -1780,16 +1775,21 @@ Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
 
   | eval_pif_false : forall h1 h2 r e1 e2,
     bigstep h1 e2 h2 r ->
-    bigstep h1 (pif (vbool false) e1 e2) h2 r.
+    bigstep h1 (pif (vbool false) e1 e2) h2 r
 
-  (* | eval_pref : forall x s (h:heap) l,
-    h l = None ->
-    eval[ s, h, pref x ] => [ s, hupdate l (s x) h, enorm l]
-  | eval_deref : forall x s (h:heap) v,
-    h (s x) = Some v ->
-    eval[ s, h, pderef x ] => [ s, h, enorm v]
-  | eval_assign : forall x1 x2 s h,
-    eval[ s, h, passign x1 x2 ] => [ s, hupdate (s x1) (s x2) h, enorm 0] *)
+  | eval_pref : forall h v p,
+    ~ Fmap.indom h p ->
+    bigstep h (pref v) (Fmap.update h p v) (enorm (vloc p))
+
+  | eval_pderef : forall h p,
+    Fmap.indom h p ->
+    bigstep h (pderef (vloc p)) h (enorm (Fmap.read h p))
+
+  | eval_passign : forall h p v,
+    Fmap.indom h p ->
+    bigstep h (passign (vloc p) v) (Fmap.update h p v) (enorm vunit)
+
+  .
 
 (* Definition compatible r1 r2 :=
   match (r1, r2) with
@@ -1812,20 +1812,22 @@ Inductive forward : expr -> flow -> Prop :=
   | fw_if: forall b e1 e2 f1 f2,
     forward e1 f1 ->
     forward e2 f2 ->
-    forward (pif b e1 e2) (disj f1 f2).
+    forward (pif b e1 e2) (disj f1 f2)
 
-  (* | fw_deref: forall x y,
-    forward (pderef x) (fex y (req (pts x y);;
-      ens (fun res s h => ((res = s y) //\\ pts x y) s h)))
+  | fw_deref: forall x,
+    forward (pderef (vloc x))
+      (fall (fun y => (req (x~~>y)
+        (ens (fun res => \[res = y] \* x~~>y)))))
 
-  | fw_ref: forall x y,
-    (* forward (pref x) (fex (fun y => ens (fun r s h => contains y (s x) s h))) *)
-    forward (pref x) (fex y (ens (fun r s h => (r = s y) /\ (pts y x s h)))) *)
+  | fw_ref: forall v,
+    forward (pref v) (fex (fun y =>
+      (ens (fun r => \[r = vloc y] \* y~~>v))))
 
-  (* | fw_get: forall l v, 
-    forward (GET l)
-      (req (contains l v) ;;
-      (ens (fun r => (r = v) //\\ contains l v))) *)
+  | fw_assign: forall x y v,
+    forward (passign (vloc x) y)
+      (req (x~~>v) (ens_ (x~~>y)))
+
+  .
 
 
 Module Soundness.
@@ -1898,6 +1900,86 @@ Module Soundness.
       now apply s_disj_r. }
   Qed.
 
+  Lemma sem_pderef : forall x,
+    sem_triple (pderef (vloc x))
+      (fall (fun y => (req (x~~>y)
+        (ens (fun res => \[res = y] \* x~~>y))))).
+  Proof.
+    intros. unfold sem_triple. intros.
+    inverts H as H.
+    constructor. intros v.
+    constructor. intros.
+    constructor. exists v. exists hp.
+    intuition.
+    { f_equal.
+      apply hsingle_inv in H0.
+      rewrite H0 in H1.
+      subst.
+      rewrite Fmap.union_comm_of_disjoint; auto.
+      rewrite Fmap.read_union_l.
+      apply Fmap.read_single.
+      apply Fmap.indom_single. }
+    { rewrite hstar_hpure_l.
+      intuition. }
+  Qed.
+
+  Lemma sem_pref : forall v,
+    sem_triple (pref v) (fex (fun y =>
+      (ens (fun r => \[r = vloc y] \* y~~>v)))).
+  Proof.
+    intros.
+    unfold sem_triple. intros.
+    inverts H as H.
+    constructor. exists p.
+    constructor. exists (vloc p). exists (Fmap.single p v).
+    forwards H1: Fmap.disjoint_single_of_not_indom h1 p v.
+    { unfold not. exact H. }
+
+    intuition.
+    { rewrite hstar_hpure_l.
+      intuition.
+      apply hsingle_intro. }
+    { rewrite Fmap.union_comm_of_disjoint; only 2: auto.
+      apply Fmap.update_eq_union_single. }
+  Qed.
+
+  Lemma sem_passign : forall x y v,
+    sem_triple (passign (vloc x) y)
+      (req (x~~>v) (ens_ (x~~>y))).
+  Proof.
+    intros.
+    unfold sem_triple. intros.
+    inverts H as H.
+    constructor. intros.
+    constructor. exists vunit. exists (Fmap.update hp x y).
+
+    (* the heap reasoning is most of this *)
+    intuition.
+
+    { rewrite hstar_hpure_l. intuition.
+      apply hsingle_inv in H0.
+      rewrite H0.
+      rewrite Fmap.update_single.
+      apply hsingle_intro. }
+
+    { rewrite H1.
+      apply hsingle_inv in H0.
+      rewrite H0.
+      rewrites* Fmap.update_union_r.
+      { rewrite H1 in H.
+        rewrite H0 in H.
+        unfold not; applys Fmap.disjoint_inv_not_indom_both (Fmap.single x v) hr.
+        - fmap_disjoint.
+        - apply Fmap.indom_single. } }
+
+    { apply Fmap.disjoint_sym.
+      applys Fmap.disjoint_update_l.
+      fmap_disjoint.
+      apply hsingle_inv in H0.
+      rewrite H0.
+      apply Fmap.indom_single. }
+  Qed.
+
   Lemma sem_consequence : forall f1 f2 e,
     entails f2 f1 ->
     sem_triple e f2 ->
@@ -1920,6 +2002,9 @@ Module Soundness.
     - apply sem_pval.
     - apply sem_plet with (v := v); auto.
     - apply sem_pif; auto.
+    - apply sem_pderef.
+    - apply sem_pref.
+    - apply sem_passign.
   Qed.
   (* Admitted. *)
 
