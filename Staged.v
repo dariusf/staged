@@ -45,9 +45,10 @@ with expr : Type :=
   | pderef (v: val)
   | passign (x: val) (v: val)
   | pif (x: val) (e1: expr) (e2: expr)
-  | pcall (x: val) (a: val).
+  | papp (x: expr) (a: val).
 
-Global Instance Inhab_val : Inhab val.
+#[global]
+Instance Inhab_val : Inhab val.
 Proof.
   constructor.
   exists vunit.
@@ -68,7 +69,7 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   | pref v => pref v
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
-  | pcall t1 t2 => pcall t1 t2
+  | papp e v => papp e v
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
   | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
   end.
@@ -1762,12 +1763,14 @@ Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
   | eval_app_fun : forall v1 v2 h x e r,
     v1 = vfun x e ->
     bigstep h (subst x v2 e) h r ->
-    bigstep h (pcall v1 v2) h r
+    bigstep h (papp (pval v1) v2) h r
 
-  | eval_app_fix : forall v1 v2 h x e r f,
-    v1 = vfun x e ->
-    bigstep h (subst x v2 (subst f v1 e)) h r ->
-    bigstep h (pcall v1 v2) h r
+  | eval_app_fix : forall v1 v2 h x e r fn,
+    v1 = vfix fn x e ->
+    bigstep h (subst x v2 (subst fn v1 e)) h r ->
+    bigstep h (papp (pval v1) v2) h r
+
+  (* there is no case for unknown functions, because only closed programs can be run *)
     
   | eval_pif_true : forall h1 h2 r e1 e2,
     bigstep h1 e1 h2 r ->
@@ -1791,6 +1794,8 @@ Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
 
   | eval_passert : forall h,
     bigstep h (passert (vbool true)) h (enorm vunit)
+
+    (* bigstep h (papp (pfun true)) h (enorm vunit) *)
 
   .
 
@@ -1833,6 +1838,19 @@ Inductive forward : expr -> flow -> Prop :=
   | fw_assert: forall b,
     forward (passert (vbool b)) (req_ \[b = true])
 
+  | fw_app_fun: forall vf x e va f,
+    vf = vfun x e ->
+    forward (subst x va e) f ->
+    forward (papp (pval vf) va) f
+
+  | fw_app_fix: forall vf x e va f fn,
+    vf = vfix fn x e ->
+    forward (subst x va (subst fn vf e)) f ->
+    forward (papp (pval vf) va) f
+
+  (* | fw_app_unk: forall f va,
+    forward (papp (pvar f) va) (fex (fun r => unk f va r)) *)
+
   .
 
 
@@ -1865,7 +1883,7 @@ Module Soundness.
   Qed.
 
   (** Rules for program constructs *)
-  Lemma sem_pval : forall n,
+  Lemma sem_pval: forall n,
     sem_triple (pval n) (ens (fun res => \[res = n])).
   Proof.
     unfold sem_triple. intros.
@@ -1876,7 +1894,7 @@ Module Soundness.
     reflexivity.
   Qed.
 
-  Lemma sem_plet : forall x e1 e2 f1 f2 v,
+  Lemma sem_plet: forall x e1 e2 f1 f2 v,
     sem_triple e1 f1 ->
     flow_res f1 v ->
     sem_triple (subst x v e2) f2 ->
@@ -1901,7 +1919,7 @@ Module Soundness.
     intuition.
   Qed.
 
-  Lemma sem_pif : forall b e1 e2 f1 f2,
+  Lemma sem_pif: forall b e1 e2 f1 f2,
     sem_triple e1 f1 ->
     sem_triple e2 f2 ->
     sem_triple (pif b e1 e2) (disj f1 f2).
@@ -1919,7 +1937,7 @@ Module Soundness.
       now apply s_disj_r. }
   Qed.
 
-  Lemma sem_pderef : forall x,
+  Lemma sem_pderef: forall x,
     sem_triple (pderef (vloc x))
       (fall (fun y => (req (x~~>y)
         (ens (fun res => \[res = y] \* x~~>y))))).
@@ -1942,7 +1960,7 @@ Module Soundness.
       intuition. }
   Qed.
 
-  Lemma sem_pref : forall v,
+  Lemma sem_pref: forall v,
     sem_triple (pref v) (fex (fun y =>
       (ens (fun r => \[r = vloc y] \* y~~>v)))).
   Proof.
@@ -1962,7 +1980,7 @@ Module Soundness.
       apply Fmap.update_eq_union_single. }
   Qed.
 
-  Lemma sem_passign : forall x y v,
+  Lemma sem_passign: forall x y v,
     sem_triple (passign (vloc x) y)
       (req (x~~>v) (ens_ (x~~>y))).
   Proof.
@@ -1999,7 +2017,7 @@ Module Soundness.
       apply Fmap.indom_single. }
   Qed.
 
-  Lemma sem_passert : forall b,
+  Lemma sem_passert: forall b,
     sem_triple (passert (vbool b)) (req_ \[b = true]).
   Proof.
     intros.
@@ -2011,6 +2029,43 @@ Module Soundness.
     apply empty_intro.
   Qed.
 
+  Lemma sem_papp_fun: forall vf x e va f,
+    vf = vfun x e ->
+    sem_triple (subst x va e) f ->
+    sem_triple (papp (pval vf) va) f.
+  Proof.
+    intros. subst.
+    unfold sem_triple. intros.
+    inverts H as H.
+    { injection H; intros; subst e0 x0; clear H.
+      unfold sem_triple in H0.
+      specializes H0 env0 H6. }
+    { false. }
+  Qed.
+
+  Lemma sem_papp_fix: forall vf x e va f fn,
+    vf = vfix fn x e ->
+    sem_triple (subst x va (subst fn vf e)) f ->
+    sem_triple (papp (pval vf) va) f.
+  Proof.
+    intros. subst.
+    unfold sem_triple. intros.
+    inverts H as H.
+    { false. }
+    { injection H; intros; subst e0 x0 fn0; clear H.
+      unfold sem_triple in H0.
+      specializes H0 env0 H6. }
+  Qed.
+
+  Lemma sem_papp_unk: forall f va,
+    sem_triple (papp (pvar f) va) (fex (fun r => unk f va r)).
+  Proof.
+    intros.
+    unfold sem_triple. intros.
+    (* this is currently not backed up by any program-level semantics *)
+    now inv H.
+  Abort.
+
   Local Notation derivable := forward.
   Local Notation valid := sem_triple.
 
@@ -2020,14 +2075,15 @@ Module Soundness.
     introv H.
     induction H.
     - apply sem_pval.
-    - apply sem_plet with (v := v); auto.
+    - eapply sem_plet; eauto.
     - apply sem_pif; auto.
     - apply sem_pderef.
     - apply sem_pref.
     - apply sem_passign.
     - apply sem_passert.
+    - eapply sem_papp_fun; eauto.
+    - eapply sem_papp_fix; eauto.
   Qed.
-  (* Admitted. *)
 
 End Soundness.
 
