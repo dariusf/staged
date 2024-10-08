@@ -839,7 +839,7 @@ Proof.
   assumption.
 Qed.
 
-Lemma norm_unk_conv : forall env h1 h2 v f1 f x,
+Lemma unk_inv_conv : forall env h1 h2 v f1 f x,
   Fmap.read env f = Some f1 ->
   satisfies env h1 h2 (norm v) (f1 x v) ->
   satisfies env h1 h2 (norm v) (unk f x v).
@@ -1848,9 +1848,7 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
     bigstep env h (passign (vloc p) v) (Fmap.update h p v) (enorm vunit)
 
   | eval_passert : forall h env,
-    bigstep env h (passert (vbool true)) h (enorm vunit)
-
-  .
+    bigstep env h (passert (vbool true)) h (enorm vunit).
 
 (* Definition compatible r1 r2 :=
   match (r1, r2) with
@@ -1918,7 +1916,7 @@ Module Soundness.
       exists sfn, Fmap.read env f = Some sfn /\
       forall v, triple_valid_under penv env (pfn x) (sfn x v).
 
-  (** A semantic triple ensures a program is overapproximated by a flow. This is also definition of validity for triples. *)
+  (** A semantic triple ensures a program is soundly overapproximated by a flow. This is also the definition of validity for triples. *)
   Definition sem_triple (e: expr) (f: flow) : Prop :=
     forall penv env,
       env_compatible penv env -> triple_valid_under penv env e f.

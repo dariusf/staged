@@ -93,17 +93,17 @@ span.docright {
 }
 
 span.bracket {
-  font-family: monospace;
-  color: #008000;
+  font-family: Fira Code, monospace, DejaVu Sans;
+  /* color: #008000; */
 }
 
 span.kwd {
   color:  #cf1d1d;
 }
 
-span.comment {
+/* span.comment {
   color:  #008000;
-}
+} */
 
 div.doc pre {
   color: Maroon;
