@@ -206,6 +206,9 @@ Definition flow_res (f:flow) (v:val) : Prop :=
 Definition flow_res_in_env (f:flow) (v:val) env : Prop :=
   forall h1 h2 v1, satisfies env h1 h2 (norm v1) f -> v1 = v.
 
+Definition has_no_result f :=
+  forall env h1 h2 r, satisfies env h1 h2 r f -> r = norm vunit.
+
 (** * Entailment *)
 (** This is defined directly in terms of the semantics, in contrast to the paper's syntactic definition. *)
 (* TODO the paper's definition should later be implemented as an Inductive here and proved sound with respect to the lemmas we can write using this semantic definition *)
@@ -607,6 +610,14 @@ Proof.
   intuition.
 Qed.
 
+Lemma ens_no_result : forall H,
+  has_no_result (ens_ H).
+Proof.
+  unfold has_no_result.
+  intros.
+  applys ens_void_inv H0.
+Qed.
+
 (** * Tactics for reasoning about entailments *)
 Ltac felim H :=
   match type of H with
@@ -917,20 +928,28 @@ Proof.
     apply ens_void_pure_intro; constructor. }
 Qed.
 
-Lemma norm_ens_empty_r : forall H,
-  bientails (ens_ H;; empty) (ens_ H).
+Lemma norm_ens_no_result_r : forall f,
+  has_no_result f ->
+  bientails (f;; empty) f.
 Proof.
   iff H1.
   { inverts H1 as H1. destr H1.
+    specializes H H0. subst.
     apply empty_inv in H2. destr H2. subst.
-    pose proof (ens_void_inv H0). subst.
     assumption. }
   { constructor.
     exists h2. exists r.
     intuition.
-    apply ens_void_inv in H1.
-    subst.
+    specializes H H1. subst.
     apply empty_intro. }
+Qed.
+
+Lemma norm_ens_empty_r : forall H,
+  bientails (ens_ H;; empty) (ens_ H).
+Proof.
+  intros.
+  apply (@norm_ens_no_result_r (ens_ H)).
+  apply ens_no_result.
 Qed.
 
 (** Compaction rule 3 from the paper *)
@@ -2133,11 +2152,42 @@ Module HistoryTriples.
   Import Soundness.
 
   Definition hist_triple fh e f :=
-    forall penv env h0 h1 h2 r v,
+    forall penv env h0 h1 h2 v r,
       satisfies env h0 h1 r fh ->
       env_compatible penv env ->
       bigstep penv h1 e h2 (enorm v) ->
       satisfies env h0 h2 (norm v) f.
+
+  (** History triples are contravariant in the history. *)
+  #[global]
+  Instance Proper_hist_triple : Proper
+    (flip entails ====> eq ====> entails ====> impl)
+    hist_triple.
+  Proof.
+    unfold entails, Proper, respectful, impl, hist_triple, flip.
+    intros. subst.
+    apply H1.
+    applys H2.
+    apply H.
+    exact H3.
+    exact H4.
+    exact H5.
+  Qed.
+
+  #[global]
+  Instance Proper_hist_triple_bi : Proper
+    (bientails ====> eq ====> bientails ====> impl)
+    hist_triple.
+  Proof.
+    unfold entails, Proper, respectful, impl, hist_triple, flip.
+    intros. subst.
+    apply H1.
+    applys H2.
+    apply H.
+    exact H3.
+    exact H4.
+    exact H5.
+  Qed.
 
   (** Structural rules *)
   Lemma hist_conseq : forall f1 f2 f3 f4 e,
@@ -2162,6 +2212,36 @@ Module HistoryTriples.
     specializes H H4 H1.
   Qed.
 
+  Lemma hist_sem : forall f e,
+    sem_triple e f <->
+    hist_triple empty e f.
+  Proof.
+    iff H.
+    { unfold hist_triple. intros.
+      apply empty_inv in H0. destruct H0. subst h0.
+      unfold sem_triple, triple_valid_under in H.
+      specializes H H1 H2. }
+    { unfold sem_triple, triple_valid_under. intros.
+      unfold hist_triple in H.
+      applys H.
+      apply empty_intro.
+      apply H0.
+      assumption. }
+  Qed.
+
+  (** The (arbitrary) result of the precondition does not matter, enabling this rewriting. *)
+  Lemma hist_pre_result : forall fh f e,
+    hist_triple (fh;; empty) e f ->
+    hist_triple fh e f.
+  Proof.
+    unfold hist_triple.
+    introv H. intros.
+    pose proof (@s_seq env0 fh empty h0 h1 (norm vunit)) as Hseq.
+    forward Hseq. { exists h1. exists r. intuition.
+      apply (empty_intro env0 h1). }
+    specializes H Hseq H1 H2.
+  Qed.
+
   (** Rules for program constructs *)
   Lemma hist_pval: forall n fh,
     hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
@@ -2174,6 +2254,45 @@ Module HistoryTriples.
     apply H; auto.
   Qed.
 
+  (** This triple can be derived directly from the history-frame rule, given the additional lemma [hist_pre_result]. *)
+  Lemma hist_pval_via_frame: forall n fh,
+    hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
+  Proof.
+    intros.
+    lets H2: sem_pval n.
+    apply hist_sem in H2.
+    lets H3: hist_frame fh H2. clear H2.
+    apply hist_pre_result in H3.
+    exact H3.
+  Qed.
+
+  (* Lemma hist_plet: forall n fh,
+    (* hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])). *)
+sem_triple e1 f1 ->
+flow_res f1 v ->
+sem_triple (subst x v e2) f2 ->
+sem_triple (plet x e1 e2) (f1;; f2)
+  Proof.
+    unfold hist_triple. introv Hh Hc Hb.
+    constructor. exists h1. exists r.
+    intuition.
+    lets H: sem_pval n Hc.
+    unfold triple_valid, sem_triple in H.
+    apply H; auto.
+  Qed.
+
+     Check sem_plet. *)
+
+    (*
+     Check sem_pif.
+     Check sem_pderef.
+     Check sem_pref.
+     Check sem_passign.
+     Check sem_passert.
+     Check sem_papp_fun.
+     Check sem_papp_fix.
+     Check sem_papp_unk.
+     *)
 
 End HistoryTriples.
 
