@@ -576,6 +576,15 @@ Proof.
   fmap_eq.
 Qed.
 
+Lemma req_pure_intro : forall env h1 P,
+  satisfies env h1 h1 (norm vunit) (req \[P] empty).
+Proof.
+  intros.
+  constructor. intros.
+  apply hpure_inv in H. destruct H. subst. rew_fmap.
+  apply empty_intro.
+Qed.
+
 Lemma seq_ens_pure_inv : forall P env h1 h2 r f,
   satisfies env h1 h2 r (ens (fun _ => \[P]);; f) ->
   P /\ satisfies env h1 h2 r f.
