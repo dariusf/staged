@@ -2126,6 +2126,12 @@ Module Soundness.
     - eapply sem_papp_unk.
   Qed.
 
+End Soundness.
+
+Module HistoryTriples.
+
+  Import Soundness.
+
   Definition hist_triple fh e f :=
     forall penv env h0 h1 h2 r v,
       satisfies env h0 h1 r fh ->
@@ -2133,6 +2139,30 @@ Module Soundness.
       bigstep penv h1 e h2 (enorm v) ->
       satisfies env h0 h2 (norm v) f.
 
+  (** Structural rules *)
+  Lemma hist_conseq : forall f1 f2 f3 f4 e,
+    entails f1 f3 ->
+    entails f4 f2 ->
+    hist_triple f3 e f4 ->
+    hist_triple f1 e f2.
+  Proof.
+    unfold hist_triple. introv He1 He2 H. introv Hf1 Hc.
+    rewrite He1 in Hf1.
+    specializes H Hf1 Hc.
+  Qed.
+
+  Lemma hist_frame : forall fh fr f e,
+    hist_triple fh e f ->
+    hist_triple (fr;; fh) e (fr;; f).
+  Proof.
+    unfold hist_triple. introv H. intros.
+    inverts H0 as H0. destr H0.
+    constructor. exists h3. exists r1.
+    intuition.
+    specializes H H4 H1.
+  Qed.
+
+  (** Rules for program constructs *)
   Lemma hist_pval: forall n fh,
     hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
   Proof.
@@ -2144,7 +2174,8 @@ Module Soundness.
     apply H; auto.
   Qed.
 
-End Soundness.
+
+End HistoryTriples.
 
 Module ForwardExamples.
 
