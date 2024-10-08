@@ -2254,16 +2254,23 @@ Module HistoryTriples.
     apply H; auto.
   Qed.
 
-  (** This triple can be derived directly from the history-frame rule, given the additional lemma [hist_pre_result]. *)
-  Lemma hist_pval_via_frame: forall n fh,
+  (** History triples which only append to history can be derived directly from the history-frame rule. *)
+  Lemma hist_frame_sem: forall fh e f,
+    sem_triple e f ->
+    hist_triple fh e (fh;; f).
+  Proof.
+    intros.
+    apply hist_sem in H.
+    lets H3: hist_frame fh H. clear H.
+    apply hist_pre_result in H3.
+    exact H3.
+  Qed.
+
+  Remark hist_pval_via_frame: forall n fh,
     hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
   Proof.
     intros.
-    lets H2: sem_pval n.
-    apply hist_sem in H2.
-    lets H3: hist_frame fh H2. clear H2.
-    apply hist_pre_result in H3.
-    exact H3.
+    applys hist_frame_sem (@sem_pval n).
   Qed.
 
   (* Lemma hist_plet: forall n fh,
