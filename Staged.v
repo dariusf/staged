@@ -2126,6 +2126,24 @@ Module Soundness.
     - eapply sem_papp_unk.
   Qed.
 
+  Definition hist_triple fh e f :=
+    forall penv env h0 h1 h2 r v,
+      satisfies env h0 h1 r fh ->
+      env_compatible penv env ->
+      bigstep penv h1 e h2 (enorm v) ->
+      satisfies env h0 h2 (norm v) f.
+
+  Lemma hist_pval: forall n fh,
+    hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
+  Proof.
+    unfold hist_triple. introv Hh Hc Hb.
+    constructor. exists h1. exists r.
+    intuition.
+    lets H: sem_pval n Hc.
+    unfold triple_valid_under, sem_triple in H.
+    apply H; auto.
+  Qed.
+
 End Soundness.
 
 Module ForwardExamples.
