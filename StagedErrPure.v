@@ -96,13 +96,11 @@ Open Scope flow_scope.
 - the definition of [req], whose variance has been fixed
 
 An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
-
-(* Now we need to think about this *)
-
 Inductive satisfies (e : env) : state -> state -> val -> flow -> Prop :=
 (* req P *)
-| s_req (S : state) (P : precond) :
-  satisfies e S (S /\ P) vunit (req P)
+| s_req (S S' : state) (P : precond) :
+  (S /\ P -> S') ->
+  satisfies e S S' vunit (req P)
 (* ens Q *)
 | s_ens (S : state) (v : val) (Q : postcond) :
   (S -> Q v) ->
@@ -139,22 +137,22 @@ Module Example.
     eexists.
     eapply s_fex. exists 1.
     eapply s_seq.
-    - eapply s_req.
-    - eapply s_ens. auto.
+    - eapply s_req. intro H. exact H.
+    - eapply s_ens. intuition.
   Qed.
 
   Goal exists S', satisfies empty_env True S' (vint 1) (fex Z (fun x => seq (req (x <> 1)) (ens (fun r => r = vint x)))).
     eexists.
     eapply s_fex. exists 1.
     eapply s_seq.
-    - eapply s_req.
+    - eapply s_req. intro H. exact H.
     - eapply s_ens. tauto.
   Qed.
 
   Goal exists S', satisfies empty_env True S' (vint 1) (fall Z (fun x => seq (req (x = 1)) (ens (fun r => r = vint x)))).
     eexists. eapply s_fall. intros a.
     eexists. eapply s_seq.
-    - eapply s_req.
+    - eapply s_req. intro H. exact H.
     - eapply s_ens. intuition. subst. reflexivity.
   Qed.
 
@@ -162,7 +160,7 @@ Module Example.
     (* should fail *)
     eexists. eapply s_fall. intros a.
     eexists. eapply s_seq.
-    - eapply s_req.
+    - eapply s_req. intro H. exact H.
     - eapply s_ens. intuition. subst. (* fail *)
   Abort.
 
@@ -183,9 +181,9 @@ Lemma satisfies_req :
     satisfies e S S' v (req P2).
 Proof.
   intros e S S' v P1 P2 H_impl H_sat.
-  inverts H_sat.
-  (* cannot proceed *)
-Abort.
+  inverts H_sat as H_sat.
+  constructor. intuition.
+Qed.
 
 Lemma satisfies_ens :
   forall (e : env)
@@ -197,7 +195,7 @@ Lemma satisfies_ens :
     satisfies e S S v (ens Q2).
 Proof.
   intros e S v Q1 Q2 H_impl H_sat.
-  inversion H_sat.
+  inverts H_sat as H_sat.
   constructor. auto.
 Qed.
 
