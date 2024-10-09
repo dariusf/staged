@@ -2280,33 +2280,130 @@ Module HistoryTriples.
     applys hist_frame_sem (@sem_pval n).
   Qed.
 
-  (* Lemma hist_plet: forall n fh,
-    (* hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])). *)
-sem_triple e1 f1 ->
-flow_res f1 v ->
-sem_triple (subst x v e2) f2 ->
-sem_triple (plet x e1 e2) (f1;; f2)
+  Lemma hist_pref: forall v fh,
+    hist_triple fh (pref v)
+      (fh;; fex (fun y =>(ens (fun r => \[r = vloc y] \* y ~~> v)))).
   Proof.
-    unfold hist_triple. introv Hh Hc Hb.
-    constructor. exists h1. exists r.
-    intuition.
-    lets H: sem_pval n Hc.
-    unfold triple_valid, sem_triple in H.
-    apply H; auto.
+    intros.
+    applys hist_frame_sem (@sem_pref v).
   Qed.
 
-     Check sem_plet. *)
+  Lemma hist_pderef: forall x fh,
+    hist_triple fh (pderef (vloc x))
+      (fh;; fall (fun y =>
+        req (x ~~> y) (ens (fun res => \[res = y] \* x ~~> y)))).
+  Proof.
+    intros.
+    applys hist_frame_sem (@sem_pderef x).
+  Qed.
 
-    (*
-     Check sem_pif.
-     Check sem_pderef.
-     Check sem_pref.
-     Check sem_passign.
-     Check sem_passert.
-     Check sem_papp_fun.
-     Check sem_papp_fix.
-     Check sem_papp_unk.
-     *)
+  Lemma hist_passign: forall x y v fh,
+    hist_triple fh (passign (vloc x) y)
+      (fh;; req (x ~~> v) (ens_ (x ~~> y))).
+  Proof.
+    intros.
+    applys hist_frame_sem (@sem_passign x).
+  Qed.
+
+  Lemma hist_passert: forall fh b,
+    hist_triple fh (passert (vbool b)) (fh;; req_ \[b = true]).
+  Proof.
+    intros.
+    applys hist_frame_sem (@sem_passert b).
+  Qed.
+
+  Lemma hist_pif: forall fh b e1 e2 f1 f2,
+    hist_triple (fh;; ens_ \[b = true]) e1 f1 ->
+    hist_triple (fh;; ens_ \[b = false]) e2 f2 ->
+    hist_triple fh (pif (vbool b) e1 e2) (disj f1 f2).
+  Proof.
+    introv He1 He2.
+    unfold hist_triple. intros.
+    destruct b.
+    { forwards: He1.
+      { constructor.
+        exists h1. exists r.
+        split. exact H.
+        pose proof (ens_void_pure_intro).
+        apply ens_void_pure_intro.
+        reflexivity. }
+      { exact H0. }
+      { inverts H1 as H1. exact H1. }
+      apply s_disj_l. assumption. }
+
+    { forwards: He2.
+      { constructor.
+        exists h1. exists r.
+        split. exact H.
+        pose proof (ens_void_pure_intro).
+        apply ens_void_pure_intro.
+        reflexivity. }
+      { exact H0. }
+      { inverts H1 as H1. exact H1. }
+      apply s_disj_r. assumption. }
+  Qed.
+
+  (* TODO alternative formulation of if, which appends only *)
+  (* TODO sem_pif should treat conditions more precisely first *)
+
+  Lemma hist_papp_fun: forall vf x e va f fh,
+    vf = vfun x e ->
+    hist_triple fh (subst x va e) f ->
+    hist_triple fh (papp (pval vf) va) f.
+  Proof.
+    intros. subst.
+    unfold hist_triple. intros.
+    inverts H2 as H2.
+    { inj H2.
+      unfold hist_triple in H0.
+      specializes H0 H H1 H9. }
+    { false. }
+  Qed.
+
+  Lemma hist_papp_fix: forall vf x e va f fn fh,
+    vf = vfix fn x e ->
+    hist_triple fh (subst x va (subst fn vf e)) f ->
+    hist_triple fh (papp (pval vf) va) f.
+  Proof.
+    intros. subst.
+    unfold hist_triple. intros.
+    inverts H2 as H2.
+    { false. }
+    { inj H2.
+      unfold hist_triple in H0.
+      specializes H0 H H1 H9. }
+  Qed.
+
+  Lemma hist_papp_unk: forall f va fh,
+    hist_triple fh (papp (pvar f) va) (fh;; fex (fun r => unk f va r)).
+  Proof.
+    intros.
+    applys hist_frame_sem fh (@sem_papp_unk f va).
+  Qed.
+
+  Lemma hist_plet: forall fh e1 f1 e2 f2 v x,
+    hist_triple fh e1 f1 ->
+    flow_res f1 v ->
+    hist_triple f1 (subst x v e2) f2 ->
+    hist_triple fh (plet x e1 e2) f2.
+  Proof.
+    introv He1 Hres He2.
+    unfold hist_triple. introv Hfh Hc Hb.
+
+    (* reason about how let executes, as the composition of e1 and e2 *)
+    inverts Hb as. introv Hb1 Hb2.
+
+    (* reason about the execution of e1 *)
+    unfold hist_triple in He1.
+    specializes He1 Hfh Hc Hb1.
+
+    (* reason about the result of e1 *)
+    specializes Hres He1. subst.
+
+    (* reason about the execution of e2 *)
+    unfold hist_triple in He2.
+    specializes He2 He1 Hc.
+  Qed.
 
 End HistoryTriples.
 
