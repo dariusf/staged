@@ -1,7 +1,6 @@
 const FONT_SIZE = "1.2em"; // matching existing
 
-function nodesWithTextAndClass(text, cls) {
-  const xpathExpression = `//*[contains(text(), '${text}') and contains(@class, '${cls}')]`;
+function nodesWithTextAndClass(xpathExpression) {
   const xpathResult = document.evaluate(
     xpathExpression,
     document,
@@ -60,18 +59,21 @@ function buildTOC() {
 
 function buildLemmaIndex() {
   let index = document.createElement("div");
-  let lemmas = nodesWithTextAndClass("Lemma", "kwd");
+
+  let lemmas = nodesWithTextAndClass(
+    `//*[(contains(text(), 'Lemma') or contains(text(), 'Theorem')) and contains(@class, 'kwd')]`
+  );
 
   const list = document.createElement("ul");
   const hdr = document.createElement("h1");
-  hdr.textContent = "Lemma Index";
+  hdr.textContent = "Index";
   index.appendChild(hdr);
   index.appendChild(list);
   lemmas.forEach((lem, index) => {
     const anchor = document.createElement("a");
     const id = `lem-${index}`;
     anchor.setAttribute("href", `#${id}`);
-    anchor.textContent = `Lemma ${lem.nextSibling.nextSibling.textContent}`;
+    anchor.textContent = `${lem.textContent} ${lem.nextSibling.nextSibling.textContent}`;
     anchor.style.fontSize = FONT_SIZE;
 
     lem.setAttribute("id", id);
