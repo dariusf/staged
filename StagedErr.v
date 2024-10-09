@@ -594,74 +594,95 @@ Proof.
 Abort.
 
 (** Contravariance of req *)
-Lemma satisfies_req : forall H1 H2 env h1 h2 r,
+(* Lemma satisfies_req : forall H1 H2 env h1 h2 r,
   H2 ==> H1 ->
   satisfies env (req H1) h1 h2 r ->
   satisfies env (req H2) h1 h2 r.
 Proof.
-  intros.
-  constructor. (* unfold in the goal *)
+  introv H H0.
+  (* unfold in the goal *)
+  constructor.
+  (* it's a conjunction, so we need to prove both branches *)
   split.
-  {
-    (* we have to prove hp |= H2 for some hp.
-      but the first premise tells us nothing about H2.
-      we can't apply H either, so the proof is stuck. *)
-    inverts H0 as H0. destr H0.
-    admit.
-  }
-  {
-    intros.
-    (* in this case, we have an assumption that H2 does not hold.
-      this doesn't help us use H either. *)
-    inverts H0 as H0. destr H0.
-    (* in order to prove r = top, we need to prove hp1 |/= H1 for some hp1. *)
+  { (* left branch *)
+    (* looking at the goal, to make progress,
+      we have to find a hp such that hp satisfies H2.
 
-    (* the contrapositive of H doesn't help. *)
-    (* Search ((?a -> ?b) -> (not ?b -> not ?a)). *)
-    unfold himpl in H.
-    specialize (H hp). pose proof (contrapose H).
+      premise H can't be used because we don't know anything about H2.
+
+      premise H0 tells us nothing about H2.
+
+      the proof is stuck. *)
+
+      intros.
+      unfold himpl in H.
+      specializes H H3.
+      inverts H0 as H0. destr H0.
+      specializes H6 H H4 H5.
+
+      (* rewrite H in H3. *)
+
+
+    (* admit. *)
+  }
+  { (* right branch *)
+    intros.
+    inverts H0 as H0. destr H0.
+
+    (* we are allowed to assume H2 does not hold for some arbitrary heap hp,
+      which is split off from h1.
+
+      we have to use this to show that req H1 will also fail,
+      producing a top result and leaving h1 = h2.
+
+      again we cannot use H to show this, and don't have any other info about H1 to make progress. *)
+
     admit.
   }
-Abort.
+Abort. *)
 
 Lemma entails_req : forall H1 H2,
-  (H2 ==> H1) -> entails (req H1) (req H2).
+  H2 ==> H1 ->
+  entails (req H1) (req H2).
 Proof.
-  unfold entails.
-  intros.
+  unfold entails. intros.
+  (* the new entailment has two cases, so we need to prove both. *)
   split.
-  {
-    intros.
+  { intros.
+    (* the case where req H1 results in norm.
+      we have to prove req H2 results in norm or top.
+      we choose the left branch. *)
     left.
-    inverts H0 as H0. destr H0.
-    destruct (classic (H1 hp)).
-    {
-      clear H4.
-      specialize (H3 H0).
-      constructor.
-      split.
-      admit.
-      intros.
-      admit.
-    }
-    {
-      clear H3.
-      specializes H4 H0.
-      constructor.
-      split.
-      admit.
-      intros.
-      admit.
-    }
-  }
-  {
-    intros.
+    (* unfold satisfies in goal. we need to prove the first branch
+      and show that the second is absurd. *)
     constructor.
     split.
-    inverts H0 as H0.
-    destr H0.
-    admit.
-    admit.
+    { (* we need to supply a hp such that hp satisfies H2.
+        we have no info about H2 to do this. *)
+      admit. }
+    { intros.
+      (* we get to assume H2 does not hold for hp,
+        which is split off from h1. this doesn't help. *)
+      admit. }
+  }
+  { intros.
+    (* the case where req H1 results in top.
+      we have to show that req H2 also results in top. *)
+    constructor.
+    split.
+    { (* we need to show this branch is absurd.
+        we're immediately required to produce a heap satisfying H2. *)
+      admit. }
+    { (* we are allowed to assume H2 does not hold for some arbitrary
+        heap hp, which is split off from h1. *)
+      intros. split; only 1: reflexivity.
+      (* we have to prove h1 = h2. reason forward by unfolding H0. *)
+      inverts H0 as H0. destruct H0.
+      (* H0 is useless as it has an absurd conclusion.
+        H6 requires us to show something about H1,
+        which we have no info about. *)
+      admit.
+    }
   }
 Abort.
 (* Qed. *)
