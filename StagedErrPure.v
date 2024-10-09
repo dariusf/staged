@@ -1,4 +1,3 @@
-
 From Coq Require Import Classes.RelationClasses.
 From Coq Require Morphisms Program.Basics.
 
@@ -8,7 +7,6 @@ Module Fmap := LibSepFmap.
 From SLF Require Export Extra Heap Tactics.
 
 Local Open Scope string_scope.
-(* Local Open Scope nat_scope. *)
 Local Open Scope Z_scope.
 Local Open Scope list_scope.
 
@@ -20,39 +18,34 @@ Definition ident : Type := string.
 Definition ident_eq := String.string_dec.
 
 Inductive val :=
-  | vunit : val
-  | vint : Z -> val
-  | vfun : ident -> expr -> val
-  | vfix : ident -> ident -> expr -> val
+| vunit : val
+| vint : Z -> val
+| vfun : ident -> expr -> val
+| vfix : ident -> ident -> expr -> val
 
 with expr : Type :=
-  | pvar (x: ident)
-  | pval (v: val)
-  | plet (x: ident) (e1 e2: expr)
-  | pfix (f: ident) (x: ident) (e: expr)
-  | pfun (x: ident) (e: expr)
-  | padd (x y: val)
-  | pminus (x y: val)
-  (* | pref (x: ident) *)
-  (* | pderef (x: ident) *)
-  (* | passign (x1: ident) (x2: ident) *)
-  | pif (x: val) (e1: expr) (e2: expr)
-  | pcall (x: val) (a: val).
+| pvar (x : ident)
+| pval (v : val)
+| plet (x : ident) (e1 e2 : expr)
+| pfix (f : ident) (x : ident) (e : expr)
+| pfun (x : ident) (e : expr)
+| padd (x y : val)
+| pif (x : val) (e1 : expr) (e2 : expr)
+| pcall (x : val) (a : val).
 
-Global Instance Inhab_val : Inhab val.
+Instance Inhab_val : Inhab val.
 Proof.
   constructor.
   exists vunit.
   constructor.
 Qed.
 
-Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
+Fixpoint subst (y : ident) (w : val) (e : expr) : expr :=
   let aux t := subst y w t in
   let if_y_eq x t1 t2 := if ident_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
   | padd x y => padd x y
-  | pminus x y => pminus x y
   | pvar x => if_y_eq x (pval w) e
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
@@ -61,227 +54,166 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
   end.
 
-Module Val.
-  Definition val := val.
-End Val.
+Unset Implicit Arguments.
 
-(** SLF's heap theory as a functor. *)
-Module Export Heap := Heap.HeapSetup(Val).
-
-Inductive eresult : Type :=
-  | enorm : val -> eresult.
-
-Inductive bigstep : heap -> expr -> heap -> eresult -> Prop :=
-  | eval_pval : forall h v,
-    bigstep h (pval v) h (enorm v)
-
-  | eval_padd : forall h x y,
-    bigstep h (padd (vint x) (vint y)) h (enorm (vint (x + y)))
-
-  | eval_pminus : forall h x y,
-    bigstep h (pminus (vint x) (vint y)) h (enorm (vint (x - y)))
-
-  | eval_pfun : forall h x e,
-    bigstep h (pfun x e) h (enorm (vfun x e))
-
-  | eval_pfix : forall h x e f,
-    bigstep h (pfix f x e) h (enorm (vfix f x e))
-
-  | eval_app_fun : forall v1 v2 h x e r,
-    v1 = vfun x e ->
-    bigstep h (subst x v2 e) h r ->
-    bigstep h (pcall v1 v2) h r
-
-  | eval_app_fix : forall v1 v2 h x e r f,
-    v1 = vfun x e ->
-    bigstep h (subst x v2 (subst f v1 e)) h r ->
-    bigstep h (pcall v1 v2) h r.
-
-  (* there is no var rule *)
-
-  (* | eval_plet : forall x e1 e2 v s h h2 s2 s1 h1 r,
-    eval[ s, h, e1 ] => [ s1, h1, enorm v] ->
-    eval[ supdate x v s1, h1, e2 ] => [ s2, h2, r] ->
-    eval[ s, h, plet x e1 e2 ] => [ s2, h2, r ] *)
-
-  (* | eval_pref : forall x s (h:heap) l,
-    h l = None ->
-    eval[ s, h, pref x ] => [ s, hupdate l (s x) h, enorm l]
-  | eval_deref : forall x s (h:heap) v,
-    h (s x) = Some v ->
-    eval[ s, h, pderef x ] => [ s, h, enorm v]
-  | eval_assign : forall x1 x2 s h,
-    eval[ s, h, passign x1 x2 ] => [ s, hupdate (s x1) (s x2) h, enorm 0] *)
-
-Definition empty_heap : heap := Fmap.empty.
-
-Definition precond := hprop.
-Definition postcond := val -> hprop.
+Definition precond := Prop.
+Definition postcond := val -> Prop.
+Definition state := Prop.
 
 Inductive result : Type :=
-  | norm : val -> result.
-
-Definition compatible r1 r2 :=
-  match (r1, r2) with
-  | (norm r3, enorm r4) => r3 = r4
-end.
+| top : result
+| norm : val -> result.
 
 (** * Staged formulae *)
 (** Deeply embedded due to uninterpreted functions, which cannot immediately be given a semantics without an environment. *)
 Inductive flow :=
-  | req : precond -> flow -> flow
-  | ens : postcond -> flow
-  | seq : flow -> flow -> flow
-  | fex : forall A, (A -> flow) -> flow
-  | fall : forall A, (A -> flow) -> flow
-  | unk : ident -> val -> val -> flow
-  | disj : flow -> flow -> flow.
+| req : precond -> flow
+| ens : postcond -> flow
+| seq : flow -> flow -> flow
+| fex : forall A, (A -> flow) -> flow
+| fall : forall A, (A -> flow) -> flow
+| unk : ident -> val -> val -> flow
+| disj : flow -> flow -> flow.
 
-(** An [ens] which doesn't have a useful return value.*)
-Definition ens_ H := ens (fun r => \[r = vunit] \* H).
+(** An [ens] which doesn't have a useful return value. *)
+Definition ens_ H := ens (fun r => r = vunit /\ H).
 (** This carries more information than [ens (fun _ => H)], which has an #<i>arbitrary</i># return value. *)
 
-Definition empty := ens_ \[True].
-
-Notation req_ H := (req H empty).
-
 (** Function environments, for interpreting unknown functions. [ufun] is a HOAS way of substituting into a staged formula, which otherwise doesn't support this due to the shallow embedding that [hprop] uses. *)
-Definition ufun := val -> val -> flow.
-Definition env := fmap ident (option ufun).
+Definition ufun : Type := val -> val -> flow. (* f(x, r) = \phi *)
+Definition env : Type := fmap ident (option ufun).
 
 Definition empty_env : env := Fmap.empty.
 
 Declare Scope flow_scope.
 Open Scope flow_scope.
 
-Infix ";;" := seq (at level 80, right associativity) : flow_scope.
-
-Notation "'∃' x1 .. xn , H" :=
-  (fex (fun x1 => .. (fex (fun xn => H)) ..))
-  (at level 39, x1 binder, H at level 50, right associativity,
-   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'",
-   only printing) : flow_scope.
-
-Notation "f '$' '(' x ',' r ')'" := (unk f x r)
-  (at level 80, format "f '$' '(' x ','  r ')'", only printing) : flow_scope.
-
-(* Notation "'ens' '[' r ']' Q" := (ens (fun r => Q))
-  (at level 80, format "'ens' '\[' r '\]' Q" , only printing) : flow_scope. *)
-(* square brackets will conflict with format notation for boxes https://coq.inria.fr/doc/V8.20.0/refman/user-extensions/syntax-extensions.html#displaying-symbolic-notations:~:text=well%2Dbracketed%20pairs%20of%20tokens%20of%20the%20form%20%27%5B%20%27%20and%20%27%5D%27 *)
-
-Notation "'ens' r '.' Q" := (ens (fun r => Q))
-  (at level 80, format "'ens'  r '.'  Q" , only printing) : flow_scope.
-
 (** * Interpretation of a staged formula *)
 (** Differs from the paper's definition in:
-    
+
 - the addition of an environment, to give interpretations for unknown functions
 - the removal of stores, to sidestep impredicativity problems
 - the definition of [req], whose variance has been fixed
 
 An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
-Inductive satisfies : env -> flow -> heap -> heap -> result -> Prop :=
 
-  | s_req env p (h1 h2:heap) r f
-    (H: forall hp hr, (* the heap satisfying p, and the remaining heap *)
-      p hp ->
-      h1 = Fmap.union hr hp ->
-      Fmap.disjoint hr hp ->
-      satisfies env f hr h2 r) :
-    satisfies env (req p f) h1 h2 r
+(* Now we need to think about this *)
 
-  | s_ens env q h1 h2 r
-    (H: exists v h3,
-      r = norm v /\
-      q v h3 /\
-      h2 = Fmap.union h1 h3 /\
-      Fmap.disjoint h1 h3) :
-    satisfies env (ens q) h1 h2 r
+Inductive satisfies (e : env) : state -> state -> val -> flow -> Prop :=
+(* req P *)
+| s_req (S : state) (P : precond) :
+  satisfies e S (S /\ P) vunit (req P)
+(* ens Q *)
+| s_ens (S : state) (v : val) (Q : postcond) :
+  (S -> Q v) ->
+  satisfies e S S v (ens Q)
+(* F1 ; F2 *)
+| s_seq (S0 S1 S2 : state) (v1 v2 : val) (F1 F2 : flow) :
+  satisfies e S0 S1 v1 F1 ->
+  satisfies e S1 S2 v2 F2 ->
+  satisfies e S0 S2 v2 (seq F1 F2)
+(* F1 \/ F2 when F1 *)
+| s_disj_l (S S' : state) (v : val) (F1 F2 : flow) :
+  satisfies e S S' v F1 ->
+  satisfies e S S' v (disj F1 F2)
+(* F1 \/ F2 when F2 *)
+| s_disj_r (S S' : state) (v : val) (F1 F2 : flow) :
+  satisfies e S S' v F2 ->
+  satisfies e S S' v (disj F1 F2)
+(* ex a, FA *)
+| s_fex (S S' : state) (v : val) (A : Type) (FA : A -> flow) :
+  (exists a, satisfies e S S' v (FA a)) ->
+  satisfies e S S' v (fex A FA)
+(* all a, FA *)
+| s_fall (S S' : state) (v : val) (A : Type) (FA : A -> flow) :
+  (forall a, exists S'', satisfies e S (S' /\ S'') v (FA a)) ->
+  satisfies e S S' v (fall A FA).
 
-  | s_seq env f1 f2 h1 h2 r
-    (H: exists h3 r1,
-      satisfies env f1 h1 h3 r1 /\
-      satisfies env f2 h3 h2 r) :
-    satisfies env (seq f1 f2) h1 h2 r
-
-  | s_fex env h1 h2 r (A:Type) (f:A->flow)
-    (H: exists v,
-      satisfies env (f v) h1 h2 r) :
-    satisfies env (@fex A f) h1 h2 r
-
-  | s_fall env h1 h2 r (A:Type) (f:A->flow)
-    (H: forall v,
-      satisfies env (f v) h1 h2 r) :
-    satisfies env (@fall A f) h1 h2 r
-
-  | s_unk env fn h1 h2 r f x
-    (He: Fmap.read env fn = Some f)
-    (Hr: satisfies env (f x r) h1 h2 (norm r)) :
-    satisfies env (unk fn x r) h1 h2 (norm r)
-
-  | s_disj_l env h1 h2 r f1 f2
-    (H: satisfies env f1 h1 h2 r) :
-    satisfies env (disj f1 f2) h1 h2 r
-
-  | s_disj_r env h1 h2 r f1 f2
-    (H: satisfies env f2 h1 h2 r) :
-    satisfies env (disj f1 f2) h1 h2 r.
-
-Notation "env ','  h1 ','  h2 ','  r  '|=' f" :=
-  (satisfies env f h1 h2 r) (at level 30, only printing).
-
-(** The result of a staged formula, written in the paper as [Φ[r]]. *)
-Definition flow_res (f:flow) (v:val) : Prop :=
-  exists h1 h2 env, satisfies env f h1 h2 (norm v).
+(* some idea: req is like: "create a value out of thin air and just put in here" *)
+(* the idea is that, the value created by req can only exists in the LHS of an implication *)
+(* we need some function -- or a different statement for the variances *)
 
 Module Example.
-  Unset Implicit Arguments.
-  
-  Check (@fall int (fun x => req \[x = 1] (ens (fun r => \[r = vint x])))).
 
-  Check (satisfies).
-  Check (satisfies 
-           empty_env
-           (@fall int (fun x => req \[x = 1] (ens (fun r => \[r = vint x]))))).
-  Check (satisfies 
-           empty_env
-           (@fall int (fun x => req \[x = 1] (ens (fun r => \[r = vint x]))))
-           empty_heap
-           empty_heap
-           (norm (vint 1))).
-
-  Goal (satisfies 
-           empty_env
-           (@fall int (fun x => req \[x = 1] (ens (fun r => \[r = vint x]))))
-           empty_heap
-           empty_heap
-           (norm (vint 1))).
-  Proof.
-    constructor.
-    intros v.
-    constructor. intros.
-    constructor. exists (vint 1).
-    exists hp.
-    split. auto.
-    split. destruct H. subst. split. auto.
-    auto. auto.
+  Goal exists S', satisfies empty_env True S' (vint 1) (fex Z (fun x => seq (req (x = 1)) (ens (fun r => r = vint x)))).
+    eexists.
+    eapply s_fex. exists 1.
+    eapply s_seq.
+    - eapply s_req.
+    - eapply s_ens. auto.
   Qed.
 
-  
+  Goal exists S', satisfies empty_env True S' (vint 1) (fex Z (fun x => seq (req (x <> 1)) (ens (fun r => r = vint x)))).
+    eexists.
+    eapply s_fex. exists 1.
+    eapply s_seq.
+    - eapply s_req.
+    - eapply s_ens. tauto.
+  Qed.
+
+  Goal exists S', satisfies empty_env True S' (vint 1) (fall Z (fun x => seq (req (x = 1)) (ens (fun r => r = vint x)))).
+    eexists. eapply s_fall. intros a.
+    eexists. eapply s_seq.
+    - eapply s_req.
+    - eapply s_ens. intuition. subst. reflexivity.
+  Qed.
+
+  Goal exists S', satisfies empty_env True S' (vint 1) (fall Z (fun x => seq (req (x = 2)) (ens (fun r => r = vint x)))).
+    (* should fail *)
+    eexists. eapply s_fall. intros a.
+    eexists. eapply s_seq.
+    - eapply s_req.
+    - eapply s_ens. intuition. subst. (* fail *)
+  Abort.
+
+  Goal exists S', satisfies empty_env True S' (vint 1) (ens (fun r => r = vint 2)).
+    (* should fail *)
+    eexists. eapply s_ens. intuition. (* fail *)
+  Abort.
+
+End Example.
+
+Lemma satisfies_req :
+  forall (e : env)
+         (S S' : state)
+         (v : val)
+         (P1 P2 : precond),
+    (P2 -> P1) ->
+    satisfies e S S' v (req P1) ->
+    satisfies e S S' v (req P2).
+Proof.
+  intros e S S' v P1 P2 H_impl H_sat.
+  inverts H_sat.
+  (* cannot proceed *)
+Abort.
+
+Lemma satisfies_ens :
+  forall (e : env)
+         (S : state)
+         (v : val)
+         (Q1 Q2 : postcond),
+    (forall (v : val), Q1 v -> Q2 v) ->
+    satisfies e S S v (ens Q1) ->
+    satisfies e S S v (ens Q2).
+Proof.
+  intros e S v Q1 Q2 H_impl H_sat.
+  inversion H_sat.
+  constructor. auto.
+Qed.
 
 (** * Entailment *)
 (** This is defined directly in terms of the semantics, in contrast to the paper's syntactic definition. *)
-(* TODO the paper's definition should later be implemented as an Inductive here and proved sound with respect to the lemmas we can write using this semantic definition *)
-Notation entails_under env f1 f2 :=
-  (forall h1 h2 r,
-    satisfies env f1 h1 h2 r -> satisfies env f2 h1 h2 r).
 
-Definition entails (f1 f2:flow) : Prop :=
-  forall env, entails_under env f1 f2.
+Definition entails_under (e : env) (F1 F2 : flow) : Prop :=
+  forall (r : result), satisfies e r F1 -> satisfies e r F2.
+
+Definition entails (F1 F2 : flow) : Prop :=
+  forall (e : env), entails_under e F1 F2.
+
+Definition bientails (F1 F2 : flow) : Prop :=
+  entails F1 F2 /\ entails F2 F1.
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
-
-Definition entailed_by f1 f2 := entails f2 f1.
 
 Notation "env '⊢' f1 '⊑' f2" :=
   (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
@@ -289,147 +221,15 @@ Notation "env '⊢' f1 '⊑' f2" :=
 (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 (* Check (forall f1 f2 f3, f1 ;; f3 ⊑ f2). *)
 
-Definition bientails (f1 f2:flow) : Prop :=
-  forall h1 h2 r env,
-    satisfies env f1 h1 h2 r <-> satisfies env f2 h1 h2 r.
-
-(** * Rewriting *)
-
-Instance entails_refl : Reflexive entails.
-Proof.
-  unfold Reflexive.
-  unfold entails.
-  intros.
-  exact H.
-Qed.
-
-Instance entails_trans : Transitive entails.
-Proof.
-  unfold Transitive.
-  intros.
-  unfold entails in *.
-  intros.
-  apply H0.
-  apply H.
-  apply H1.
-Qed.
-
-Instance entails_preorder : PreOrder entails.
-Proof.
-  constructor.
-  apply entails_refl.
-  apply entails_trans.
-Qed.
-
-Instance bientails_equiv : Equivalence bientails.
-Proof.
-  constructor.
-  - unfold Reflexive.
-    unfold bientails.
-    reflexivity.
-  - unfold Symmetric.
-    unfold bientails.
-    symmetry.
-    auto.
-  - unfold Transitive.
-    unfold bientails.
-    intros.
-    split.
-    + intros. apply H0. apply H. easy.
-    + intros. apply H. apply H0. easy.
-Qed.
-
-(** Incantations for setoid rewriting *)
-Section Proprium.
-
-  (* for sanity *)
-  Local Infix "====>" := Morphisms.respectful (at level 80, right associativity).
-
-  Local Notation Proper := Morphisms.Proper.
-  Local Notation respectful := Morphisms.respectful.
-  Local Notation impl := Program.Basics.impl.
-
-  (** This reflects how entailment is contravariant in the antecedent and covariant in the consequent *)
-  #[global]
-  Instance Proper_entails : Proper
-    (entailed_by ====> entails ====> impl)
-    entails.
-  Proof.
-    unfold entailed_by, entails, Proper, respectful, impl.
-    intros.
-    auto.
-  Qed.
-
-  #[global]
-  Instance Proper_bientails : Proper
-    (bientails ====> bientails ====> iff)
-    entails.
-  Proof.
-    unfold bientails, entailed_by, entails, Proper, respectful, impl.
-    split; intros.
-    { apply H0. apply H1. apply H. auto. }
-    { apply H0. apply H1. apply H. auto. }
-  Qed.
-
-  #[global]
-  Instance Proper_satisfies : Proper
-    (eq ====> entails ====> eq ====> eq ====> eq ====> impl)
-    satisfies.
-  Proof.
-    unfold entails, Proper, respectful, impl.
-    intros. subst.
-    auto.
-  Qed.
-
-  #[global]
-  Instance Proper_satisfies_bi : Proper
-    (eq ====> bientails ====> eq ====> eq ====> eq ====> impl)
-    satisfies.
-  Proof.
-    unfold bientails, entails, Proper, respectful, impl.
-    intros. subst.
-    apply H0.
-    auto.
-  Qed.
-
-  #[global]
-  Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
-  Proof.
-    unfold Proper, entails, respectful.
-    intros.
-    inverts H1 as H1; destr H1.
-    constructor. exists h3. exists r1.
-    eauto.
-  Qed.
-
-  #[global]
-  Instance Proper_seq_bi : Proper (bientails ====> bientails ====> bientails) seq.
-  Proof.
-    unfold Proper, bientails, entails, respectful.
-    intros.
-    split; intros.
-    { inverts H1 as H1; destr H1.
-      constructor. exists h3. exists r1.
-      split.
-      apply H; auto.
-      apply H0; auto. }
-    { inverts H1 as H1; destr H1.
-      constructor. exists h3. exists r1.
-      split.
-      apply H; auto.
-      apply H0; auto. }
-  Qed.
-
-End Proprium.
-
 (** * Inversion/introduction lemmas *)
-Lemma ens_ret_inv : forall env h1 h2 H r,
+Lemma ens__ret_inv :
+  forall e H r,
   satisfies env (ens_ H) h1 h2 r ->
   r = norm vunit.
 Proof.
   intros.
   inverts H0 as H0.
-  destruct H0 as (v&h3&H1&H2&H3&H4).
+  destruct H0 as (?&h3&H1&H2&H3&H4).
   rewrite hstar_hpure_l in H2.
   destruct H2.
   congruence.
@@ -446,12 +246,11 @@ Proof.
   fmap_eq.
 Qed.
 
-Lemma ens_empty_intro : forall env h1 r,
-  satisfies env (ens (fun r => \[])) h1 h1 r.
+Lemma ens_empty_intro : forall env h1 v,
+  satisfies env (ens (fun r => \[])) h1 h1 (norm v).
 Proof.
   intros.
-  constructor.
-  destruct r.
+  apply s_ens.
   exists v.
   exists empty_heap.
   intuition fmap_eq.
@@ -469,12 +268,11 @@ Proof.
   intuition.
 Qed.
 
-Lemma ens_pure_intro : forall P env h r,
-  P -> satisfies env (ens (fun _ => \[P])) h h r.
+Lemma ens_pure_intro : forall P env h v,
+  P -> satisfies env (ens (fun _ => \[P])) h h (norm v).
 Proof.
   intros.
   constructor.
-  destruct r.
   exists v.
   exists empty_heap.
   intuition.
@@ -551,29 +349,18 @@ Proof.
   easy.
 Qed.
 
-Lemma entails_ens : forall Q1 Q2,
+(* Lemma entails_ens : forall Q1 Q2,
   (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
 Proof.
   unfold entails.
   intros.
+  split.
+  { intros. left.
+  (* Check satisfies_ens. *)
+  (* rewrite satisfies_ens. *)
+  apply (satisfies_ens Q1).
+  }
   applys* satisfies_ens.
-Qed.
-
-(** Contravariance of req *)
-Lemma satisfies_req : forall H1 H2 env h1 h2 r f,
-  H2 ==> H1 ->
-  satisfies env (req H1 f) h1 h2 r ->
-  satisfies env (req H2 f) h1 h2 r.
-Proof.
-  intros.
-  inverts H0 as H0.
-  apply s_req.
-  intros hH1 hr H3.
-  (* hH1 is the heap that satisfies H1 *)
-  (* hr is the starting heap of the continuation *)
-  apply H in H3.
-  specialize (H0 _ hr H3).
-  intuition.
 Qed.
 
 Lemma entails_req : forall H1 H2 f,
@@ -582,7 +369,7 @@ Proof.
   unfold entails.
   intros.
   applys* satisfies_req H1.
-Qed.
+Qed. *)
 
 (** seq is associative *)
 Lemma seq_assoc : forall env h1 h2 r f1 f2 f3,
@@ -617,7 +404,7 @@ Proof.
 Qed.
 
 (** Reassociating req *)
-Lemma satisfies_reassoc : forall H f env h1 h2 r,
+(* Lemma satisfies_reassoc : forall H f env h1 h2 r,
   satisfies env (req_ H;; f) h1 h2 r ->
   satisfies env (req H f) h1 h2 r.
 Proof.
@@ -738,7 +525,7 @@ Proof.
 Qed.
 
 (** Splitting and combining [ens] with results is more complex, and there does not seem to be a single equivalence. *)
-Lemma satisfies_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
+(* Lemma satisfies_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
   satisfies env (ens Q1;; ens Q2) h1 h2 r ->
   satisfies env (ens (fun r0 : val => \exists r1 : val, Q1 r1 \* Q2 r0)) h1 h2 r.
 Proof.
@@ -746,7 +533,8 @@ Proof.
   felim H.
   destruct H as (h3 & r1 & H1 & H2).
 
-  constructor. destruct r.
+  constructor.
+  (* destruct r. *)
   exists v.
   inverts H1 as H1. destruct H1 as (v0 & h0 & ? & ? & ? & ?).
   inverts H2 as H2. destruct H2 as (v1 & h4 & ? & ? & ? & ?).
@@ -758,14 +546,14 @@ Proof.
   subst. inj H2. assumption.
   subst. rew_fmap.
   reflexivity.
-Qed.
+Qed. *)
 
-Lemma norm_ens_ens_combine : forall Q1 Q2,
+(* Lemma norm_ens_ens_combine : forall Q1 Q2,
   entails (ens Q1;; ens Q2) (ens (fun r => \exists r1, Q1 r1 \* Q2 r)).
 Proof.
   unfold entails.
   apply satisfies_ens_sep_combine.
-Qed.
+Qed. *)
 
 Lemma satisfies_ens_sep_split : forall H Q env h1 h2 r,
   satisfies env (ens (Q \*+ H)) h1 h2 r  ->
@@ -1080,7 +868,7 @@ Module Examples.
       intuition.
       fmap_eq.
   Qed.
- 
+
   Example ex7_rewrite : f5 ⊑ f6.
   Proof.
     rewrite ex6_ent.
@@ -1363,7 +1151,7 @@ Inductive forward : expr -> flow -> Prop :=
     (* forward (pref x) (fex (fun y => ens (fun r s h => contains y (s x) s h))) *)
     forward (pref x) (fex y (ens (fun r s h => (r = s y) /\ (pts y x s h)))) *)
 
-  (* | fw_get: forall l v, 
+  (* | fw_get: forall l v,
     forward (GET l)
       (req (contains l v) ;;
       (ens (fun r => (r = v) //\\ contains l v))) *)
@@ -1400,4 +1188,4 @@ Module ForwardExamples.
       apply fw_val.
   Qed.
 
-End ForwardExamples.
+End ForwardExamples. *)
