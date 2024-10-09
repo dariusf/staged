@@ -2255,18 +2255,6 @@ Module HistoryTriples.
     specializes H Hseq H1 H2.
   Qed.
 
-  (** Rules for program constructs *)
-  Lemma hist_pval: forall n fh,
-    hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
-  Proof.
-    unfold hist_triple. introv Hh Hc Hb.
-    constructor. exists h1. exists r.
-    intuition.
-    lets H: sem_pval n Hc.
-    unfold tuple_valid_under, sem_tuple in H.
-    apply H; auto.
-  Qed.
-
   (** History triples which only append to history can be derived directly from the history-frame rule. *)
   Lemma hist_frame_sem: forall fh e f,
     sem_tuple e f ->
@@ -2277,6 +2265,18 @@ Module HistoryTriples.
     lets H3: hist_frame fh H. clear H.
     apply hist_pre_result in H3.
     exact H3.
+  Qed.
+
+  (** Rules for program constructs *)
+  Lemma hist_pval: forall n fh,
+    hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
+  Proof.
+    unfold hist_triple. introv Hh Hc Hb.
+    constructor. exists h1. exists r.
+    intuition.
+    lets H: sem_pval n Hc.
+    unfold tuple_valid_under, sem_tuple in H.
+    apply H; auto.
   Qed.
 
   Remark hist_pval_via_frame: forall n fh,
