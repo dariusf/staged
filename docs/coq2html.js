@@ -70,10 +70,12 @@ function buildLemmaIndex() {
   index.appendChild(hdr);
   index.appendChild(list);
   lemmas.forEach((lem, index) => {
+    const kind = lem.textContent;
+    const name = lem.nextSibling.nextSibling.textContent;
+    const id = name;
     const anchor = document.createElement("a");
-    const id = `lem-${index}`;
     anchor.setAttribute("href", `#${id}`);
-    anchor.textContent = `${lem.textContent} ${lem.nextSibling.nextSibling.textContent}`;
+    anchor.textContent = `${kind} ${name}`;
     anchor.style.fontSize = FONT_SIZE;
 
     lem.setAttribute("id", id);
