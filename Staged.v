@@ -1855,7 +1855,7 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
   | (norm r3, enorm r4) => r3 = r4
 end. *)
 
-(** * Hoare rules *)
+(** * Program logic rules *)
 Inductive forward : expr -> flow -> Prop :=
   | fw_val: forall n,
     forward (pval n) (ens (fun res => \[res = n]))
@@ -1905,6 +1905,7 @@ Inductive forward : expr -> flow -> Prop :=
 
 Module Soundness.
 
+  (** * Semantic rules *)
   Definition triple_valid_under penv env e f : Prop :=
     forall h1 h2 v,
       bigstep penv h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
@@ -2135,6 +2136,7 @@ Module Soundness.
   Local Notation derivable := forward.
   Local Notation valid := sem_triple.
 
+  (** * Soundness *)
   Theorem soundness : forall e f,
     derivable e f -> valid e f.
   Proof.
@@ -2158,6 +2160,7 @@ Module HistoryTriples.
 
   Import Soundness.
 
+  (** * History triples *)
   Definition hist_triple fh e f :=
     forall penv env h0 h1 h2 v r,
       satisfies env h0 h1 r fh ->
