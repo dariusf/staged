@@ -1,0 +1,871 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibEqual</title>
+<meta name="description" content="Documentation of Coq module LibEqual" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibEqual</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibAxioms.html">LibAxioms</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span>.<br/>
+<br/>
+<h1> Definition of equality </h1>
+<br/>
+<h2> Definition of Leibnitz' equality </h2>
+<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq">eq</a></span> {<span class="id">A</span>}.<br/>
+<br/>
+<h2> Partial application of Leibnitz' equality </h2>
+<br/>
+<div class="doc"><span class="bracket">= <span class="id">x</span></span> is a unary predicate which holds of values equal to <span class="bracket"><span class="id">x</span></span>.
+    It simply denotes the partial application of equality.
+    <span class="bracket">= <span class="id">x</span> :&gt; <span class="id">A</span></span> allows to specify the type. </div>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'=' x :&gt; A"</span> := (<span class="kwd">fun</span> <span class="id">y</span> =&gt; <span class="id">y</span> = <span class="id">x</span> :&gt; <span class="id">A</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 71, <span class="id">x</span> <span class="kwd">at</span> <span class="id">next</span> <span class="id">level</span>).<br/>
+<span class="kwd">Notation</span> <span class="string">"'=' x"</span> := (<span class="kwd">fun</span> <span class="id">y</span> =&gt; <span class="id">y</span> = <span class="id">x</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 71).<br/>
+<br/>
+<div class="doc"><span class="bracket">&lt;&gt; <span class="id">x</span></span> is a unary predicate which holds of values disequal to <span class="bracket"><span class="id">x</span></span>.
+    It simply denotes the partial application of disequality.
+    <span class="bracket">&lt;&gt; <span class="id">x</span> :&gt; <span class="id">A</span></span> allows to specify the type. </div>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'&lt;&gt;' x :&gt; A"</span> := (<span class="kwd">fun</span> <span class="id">y</span> =&gt; <span class="id">y</span> &lt;&gt; <span class="id">x</span> :&gt; <span class="id">A</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 71, <span class="id">x</span> <span class="kwd">at</span> <span class="id">next</span> <span class="id">level</span>).<br/>
+<span class="kwd">Notation</span> <span class="string">"'&lt;&gt;' x"</span> := (<span class="kwd">fun</span> <span class="id">y</span> =&gt; <span class="id">y</span> &lt;&gt; <span class="id">x</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 71).<br/>
+<br/>
+<h2> Typeclass to exploit extensionality </h2>
+<br/>
+<div class="doc">The property <span class="bracket"><span class="id">Extensionality</span> <span class="id">A</span></span> captures the fact that the type <span class="bracket"><span class="id">A</span></span>
+    features an extensional equality, in the sense that to prove the
+    equality between two values of type <span class="bracket"><span class="id">A</span></span> it suffices to prove that
+    those two values are related by some binary relation. </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Extensionality">Extensionality</a></span> (<span class="id">A</span>:<span class="kwd">Type</span>) := <span class="id">Extensionality_make</span> {<br/>
+&nbsp;&nbsp;<span class="id"><a name="extensionality_hyp">extensionality_hyp</a></span> : <span class="id">A</span> -&gt; <span class="id">A</span> -&gt; <span class="kwd">Prop</span>;<br/>
+&nbsp;&nbsp;<span class="id"><a name="extensionality">extensionality</a></span> : <span class="kwd">forall</span> (<span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>), <span class="id">extensionality_hyp</span> <span class="id">x</span> <span class="id">y</span> -&gt; <span class="id">x</span> = <span class="id">y</span> }.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#extensionality">extensionality</a></span> [<span class="id">A</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> [<span class="id">A</span>] [<span class="id">extensionality_hyp</span>].<br/>
+<br/>
+<div class="doc">Instance for propositional extensionality </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="extensionatity_prop">extensionatity_prop</a></span> : <span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>). Defined.</div></details>
+<br/>
+<h2> Tactic to exploit extensionality </h2>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">extens_reveal_eq</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- _ = _ =&gt; <span class="id">idtac</span><br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">first</span> [ <span class="id">intro</span>; <span class="id">extens_reveal_eq</span> <span class="id">tt</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">fail</span> 2 <span class="string">"extens needs hnf to reveal an equality"</span> ]<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">extens_core</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="id">extens_reveal_eq</span> <span class="id">tt</span>;<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#extensionality">extensionality</a></span>;<br/>
+&nbsp;&nbsp;<span class="id">simpl</span> <span class="id"><a href="SLF.LibEqual.html#extensionality_hyp">extensionality_hyp</a></span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"extens"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">extens_core</span> <span class="id">tt</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"extens"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">extens</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"extens"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">extens</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<h1> Properties of equality </h1>
+<br/>
+<div class="doc">This section contains a reformulation of the lemmas provided by
+    the standard library concerning equality. </div>
+<br/>
+<h2> Equality as an equivalence relation </h2>
+<br/>
+<div class="doc">See also sectin <span class="bracket"><span class="id">Eq</span></span> from <span class="bracket"><span class="id">LibRelation</span></span> for reformulation of theses
+    results using high-level definitions. </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="EqualityProp">EqualityProp</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="EqualityProp.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> <span class="id">y</span> <span class="id">z</span> : <span class="id"><a href="SLF.LibEqual.html#EqualityProp.A">A</a></span>.<br/>
+<br/>
+<div class="doc">Reflexivity is captured by the constructor <span class="bracket"><span class="id">eq_refl</span></span>. </div>
+<br/>
+<div class="doc">Symmetry </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_sym">eq_sym</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">y</span> = <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span>~ <span class="id">H</span>. Qed.</div></details>
+<br/>
+<div class="doc">Transitivity </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_trans_ll">eq_trans_ll</a></span> : <span class="kwd">forall</span> <span class="id">y</span> <span class="id">x</span> <span class="id">z</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">y</span> = <span class="id">z</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">z</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">destruct</span>~ <span class="id">H2</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="eq_trans">eq_trans</a></span> := <span class="id"><a href="SLF.LibEqual.html#eq_trans_ll">eq_trans_ll</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_trans_lr">eq_trans_lr</a></span> : <span class="kwd">forall</span> <span class="id">y</span> <span class="id">x</span> <span class="id">z</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">z</span> = <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">z</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">destruct</span>~ <span class="id">H2</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_trans_rl">eq_trans_rl</a></span> : <span class="kwd">forall</span> <span class="id">y</span> <span class="id">x</span> <span class="id">z</span>,<br/>
+&nbsp;&nbsp;<span class="id">y</span> = <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">y</span> = <span class="id">z</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">z</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">destruct</span>~ <span class="id">H2</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_trans_rr">eq_trans_rr</a></span> : <span class="kwd">forall</span> <span class="id">y</span> <span class="id">x</span> <span class="id">z</span>,<br/>
+&nbsp;&nbsp;<span class="id">y</span> = <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">z</span> = <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">z</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">destruct</span>~ <span class="id">H2</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEqual.html#EqualityProp">EqualityProp</a></span>.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#eq_trans_ll">eq_trans_ll</a></span> [<span class="id">A</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#eq_trans_lr">eq_trans_lr</a></span> [<span class="id">A</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#eq_trans_rl">eq_trans_rl</a></span> [<span class="id">A</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#eq_trans_rr">eq_trans_rr</a></span> [<span class="id">A</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#eq_trans">eq_trans</a></span> [<span class="id">A</span>].<br/>
+<br/>
+<h2> Properties of disequality </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="DisequalityProp">DisequalityProp</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="DisequalityProp.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> <span class="id">y</span> : <span class="id"><a href="SLF.LibEqual.html#DisequalityProp.A">A</a></span>.<br/>
+<br/>
+<div class="doc">Symmetry </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="neq_sym">neq_sym</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> &lt;&gt; <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">y</span> &lt;&gt; <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span> <span class="id">K</span>. <span class="id">destruct</span>~ <span class="id">K</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEqual.html#DisequalityProp">DisequalityProp</a></span>.<br/>
+<br/>
+<h2> Symmetrized induction principles </h2>
+<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="EqInductionSym">EqInductionSym</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="EqInductionSym.A">A</a></span> : <span class="kwd">Type</span>) (<span class="id"><a name="EqInductionSym.x">x</a></span> : <span class="id">A</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="eq_ind_r">eq_ind_r</a></span> : <span class="kwd">forall</span> (<span class="id">P</span>:<span class="id"><a href="SLF.LibEqual.html#EqInductionSym.A">A</a></span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id"><a href="SLF.LibEqual.html#EqInductionSym.x">x</a></span> -&gt; <span class="kwd">forall</span> <span class="id">y</span>, <span class="id">y</span> = <span class="id"><a href="SLF.LibEqual.html#EqInductionSym.x">x</a></span> -&gt; <span class="id">P</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="eq_rec_r">eq_rec_r</a></span> : <span class="kwd">forall</span> (<span class="id">P</span>:<span class="id"><a href="SLF.LibEqual.html#EqInductionSym.A">A</a></span> -&gt; <span class="kwd">Set</span>),<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id"><a href="SLF.LibEqual.html#EqInductionSym.x">x</a></span> -&gt; <span class="kwd">forall</span> <span class="id">y</span>, <span class="id">y</span> = <span class="id"><a href="SLF.LibEqual.html#EqInductionSym.x">x</a></span> -&gt; <span class="id">P</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="eq_rect_r">eq_rect_r</a></span> : <span class="kwd">forall</span> (<span class="id">P</span>:<span class="id"><a href="SLF.LibEqual.html#EqInductionSym.A">A</a></span> -&gt; <span class="kwd">Type</span>),<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id"><a href="SLF.LibEqual.html#EqInductionSym.x">x</a></span> -&gt; <span class="kwd">forall</span> <span class="id">y</span>, <span class="id">y</span> = <span class="id"><a href="SLF.LibEqual.html#EqInductionSym.x">x</a></span> -&gt; <span class="id">P</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEqual.html#EqInductionSym">EqInductionSym</a></span>.<br/>
+<br/>
+<br/>
+<h1> Functional extensionality </h1>
+<br/>
+<h2> Dependent functional extensionality </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="FuncExtDep">FuncExtDep</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FuncExtDep.A1">A1</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FuncExtDep.A2">A2</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FuncExtDep.A3">A3</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FuncExtDep.A4">A4</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FuncExtDep.A5">A5</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FuncExtDep.A6">A6</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span> : <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A5">A5</a></span> <span class="id">x4</span>), <span class="kwd">Type</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_1">fun_ext_1</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> <span class="id">g</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span>, <span class="id">f</span> <span class="id">x1</span> = <span class="id">g</span> <span class="id">x1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_2">fun_ext_2</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> <span class="id">g</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span>, <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> = <span class="id">g</span> <span class="id">x1</span> <span class="id">x2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_3">fun_ext_3</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> <span class="id">g</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>, <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> = <span class="id">g</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_4">fun_ext_4</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> <span class="id">g</span>: <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A5">A5</a></span> <span class="id">x4</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>, <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> = <span class="id">g</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_5">fun_ext_5</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> <span class="id">g</span>: <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A5">A5</a></span> <span class="id">x4</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A6">A6</a></span> <span class="id">x5</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>, <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> = <span class="id">g</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_fun_1">Extensionality_fun_1</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_1">fun_ext_1</a></span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_fun_2">Extensionality_fun_2</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_2">fun_ext_2</a></span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_fun_3">Extensionality_fun_3</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_3">fun_ext_3</a></span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_fun_4">Extensionality_fun_4</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A5">A5</a></span> <span class="id">x4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_4">fun_ext_4</a></span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_fun_5">Extensionality_fun_5</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A5">A5</a></span> <span class="id">x4</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A6">A6</a></span> <span class="id">x5</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_5">fun_ext_5</a></span>). Defined.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_dep_1">fun_eta_dep_1</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> =&gt; <span class="id">f</span> <span class="id">x1</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_1">fun_ext_1</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_dep_2">fun_eta_dep_2</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> =&gt; <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_2">fun_ext_2</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_dep_3">fun_eta_dep_3</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> =&gt; <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_3">fun_ext_3</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_dep_4">fun_eta_dep_4</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A5">A5</a></span> <span class="id">x4</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> =&gt; <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_4">fun_ext_4</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_dep_5">fun_eta_dep_5</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A5">A5</a></span> <span class="id">x4</span>), <span class="id"><a href="SLF.LibEqual.html#FuncExtDep.A6">A6</a></span> <span class="id">x5</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> =&gt; <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_5">fun_ext_5</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEqual.html#FuncExtDep">FuncExtDep</a></span>.<br/>
+<br/>
+<h2> Non-dependent functional extensionality </h2>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_nondep_1">fun_ext_nondep_1</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">B</span> (<span class="id">f</span> <span class="id">g</span> : <span class="id">A1</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span>, <span class="id">f</span> <span class="id">x1</span> = <span class="id">g</span> <span class="id">x1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_1">fun_ext_1</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_nondep_2">fun_ext_nondep_2</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">B</span> (<span class="id">f</span> <span class="id">g</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span>, <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> = <span class="id">g</span> <span class="id">x1</span> <span class="id">x2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_2">fun_ext_2</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_nondep_3">fun_ext_nondep_3</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">B</span> (<span class="id">f</span> <span class="id">g</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>, <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> = <span class="id">g</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_3">fun_ext_3</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_nondep_4">fun_ext_nondep_4</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> <span class="id">B</span> (<span class="id">f</span> <span class="id">g</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="id">A4</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>, <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> = <span class="id">g</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_4">fun_ext_4</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_ext_nondep_5">fun_ext_nondep_5</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> <span class="id">A5</span> <span class="id">B</span> (<span class="id">f</span> <span class="id">g</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="id">A4</span> -&gt; <span class="id">A5</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>, <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> = <span class="id">g</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_5">fun_ext_5</a></span>. Qed.</div></details>
+<br/>
+<h2> Eta-conversion </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_1">fun_eta_1</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A1</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> =&gt; <span class="id">f</span> <span class="id">x1</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_1">fun_ext_1</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_2">fun_eta_2</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> =&gt; <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_2">fun_ext_2</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_3">fun_eta_3</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> =&gt; <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_3">fun_ext_3</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_4">fun_eta_4</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="id">A4</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> =&gt; <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_4">fun_ext_4</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eta_5">fun_eta_5</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> <span class="id">A5</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="id">A4</span> -&gt; <span class="id">A5</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> =&gt; <span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>) = <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#fun_ext_4">fun_ext_4</a></span>. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibEqual.html#fun_eta_1">fun_eta_1</a></span> <span class="id"><a href="SLF.LibEqual.html#fun_eta_2">fun_eta_2</a></span> <span class="id"><a href="SLF.LibEqual.html#fun_eta_3">fun_eta_3</a></span> <span class="id"><a href="SLF.LibEqual.html#fun_eta_4">fun_eta_4</a></span> <span class="id"><a href="SLF.LibEqual.html#fun_eta_5">fun_eta_5</a></span> : <span class="id">rew_eta</span>.<br/>
+<br/>
+<br/>
+<h1> Predicate extensionality </h1>
+<br/>
+<h2> Dependend predicates </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="PropExt">PropExt</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="PropExt.A1">A1</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="PropExt.A2">A2</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="PropExt.A3">A3</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="PropExt.A4">A4</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="PropExt.A5">A5</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A4">A4</a></span> <span class="id">x3</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="PropExt.A6">A6</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span> : <span class="id"><a href="SLF.LibEqual.html#PropExt.A5">A5</a></span> <span class="id">x4</span>), <span class="kwd">Type</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_1">pred_ext_1</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span>, <span class="id">P</span> <span class="id">x1</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_2">pred_ext_2</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_3">pred_ext_3</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_4">pred_ext_4</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A4">A4</a></span> <span class="id">x3</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_5">pred_ext_5</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A5">A5</a></span> <span class="id">x4</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_6">pred_ext_6</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A6">A6</a></span> <span class="id">x5</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">repeat</span> (<span class="id">intros</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#fun_ext_dep">fun_ext_dep</a></span>). <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_pred_1">Extensionality_pred_1</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>), <span class="kwd">Prop</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_pred_2">Extensionality_pred_2</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>), <span class="kwd">Prop</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_2">pred_ext_2</a></span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_pred_3">Extensionality_pred_3</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>), <span class="kwd">Prop</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_3">pred_ext_3</a></span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_pred_4">Extensionality_pred_4</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A4">A4</a></span> <span class="id">x3</span>), <span class="kwd">Prop</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_4">pred_ext_4</a></span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_pred_5">Extensionality_pred_5</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A5">A5</a></span> <span class="id">x4</span>), <span class="kwd">Prop</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_5">pred_ext_5</a></span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Extensionality_pred_6">Extensionality_pred_6</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> (<span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span>:<span class="id"><a href="SLF.LibEqual.html#PropExt.A6">A6</a></span> <span class="id">x5</span>), <span class="kwd">Prop</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_6">pred_ext_6</a></span>). Defined.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEqual.html#PropExt">PropExt</a></span>.<br/>
+<br/>
+<h2> Non-dependend predicate extensionality </h2>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_nondep_1">pred_ext_nondep_1</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A1</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A1</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span>, <span class="id">P</span> <span class="id">x1</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_nondep_2">pred_ext_nondep_2</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#pred_ext_2">pred_ext_2</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_nondep_3">pred_ext_nondep_3</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#pred_ext_3">pred_ext_3</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_nondep_4">pred_ext_nondep_4</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="id">A4</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#pred_ext_4">pred_ext_4</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_nondep_5">pred_ext_nondep_5</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> <span class="id">A5</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="id">A4</span> -&gt; <span class="id">A5</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#pred_ext_5">pred_ext_5</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_ext_nondep_6">pred_ext_nondep_6</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> <span class="id">A5</span> <span class="id">A6</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id">A3</span> -&gt; <span class="id">A4</span> -&gt; <span class="id">A5</span> -&gt; <span class="id">A6</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>)  -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#pred_ext_6">pred_ext_6</a></span>. Qed.</div></details>
+<br/>
+<br/>
+<h1> Equality of function and predicate applications </h1>
+<br/>
+<br/>
+<h2> A same function applied to equal arguments yield equal result </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="ArgsEq">ArgsEq</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ArgsEq.A1">A1</a></span> <span class="id"><a name="ArgsEq.A2">A2</a></span> <span class="id"><a name="ArgsEq.A3">A3</a></span> <span class="id"><a name="ArgsEq.A4">A4</a></span> <span class="id"><a name="ArgsEq.A5">A5</a></span> <span class="id"><a name="ArgsEq.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="args_eq_1">args_eq_1</a></span> : <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A1">A1</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.B">B</a></span>) <span class="id">x1</span> <span class="id">y1</span>,<br/>
+&nbsp;&nbsp;<span class="id">x1</span> = <span class="id">y1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> = <span class="id">f</span> <span class="id">y1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="args_eq_2">args_eq_2</a></span> : <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A1">A1</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A2">A2</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.B">B</a></span>) <span class="id">x1</span> <span class="id">y1</span> <span class="id">x2</span> <span class="id">y2</span>,<br/>
+&nbsp;&nbsp;<span class="id">x1</span> = <span class="id">y1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x2</span> = <span class="id">y2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> = <span class="id">f</span> <span class="id">y1</span> <span class="id">y2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="args_eq_3">args_eq_3</a></span> : <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A1">A1</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A2">A2</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A3">A3</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.B">B</a></span>) <span class="id">x1</span> <span class="id">y1</span> <span class="id">x2</span> <span class="id">y2</span> <span class="id">x3</span> <span class="id">y3</span>,<br/>
+&nbsp;&nbsp;<span class="id">x1</span> = <span class="id">y1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x2</span> = <span class="id">y2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x3</span> = <span class="id">y3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> = <span class="id">f</span> <span class="id">y1</span> <span class="id">y2</span> <span class="id">y3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="args_eq_4">args_eq_4</a></span> : <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A1">A1</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A2">A2</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A3">A3</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A4">A4</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.B">B</a></span>) <span class="id">x1</span> <span class="id">y1</span> <span class="id">x2</span> <span class="id">y2</span> <span class="id">x3</span> <span class="id">y3</span> <span class="id">x4</span> <span class="id">y4</span>,<br/>
+&nbsp;&nbsp;<span class="id">x1</span> = <span class="id">y1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x2</span> = <span class="id">y2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x3</span> = <span class="id">y3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x4</span> = <span class="id">y4</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> = <span class="id">f</span> <span class="id">y1</span> <span class="id">y2</span> <span class="id">y3</span> <span class="id">y4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="args_eq_5">args_eq_5</a></span> : <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A1">A1</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A2">A2</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A3">A3</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A4">A4</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.A5">A5</a></span>-&gt;<span class="id"><a href="SLF.LibEqual.html#ArgsEq.B">B</a></span>) <span class="id">x1</span> <span class="id">y1</span> <span class="id">x2</span> <span class="id">y2</span> <span class="id">x3</span> <span class="id">y3</span> <span class="id">x4</span> <span class="id">y4</span> <span class="id">x5</span> <span class="id">y5</span>,<br/>
+&nbsp;&nbsp;<span class="id">x1</span> = <span class="id">y1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x2</span> = <span class="id">y2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x3</span> = <span class="id">y3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x4</span> = <span class="id">y4</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x5</span> = <span class="id">y5</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> = <span class="id">f</span> <span class="id">y1</span> <span class="id">y2</span> <span class="id">y3</span> <span class="id">y4</span> <span class="id">y5</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEqual.html#ArgsEq">ArgsEq</a></span>.<br/>
+<br/>
+<h2> Equal functions applied to same arguments return equal results </h2>
+<br/>
+<div class="doc">These results are exploited by tactic <span class="bracket"><span class="id">fequals</span></span> (see LibTactics);
+    however the lemmas remain useful for forward-reasoning. </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="FuncEq">FuncEq</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FuncEq.A1">A1</a></span> <span class="id"><a name="FuncEq.A2">A2</a></span> <span class="id"><a name="FuncEq.A3">A3</a></span> <span class="id"><a name="FuncEq.A4">A4</a></span> <span class="id"><a name="FuncEq.A5">A5</a></span> <span class="id"><a name="FuncEq.B">B</a></span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FuncEq.x1">x1</a></span>:<span class="id"><a href="SLF.LibEqual.html#FuncEq.A1">A1</a></span>) (<span class="id"><a name="FuncEq.x2">x2</a></span>:<span class="id"><a href="SLF.LibEqual.html#FuncEq.A2">A2</a></span>) (<span class="id"><a name="FuncEq.x3">x3</a></span>:<span class="id"><a href="SLF.LibEqual.html#FuncEq.A3">A3</a></span>) (<span class="id"><a name="FuncEq.x4">x4</a></span>:<span class="id"><a href="SLF.LibEqual.html#FuncEq.A4">A4</a></span>) (<span class="id"><a name="FuncEq.x5">x5</a></span>:<span class="id"><a href="SLF.LibEqual.html#FuncEq.A5">A5</a></span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eq_1">fun_eq_1</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">g</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> = <span class="id">g</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> :&gt; <span class="id"><a href="SLF.LibEqual.html#FuncEq.B">B</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eq_2">fun_eq_2</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">g</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x2">x2</a></span> = <span class="id">g</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x2">x2</a></span> :&gt; <span class="id"><a href="SLF.LibEqual.html#FuncEq.B">B</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eq_3">fun_eq_3</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">g</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x3">x3</a></span> = <span class="id">g</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x3">x3</a></span> :&gt; <span class="id"><a href="SLF.LibEqual.html#FuncEq.B">B</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eq_4">fun_eq_4</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">g</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x3">x3</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x4">x4</a></span> = <span class="id">g</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x3">x3</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x4">x4</a></span> :&gt; <span class="id"><a href="SLF.LibEqual.html#FuncEq.B">B</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fun_eq_5">fun_eq_5</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">g</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x3">x3</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x4">x4</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x5">x5</a></span> = <span class="id">g</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x3">x3</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x4">x4</a></span> <span class="id"><a href="SLF.LibEqual.html#FuncEq.x5">x5</a></span> :&gt; <span class="id"><a href="SLF.LibEqual.html#FuncEq.B">B</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEqual.html#FuncEq">FuncEq</a></span>.<br/>
+<br/>
+<h2> Equal predicates applied to same arguments return equivalent results </h2>
+<br/>
+<div class="doc">These results are exploited by tactic <span class="bracket"><span class="id">fequals</span></span> (see LibTactics);
+    however the lemmas remain useful for forward-reasoning. </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="PredEq">PredEq</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="PredEq.A1">A1</a></span> <span class="id"><a name="PredEq.A2">A2</a></span> <span class="id"><a name="PredEq.A3">A3</a></span> <span class="id"><a name="PredEq.A4">A4</a></span> <span class="id"><a name="PredEq.A5">A5</a></span> <span class="id"><a name="PredEq.B">B</a></span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="PredEq.x1">x1</a></span>:<span class="id"><a href="SLF.LibEqual.html#PredEq.A1">A1</a></span>) (<span class="id"><a name="PredEq.x2">x2</a></span>:<span class="id"><a href="SLF.LibEqual.html#PredEq.A2">A2</a></span>) (<span class="id"><a name="PredEq.x3">x3</a></span>:<span class="id"><a href="SLF.LibEqual.html#PredEq.A3">A3</a></span>) (<span class="id"><a name="PredEq.x4">x4</a></span>:<span class="id"><a href="SLF.LibEqual.html#PredEq.A4">A4</a></span>) (<span class="id"><a name="PredEq.x5">x5</a></span>:<span class="id"><a href="SLF.LibEqual.html#PredEq.A5">A5</a></span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_eq_1">pred_eq_1</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span> &lt;-&gt; <span class="id">Q</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_eq_2">pred_eq_2</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x2">x2</a></span> &lt;-&gt; <span class="id">Q</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x2">x2</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_eq_3">pred_eq_3</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x3">x3</a></span> &lt;-&gt; <span class="id">Q</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x3">x3</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_eq_4">pred_eq_4</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x3">x3</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x4">x4</a></span> &lt;-&gt; <span class="id">Q</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x3">x3</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x4">x4</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_eq_5">pred_eq_5</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x3">x3</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x4">x4</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x5">x5</a></span> &lt;-&gt; <span class="id">Q</span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x1">x1</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x2">x2</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x3">x3</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x4">x4</a></span> <span class="id"><a href="SLF.LibEqual.html#PredEq.x5">x5</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEqual.html#PredEq">PredEq</a></span>.<br/>
+<br/>
+<br/>
+<h1> Proof Irrelevance </h1>
+<br/>
+<div class="doc">The proof irrelevance lemma states that two proofs of a same
+    proposition are always equal.
+      <span class="bracket"><span class="kwd">forall</span> (<span class="id">P</span> : <span class="kwd">Prop</span>) (<span class="id">p</span> <span class="id">q</span> : <span class="id">P</span>), <span class="id">p</span> = <span class="id">q</span></span>
+   This result is a consequence of propositional extensionality.
+</div>
+<br/>
+<h2> Proof of the proof-irrelevance result </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="PIfromExt">PIfromExt</a></span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">First, we prove that on an inhabited proposition type,
+    there exists a fixpoint combinator. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="PIfromExt.prop_eq_self_impl_when_true">prop_eq_self_impl_when_true</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = (<span class="id">P</span> -&gt; <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Record</span> <span class="id"><a name="PIfromExt.has_fixpoint">has_fixpoint</a></span> (<span class="id">P</span>:<span class="kwd">Prop</span>) : <span class="kwd">Prop</span> := <span class="id">has_fixpoint_make</span><br/>
+&nbsp;&nbsp;{ <span class="id"><a name="PIfromExt.has_fixpoint_F">has_fixpoint_F</a></span> : (<span class="id">P</span> -&gt; <span class="id">P</span>) -&gt; <span class="id">P</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a name="PIfromExt.has_fixpoint_fix">has_fixpoint_fix</a></span> : <span class="kwd">forall</span> <span class="id">f</span>, <span class="id">has_fixpoint_F</span> <span class="id">f</span> = <span class="id">f</span> (<span class="id">has_fixpoint_F</span> <span class="id">f</span>) }.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="PIfromExt.prop_has_fixpoint_when_true">prop_has_fixpoint_when_true</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#PIfromExt.has_fixpoint">has_fixpoint</a></span> <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">P</span> <span class="id">a</span>. <span class="id">set</span> (<span class="id">P'</span> := <span class="id">P</span>).<br/>
+&nbsp;&nbsp;<span class="id">set</span> (<span class="id">g1</span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#id">id</a></span> : <span class="id">P'</span> -&gt; <span class="id">P</span>). <span class="id">set</span> (<span class="id">g2</span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#id">id</a></span> : <span class="id">P</span> -&gt; <span class="id">P'</span>).<br/>
+&nbsp;&nbsp;<span class="id">asserts</span>~ <span class="id">Fix</span>: (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">g1</span> (<span class="id">g2</span> <span class="id">x</span>) = <span class="id">x</span>).<br/>
+&nbsp;&nbsp;<span class="id">clearbody</span> <span class="id">g1</span> <span class="id">g2</span>. <span class="id">gen</span> <span class="id">g1</span> <span class="id">g2</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id"><a href="SLF.LibEqual.html#PIfromExt.prop_eq_self_impl_when_true">prop_eq_self_impl_when_true</a></span> <span class="id">a</span>).<br/>
+&nbsp;&nbsp;<span class="id">subst</span> <span class="id">P'</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">set</span> (<span class="id">Y</span> := <span class="kwd">fun</span> <span class="id">f</span> =&gt; (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">f</span> (<span class="id">g1</span> <span class="id">x</span> <span class="id">x</span>)) (<span class="id">g2</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">f</span> (<span class="id">g1</span> <span class="id">x</span> <span class="id">x</span>)))).<br/>
+&nbsp;&nbsp;<span class="id">applys</span> (<span class="id"><a href="SLF.LibEqual.html#PIfromExt.has_fixpoint_make">has_fixpoint_make</a></span> <span class="id">Y</span>). <br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">f</span>. <span class="id">unfold</span> <span class="id">Y</span> <span class="kwd">at</span> 1. <span class="id">rewrite</span>~ <span class="id">Fix</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">We exploit the fixpoint combinator on the negation function, applied
+    to the following special proposition type (isomorphic to booleans,
+    but living in Prop). </div>
+<br/>
+<span class="kwd">Inductive</span> <span class="id"><a name="PIfromExt.boolP">boolP</a></span> : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;| <span class="id"><a name="PIfromExt.trueP">trueP</a></span> : <span class="id">boolP</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="PIfromExt.falseP">falseP</a></span> : <span class="id">boolP</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="PIfromExt.trueP_eq_falseP">trueP_eq_falseP</a></span> : <span class="id"><a href="SLF.LibEqual.html#PIfromExt.trueP">trueP</a></span> = <span class="id"><a href="SLF.LibEqual.html#PIfromExt.falseP">falseP</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">Y</span>&amp;<span class="id">Yfix</span>): (@<span class="id"><a href="SLF.LibEqual.html#PIfromExt.prop_has_fixpoint_when_true">prop_has_fixpoint_when_true</a></span> <span class="id"><a href="SLF.LibEqual.html#PIfromExt.boolP">boolP</a></span> <span class="id"><a href="SLF.LibEqual.html#PIfromExt.trueP">trueP</a></span>).<br/>
+&nbsp;&nbsp;<span class="id">set</span> (<span class="id">neg</span> := <span class="kwd">fun</span> <span class="id">b</span> =&gt; <span class="kwd">match</span> <span class="id">b</span> <span class="kwd">with</span>| <span class="id"><a href="SLF.LibEqual.html#PIfromExt.trueP">trueP</a></span> =&gt; <span class="id"><a href="SLF.LibEqual.html#PIfromExt.falseP">falseP</a></span> | <span class="id"><a href="SLF.LibEqual.html#PIfromExt.falseP">falseP</a></span> =&gt; <span class="id"><a href="SLF.LibEqual.html#PIfromExt.trueP">trueP</a></span> <span class="kwd">end</span>).<br/>
+&nbsp;&nbsp;<span class="id">lets</span> <span class="id">F</span>: ((<span class="id"><a href="SLF.LibTactics.html#rm">rm</a></span> <span class="id">Yfix</span>) <span class="id">neg</span>).<br/>
+&nbsp;&nbsp;<span class="id">set</span> (<span class="id">b</span> := <span class="id">Y</span> <span class="id">neg</span>).<br/>
+&nbsp;&nbsp;<span class="id">asserts</span>~ <span class="id">E</span>: (<span class="id">b</span> = <span class="id">Y</span> <span class="id">neg</span>).<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">change</span> (<span class="id"><a href="SLF.LibEqual.html#PIfromExt.trueP">trueP</a></span> = <span class="id">neg</span> <span class="id"><a href="SLF.LibEqual.html#PIfromExt.trueP">trueP</a></span>) <span class="kwd">in</span> |- *. <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">rewrite</span>~ &lt;- <span class="id">F</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">change</span> (<span class="id">neg</span> <span class="id"><a href="SLF.LibEqual.html#PIfromExt.falseP">falseP</a></span> = <span class="id"><a href="SLF.LibEqual.html#PIfromExt.falseP">falseP</a></span>) <span class="kwd">in</span> |- *. <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">rewrite</span>~ &lt;- <span class="id">F</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">We now have two distinct constructors <span class="bracket"><span class="id">trueP</span></span> and <span class="bracket"><span class="id">falseP</span></span>,
+    which we can distinguish in the logic using <span class="bracket"><span class="kwd">match</span></span> for
+    any goal concluding on a proposition; and, at the same time,
+    these two constructors are provably equal. We can exploit
+    these properties to prove that two proofs of a same theorem
+    are equal. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="PIfromExt.proof_irrelevance">proof_irrelevance</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">P</span> : <span class="kwd">Prop</span>) (<span class="id">p</span> <span class="id">q</span> : <span class="id">P</span>), <span class="id">p</span> = <span class="id">q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">P</span> <span class="id">p</span> <span class="id">q</span>.<br/>
+&nbsp;&nbsp;<span class="id">set</span> (<span class="id">f</span> := <span class="kwd">fun</span> <span class="id">b</span> =&gt; <span class="kwd">match</span> <span class="id">b</span> <span class="kwd">with</span> | <span class="id"><a href="SLF.LibEqual.html#PIfromExt.trueP">trueP</a></span> =&gt; <span class="id">p</span> | <span class="id"><a href="SLF.LibEqual.html#PIfromExt.falseP">falseP</a></span> =&gt; <span class="id">q</span> <span class="kwd">end</span>).<br/>
+&nbsp;&nbsp;<span class="id">change</span> <span class="id">p</span> <span class="kwd">with</span> (<span class="id">f</span> <span class="id"><a href="SLF.LibEqual.html#PIfromExt.trueP">trueP</a></span>).<br/>
+&nbsp;&nbsp;<span class="id">change</span> <span class="id">q</span> <span class="kwd">with</span> (<span class="id">f</span> <span class="id"><a href="SLF.LibEqual.html#PIfromExt.falseP">falseP</a></span>).<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibEqual.html#PIfromExt.trueP_eq_falseP">trueP_eq_falseP</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEqual.html#PIfromExt">PIfromExt</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="proof_irrelevance">proof_irrelevance</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> : <span class="kwd">Prop</span>) (<span class="id">p</span> <span class="id">q</span> : <span class="id">P</span>), <span class="id">p</span> = <span class="id">q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">exact</span> <span class="id"><a href="SLF.LibEqual.html#proof_irrelevance">PIfromExt.proof_irrelevance</a></span>. Qed.</div></details>
+<br/>
+<h2> Consequences of proof irrelevance </h2>
+<br/>
+<div class="doc">Uniqueness of identity proofs </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="identity_proofs_unique">identity_proofs_unique</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>) (<span class="id">p</span> <span class="id">q</span> : <span class="id">x</span> = <span class="id">y</span>),<br/>
+&nbsp;&nbsp;<span class="id">p</span> = <span class="id">q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#proof_irrelevance">proof_irrelevance</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Uniqueness of reflexive identity proofs (special case) </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="reflexive_identity_proofs_unique">reflexive_identity_proofs_unique</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">x</span> : <span class="id">A</span>) (<span class="id">p</span> : <span class="id">x</span> = <span class="id">x</span>),<br/>
+&nbsp;&nbsp;<span class="id">p</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#refl_equal">refl_equal</a></span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#identity_proofs_unique">identity_proofs_unique</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Invariance by substitution of reflexive equality proofs </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_rect_refl_eq">eq_rect_refl_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">p</span> : <span class="id">A</span>) (<span class="id">Q</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">x</span> : <span class="id">Q</span> <span class="id">p</span>) (<span class="id">h</span> : <span class="id">p</span> = <span class="id">p</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq_rect">eq_rect</a></span> <span class="id">p</span> <span class="id">Q</span> <span class="id">x</span> <span class="id">p</span> <span class="id">h</span> = <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>~ (<span class="id"><a href="SLF.LibEqual.html#reflexive_identity_proofs_unique">reflexive_identity_proofs_unique</a></span> <span class="id">h</span>). Qed.</div></details>
+<br/>
+<div class="doc">Streicher's axiom K </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="streicher_K">streicher_K</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">x</span> : <span class="id">A</span>) (<span class="id">P</span> : <span class="id">x</span> = <span class="id">x</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">P</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#refl_equal">refl_equal</a></span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">p</span> : <span class="id">x</span> = <span class="id">x</span>), <span class="id">P</span> <span class="id">p</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>~ (<span class="id"><a href="SLF.LibEqual.html#reflexive_identity_proofs_unique">reflexive_identity_proofs_unique</a></span> <span class="id">p</span>). Qed.</div></details>
+<br/>
+<div class="doc">Coercion for rewriting a type equality in a term </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="rewrite_type">rewrite_type</a></span> (<span class="id">A</span> <span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">E</span>:<span class="id">A</span>=<span class="id">B</span>) (<span class="id">V</span>:<span class="id">A</span>) : <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq_rect">eq_rect</a></span> <span class="id">A</span> (<span class="kwd">fun</span> <span class="id">T</span> =&gt; <span class="id">T</span>) <span class="id">V</span> <span class="id">B</span> <span class="id">E</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="rewrite_type_self">rewrite_type_self</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id">A</span>=<span class="id">A</span>) (<span class="id">V</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#rewrite_type">rewrite_type</a></span> <span class="id">E</span> <span class="id">V</span> = <span class="id">V</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibEqual.html#rewrite_type">rewrite_type</a></span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibEqual.html#eq_rect_refl_eq">eq_rect_refl_eq</a></span>. Qed.</div></details>
+<br/>
+<h2> Injectivity of equality on dependent pairs </h2>
+<br/>
+<div class="doc">This section establishes that <span class="bracket"><span class="id">existT</span> <span class="id">P</span> <span class="id">p</span> <span class="id">x</span> = <span class="id">existT</span> <span class="id">P</span> <span class="id">p</span> <span class="id">y</span></span> implies
+    that <span class="bracket"><span class="id">x</span></span> is equal to <span class="bracket"><span class="id">y</span></span>. It indirectly results from the proof
+    irrelevance property. </div>
+<br/>
+<div class="doc">Definition of dependent equality, with non-dependent return type </div>
+<br/>
+<span class="kwd">Inductive</span> <span class="id"><a name="eq_dep_nd">eq_dep_nd</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> : <span class="id">A</span>) (<span class="id">x</span> : <span class="id">P</span> <span class="id">p</span>) (<span class="id">q</span> : <span class="id">A</span>) (<span class="id">y</span> : <span class="id">P</span> <span class="id">q</span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;| <span class="id"><a name="eq_dep_nd_intro">eq_dep_nd_intro</a></span> : <span class="kwd">forall</span> (<span class="id">h</span> : <span class="id">q</span> = <span class="id">p</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq_rect">eq_rect</a></span> <span class="id">q</span> <span class="id">P</span> <span class="id">y</span> <span class="id">p</span> <span class="id">h</span> -&gt; <span class="id">eq_dep_nd</span> <span class="id">P</span> <span class="id">p</span> <span class="id">x</span> <span class="id">q</span> <span class="id">y</span>.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#eq_dep_nd">eq_dep_nd</a></span> [<span class="id">A</span>] [<span class="id">P</span>] [<span class="id">p</span>] <span class="id">x</span> [<span class="id">q</span>] <span class="id">y</span>.<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#eq_dep_nd_intro">eq_dep_nd_intro</a></span> [<span class="id">A</span>] [<span class="id">P</span>] [<span class="id">p</span>] [<span class="id">x</span>] [<span class="id">q</span>] [<span class="id">y</span>].<br/>
+<br/>
+<div class="doc">Reflexivity of <span class="bracket"><span class="id">eq_dep_nd</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_dep_nd_refl">eq_dep_nd_refl</a></span> : <span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> : <span class="id">A</span>) (<span class="id">x</span> : <span class="id">P</span> <span class="id">p</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep_nd">eq_dep_nd</a></span> <span class="id">x</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#eq_dep_nd_intro">eq_dep_nd_intro</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#refl_equal">refl_equal</a></span> <span class="id">p</span>)). <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<div class="doc">Injectivity of <span class="bracket"><span class="id">eq_dep_nd</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_dep_nd_same_inv">eq_dep_nd_same_inv</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> : <span class="id">A</span>) (<span class="id">x</span> <span class="id">y</span> : <span class="id">P</span> <span class="id">p</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep_nd">eq_dep_nd</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">inversions</span> <span class="id">H</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibEqual.html#eq_rect_refl_eq">eq_rect_refl_eq</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Equality on dependent pairs implies <span class="bracket"><span class="id">eq_dep_nd</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_existT_inv">eq_existT_inv</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> <span class="id">q</span> : <span class="id">A</span>) (<span class="id">x</span> : <span class="id">P</span> <span class="id">p</span>) (<span class="id">y</span> : <span class="id">P</span> <span class="id">q</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">p</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">q</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep_nd">eq_dep_nd</a></span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span>. <span class="id">dependent</span> <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">simpl</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#eq_dep_nd_refl">eq_dep_nd_refl</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Injectivity of equality on dependent pairs </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_existT_same_inv">eq_existT_same_inv</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> : <span class="id">A</span>) (<span class="id">x</span> <span class="id">y</span> : <span class="id">P</span> <span class="id">p</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">p</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">p</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#eq_dep_nd_same_inv">eq_dep_nd_same_inv</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#eq_existT_inv">eq_existT_inv</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Reformulated as an equality </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_existT_same_eq">eq_existT_same_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> : <span class="id">A</span>) (<span class="id">x</span> <span class="id">y</span> : <span class="id">P</span> <span class="id">p</span>),<br/>
+&nbsp;&nbsp;(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">p</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">p</span> <span class="id">y</span>) = (<span class="id">x</span> = <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#eq_dep_nd_same_inv">eq_dep_nd_same_inv</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#eq_existT_inv">eq_existT_inv</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<div class="doc">This is another consequence of proof irrelevance </div>
+<br/>
+<span class="kwd">Scheme</span> <span class="id"><a name="eq_indd">eq_indd</a></span> := <span class="id">Induction</span> <span class="kwd">for</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq">eq</a></span> <span class="id">Sort</span> <span class="kwd">Prop</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="exist_eq_exist">exist_eq_exist</a></span> : <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>) (<span class="id">p</span> : <span class="id">P</span> <span class="id">x</span>) (<span class="id">q</span> : <span class="id">P</span> <span class="id">y</span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#exist">exist</a></span> <span class="id">P</span> <span class="id">x</span> <span class="id">p</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#exist">exist</a></span> <span class="id">P</span> <span class="id">y</span> <span class="id">q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibEqual.html#proof_irrelevance">proof_irrelevance</a></span> <span class="id">q</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq_rect">eq_rect</a></span> <span class="id">x</span> <span class="id">P</span> <span class="id">p</span> <span class="id">y</span> <span class="id">H</span>)). <span class="id">subst</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="existT_eq_existT">existT_eq_existT</a></span> : <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">x</span> <span class="id">y</span>:<span class="id">A</span>) (<span class="id">p</span>:<span class="id">P</span> <span class="id">x</span>) (<span class="id">q</span>:<span class="id">P</span> <span class="id">y</span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">x</span> <span class="id">p</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">y</span> <span class="id">q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibEqual.html#proof_irrelevance">proof_irrelevance</a></span> <span class="id">q</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq_rect">eq_rect</a></span> <span class="id">x</span> <span class="id">P</span> <span class="id">p</span> <span class="id">y</span> <span class="id">H</span>)). <span class="id">subst</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fequal_support_for_exist</span> <span class="id">tt</span> ::= <br/>
+&nbsp;&nbsp;<span class="id">first</span> [ <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#exist_eq_exist">exist_eq_exist</a></span> | <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#existT_eq_existT">existT_eq_existT</a></span> ].<br/>
+<br/>
+<h1> Dependent equality </h1>
+<br/>
+<div class="doc">In this section, we prove that <span class="bracket"><span class="id">eq_dep</span> <span class="id">x</span> <span class="id">y</span></span> implies <span class="bracket"><span class="id">x</span> = <span class="id">y</span></span>. </div>
+<br/>
+<div class="doc">Definition of <span class="bracket"><span class="id">eq_dep</span></span> (copied from the Prelude) </div>
+<br/>
+<span class="kwd">Inductive</span> <span class="id"><a name="eq_dep">eq_dep</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> : <span class="id">A</span>) (<span class="id">x</span> : <span class="id">P</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;: <span class="kwd">forall</span> <span class="id">q</span>, <span class="id">P</span> <span class="id">q</span> -&gt; <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;| <span class="id"><a name="eq_dep_refl">eq_dep_refl</a></span> : <span class="id">eq_dep</span> <span class="id">P</span> <span class="id">p</span> <span class="id">x</span> <span class="id">p</span> <span class="id">x</span>.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> [<span class="id">A</span>] [<span class="id">P</span>] [<span class="id">p</span>] <span class="id">x</span> [<span class="id">q</span>].<br/>
+<br/>
+<div class="doc">Symmetry of <span class="bracket"><span class="id">eq_dep</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_dep_sym">eq_dep_sym</a></span> : <span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">p</span> <span class="id">q</span> : <span class="id">A</span>) (<span class="id">x</span> : <span class="id">P</span> <span class="id">p</span>) (<span class="id">y</span> : <span class="id">P</span> <span class="id">q</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="id">y</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span>. <span class="id">destruct</span> <span class="id">E</span>. <span class="id">constructor</span>. Qed.</div></details>
+<br/>
+<div class="doc">Transitivity of <span class="bracket"><span class="id">eq_dep</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_dep_trans">eq_dep_trans</a></span> : <span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">p</span> <span class="id">q</span> <span class="id">r</span> : <span class="id">A</span>) (<span class="id">y</span> : <span class="id">P</span> <span class="id">q</span>) (<span class="id">x</span> : <span class="id">P</span> <span class="id">p</span>) (<span class="id">z</span> : <span class="id">P</span> <span class="id">r</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="id">y</span> <span class="id">z</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="id">x</span> <span class="id">z</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span> <span class="id">F</span>. <span class="id">destruct</span>~ <span class="id">E</span>. Qed.</div></details>
+<br/>
+<div class="doc">Proof of equivalence between <span class="bracket"><span class="id">eq_dep_nd</span></span> and <span class="bracket"><span class="id">eq_dep</span></span> </div>
+<br/>
+<span class="kwd">Scheme</span> <span class="id"><a name="eq_induction">eq_induction</a></span> := <span class="id">Induction</span> <span class="kwd">for</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq">eq</a></span> <span class="id">Sort</span> <span class="kwd">Prop</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_dep_of_eq_dep_nd">eq_dep_of_eq_dep_nd</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> <span class="id">q</span> : <span class="id">A</span>) (<span class="id">x</span> : <span class="id">P</span> <span class="id">p</span>) (<span class="id">y</span> : <span class="id">P</span> <span class="id">q</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep_nd">eq_dep_nd</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">destruct</span> <span class="id">E</span> <span class="kwd">as</span> (<span class="id">h</span>,<span class="id">H</span>).<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">h</span> <span class="kwd">using</span> <span class="id"><a href="SLF.LibEqual.html#eq_induction">eq_induction</a></span>. <span class="id">subst</span>~. <span class="id">constructor</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_dep_nd_of_eq_dep">eq_dep_nd_of_eq_dep</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> <span class="id">q</span> : <span class="id">A</span>) (<span class="id">x</span> : <span class="id">P</span> <span class="id">p</span>) (<span class="id">y</span> : <span class="id">P</span> <span class="id">q</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep_nd">eq_dep_nd</a></span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span> <span class="id">H</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#eq_dep_nd_intro">eq_dep_nd_intro</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#refl_equal">refl_equal</a></span> <span class="id">p</span>)); <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<div class="doc">Injectivity of dependent equality </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_dep_same_inv">eq_dep_same_inv</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> : <span class="id">A</span>) (<span class="id">x</span> <span class="id">y</span> : <span class="id">P</span> <span class="id">p</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">R</span>. <span class="id">inversion</span> <span class="id">R</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#eq_dep_nd_same_inv">eq_dep_nd_same_inv</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#eq_dep_nd_of_eq_dep">eq_dep_nd_of_eq_dep</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Equality on dependent pairs implies dependent equality </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_dep_of_eq_existT">eq_dep_of_eq_existT</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Type</span>) (<span class="id">p</span> <span class="id">q</span> : <span class="id">A</span>) (<span class="id">x</span> : <span class="id">P</span> <span class="id">p</span>) (<span class="id">y</span> : <span class="id">P</span> <span class="id">q</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">p</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> <span class="id">P</span> <span class="id">q</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span>. <span class="id">dependent</span> <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">simple</span>~. <span class="id">constructor</span>. Qed.</div></details>
+<br/>
+<h1> John Major's equality </h1>
+<br/>
+<span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Logic.JMeq.html">Coq.Logic.JMeq</a></span>.<br/>
+<br/>
+<div class="doc">The module above defines John Major's equality:
+  Inductive JMeq (A : Type) (x : A) : forall B : Type, B -&gt; Prop :=
+     | JMeq_refl : JMeq x x.
+</div>
+<br/>
+<div class="doc">In this section, we prove that <span class="bracket"><span class="id">JMeq</span> <span class="id">x</span> <span class="id">y</span></span> implies <span class="bracket"><span class="id">x</span> = <span class="id">y</span></span>
+    when <span class="bracket"><span class="id">x</span></span> and <span class="bracket"><span class="id">y</span></span> have the same type. </div>
+<br/>
+<div class="doc">Symmetry, transitivity of <span class="bracket"><span class="id">JMeq</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="JMeq_sym">JMeq_sym</a></span> : <span class="kwd">forall</span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">x</span> : <span class="id">A</span>) (<span class="id">y</span> : <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Logic.JMeq.html#JMeq">JMeq</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Logic.JMeq.html#JMeq">JMeq</a></span> <span class="id">y</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span>. <span class="id">destruct</span>~ <span class="id">E</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="JMeq_trans">JMeq_trans</a></span> : <span class="kwd">forall</span> (<span class="id">A</span> <span class="id">B</span> <span class="id">C</span> : <span class="kwd">Type</span>) (<span class="id">y</span> : <span class="id">B</span>) (<span class="id">x</span> : <span class="id">A</span>) (<span class="id">z</span> : <span class="id">C</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Logic.JMeq.html#JMeq">JMeq</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Logic.JMeq.html#JMeq">JMeq</a></span> <span class="id">y</span> <span class="id">z</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Logic.JMeq.html#JMeq">JMeq</a></span> <span class="id">x</span> <span class="id">z</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span> <span class="id">F</span>. <span class="id">destruct</span>~ <span class="id">E</span>. Qed.</div></details>
+<br/>
+<span class="id">Local</span> <span class="kwd">Hint</span> <span class="id">Immediate</span> <span class="id">JMeq_sym</span>.<br/>
+<br/>
+<div class="doc">Relation between <span class="bracket"><span class="id">JMeq</span></span> and <span class="bracket"><span class="id">eq_dep</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_dep_of_JMeq">eq_dep_of_JMeq</a></span> : <span class="kwd">forall</span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">x</span> : <span class="id">A</span>) (<span class="id">y</span> : <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Logic.JMeq.html#JMeq">JMeq</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="kwd">Type</span> (<span class="kwd">fun</span> <span class="id">T</span> =&gt; <span class="id">T</span>) <span class="id">A</span> <span class="id">x</span> <span class="id">B</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span>. <span class="id">destruct</span> <span class="id">E</span>. <span class="id">constructor</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="JMeq_of_eq_dep">JMeq_of_eq_dep</a></span> : <span class="kwd">forall</span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">x</span> : <span class="id">A</span>) (<span class="id">y</span> : <span class="id">B</span>),<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibEqual.html#eq_dep">eq_dep</a></span> <span class="kwd">Type</span> (<span class="kwd">fun</span> <span class="id">T</span> =&gt; <span class="id">T</span>) <span class="id">A</span> <span class="id">x</span> <span class="id">B</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Logic.JMeq.html#JMeq">JMeq</a></span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span>. <span class="id">destruct</span>~ <span class="id">E</span>. Qed.</div></details>
+<br/>
+<div class="doc">Injectivity of <span class="bracket"><span class="id">JMeq</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="JMeq_same_inv">JMeq_same_inv</a></span> : <span class="kwd">forall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Logic.JMeq.html#JMeq">JMeq</a></span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">apply</span> (@<span class="id"><a href="SLF.LibEqual.html#eq_dep_same_inv">eq_dep_same_inv</a></span> <span class="kwd">Type</span> (<span class="kwd">fun</span> <span class="id">T</span> =&gt; <span class="id">T</span>)).<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibEqual.html#eq_dep_of_JMeq">eq_dep_of_JMeq</a></span>.<br/>
+Qed.</div></details>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

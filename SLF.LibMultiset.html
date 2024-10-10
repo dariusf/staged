@@ -1,0 +1,734 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibMultiset</title>
+<meta name="description" content="Documentation of Coq module LibMultiset" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibMultiset</h1>
+<div class="coq">
+<br/>
+<div class="doc">DISCLAIMER: this file is under construction and still contains a
+    couple admits. </div>
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span> <span class="id"><a href="SLF.LibList.html">LibList</a></span> <span class="id"><a href="SLF.LibInt.html">LibInt</a></span> <span class="id"><a href="SLF.LibNat.html">LibNat</a></span> <span class="id"><a href="SLF.LibOperation.html">LibOperation</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEpsilon.html">LibEpsilon</a></span> <span class="id"><a href="SLF.LibSet.html">LibSet</a></span> <span class="id"><a href="SLF.LibMonoid.html">LibMonoid</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibContainer.html">LibContainer</a></span>.<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">nat_scope</span>.<br/>
+<br/>
+<h1> Construction of sets as predicates </h1>
+<br/>
+<h2> Basic definitions </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="multiset">multiset</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) := <span class="id">A</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Operations">Operations</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Operations.A">A</a></span> <span class="id"><a name="Operations.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> : <span class="id"><a href="SLF.LibMultiset.html#Operations.A">A</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Operations.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="empty_impl">empty_impl</a></span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Operations.A">A</a></span> := <span class="kwd">fun</span> _ =&gt; 0.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="single_impl">single_impl</a></span> <span class="id">x</span> := <span class="kwd">fun</span> <span class="id">y</span> =&gt; <span class="id">If</span> <span class="id">x</span> = <span class="id">y</span> <span class="kwd">then</span> 1 <span class="kwd">else</span> 0.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="in_impl">in_impl</a></span> <span class="id">x</span> <span class="id">E</span> := <span class="id">E</span> <span class="id">x</span> &gt; 0.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="union_impl">union_impl</a></span> <span class="id">E</span> <span class="id">F</span> := <span class="kwd">fun</span> <span class="id">x</span> =&gt; (<span class="id">E</span> <span class="id">x</span> + <span class="id">F</span> <span class="id">x</span>)%<span class="id">nat</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="incl_impl">incl_impl</a></span> <span class="id">E</span> <span class="id">F</span> := <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">E</span> <span class="id">x</span> &lt;= <span class="id">F</span> <span class="id">x</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="dom_impl">dom_impl</a></span> <span class="id">E</span> := <span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">E</span> <span class="id">x</span> &gt; 0).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="list_repr_impl">list_repr_impl</a></span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Operations.A">A</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> (<span class="id"><a href="SLF.LibMultiset.html#Operations.A">A</a></span>*<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>)) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#noduplicates">noduplicates</a></span> (<span class="id"><a href="SLF.LibList.html#map">LibList.map</a></span> (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#fst">fst</a></span> _ _) <span class="id">l</span>)<br/>
+&nbsp;&nbsp;/\ <span class="kwd">forall</span> <span class="id">n</span> <span class="id">x</span>, <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> (<span class="id">x</span>,<span class="id">n</span>) <span class="id">l</span> &lt;-&gt; (<span class="id">n</span> = <span class="id">E</span> <span class="id">x</span> /\ <span class="id">n</span> &gt; 0).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="to_list_impl">to_list_impl</a></span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Operations.A">A</a></span>) := <span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> (<span class="id"><a href="SLF.LibMultiset.html#list_repr_impl">list_repr_impl</a></span> <span class="id">E</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="fold_impl">fold_impl</a></span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id"><a href="SLF.LibMultiset.html#Operations.B">B</a></span>) (<span class="id">f</span>:<span class="id"><a href="SLF.LibMultiset.html#Operations.A">A</a></span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>-&gt;<span class="id"><a href="SLF.LibMultiset.html#Operations.B">B</a></span>) (<span class="id">E</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Operations.A">A</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#fold_right">LibList.fold_right</a></span> (<span class="kwd">fun</span> <span class="id">p</span> <span class="id">acc</span> =&gt; <span class="kwd">let</span> (<span class="id">x</span>,<span class="id">n</span>) := <span class="id">p</span> : <span class="id"><a href="SLF.LibMultiset.html#Operations.A">A</a></span>*<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> <span class="kwd">in</span> <span class="id"><a href="SLF.LibMonoid.html#monoid_oper">monoid_oper</a></span> <span class="id">m</span> (<span class="id">f</span> <span class="id">x</span> <span class="id">n</span>) <span class="id">acc</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.LibMonoid.html#monoid_neutral">monoid_neutral</a></span> <span class="id">m</span>) (<span class="id"><a href="SLF.LibMultiset.html#to_list_impl">to_list_impl</a></span> <span class="id">E</span>).<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMultiset.html#Operations">Operations</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="card_impl">card_impl</a></span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMultiset.html#fold_impl">fold_impl</a></span> (<span class="id"><a href="SLF.LibMonoid.html#monoid_make">monoid_make</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Peano.html#plus">plus</a></span> 0) (<span class="kwd">fun</span> _ <span class="id">n</span> =&gt; <span class="id">n</span>) <span class="id">E</span>.<br/>
+<br/>
+<h2> Notation through typeclasses </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_inst">in_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagIn">BagIn</a></span> <span class="id">A</span> (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">exact</span> (@<span class="id"><a href="SLF.LibMultiset.html#in_impl">in_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 (<span class="id"><a href="SLF.LibContainer.html#BagIn">BagIn</a></span> _ (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> _)) =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#in_inst">in_inst</a></span><br/>
+&nbsp;&nbsp;: <span class="id">typeclass_instances</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="empty_inst">empty_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagEmpty">BagEmpty</a></span> (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibMultiset.html#empty_impl">empty_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="single_inst">single_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagSingle">BagSingle</a></span> <span class="id">A</span> (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>) .<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibMultiset.html#single_impl">single_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="union_inst">union_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagUnion">BagUnion</a></span> (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibMultiset.html#union_impl">union_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="incl_inst">incl_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagIncl">BagIncl</a></span> (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibMultiset.html#incl_impl">incl_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="fold_inst">fold_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>, <span class="id"><a href="SLF.LibContainer.html#BagFold">BagFold</a></span> <span class="id">B</span> (<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>-&gt;<span class="id">B</span>) (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibMultiset.html#fold_impl">fold_impl</a></span> <span class="id">A</span> <span class="id">B</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="card_inst">card_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagCard">BagCard</a></span> (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibMultiset.html#card_impl">card_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#empty_inst">empty_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#single_inst">single_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#in_inst">in_inst</a></span><br/>
+&nbsp;<span class="id"><a href="SLF.LibMultiset.html#union_inst">union_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#incl_inst">incl_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#fold_inst">fold_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#card_inst">card_inst</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="Inhab_multiset">Inhab_multiset</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> (@<span class="id"><a href="SLF.LibMultiset.html#empty_impl">empty_impl</a></span> <span class="id">A</span>)). Qed.</div></details>
+<br/>
+<h1> Properties of multisets </h1>
+<br/>
+<h2> Structural properties </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Instances">Instances</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Instances.A">A</a></span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> =&gt; <span class="id">math</span>.<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 (_ &gt; _) =&gt; <span class="id">solve</span> [ <span class="id">math</span> | <span class="id">false</span> ].<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 (_ = _) =&gt; <span class="id">math</span>.<br/>
+<br/>
+<span class="kwd">Transparent</span> <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#empty_inst">empty_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#single_inst">single_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#in_inst">in_inst</a></span><br/>
+&nbsp;<span class="id"><a href="SLF.LibMultiset.html#union_inst">union_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#incl_inst">incl_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#fold_inst">fold_inst</a></span> <span class="id"><a href="SLF.LibMultiset.html#card_inst">card_inst</a></span>.<br/>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_empty_eq_inst">in_empty_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#empty_impl">empty_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#in_impl">in_impl</a></span>. <span class="id">autos</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_single_eq_inst">in_single_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#In_single_eq">In_single_eq</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#single_impl">single_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#in_impl">in_impl</a></span>. <span class="id">case_if</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_union_eq_inst">in_union_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#single_impl">single_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#union_impl">union_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#in_impl">in_impl</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">iff</span>. <span class="id">tests</span>: (<span class="id">E</span> <span class="id">x</span> = 0). <span class="id">right</span>~. <span class="id">left</span>~. <span class="id">destruct</span> <span class="id">H</span>; <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_refl_inst">incl_refl_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Incl_refl">Incl_refl</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#incl_inst">incl_inst</a></span>, <span class="id"><a href="SLF.LibMultiset.html#incl_impl">incl_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#incl">incl</a></span>. <span class="id">intros</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_inv_inst">incl_inv_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Incl_inv">Incl_inv</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">N</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#incl_inst">incl_inst</a></span>, <span class="id"><a href="SLF.LibMultiset.html#incl_impl">incl_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#incl">incl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#in_inst">in_inst</a></span>, <span class="id"><a href="SLF.LibMultiset.html#in_impl">in_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#is_in">is_in</a></span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">M</span> <span class="id">x</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_empty_inv_inst">union_empty_inv_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Union_empty_inv">Union_empty_inv</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#union_inst">union_inst</a></span>, <span class="id"><a href="SLF.LibMultiset.html#union_impl">union_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#union">union</a></span>, <span class="id"><a href="SLF.LibMultiset.html#empty_impl">empty_impl</a></span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibMultiset.html#empty_inst">empty_inst</a></span>, <span class="id"><a href="SLF.LibContainer.html#empty">empty</a></span>, <span class="id"><a href="SLF.LibMultiset.html#empty_impl">empty_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span>. <span class="id">introv</span> <span class="id">N</span>.<br/>
+&nbsp;&nbsp;<span class="id">split</span>; <span class="id">extens</span>~.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">lets</span>: <span class="id"><a href="SLF.LibEqual.html#fun_eq_1">fun_eq_1</a></span> <span class="id">x</span> <span class="id">N</span>. <span class="id">math</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">lets</span>: <span class="id"><a href="SLF.LibEqual.html#fun_eq_1">fun_eq_1</a></span> <span class="id">x</span> <span class="id">N</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_empty_l_eq_inst">union_empty_l_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Union_empty_l">Union_empty_l</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros_all</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#union_impl">union_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#empty_impl">empty_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span>. <span class="id">simpl</span>. <span class="id">extens</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_comm_eq_inst">union_comm_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Union_comm">Union_comm</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros_all</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#union_impl">union_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span>. <span class="id">simpl</span>. <span class="id">extens</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_assoc_eq_inst">union_assoc_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Union_assoc">Union_assoc</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros_all</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#union_impl">union_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span>. <span class="id">simpl</span>. <span class="id">extens</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="empty_incl_inst">empty_incl_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Empty_incl">Empty_incl</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros_all</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#empty_impl">empty_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_incl_union_inst">union_incl_union_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Union_incl_union">Union_incl_union</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibMultiset.html#incl_inst">incl_inst</a></span>, <span class="id"><a href="SLF.LibMultiset.html#incl_impl">incl_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#union_inst">union_inst</a></span>, <span class="id"><a href="SLF.LibMultiset.html#union_impl">union_impl</a></span>, <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">H2</span> <span class="id">x</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMultiset.html#Instances">Instances</a></span>.<br/>
+<br/>
+<h1> Additional predicates </h1>
+<br/>
+<h2> Foreach </h2>
+<br/>
+<div class="doc">--TODO: foreach properties should be shared in LibContainer </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="ForeachProp">ForeachProp</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ForeachProp.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> <span class="id">Q</span> : <span class="id"><a href="SLF.LibMultiset.html#ForeachProp.A">A</a></span> -&gt; <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#ForeachProp.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_empty">foreach_empty</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id"><a href="SLF.LibMultiset.html#ForeachProp.A">A</a></span> (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#ForeachProp.A">A</a></span>) _ <span class="id">P</span> \{}.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros_all</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">false</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_single">foreach_single</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">X</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id">X</span> -&gt;<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id"><a href="SLF.LibMultiset.html#ForeachProp.A">A</a></span> (<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#ForeachProp.A">A</a></span>) _ <span class="id">P</span> (\{ <span class="id">X</span> }).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros_all</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">H0</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_union">foreach_union</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> -&gt; <span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">F</span> -&gt; <span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros_all</span>. <span class="id">destruct</span>~ (<span class="id"><a href="SLF.LibContainer.html#in_union_inv">in_union_inv</a></span> <span class="id">H1</span>). Qed.</div></details>
+<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">foreach_empty</span> <span class="id">foreach_single</span> <span class="id">foreach_union</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_union_inv">foreach_union_inv</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> /\ <span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">F</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">split</span>; <span class="id">introv</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span>. <span class="id">rewrite</span>~ @<span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. <span class="id">typeclass</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span>. <span class="id">rewrite</span>~ @<span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. <span class="id">typeclass</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_union_eq">foreach_union_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = (<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> /\ <span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibMultiset.html#foreach_union_inv">foreach_union_inv</a></span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibMultiset.html#foreach_union">foreach_union</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_single_eq">foreach_single_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">X</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (\{<span class="id">X</span>}:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#ForeachProp.A">A</a></span>) = <span class="id">P</span> <span class="id">X</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibMultiset.html#foreach_single">foreach_single</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_weaken">foreach_weaken</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span> <span class="id">E</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id">P</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">Q</span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span> <span class="id">L</span> <span class="id">K</span>. <span class="id">apply</span>~ <span class="id">L</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMultiset.html#ForeachProp">ForeachProp</a></span>.<br/>
+<br/>
+<h1> Tactics </h1>
+<br/>
+<div class="doc">EXPERIMENTAL tactics -- TODO: add documentation </div>
+<br/>
+<h2> Tactics to prove equalities on unions </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="for_multiset_union_assoc">for_multiset_union_assoc</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibOperation.html#assoc">assoc</a></span> (<span class="id"><a href="SLF.LibContainer.html#union">union</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="for_multiset_union_comm">for_multiset_union_comm</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> (<span class="id"><a href="SLF.LibContainer.html#union">union</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_comm">union_comm</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="for_multiset_union_empty_l">for_multiset_union_empty_l</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>), \{} \<span class="id">u</span> <span class="id">E</span> = <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_empty_l">union_empty_l</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="for_multiset_union_empty_r">for_multiset_union_empty_r</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>), <span class="id">E</span> \<span class="id">u</span> \{} = <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_empty_r">union_empty_r</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="for_multiset_empty_incl">for_multiset_empty_incl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>), \{} \<span class="id">c</span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#empty_incl">empty_incl</a></span>. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> &lt;- <span class="id"><a href="SLF.LibMultiset.html#for_multiset_union_assoc">for_multiset_union_assoc</a></span> : <span class="id">rew_permut_simpl</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibMultiset.html#for_multiset_union_empty_l">for_multiset_union_empty_l</a></span> <span class="id"><a href="SLF.LibMultiset.html#for_multiset_union_empty_r">for_multiset_union_empty_r</a></span> : <span class="id">rew_permut_simpl</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">rew_permut_simpl</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_permut_simpl</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">rews_permut_simpl</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_permut_simpl</span> <span class="kwd">in</span> *.<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="PermutationTactic">PermutationTactic</a></span>.<br/>
+<span class="kwd">Context</span> (<span class="id">A</span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">l</span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#PermutationTactic.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_get_1">permut_get_1</a></span> : <span class="kwd">forall</span> <span class="id">l1</span> <span class="id">l2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span>) = (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_get_2">permut_get_2</a></span> : <span class="kwd">forall</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span>) = (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l1</span> \<span class="id">u</span> <span class="id">l3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_comm_assoc">union_comm_assoc</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_get_3">permut_get_3</a></span> : <span class="kwd">forall</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span>,<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span>) = (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l1</span> \<span class="id">u</span> <span class="id">l4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span> <span class="id">l2</span>). <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_get_2">permut_get_2</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_get_4">permut_get_4</a></span> : <span class="kwd">forall</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span> <span class="id">l5</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span>)<br/>
+&nbsp;&nbsp;= (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l1</span> \<span class="id">u</span> <span class="id">l5</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span> <span class="id">l2</span>). <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_get_3">permut_get_3</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_get_5">permut_get_5</a></span> : <span class="kwd">forall</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span> <span class="id">l5</span> <span class="id">l6</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span> \<span class="id">u</span> <span class="id">l6</span>)<br/>
+&nbsp;&nbsp;= (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span> \<span class="id">u</span> <span class="id">l1</span> \<span class="id">u</span> <span class="id">l6</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span> <span class="id">l2</span>). <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_get_4">permut_get_4</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_get_6">permut_get_6</a></span> : <span class="kwd">forall</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span> <span class="id">l5</span> <span class="id">l6</span> <span class="id">l7</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span> \<span class="id">u</span> <span class="id">l6</span> \<span class="id">u</span> <span class="id">l7</span>)<br/>
+&nbsp;&nbsp;= (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span> \<span class="id">u</span> <span class="id">l6</span> \<span class="id">u</span> <span class="id">l1</span> \<span class="id">u</span> <span class="id">l7</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span> <span class="id">l2</span>). <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_get_5">permut_get_5</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_get_7">permut_get_7</a></span> : <span class="kwd">forall</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span> <span class="id">l5</span> <span class="id">l6</span> <span class="id">l7</span> <span class="id">l8</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span> \<span class="id">u</span> <span class="id">l6</span> \<span class="id">u</span> <span class="id">l7</span> \<span class="id">u</span> <span class="id">l8</span>)<br/>
+&nbsp;&nbsp;= (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span> \<span class="id">u</span> <span class="id">l6</span> \<span class="id">u</span> <span class="id">l7</span> \<span class="id">u</span> <span class="id">l1</span> \<span class="id">u</span> <span class="id">l8</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span> <span class="id">l2</span>). <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_get_6">permut_get_6</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_get_8">permut_get_8</a></span> : <span class="kwd">forall</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span> <span class="id">l5</span> <span class="id">l6</span> <span class="id">l7</span> <span class="id">l8</span> <span class="id">l9</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span> \<span class="id">u</span> <span class="id">l6</span> \<span class="id">u</span> <span class="id">l7</span> \<span class="id">u</span> <span class="id">l8</span> \<span class="id">u</span> <span class="id">l9</span>)<br/>
+&nbsp;&nbsp;= (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span> \<span class="id">u</span> <span class="id">l6</span> \<span class="id">u</span> <span class="id">l7</span> \<span class="id">u</span> <span class="id">l8</span> \<span class="id">u</span> <span class="id">l1</span> \<span class="id">u</span> <span class="id">l9</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span> <span class="id">l2</span>). <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_get_7">permut_get_7</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_tactic_setup">permut_tactic_setup</a></span> : <span class="kwd">forall</span> <span class="id">C</span> <span class="id">l1</span> <span class="id">l2</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">C</span> (\{} \<span class="id">u</span> <span class="id">l1</span> \<span class="id">u</span> \{}) (<span class="id">l2</span> \<span class="id">u</span> \{}) -&gt; <span class="id">C</span> <span class="id">l1</span> <span class="id">l2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rews_permut_simpl</span>. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_tactic_keep">permut_tactic_keep</a></span> : <span class="kwd">forall</span> <span class="id">C</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span>,<br/>
+&nbsp;&nbsp;<span class="id">C</span> ((<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span>) \<span class="id">u</span> <span class="id">l3</span>) <span class="id">l4</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">C</span> (<span class="id">l1</span> \<span class="id">u</span> (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span>)) <span class="id">l4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rews_permut_simpl</span>. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_tactic_trans">permut_tactic_trans</a></span> : <span class="kwd">forall</span> <span class="id">C</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span>,<br/>
+&nbsp;&nbsp;<span class="id">l3</span> = <span class="id">l2</span> -&gt; <span class="id">C</span> <span class="id">l1</span> <span class="id">l3</span> -&gt; <span class="id">C</span> <span class="id">l1</span> <span class="id">l2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMultiset.html#PermutationTactic">PermutationTactic</a></span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">permut_lemma_get</span> <span class="id">n</span></span> returns the lemma <span class="bracket"><span class="id">permut_get_n</span></span>
+    for the given value of <span class="bracket"><span class="id">n</span></span> </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">permut_lemma_get</span> <span class="id">n</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">number_to_nat</span> <span class="id">n</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| 1%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_get_1">permut_get_1</a></span>)<br/>
+&nbsp;&nbsp;| 2%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_get_2">permut_get_2</a></span>)<br/>
+&nbsp;&nbsp;| 3%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_get_3">permut_get_3</a></span>)<br/>
+&nbsp;&nbsp;| 4%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_get_4">permut_get_4</a></span>)<br/>
+&nbsp;&nbsp;| 5%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_get_5">permut_get_5</a></span>)<br/>
+&nbsp;&nbsp;| 6%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_get_6">permut_get_6</a></span>)<br/>
+&nbsp;&nbsp;| 7%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_get_7">permut_get_7</a></span>)<br/>
+&nbsp;&nbsp;| 8%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_get_8">permut_get_8</a></span>)<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">permut_prepare</span></span> applies to a goal of the form <span class="bracket"><span class="id">permut</span> <span class="id">l</span> <span class="id">l'</span></span>
+    and sets <span class="bracket"><span class="id">l</span></span> and <span class="bracket"><span class="id">l'</span></span> in the form <span class="bracket"><span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> .. \<span class="id">u</span> \{}</span>,
+    (some of the lists <span class="bracket"><span class="id">li</span></span> are put in the form <span class="bracket"><span class="id">x</span>::\{}</span>). </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">permut_simpl_prepare</span> :=<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">rew_permut_simpl</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_tactic_setup">permut_tactic_setup</a></span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">permut_index_of</span> <span class="id">l</span> <span class="id">lcontainer</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">constr</span>:(<span class="id">lcontainer</span>) <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">l</span> \<span class="id">u</span> _ =&gt; <span class="id">constr</span>:(1)<br/>
+&nbsp;&nbsp;| _ \<span class="id">u</span> <span class="id">l</span> \<span class="id">u</span> _ =&gt; <span class="id">constr</span>:(2)<br/>
+&nbsp;&nbsp;| _ \<span class="id">u</span> _ \<span class="id">u</span> <span class="id">l</span> \<span class="id">u</span> _ =&gt; <span class="id">constr</span>:(3)<br/>
+&nbsp;&nbsp;| _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> <span class="id">l</span> \<span class="id">u</span> _ =&gt; <span class="id">constr</span>:(4)<br/>
+&nbsp;&nbsp;| _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> <span class="id">l</span> \<span class="id">u</span> _ =&gt; <span class="id">constr</span>:(5)<br/>
+&nbsp;&nbsp;| _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> <span class="id">l</span> \<span class="id">u</span> _ =&gt; <span class="id">constr</span>:(6)<br/>
+&nbsp;&nbsp;| _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> <span class="id">l</span> \<span class="id">u</span> _ =&gt; <span class="id">constr</span>:(7)<br/>
+&nbsp;&nbsp;| _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> _ \<span class="id">u</span> <span class="id">l</span> \<span class="id">u</span> _ =&gt; <span class="id">constr</span>:(8)<br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">constr</span>:(0) <br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">permut_simplify</span></span> simplifies a goal of the form
+    <span class="bracket"><span class="id">permut</span> <span class="id">l</span> <span class="id">l'</span></span> where <span class="bracket"><span class="id">l</span></span> and <span class="bracket"><span class="id">l'</span></span> are lists built with
+    concatenation and consing </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">permut_simpl_once_for</span> <span class="id">permut_tactic_simpl</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">go</span> <span class="id">l0</span> <span class="id">l'</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">l0</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| _ \<span class="id">u</span> \{} =&gt; <span class="id">fail</span> 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| _ \<span class="id">u</span> (?<span class="id">l</span> \<span class="id">u</span> ?<span class="id">lr</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">permut_index_of</span> <span class="id">l</span> <span class="id">l'</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| 0 =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_tactic_keep">permut_tactic_keep</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| ?<span class="id">n</span> =&gt; <span class="kwd">let</span> <span class="id">F</span> := <span class="id">permut_lemma_get</span> <span class="id">n</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_tactic_trans">permut_tactic_trans</a></span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id">eapply</span> <span class="id">F</span>; <span class="id">try</span> <span class="id">typeclass</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> <span class="id">permut_tactic_simpl</span> ]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;| |- _ ?<span class="id">x</span> ?<span class="id">y</span> =&gt; <span class="id">go</span> <span class="id">x</span> <span class="id">y</span><br/>
+&nbsp;&nbsp;&nbsp;| |- _ _ ?<span class="id">x</span> ?<span class="id">y</span> =&gt; <span class="id">go</span> <span class="id">x</span> <span class="id">y</span><br/>
+&nbsp;&nbsp;&nbsp;| |- _ _ _ ?<span class="id">x</span> ?<span class="id">y</span> =&gt; <span class="id">go</span> <span class="id">x</span> <span class="id">y</span><br/>
+&nbsp;&nbsp;&nbsp;| |- _ _ _ _ ?<span class="id">x</span> ?<span class="id">y</span> =&gt; <span class="id">go</span> <span class="id">x</span> <span class="id">y</span><br/>
+&nbsp;&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">permut_conclude</span> :=<br/>
+&nbsp;&nbsp;<span class="id">first</span> [ <span class="id">apply</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#refl_equal">refl_equal</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#for_multiset_empty_incl">for_multiset_empty_incl</a></span> ].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">permut_simpl_for</span> <span class="id">permut_tactic_simpl</span> :=<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_prepare</span>;<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">permut_simpl_once_for</span> <span class="id">permut_tactic_simpl</span>;<br/>
+&nbsp;&nbsp;<span class="id">rew_permut_simpl</span>;<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="id">permut_conclude</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_tactic_simpl_eq">permut_tactic_simpl_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l3</span>) = <span class="id">l4</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span>)) = (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#permut_get_2">permut_get_2</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="permut_tactic_simpl_incl">permut_tactic_simpl_incl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l3</span>) \<span class="id">c</span> <span class="id">l4</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span>)) \<span class="id">c</span> (<span class="id">l2</span> \<span class="id">u</span> <span class="id">l4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">rewrites</span> (<span class="id"><a href="SLF.LibContainer.html#union_comm">union_comm</a></span> <span class="id">l2</span> <span class="id">l3</span>). <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">l0</span>: (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l3</span>). <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#union_comm">union_comm</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_incl_union">union_incl_union</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#incl_refl">incl_refl</a></span>. } { <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">get_premut_tactic_simpl</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- ?<span class="id">x</span> = ?<span class="id">y</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_tactic_simpl_eq">permut_tactic_simpl_eq</a></span>)<br/>
+&nbsp;&nbsp;| |- ?<span class="id">x</span> \<span class="id">c</span> ?<span class="id">y</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="SLF.LibMultiset.html#permut_tactic_simpl_incl">permut_tactic_simpl_incl</a></span>)<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">permut_simpl_once</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">L</span> := <span class="id">get_premut_tactic_simpl</span> <span class="id">tt</span> <span class="kwd">in</span> <span class="id">permut_simpl_once_for</span> <span class="id">L</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">permut_simpl</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">L</span> := <span class="id">get_premut_tactic_simpl</span> <span class="id">tt</span> <span class="kwd">in</span> <span class="id">permut_simpl_for</span> <span class="id">L</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"multiset_eq"</span> := <br/>
+&nbsp;&nbsp;<span class="id">check_noevar_goal</span>; <span class="id">permut_simpl</span>.<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="DemoSetUnion">DemoSetUnion</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="DemoSetUnion.A">A</a></span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">l</span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#DemoSetUnion.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="demo_multiset_union_permut_simpl_1">demo_multiset_union_permut_simpl_1</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#DemoSetUnion.A">A</a></span>,<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span>) = (<span class="id">l3</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l1</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_prepare</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_permut_simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_conclude</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="demo_multiset_union_permut_simpl_2">demo_multiset_union_permut_simpl_2</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span><br/>
+&nbsp;&nbsp;(<span class="id">x</span>:<span class="id"><a href="SLF.LibMultiset.html#DemoSetUnion.A">A</a></span>) <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span>,<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> \{<span class="id">x</span>} \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l2</span>) \<span class="id">c</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> (\{<span class="id">x</span>} \<span class="id">u</span> <span class="id">l3</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_prepare</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_permut_simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_conclude</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="demo_multiset_union_permut_simpl_3">demo_multiset_union_permut_simpl_3</a></span> : <span class="kwd">forall</span> (<span class="id">x</span> <span class="id">y</span>:<span class="id"><a href="SLF.LibMultiset.html#DemoSetUnion.A">A</a></span>) <span class="id">l1</span> <span class="id">l1'</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span>,<br/>
+&nbsp;&nbsp;<span class="id">l1</span> \<span class="id">c</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l1'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">l1</span> \<span class="id">u</span> (\{<span class="id">x</span>} \<span class="id">u</span> <span class="id">l2</span>) \<span class="id">u</span> \{<span class="id">x</span>} \<span class="id">u</span> (\{<span class="id">y</span>} \<span class="id">u</span> <span class="id">l3</span>)) \<span class="id">c</span><br/>
+&nbsp;&nbsp;(\{<span class="id">y</span>} \<span class="id">u</span> \{<span class="id">x</span>} \<span class="id">u</span> (<span class="id">l1'</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l4</span>) \<span class="id">u</span> (\{<span class="id">x</span>} \<span class="id">u</span> <span class="id">l3</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">dup</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_prepare</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_permut_simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">equates</span> 1. <span class="id">apply</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_prepare</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl_once</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_permut_simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_conclude</span>.<br/>
+&nbsp;&nbsp;<span class="id">permut_simpl</span>. <span class="id">applys_eq</span> <span class="id">H</span>. <span class="id">permut_simpl</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMultiset.html#DemoSetUnion">DemoSetUnion</a></span>.<br/>
+<br/>
+<h2> Tactics to prove membership </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="InUnionGet">InUnionGet</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="InUnionGet.A">A</a></span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">l</span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#InUnionGet.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_get_1">in_union_get_1</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id">l1</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_l">in_union_l</a></span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_get_2">in_union_get_2</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id">l2</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_r">in_union_r</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibMultiset.html#in_union_get_1">in_union_get_1</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_get_3">in_union_get_3</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id">l3</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_r">in_union_r</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibMultiset.html#in_union_get_2">in_union_get_2</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_get_4">in_union_get_4</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span> <span class="id">l5</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id">l4</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_r">in_union_r</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibMultiset.html#in_union_get_3">in_union_get_3</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_get_5">in_union_get_5</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span> <span class="id">l5</span> <span class="id">l6</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id">l5</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> <span class="id">l5</span> \<span class="id">u</span> <span class="id">l6</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_r">in_union_r</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibMultiset.html#in_union_get_4">in_union_get_4</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMultiset.html#InUnionGet">InUnionGet</a></span>.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_1">in_union_get_1</a></span> [<span class="id">A</span>] [<span class="id">x</span>] [<span class="id">l1</span>] [<span class="id">l2</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_2">in_union_get_2</a></span> [<span class="id">A</span>] [<span class="id">x</span>] [<span class="id">l1</span>] [<span class="id">l2</span>] [<span class="id">l3</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_3">in_union_get_3</a></span> [<span class="id">A</span>] [<span class="id">x</span>] [<span class="id">l1</span>] [<span class="id">l2</span>] [<span class="id">l3</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_4">in_union_get_4</a></span> [<span class="id">A</span>] [<span class="id">x</span>] [<span class="id">l1</span>] [<span class="id">l2</span>] [<span class="id">l3</span>] [<span class="id">l4</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_5">in_union_get_5</a></span> [<span class="id">A</span>] [<span class="id">x</span>] [<span class="id">l1</span>] [<span class="id">l2</span>] [<span class="id">l3</span>] [<span class="id">l4</span>] [<span class="id">l5</span>].<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">in_union_get</span></span> solves a goal of the form
+    <span class="bracket"><span class="id">x</span> \<span class="kwd">in</span> <span class="id">F1</span> \<span class="id">u</span> ... \<span class="id">u</span> <span class="id">FN</span></span> when there exists an
+    hypothesis of the form <span class="bracket"><span class="id">x</span> \<span class="kwd">in</span> <span class="id">Fi</span></span> for some <span class="bracket"><span class="id">i</span></span>. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">in_union_get</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> <span class="id">H</span>: ?<span class="id">x</span> \<span class="kwd">in</span> ?<span class="id">A</span> |- ?<span class="id">x</span> \<span class="kwd">in</span> ?<span class="id">B</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">B</span> <span class="kwd">with</span> <span class="id">context</span> [<span class="id">A</span>] =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">go</span> <span class="id">tt</span> := <span class="id">first</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_get_1">in_union_get_1</a></span> <span class="id">H</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_get_2">in_union_get_2</a></span> <span class="id">H</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_get_3">in_union_get_3</a></span> <span class="id">H</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_get_4">in_union_get_4</a></span> <span class="id">H</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_get_5">in_union_get_5</a></span> <span class="id">H</span>) ] <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="id">first</span> [ <span class="id">go</span> <span class="id">tt</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">rewrite</span> &lt;- (<span class="id"><a href="SLF.LibMultiset.html#for_multiset_union_empty_r">for_multiset_union_empty_r</a></span> <span class="id">B</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibMultiset.html#for_multiset_union_assoc">for_multiset_union_assoc</a></span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">go</span> <span class="id">tt</span> ]<br/>
+&nbsp;&nbsp;<span class="kwd">end</span> <span class="kwd">end</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="InUnionExtract">InUnionExtract</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="InUnionExtract.A">A</a></span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">l</span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#InUnionExtract.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_extract_1">in_union_extract_1</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (\{<span class="id">x</span>} \<span class="id">u</span> <span class="id">l1</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_1">in_union_get_1</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_extract_2">in_union_extract_2</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> \{<span class="id">x</span>} \<span class="id">u</span> <span class="id">l2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_2">in_union_get_2</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_extract_3">in_union_extract_3</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> \{<span class="id">x</span>} \<span class="id">u</span> <span class="id">l3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_3">in_union_get_3</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_extract_4">in_union_extract_4</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> \{<span class="id">x</span>} \<span class="id">u</span> <span class="id">l4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_4">in_union_get_4</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_extract_5">in_union_extract_5</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span> <span class="id">l3</span> <span class="id">l4</span> <span class="id">l5</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> \<span class="id">u</span> <span class="id">l3</span> \<span class="id">u</span> <span class="id">l4</span> \<span class="id">u</span> \{<span class="id">x</span>} \<span class="id">u</span> <span class="id">l5</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_get_5">in_union_get_5</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMultiset.html#InUnionExtract">InUnionExtract</a></span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">in_union_extract</span></span> solves a goal of the form
+    <span class="bracket"><span class="id">x</span> \<span class="kwd">in</span> <span class="id">F1</span> \<span class="id">u</span> ... \<span class="id">u</span> \{<span class="id">x</span>} \<span class="id">u</span> ... \<span class="id">u</span> <span class="id">FN</span></span>. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">in_union_extract</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> |- ?<span class="id">x</span> \<span class="kwd">in</span> ?<span class="id">A</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">A</span> <span class="kwd">with</span> <span class="id">context</span> [\{<span class="id">x</span>}] =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">go</span> <span class="id">tt</span> := <span class="id">first</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_extract_1">in_union_extract_1</a></span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_extract_2">in_union_extract_2</a></span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_extract_3">in_union_extract_3</a></span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_extract_4">in_union_extract_4</a></span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">apply</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_extract_5">in_union_extract_5</a></span>) ] <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="id">first</span> [ <span class="id">go</span> <span class="id">tt</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">rewrite</span> &lt;- (<span class="id"><a href="SLF.LibMultiset.html#for_multiset_union_empty_r">for_multiset_union_empty_r</a></span> <span class="id">A</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibMultiset.html#for_multiset_union_assoc">for_multiset_union_assoc</a></span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">go</span> <span class="id">tt</span> ]<br/>
+&nbsp;&nbsp;<span class="kwd">end</span> <span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"multiset_in"</span> :=<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">first</span> [ <span class="id">in_union_extract</span> | <span class="id">in_union_get</span> ].<br/>
+<br/>
+<h2> Tactics to invert a membership hypothesis </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="InversionsTactic">InversionsTactic</a></span>.<br/>
+<span class="kwd">Context</span> (<span class="id">A</span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">l</span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#InversionsTactic.A">A</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> : <span class="id"><a href="SLF.LibMultiset.html#InversionsTactic.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="empty_eq_single_inv_1">empty_eq_single_inv_1</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span>,<br/>
+&nbsp;&nbsp;<span class="id">l1</span> = <span class="id">l2</span> -&gt; <span class="id">x</span> \<span class="id">notin</span> <span class="id">l1</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">l2</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="empty_eq_single_inv_2">empty_eq_single_inv_2</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span>,<br/>
+&nbsp;&nbsp;<span class="id">l1</span> = <span class="id">l2</span> -&gt; <span class="id">x</span> \<span class="id">notin</span> <span class="id">l2</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">l1</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="notin_empty">notin_empty</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="id">notin</span> (\{}:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#InversionsTactic.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibContainer.html#notin">notin</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMultiset.html#InversionsTactic">InversionsTactic</a></span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">notin_empty</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">in_union_meta</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- _ \<span class="kwd">in</span> \{_} =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span><br/>
+&nbsp;&nbsp;| |- _ \<span class="kwd">in</span> \{_} \<span class="id">u</span> _ =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_l">in_union_l</a></span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span><br/>
+&nbsp;&nbsp;| |- _ \<span class="kwd">in</span> _ \<span class="id">u</span> _ =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_r">in_union_r</a></span>; <span class="id">in_union_meta</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fseq_inv_core</span> <span class="id">H</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">go</span> <span class="id">L</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span> <span class="id">L</span>; [ <span class="id">apply</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">try</span> <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#notin_empty">notin_empty</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">try</span> <span class="id">in_union_meta</span> ] <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">H</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| \{} = _ =&gt; <span class="id">go</span> <span class="id">empty_eq_single_inv_1</span><br/>
+&nbsp;&nbsp;| _ = \{} =&gt; <span class="id">go</span> <span class="id">empty_eq_single_inv_2</span><br/>
+&nbsp;&nbsp;| _ = _ =&gt; <span class="id">go</span> <span class="id">empty_eq_single_inv_1</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">multiset_inv</span> <span class="id">H</span></span> solves a goal by contraction if
+    there exists an hypothesis of the form
+    <span class="bracket">\{} = <span class="id">E1</span> \<span class="id">u</span> ... \<span class="id">u</span> \{<span class="id">x</span>} \<span class="id">u</span> ... \<span class="id">u</span> <span class="id">EN</span></span>
+    (or its symmetric).
+    <span class="bracket"><span class="id">multiset_inv</span></span> speculates on the hypothesis <span class="bracket"><span class="id">H</span></span> to
+    be used. </div>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"multiset_inv"</span> <span class="id">constr</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">fseq_inv_core</span> <span class="id">H</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"multiset_inv"</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- \{} &lt;&gt; _ =&gt; <span class="kwd">let</span> <span class="id">H</span> := <span class="id">fresh</span> <span class="kwd">in</span> <span class="id">intro</span> <span class="id">H</span>; <span class="id">multiset_inv</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| |- _ &lt;&gt; \{} =&gt; <span class="kwd">let</span> <span class="id">H</span> := <span class="id">fresh</span> <span class="kwd">in</span> <span class="id">intro</span> <span class="id">H</span>; <span class="id">multiset_inv</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| <span class="id">H</span>: \{} = _ |- _ =&gt; <span class="id">multiset_inv</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| <span class="id">H</span>: _ = \{} |- _ =&gt; <span class="id">multiset_inv</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="InUnionInv">InUnionInv</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="InUnionInv.A">A</a></span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">l</span> : <span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#InUnionInv.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_empty_inv">in_empty_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (\{}:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#InUnionInv.A">A</a></span>) -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibMultiset.html#notin_empty">notin_empty</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_single_inv">in_single_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id"><a href="SLF.LibMultiset.html#InUnionInv.A">A</a></span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (\{<span class="id">y</span>}:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id"><a href="SLF.LibMultiset.html#InUnionInv.A">A</a></span>) -&gt; <span class="id">x</span> = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> @<span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">auto</span>. <span class="id">typeclass</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_union_inv">in_union_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">l1</span> <span class="id">l2</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span>) -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">l1</span> \/ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">l2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">rewrite</span> @<span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">auto</span>. <span class="id">typeclass</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMultiset.html#InUnionInv">InUnionInv</a></span>.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibMultiset.html#in_single_inv">in_single_inv</a></span> [<span class="id">A</span>] [<span class="id">x</span>] [<span class="id">y</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibMultiset.html#in_union_inv">in_union_inv</a></span> [<span class="id">A</span>] [<span class="id">x</span>] [<span class="id">l1</span>] [<span class="id">l2</span>].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">multiset_in_inv_base</span> <span class="id">H</span> <span class="id">M</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">H</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| _ \<span class="kwd">in</span> \{} =&gt; <span class="id">false</span>; <span class="id">apply</span> (@<span class="id"><a href="SLF.LibMultiset.html#in_empty_inv">in_empty_inv</a></span> _ _ <span class="id">H</span>)<br/>
+&nbsp;&nbsp;| _ \<span class="kwd">in</span> \{_} =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">generalize</span> (<span class="id"><a href="SLF.LibMultiset.html#in_single_inv">in_single_inv</a></span> <span class="id">H</span>); <span class="id">try</span> <span class="id">clear</span> <span class="id">H</span>; <span class="id">try</span> <span class="id">intro_subst_hyp</span><br/>
+&nbsp;&nbsp;| _ \<span class="kwd">in</span> _ \<span class="id">u</span> _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">H'</span> := <span class="id">fresh</span> <span class="string">"TEMP"</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id"><a href="SLF.LibMultiset.html#in_union_inv">in_union_inv</a></span> <span class="id">H</span>) <span class="kwd">as</span> [<span class="id">H'</span>|<span class="id">H'</span>];<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">try</span> <span class="id">clear</span> <span class="id">H</span>; <span class="id">multiset_in_inv_base</span> <span class="id">H'</span> <span class="id">M</span><br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">rename</span> <span class="id">H</span> <span class="id">into</span> <span class="id">M</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"multiset_in"</span> <span class="id">constr</span>(<span class="id">H</span>) <span class="string">"as"</span> <span class="id">ident</span>(<span class="id">M</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">multiset_in_inv_base</span> <span class="id">H</span> <span class="id">M</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"multiset_in"</span> <span class="id">constr</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">M</span> := <span class="id">fresh</span> <span class="string">"H"</span> <span class="kwd">in</span> <span class="id">multiset_in</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">M</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_empty_inv_multiset">union_empty_inv_multiset</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">l1</span> <span class="id">l2</span>:<span class="id"><a href="SLF.LibMultiset.html#multiset">multiset</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id">l1</span> \<span class="id">u</span> <span class="id">l2</span> = \{} -&gt; <span class="id">l1</span> = \{} /\ <span class="id">l2</span> = \{}.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">eapply</span> <span class="id"><a href="SLF.LibMultiset.html#union_empty_inv_inst">union_empty_inv_inst</a></span>. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibMultiset.html#union_empty_inv_multiset">union_empty_inv_multiset</a></span> [<span class="id">A</span>] [<span class="id">l1</span>] [<span class="id">l2</span>].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">multiset_empty_core</span> <span class="id">H</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">H</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| _ \<span class="id">u</span> _ = \{} =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">H1</span> := <span class="id">fresh</span> <span class="string">"M"</span> <span class="kwd">in</span> <span class="kwd">let</span> <span class="id">H2</span> := <span class="id">fresh</span> <span class="string">"M"</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id"><a href="SLF.LibMultiset.html#union_empty_inv_multiset">union_empty_inv_multiset</a></span> <span class="id">H</span>) <span class="kwd">as</span> [<span class="id">H1</span> <span class="id">H2</span>]; <span class="id">clear</span> <span class="id">H</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">multiset_empty_core</span> <span class="id">H1</span>; <span class="id">multiset_empty_core</span> <span class="id">H2</span><br/>
+&nbsp;&nbsp;| ?<span class="id">E</span> = \{} =&gt; <span class="id">try</span> <span class="id">subst</span> <span class="id">E</span>; <span class="id">try</span> <span class="id">solve</span> [ <span class="id">false</span> ]<br/>
+&nbsp;&nbsp;| \{} = _ \<span class="id">u</span> _ =&gt; <span class="id">symmetry</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">multiset_empty_core</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| \{} = ?<span class="id">E</span> =&gt; <span class="id">symmetry</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">multiset_empty_core</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"multiset_empty"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">multiset_empty_core</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"multiset_empty"</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">H</span> := <span class="id">fresh</span> <span class="string">"M"</span> <span class="kwd">in</span> <span class="id">intro</span> <span class="id">H</span>; <span class="id">multiset_empty</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"multiset_empty"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">H</span> := <span class="id">fresh</span> <span class="string">"M"</span> <span class="kwd">in</span> <span class="id">lets</span> <span class="id">H</span>:<span class="id">E</span>; <span class="id">multiset_empty</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

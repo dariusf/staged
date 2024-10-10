@@ -1,0 +1,274 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibProd</title>
+<meta name="description" content="Documentation of Coq module LibProd" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibProd</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span>.<br/>
+<br/>
+<br/>
+<h1> Product type </h1>
+<br/>
+<h2> Definition </h2>
+<br/>
+<div class="doc">From the Prelude:
+    Inductive prod A B : Type :=
+      | pair : A -&gt; B -&gt; prod A B.
+    Hint Constructors prod : core.
+    Add Printing Let prod.
+    Notation "x * y" := (prod x y) : type_scope.
+    Notation "( x , y , .. , z )" := (pair .. (pair x y) .. z) : core_scope.
+    Definition fst A B (p:A*B) : A :=
+      match p with (x,y) =&gt; x end.
+    Definition snd A B (p:A*B) : B :=
+      match p with (x,y) =&gt; y end.
+  Remark: to follow conventions <span class="bracket"><span class="id">pair</span></span> should be renamed to <span class="bracket"><span class="id">prod_intro</span></span>.
+</div>
+<br/>
+<h2> Inhabited </h2>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Inhab_prod">Inhab_prod</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>, <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>}, <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> (<span class="id">A</span> * <span class="id">B</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> (<span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span>, <span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span>)). Qed.</div></details>
+<br/>
+<h1> Structure </h1>
+<br/>
+<div class="doc">Decomposition as projection </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prod2_eq_tuple_proj">prod2_eq_tuple_proj</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> (<span class="id">x</span>:<span class="id">A1</span>*<span class="id">A2</span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> = (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#fst">fst</a></span> <span class="id">x</span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#snd">snd</a></span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">destruct</span>~ <span class="id">x</span>. Qed.</div></details>
+<br/>
+<div class="doc">Structural equality </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Properties">Properties</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Properties.A1">A1</a></span> <span class="id"><a name="Properties.A2">A2</a></span> <span class="id"><a name="Properties.A3">A3</a></span> <span class="id"><a name="Properties.A4">A4</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_prod2">eq_prod2</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> <span class="id">y1</span>:<span class="id"><a href="SLF.LibProd.html#Properties.A1">A1</a></span>) (<span class="id">x2</span> <span class="id">y2</span>:<span class="id"><a href="SLF.LibProd.html#Properties.A2">A2</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">x1</span> = <span class="id">y1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x2</span> = <span class="id">y2</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">x1</span>, <span class="id">x2</span>) = (<span class="id">y1</span>, <span class="id">y2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_prod3">eq_prod3</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> <span class="id">y1</span>:<span class="id"><a href="SLF.LibProd.html#Properties.A1">A1</a></span>) (<span class="id">x2</span> <span class="id">y2</span>:<span class="id"><a href="SLF.LibProd.html#Properties.A2">A2</a></span>) (<span class="id">x3</span> <span class="id">y3</span>:<span class="id"><a href="SLF.LibProd.html#Properties.A3">A3</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">x1</span> = <span class="id">y1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x2</span> = <span class="id">y2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x3</span> = <span class="id">y3</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">x1</span>, <span class="id">x2</span>, <span class="id">x3</span>) = (<span class="id">y1</span>, <span class="id">y2</span>, <span class="id">y3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_prod4">eq_prod4</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> <span class="id">y1</span>:<span class="id"><a href="SLF.LibProd.html#Properties.A1">A1</a></span>) (<span class="id">x2</span> <span class="id">y2</span>:<span class="id"><a href="SLF.LibProd.html#Properties.A2">A2</a></span>) (<span class="id">x3</span> <span class="id">y3</span>:<span class="id"><a href="SLF.LibProd.html#Properties.A3">A3</a></span>) (<span class="id">x4</span> <span class="id">y4</span>:<span class="id"><a href="SLF.LibProd.html#Properties.A4">A4</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">x1</span> = <span class="id">y1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x2</span> = <span class="id">y2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x3</span> = <span class="id">y3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x4</span> = <span class="id">y4</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">x1</span>, <span class="id">x2</span>, <span class="id">x3</span>, <span class="id">x4</span>) = (<span class="id">y1</span>, <span class="id">y2</span>, <span class="id">y3</span>, <span class="id">y4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibProd.html#Properties">Properties</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Immediate</span> <span class="id">eq_prod2</span> <span class="id">eq_prod3</span> <span class="id">eq_prod4</span>.<br/>
+<br/>
+<br/>
+<h1> Operations </h1>
+<br/>
+<h2> Definition of projections </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">fst</span></span> and <span class="bracket"><span class="id">snd</span></span> are defined in the Prelude
+  Definition fst A B (p:A*B) : A :=
+    match p with (x,y) =&gt; x end.
+  Definition snd A B (p:A*B) : B :=
+    match p with (x,y) =&gt; y end.
+</div>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#fst">fst</a></span> {<span class="id">A</span>} {<span class="id">B</span>}.<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#snd">snd</a></span> {<span class="id">A</span>} {<span class="id">B</span>}.<br/>
+<br/>
+<h2> Notation for projections </h2>
+<br/>
+<div class="doc">N-ary projections are defined as notations and not as
+    definitions, which has appeared to be more flexible with
+    respect to type inference.
+    --TODO: investigate the possibility of using definitions. </div>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj11' P"</span> := <span class="id">P</span> (<span class="kwd">at</span> <span class="id">level</span> 69, <span class="id">only</span> <span class="id">parsing</span>).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj21' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> <span class="id">P</span>) (<span class="kwd">at</span> <span class="id">level</span> 69, <span class="id">only</span> <span class="id">parsing</span>).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj22' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>) (<span class="kwd">at</span> <span class="id">level</span> 69, <span class="id">only</span> <span class="id">parsing</span>).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj31' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> <span class="id">P</span>) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj32' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>)) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj33' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>)) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj41' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> <span class="id">P</span>) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj42' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>)) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj43' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>))) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj44' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>))) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj51' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> <span class="id">P</span>) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj52' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>)) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj53' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>))) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj54' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>)))) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<span class="kwd">Notation</span> <span class="string">"'proj55' P"</span> := (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj2">proj2</a></span> <span class="id">P</span>)))) (<span class="kwd">at</span> <span class="id">level</span> 69).<br/>
+<br/>
+<h2> Currying </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Currying">Currying</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Currying.A1">A1</a></span> <span class="id"><a name="Currying.A2">A2</a></span> <span class="id"><a name="Currying.A3">A3</a></span> <span class="id"><a name="Currying.A4">A4</a></span> <span class="id"><a name="Currying.A5">A5</a></span> <span class="id"><a name="Currying.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="curry1">curry1</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Currying.A1">A1</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id">f</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="curry2">curry2</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Currying.A1">A1</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> =&gt; <span class="id">f</span> (<span class="id">x1</span>,<span class="id">x2</span>).<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="curry3">curry3</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Currying.A1">A1</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> =&gt; <span class="id">f</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>).<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="curry4">curry4</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Currying.A1">A1</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> =&gt; <span class="id">f</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>).<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="curry5">curry5</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Currying.A1">A1</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Currying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> =&gt; <span class="id">f</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>,<span class="id">x5</span>).<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibProd.html#Currying">Currying</a></span>.<br/>
+<br/>
+<h2> Uncurrying </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Uncurrying">Uncurrying</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Uncurrying.A1">A1</a></span> <span class="id"><a name="Uncurrying.A2">A2</a></span> <span class="id"><a name="Uncurrying.A3">A3</a></span> <span class="id"><a name="Uncurrying.A4">A4</a></span> <span class="id"><a name="Uncurrying.A5">A5</a></span> <span class="id"><a name="Uncurrying.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="uncurry1">uncurry1</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Uncurrying.A1">A1</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurrying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id">f</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="uncurry2">uncurry2</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Uncurrying.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurrying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p</span> =&gt; <span class="kwd">match</span> <span class="id">p</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="uncurry3">uncurry3</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Uncurrying.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurrying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p</span> =&gt; <span class="kwd">match</span> <span class="id">p</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="uncurry4">uncurry4</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Uncurrying.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurrying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p</span> =&gt; <span class="kwd">match</span> <span class="id">p</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="uncurry5">uncurry5</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Uncurrying.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurrying.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurrying.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p</span> =&gt; <span class="kwd">match</span> <span class="id">p</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>,<span class="id">x5</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibProd.html#Uncurrying">Uncurrying</a></span>.<br/>
+<br/>
+<h2> Uncurrying for relations </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">uncurrypN</span></span> turns a function of type <span class="bracket"><span class="id">A1</span> -&gt; <span class="id">A1</span> -&gt; .. -&gt; <span class="id">AN</span> -&gt; <span class="id">AN</span> -&gt; <span class="id">B</span></span>
+    into a function of type <span class="bracket">(<span class="id">A1</span>*..*<span class="id">AN</span>) -&gt; (<span class="id">A1</span>*..*<span class="id">AN</span>) -&gt; <span class="id">B</span></span>. </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Uncurryp">Uncurryp</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Uncurryp.A1">A1</a></span> <span class="id"><a name="Uncurryp.A2">A2</a></span> <span class="id"><a name="Uncurryp.A3">A3</a></span> <span class="id"><a name="Uncurryp.A4">A4</a></span> <span class="id"><a name="Uncurryp.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="uncurryp1">uncurryp1</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Uncurryp.A1">A1</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurryp.A1">A1</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurryp.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id">f</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="uncurryp2">uncurryp2</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Uncurryp.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurryp.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurryp.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>),(<span class="id">y1</span>,<span class="id">y2</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">y1</span> <span class="id">x2</span> <span class="id">y2</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="uncurryp3">uncurryp3</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Uncurryp.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurryp.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurryp.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">y1</span> <span class="id">y2</span> <span class="id">y3</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="uncurryp4">uncurryp4</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Uncurryp.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurryp.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Uncurryp.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Uncurryp.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">y1</span> <span class="id">y2</span> <span class="id">y3</span> <span class="id">y4</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibProd.html#Uncurryp">Uncurryp</a></span>.<br/>
+<br/>
+<div class="doc">Unfolding </div>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"unfold_uncurryp"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibProd.html#uncurryp1">uncurryp1</a></span>, <span class="id"><a href="SLF.LibProd.html#uncurryp2">uncurryp2</a></span>, <span class="id"><a href="SLF.LibProd.html#uncurryp3">uncurryp3</a></span>, <span class="id"><a href="SLF.LibProd.html#uncurryp4">uncurryp4</a></span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"unfolds_uncurryp"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibProd.html#uncurryp1">uncurryp1</a></span>, <span class="id"><a href="SLF.LibProd.html#uncurryp2">uncurryp2</a></span>, <span class="id"><a href="SLF.LibProd.html#uncurryp3">uncurryp3</a></span>, <span class="id"><a href="SLF.LibProd.html#uncurryp4">uncurryp4</a></span> <span class="kwd">in</span> *.<br/>
+<br/>
+<h2> Inverse projections for relations </h2>
+<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">unprojNK</span></span> turns a function of type <span class="bracket"><span class="id">AK</span> -&gt; <span class="id">AK</span> -&gt; <span class="id">B</span></span>
+    into a function of type <span class="bracket">(<span class="id">A1</span>*..*<span class="id">AN</span>) -&gt; (<span class="id">A1</span>*..*<span class="id">AN</span>) -&gt; <span class="id">B</span></span>. </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Unproj">Unproj</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Unproj.A1">A1</a></span> <span class="id"><a name="Unproj.A2">A2</a></span> <span class="id"><a name="Unproj.A3">A3</a></span> <span class="id"><a name="Unproj.A4">A4</a></span> <span class="id"><a name="Unproj.A5">A5</a></span> <span class="id"><a name="Unproj.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj21">unproj21</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>),(<span class="id">y1</span>,<span class="id">y2</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">y1</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj22">unproj22</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>),(<span class="id">y1</span>,<span class="id">y2</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x2</span> <span class="id">y2</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj31">unproj31</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">y1</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj32">unproj32</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x2</span> <span class="id">y2</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj33">unproj33</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x3</span> <span class="id">y3</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj41">unproj41</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">y1</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj42">unproj42</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x2</span> <span class="id">y2</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj43">unproj43</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x3</span> <span class="id">y3</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj44">unproj44</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x4</span> <span class="id">y4</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj51">unproj51</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>,<span class="id">x5</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>,<span class="id">y5</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x1</span> <span class="id">y1</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj52">unproj52</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>,<span class="id">x5</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>,<span class="id">y5</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x2</span> <span class="id">y2</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj53">unproj53</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>,<span class="id">x5</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>,<span class="id">y5</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x3</span> <span class="id">y3</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj54">unproj54</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>,<span class="id">x5</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>,<span class="id">y5</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x4</span> <span class="id">y4</span> <span class="kwd">end</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unproj55">unproj55</a></span> <span class="id">f</span> : <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.A1">A1</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A2">A2</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A3">A3</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A4">A4</a></span>*<span class="id"><a href="SLF.LibProd.html#Unproj.A5">A5</a></span> -&gt; <span class="id"><a href="SLF.LibProd.html#Unproj.B">B</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">match</span> <span class="id">p1</span>,<span class="id">p2</span> <span class="kwd">with</span> (<span class="id">x1</span>,<span class="id">x2</span>,<span class="id">x3</span>,<span class="id">x4</span>,<span class="id">x5</span>),(<span class="id">y1</span>,<span class="id">y2</span>,<span class="id">y3</span>,<span class="id">y4</span>,<span class="id">y5</span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x5</span> <span class="id">y5</span> <span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibProd.html#Unproj">Unproj</a></span>.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj21">unproj21</a></span> [<span class="id">A1</span>] <span class="id">A2</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj22">unproj22</a></span> <span class="id">A1</span> [<span class="id">A2</span>] [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj31">unproj31</a></span> [<span class="id">A1</span>] <span class="id">A2</span> <span class="id">A3</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj32">unproj32</a></span> <span class="id">A1</span> [<span class="id">A2</span>] <span class="id">A3</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj33">unproj33</a></span> <span class="id">A1</span> <span class="id">A2</span> [<span class="id">A3</span>] [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj41">unproj41</a></span> [<span class="id">A1</span>] <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj42">unproj42</a></span> <span class="id">A1</span> [<span class="id">A2</span>] <span class="id">A3</span> <span class="id">A4</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj43">unproj43</a></span> <span class="id">A1</span> <span class="id">A2</span> [<span class="id">A3</span>] <span class="id">A4</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj44">unproj44</a></span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> [<span class="id">A4</span>] [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj51">unproj51</a></span> [<span class="id">A1</span>] <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> <span class="id">A5</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj52">unproj52</a></span> <span class="id">A1</span> [<span class="id">A2</span>] <span class="id">A3</span> <span class="id">A4</span> <span class="id">A5</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj53">unproj53</a></span> <span class="id">A1</span> <span class="id">A2</span> [<span class="id">A3</span>] <span class="id">A4</span> <span class="id">A5</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj54">unproj54</a></span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> [<span class="id">A4</span>] <span class="id">A5</span> [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibProd.html#unproj55">unproj55</a></span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span> [<span class="id">A5</span>] [<span class="id">B</span>].<br/>
+<br/>
+<div class="doc">Unfolding </div>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"unfold_unproj"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibProd.html#unproj21">unproj21</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj22">unproj22</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj31">unproj31</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj32">unproj32</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj33">unproj33</a></span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibProd.html#unproj41">unproj41</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj42">unproj42</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj43">unproj43</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj44">unproj44</a></span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibProd.html#unproj51">unproj51</a></span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"unfolds_unproj"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibProd.html#unproj21">unproj21</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj22">unproj22</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj31">unproj31</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj32">unproj32</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj33">unproj33</a></span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibProd.html#unproj41">unproj41</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj42">unproj42</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj43">unproj43</a></span>, <span class="id"><a href="SLF.LibProd.html#unproj44">unproj44</a></span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibProd.html#unproj51">unproj51</a></span> <span class="kwd">in</span> *.<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

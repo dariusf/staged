@@ -1,0 +1,1212 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Wand</title>
+<meta name="description" content="Documentation of Coq module Wand" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Wand</h1>
+<div class="coq">
+<h1> Wand: The Magic Wand and Other Operators </h1>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibSepReference.html">LibSepReference</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="id"><a href="SLF.Repr.html">Repr</a></span>.<br/>
+<span class="kwd">Close</span> <span class="kwd">Scope</span> <span class="id">trm_scope</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">h</span> : <span class="id"><a href="SLF.LibSepReference.html#heap">heap</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">H</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">Q</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<br/>
+<h1> First Pass </h1>
+<br/>
+<div class="doc">This chapter presents some additional Separation Logic operators:
+    - the disjunction, written <span class="bracket"><span class="id">hor</span> <span class="id">H1</span> <span class="id">H2</span></span>,
+    - the non-separating conjunction, written <span class="bracket"><span class="id">hand</span> <span class="id">H1</span> <span class="id">H2</span></span>,
+    - the "forall", named <span class="bracket"><span class="id">hforall</span></span> and written <span class="bracket">\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">H</span></span>,
+    - the "magic wand", named <span class="bracket"><span class="id">hwand</span></span> and written <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span>,
+    - the "magic wand for postconditions", named <span class="bracket"><span class="id">qwand</span></span> and written
+      <span class="bracket"><span class="id">Q1</span> \--* <span class="id">Q2</span></span>.
+    The magic wand operator has multiple uses:
+    - it is key to formulating the "ramified frame rule", a more practical rule
+      for exploiting the frame and consequence properties,
+    - it will be used in the chapter <span class="bracket"><span class="id">WPgen</span></span> to define a
+      weakest-precondition generator, and
+    - it can be useful to state the specifications for certain data structures.
+    This chapter is organized as follows:
+    - definition and properties of <span class="bracket"><span class="id">hand</span></span>, <span class="bracket"><span class="id">hor</span></span>, and <span class="bracket"><span class="id">hforall</span></span>,
+    - definition and properties of the magic wand operator,
+    - generalization of the magic wand to postconditions,
+    - extension of the <span class="bracket"><span class="id">xsimpl</span></span> tactic to handle the magic wand,
+    - statement and benefits of the ramified frame rule.
+    The "optional material" presents several equivalent definitions for magic
+    wand. </div>
+<br/>
+<h2> Definition of the Operator <span class="bracket"><span class="id">hforall</span></span> </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Hforall">Hforall</a></span>.<br/>
+<br/>
+<div class="doc">The heap predicate <span class="bracket">\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">H</span></span> holds of a heap <span class="bracket"><span class="id">h</span></span> that, for any possible
+    value of <span class="bracket"><span class="id">x</span></span>, satisfies <span class="bracket"><span class="id">H</span></span>. It may be puzzling at first what could possibly
+    be the use case for such a universal quantification, but we will see several
+    examples through this chapter -- in particular the encoding of the
+    non-separating conjunction (<span class="bracket"><span class="id">hand</span></span>) and of the magic wand on postconditions
+    (<span class="bracket"><span class="id">qwand</span></span>).
+    The predicate <span class="bracket">\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">H</span></span> stands for <span class="bracket"><span class="id">hforall</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">H</span>)</span>, where the
+    definition of <span class="bracket"><span class="id">hforall</span></span> follows the same pattern as <span class="bracket"><span class="id">hexists</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="Hforall.hforall">hforall</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">J</span> : <span class="id">A</span> -&gt; <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'\forall' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Wand.html#Hforall.hforall">hforall</a></span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id"><a href="SLF.Wand.html#Hforall.hforall">hforall</a></span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '\forall' '/ '  x1  ..  xn , '/ '  H ']'"</span>).<br/>
+<br/>
+<div class="doc">To follow the rest of this chapter, it suffices to have in mind the
+    introduction and elimination rules for <span class="bracket"><span class="id">hforall</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hforall.hforall_intro">hforall_intro</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Wand.html#Hforall.hforall">hforall</a></span> <span class="id">J</span>) <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span>* <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hforall.hforall_inv">hforall_inv</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Wand.html#Hforall.hforall">hforall</a></span> <span class="id">J</span>) <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span>* <span class="id">M</span>. Qed.</div></details>
+<br/>
+<div class="doc">The introduction rule in an entailment for <span class="bracket">\<span class="kwd">forall</span></span> appears below. To
+    prove that a heap satisfies <span class="bracket">\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span></span>, we must show that, for any
+    <span class="bracket"><span class="id">x</span></span>, this heap satisfies <span class="bracket"><span class="id">J</span> <span class="id">x</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hforall.himpl_hforall_r">himpl_hforall_r</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">H</span> ==&gt; <span class="id">J</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span> <span class="id">x</span>. <span class="id">apply</span>~ <span class="id">M</span>. Qed.</div></details>
+<br/>
+<div class="doc">The elimination rule in an entailment for <span class="bracket">\<span class="kwd">forall</span></span> appears below. Assuming
+    a heap satisfies <span class="bracket">\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span></span>, we can derive that the same heap
+    satisfies <span class="bracket"><span class="id">J</span> <span class="id">v</span></span> for any desired value <span class="bracket"><span class="id">v</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hforall.hforall_specialize">hforall_specialize</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">v</span>:<span class="id">A</span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) ==&gt; (<span class="id">J</span> <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">apply</span>* <span class="id">K</span>. Qed.</div></details>
+<br/>
+<div class="doc">The lemma <span class="bracket"><span class="id">hforall_specialize</span></span> can equivalently be formulated in the
+    following way, which makes it easier to apply in some cases. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hforall.himpl_hforall_l">himpl_hforall_l</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">v</span>:<span class="id">A</span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">J</span> <span class="id">v</span> ==&gt; <span class="id">H</span> -&gt;<br/>
+&nbsp;&nbsp;(\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) ==&gt; <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hforall.hforall_specialize">hforall_specialize</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Universal quantifers that appear in the precondition of a triple may be
+    specialized like universal quantifiers appearing on the left-hand side of an
+    entailment. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hforall.triple_hforall">triple_hforall</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">v</span>:<span class="id">A</span>) <span class="id">t</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> (<span class="id">J</span> <span class="id">v</span>) <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> (\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) <span class="id">Q</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#triple_conseq">triple_conseq</a></span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hforall.hforall_specialize">hforall_specialize</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.qimpl_refl">qimpl_refl</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#Hforall">Hforall</a></span>.<br/>
+<br/>
+<h2> Definition of the Operator <span class="bracket"><span class="id">hor</span></span> </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Hor">Hor</a></span>.<br/>
+<br/>
+<div class="doc">The heap predicate <span class="bracket"><span class="id">hor</span> <span class="id">H1</span> <span class="id">H2</span></span> describes a heap that satisfies <span class="bracket"><span class="id">H1</span></span> or
+    satifies <span class="bracket"><span class="id">H2</span></span> (or possibly both). In other words, the heap predicate
+    <span class="bracket"><span class="id">hor</span> <span class="id">H1</span> <span class="id">H2</span></span> lifts the disjunction operator <span class="bracket"><span class="id">P1</span> \/ <span class="id">P2</span></span> from <span class="bracket"><span class="kwd">Prop</span></span> to
+    <span class="bracket"><span class="id">hprop</span></span>.
+    The disjunction operator does not appear to be critically useful in
+    practice, because it can be encoded using Coq's conditional construct, or
+    using pattern matching. Nevertheless, there are situations where it proves
+    handy.
+    The heap disjunction predicate admits a direct definition as a function over
+    heaps, written <span class="bracket"><span class="id">hor'</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hor'</span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="id">H1</span> <span class="id">h</span> \/ <span class="id">H2</span> <span class="id">h</span>.<br/>
+<br/>
+<div class="doc">An alternative definition leverages the <span class="bracket">\<span class="kwd">exists</span></span> quantifier. The
+    definition, shown below, reads as follows: "there exists an unspecified
+    boolean value <span class="bracket"><span class="id">b</span></span> such that if <span class="bracket"><span class="id">b</span></span> is true then <span class="bracket"><span class="id">H1</span></span> holds, else if <span class="bracket"><span class="id">b</span></span> is
+    false then <span class="bracket"><span class="id">H2</span></span> holds".
+    The benefit of this definition is that its properties can be established
+    without manipulating heaps explicitly. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="Hor.hor">hor</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>), <span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">H1</span> <span class="kwd">else</span> <span class="id">H2</span>.<br/>
+<br/>
+<h3> Exercise: 3 stars, standard, optional (hor_eq_hor')
+    Prove the equivalence of the definitions <span class="bracket"><span class="id">hor</span></span> and <span class="bracket"><span class="id">hor'</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hor_eq_hor'</span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span> = <span class="id">hor'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The two introduction rules for <span class="bracket"><span class="id">hor</span></span> assert that if <span class="bracket"><span class="id">H1</span></span> holds, then
+    <span class="bracket"><span class="id">hor</span> <span class="id">H1</span> <span class="id">H2</span></span> holds; and, symmetrically, if <span class="bracket"><span class="id">H2</span></span> holds, then <span class="bracket"><span class="id">hor</span> <span class="id">H1</span> <span class="id">H2</span></span>
+    holds. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hor.himpl_hor_r_l">himpl_hor_r_l</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span>. <span class="kwd">exists</span>* <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hor.himpl_hor_r_r">himpl_hor_r_r</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span>. <span class="kwd">exists</span>* <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">In practice, these rules are easier to exploit when combined with a
+    transitivity step. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hor.himpl_hor_r_l_trans">himpl_hor_r_l_trans</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H3</span> ==&gt; <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H3</span> ==&gt; <span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">W</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id">W</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hor.himpl_hor_r_l">himpl_hor_r_l</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hor.himpl_hor_r_r_trans">himpl_hor_r_r_trans</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H3</span> ==&gt; <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H3</span> ==&gt; <span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">W</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id">W</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hor.himpl_hor_r_r">himpl_hor_r_r</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">The elimination rule asserts that, if <span class="bracket"><span class="id">hor</span> <span class="id">H1</span> <span class="id">H2</span></span> holds, then we can perform
+    a case analysis on whether it is <span class="bracket"><span class="id">H1</span></span> or <span class="bracket"><span class="id">H2</span></span> that holds. Concretely, to
+    show that <span class="bracket"><span class="id">hor</span> <span class="id">H1</span> <span class="id">H2</span></span> entails a heap predicate <span class="bracket"><span class="id">H3</span></span>, we must show both that
+    <span class="bracket"><span class="id">H1</span></span> entails <span class="bracket"><span class="id">H3</span></span> and that <span class="bracket"><span class="id">H2</span></span> entails <span class="bracket"><span class="id">H3</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hor.himpl_hor_l">himpl_hor_l</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span> <span class="id">H1</span> <span class="id">H2</span> ==&gt; <span class="id">H3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_hexists_l">himpl_hexists_l</a></span>. <span class="id">intros</span> <span class="id">b</span>. <span class="id">case_if</span>*.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The operator <span class="bracket"><span class="id">hor</span></span> is commutative. To establish this property, it is useful
+    to exploit the following lemma, called <span class="bracket"><span class="id">if_neg</span></span>, for swapping the two
+    branches of a conditional by negating its boolean condition. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hor.if_neg">if_neg</a></span> : <span class="kwd">forall</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) <span class="id">A</span> (<span class="id">X</span> <span class="id">Y</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">X</span> <span class="kwd">else</span> <span class="id">Y</span>) = (<span class="kwd">if</span> <span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">Y</span> <span class="kwd">else</span> <span class="id">X</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (hor_comm)
+    Prove that <span class="bracket"><span class="id">hor</span></span> is a symmetric operator. Hint: exploit <span class="bracket"><span class="id">hprop_op_comm</span></span> and
+    <span class="bracket"><span class="id">if_neg</span></span> (from chapter <span class="bracket"><span class="id">Himpl</span></span>). </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hor.hor_comm">hor_comm</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span> <span class="id">H1</span> <span class="id">H2</span> = <span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span> <span class="id">H2</span> <span class="id">H1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Hor.HorExample">HorExample</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.Repr.html">Repr</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">q</span> : <span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>.<br/>
+<br/>
+<h3> Exercise: 4 stars, standard, especially useful (hor_comm)
+    Prove that the representation predicate <span class="bracket"><span class="id">MList</span></span> introduced in chapter
+    <span class="bracket"><span class="id">Repr</span></span> can be equivalently characterized using the predicate <span class="bracket"><span class="id">hor</span></span>, as
+    shown below. Hint: to prove this equivalence, do not attempt a proof by
+    induction, and do not attempt to unfold <span class="bracket"><span class="id">MList</span></span>. Instead, work using the
+    equalities <span class="bracket"><span class="id">MList_nil</span></span> and <span class="bracket"><span class="id">MList_cons</span></span>. You may want to begin the proof by
+    applying <span class="bracket"><span class="id">himpl_antisym</span></span> and calling <span class="bracket"><span class="id">destruct</span></span> on <span class="bracket"><span class="id">L</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hor.HorExample.MList_using_hor">MList_using_hor</a></span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span> =<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#Hor.hor">hor</a></span> (\[<span class="id">L</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> /\ <span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>])<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(\<span class="kwd">exists</span> <span class="id">x</span> <span class="id">q</span> <span class="id">L'</span>, \[<span class="id">L</span> = <span class="id">x</span>::<span class="id">L'</span>]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\* (<span class="id">p</span> ~~~&gt;`{ <span class="id"><a href="SLF.Repr.html#head">head</a></span> := <span class="id">x</span>; <span class="id"><a href="SLF.Repr.html#tail">tail</a></span> := <span class="id">q</span>})<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\* (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L'</span> <span class="id">q</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#Hor.HorExample">HorExample</a></span>.<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#Hor">Hor</a></span>.<br/>
+<br/>
+<h2> Definition of the Operator <span class="bracket"><span class="id">hand</span></span> </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Hand">Hand</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.Wand.html#Hforall">Hforall</a></span> <span class="id"><a href="SLF.Wand.html#Hor">Hor</a></span>.<br/>
+<br/>
+<div class="doc">The heap predicate <span class="bracket"><span class="id">hand</span> <span class="id">H1</span> <span class="id">H2</span></span> describes a single heap that satisfies <span class="bracket"><span class="id">H1</span></span>
+    and at the same time satifies <span class="bracket"><span class="id">H2</span></span>. In other words, the heap predicate
+    <span class="bracket"><span class="id">hand</span> <span class="id">H1</span> <span class="id">H2</span></span> lifts the disjunction operator <span class="bracket"><span class="id">P1</span> /\ <span class="id">P2</span></span> from <span class="bracket"><span class="kwd">Prop</span></span> to
+    <span class="bracket"><span class="id">hprop</span></span>. The heap predicate <span class="bracket"><span class="id">hand</span></span> admits a direct definition as a function
+    over heaps. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hand'</span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="id">H1</span> <span class="id">h</span> /\ <span class="id">H2</span> <span class="id">h</span>.<br/>
+<br/>
+<div class="doc">An alternative definition leverages the <span class="bracket">\<span class="kwd">forall</span></span> quantifier. The definition
+    reads as follows: "for any boolean value <span class="bracket"><span class="id">b</span></span>, if <span class="bracket"><span class="id">b</span></span> is true then <span class="bracket"><span class="id">H1</span></span>
+    should hold, and if <span class="bracket"><span class="id">b</span></span> is false then <span class="bracket"><span class="id">H2</span></span> should hold". </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="Hand.hand">hand</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">forall</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>), <span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">H1</span> <span class="kwd">else</span> <span class="id">H2</span>.<br/>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (hand_eq_hand')
+    Prove the equivalence of the definitions <span class="bracket"><span class="id">hand</span></span> and <span class="bracket"><span class="id">hand'</span></span>. Use functional
+    extensionality to get started. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hand_eq_hand'</span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#Hand.hand">hand</a></span> = <span class="id">hand'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The introduction and elimination rules for <span class="bracket"><span class="id">hand</span></span> are as follows.
+    - If "<span class="bracket"><span class="id">H1</span></span> and <span class="bracket"><span class="id">H2</span></span>" holds, then in particular <span class="bracket"><span class="id">H1</span></span> holds.
+    - Symmetrically, if "<span class="bracket"><span class="id">H1</span></span> and <span class="bracket"><span class="id">H2</span></span>" holds, then in particular <span class="bracket"><span class="id">H2</span></span> holds.
+    - Reciprocally, to prove that a heap predicate <span class="bracket"><span class="id">H3</span></span> entails
+      "<span class="bracket"><span class="id">H1</span></span> and <span class="bracket"><span class="id">H2</span></span>", we must prove that <span class="bracket"><span class="id">H3</span></span> entails <span class="bracket"><span class="id">H1</span></span>, and that
+      <span class="bracket"><span class="id">H3</span></span> satisfies <span class="bracket"><span class="id">H2</span></span>.
+</div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hand.himpl_hand_l_r">himpl_hand_l_r</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#Hand.hand">hand</a></span> <span class="id">H1</span> <span class="id">H2</span> ==&gt; <span class="id">H1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.Wand.html#Hand.hand">hand</a></span>. <span class="id">applys</span>* <span class="id"><a href="SLF.Wand.html#Hforall.himpl_hforall_l">himpl_hforall_l</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hand.himpl_hand_l_l">himpl_hand_l_l</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#Hand.hand">hand</a></span> <span class="id">H1</span> <span class="id">H2</span> ==&gt; <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.Wand.html#Hand.hand">hand</a></span>. <span class="id">applys</span>* <span class="id"><a href="SLF.Wand.html#Hforall.himpl_hforall_l">himpl_hforall_l</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hand.himpl_hand_r">himpl_hand_r</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H3</span> ==&gt; <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H3</span> ==&gt; <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H3</span> ==&gt; <span class="id"><a href="SLF.Wand.html#Hand.hand">hand</a></span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span> <span class="id">Hh</span>. <span class="id">intros</span> <span class="id">b</span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (hand_comm)
+    Prove that <span class="bracket"><span class="id">hand</span></span> is symmetric. Hint: use <span class="bracket"><span class="id">hprop_op_comm</span></span> and
+    <span class="bracket"><span class="id">rewrite</span> <span class="id">if_neg</span></span>, or a case analysis on the boolean value coming from
+    <span class="bracket"><span class="id">hand</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hand.hand_comm">hand_comm</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#Hand.hand">hand</a></span> <span class="id">H1</span> <span class="id">H2</span> = <span class="id"><a href="SLF.Wand.html#Hand.hand">hand</a></span> <span class="id">H2</span> <span class="id">H1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#Hand">Hand</a></span>.<br/>
+<br/>
+<h2> Definition of the Magic Wand Operator: <span class="bracket"><span class="id">hwand</span></span> </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Hwand">Hwand</a></span>.<br/>
+<br/>
+<h3> Definition of <span class="bracket"><span class="id">hwand</span></span> </h3>
+<br/>
+<div class="doc">The magic wand operation <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span>, pronounced "H1 wand H2", defines a
+    heap predicate such that, if we extend it with <span class="bracket"><span class="id">H1</span></span>, we obtain <span class="bracket"><span class="id">H2</span></span>.
+    Formally, the following entailment holds:
+      H1 \* (H1 \-* H2) ==&gt; H2.
+    Intuitively, if we think of the star <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span> as a sort of addition,
+    <span class="bracket"><span class="id">H1</span> + <span class="id">H2</span></span>, then we can think of <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> as the subtraction <span class="bracket">-<span class="id">H1</span> + <span class="id">H2</span></span>.
+    The entailment above intuitively captures the idea that <span class="bracket">(-<span class="id">H1</span> + <span class="id">H2</span>) + <span class="id">H1</span></span>
+    simplifies to <span class="bracket"><span class="id">H2</span></span>.
+    Note, however, that the operation <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> only makes sense if <span class="bracket"><span class="id">H1</span></span>
+    describes a piece of heap that "can" be subtracted from <span class="bracket"><span class="id">H2</span></span>. Otherwise, the
+    predicate <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> characterizes a heap that cannot possibly exist.
+    Informally speaking, <span class="bracket"><span class="id">H1</span></span> must somehow be a subset of <span class="bracket"><span class="id">H2</span></span> for the
+    subtraction <span class="bracket">-<span class="id">H1</span> + <span class="id">H2</span></span> to make sense.
+    Another possible analogy is that of logical operators. If <span class="bracket"><span class="id">P1</span></span> and <span class="bracket"><span class="id">P2</span></span> were
+    propositions (of type <span class="bracket"><span class="kwd">Prop</span></span>), then <span class="bracket"><span class="id">P1</span> \* <span class="id">P2</span></span> would mean <span class="bracket"><span class="id">P1</span> /\ <span class="id">P2</span></span> and
+    <span class="bracket"><span class="id">P1</span> \-* <span class="id">P2</span></span> would mean <span class="bracket"><span class="id">P1</span> -&gt; <span class="id">P2</span></span>. The entailment <span class="bracket"><span class="id">P1</span> \* (<span class="id">P1</span> \-* <span class="id">P2</span>) ==&gt; <span class="id">P2</span></span>
+    then corresponds to the tautology <span class="bracket">(<span class="id">P1</span> /\ (<span class="id">P1</span> -&gt; <span class="id">P2</span>)) -&gt; <span class="id">P2</span></span>.
+    Technically, <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> holds of a heap <span class="bracket"><span class="id">h</span></span> if, for any heap <span class="bracket"><span class="id">h'</span></span> disjoint
+    from <span class="bracket"><span class="id">h</span></span> and satisfying <span class="bracket"><span class="id">H1</span></span>, the union of <span class="bracket"><span class="id">h</span></span> and <span class="bracket"><span class="id">h'</span></span> satisfies <span class="bracket"><span class="id">H2</span></span>. The
+    operator <span class="bracket"><span class="id">hwand</span></span>, which implements the notation <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span>, may thus be
+    defined as follows. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hwand'</span> (<span class="id">H1</span> <span class="id">H2</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">h'</span>, <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h</span> <span class="id">h'</span> -&gt; <span class="id">H1</span> <span class="id">h'</span> -&gt; <span class="id">H2</span> (<span class="id">h</span> \<span class="id">u</span> <span class="id">h'</span>).<br/>
+<br/>
+<div class="doc">The definition above is perfectly fine, however it is more practical to use
+    an alternative, equivalent definition of <span class="bracket"><span class="id">hwand</span></span>, expressed in terms of
+    previously introduced Separation Logic operators. Doing so enables us to
+    establish all the properties of the magic wand by exploiting the tactic
+    <span class="bracket"><span class="id">xsimpl</span></span>, thereby conducting all the reasoning at the level of <span class="bracket"><span class="id">hprop</span></span>,
+    rather than having to work with concrete heaps.
+    The alternative definition asserts that <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> corresponds to some heap
+    predicate, called <span class="bracket"><span class="id">H0</span></span>, such that <span class="bracket"><span class="id">H0</span></span> starred with <span class="bracket"><span class="id">H1</span></span> yields <span class="bracket"><span class="id">H2</span></span>. In
+    other words, <span class="bracket"><span class="id">H0</span></span> is such that <span class="bracket">(<span class="id">H1</span> \* <span class="id">H0</span>) ==&gt; <span class="id">H2</span></span>. In the definition below,
+    observe how <span class="bracket"><span class="id">H0</span></span> is existentially quantified. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="Hwand.hwand">hwand</a></span> (<span class="id">H1</span> <span class="id">H2</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">H0</span>, <span class="id">H0</span> \* \[ <span class="id">H1</span> \* <span class="id">H0</span> ==&gt; <span class="id">H2</span> ].<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"H1 \-* H2"</span> := (<span class="id"><a href="SLF.Wand.html#Hwand.hwand">hwand</a></span> <span class="id">H1</span> <span class="id">H2</span>) (<span class="kwd">at</span> <span class="id">level</span> 43, <span class="id">right</span> <span class="id">associativity</span>).<br/>
+<br/>
+<h3> Characteristic Equivalence for <span class="bracket"><span class="id">hwand</span></span> </h3>
+<br/>
+<div class="doc">The magic wand is not easy to make sense of at first. Reading its
+    introduction and elimination rules may help further appreciate its meaning.
+    The operator <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> satisfies the following equivalence. Informally
+    speaking, think of <span class="bracket"><span class="id">H0</span> = -<span class="id">H1</span>+<span class="id">H2</span></span> and <span class="bracket"><span class="id">H1</span>+<span class="id">H0</span> = <span class="id">H2</span></span> being equivalent claims.
+    </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_equiv">hwand_equiv</a></span> : <span class="kwd">forall</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H0</span> ==&gt; <span class="id">H1</span> \-* <span class="id">H2</span>) &lt;-&gt; (<span class="id">H1</span> \* <span class="id">H0</span> ==&gt; <span class="id">H2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#Hwand.hwand">hwand</a></span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">xchange</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">H</span> <span class="id">N</span>. <span class="id">xchange</span> <span class="id">N</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span> <span class="id">H0</span>. <span class="id">xchange</span> <span class="id">M</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Indeed, we will see below that the magic wand operator is _uniquely defined_
+    by the equivalence <span class="bracket">(<span class="id">H0</span> ==&gt; <span class="id">H1</span> \-* <span class="id">H2</span>) &lt;-&gt; (<span class="id">H1</span> \* <span class="id">H0</span> ==&gt; <span class="id">H2</span>)</span>. In other
+    words, any operator that satisfies the above equivalence is provably equal
+    to <span class="bracket"><span class="id">hwand</span></span>. </div>
+<br/>
+<div class="doc">The right-to-left direction of the equivalence is an introduction rule: it
+    tells what needs to be proved for constructing a magic wand <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> from
+    a state <span class="bracket"><span class="id">H0</span></span>.
+    To establish that <span class="bracket"><span class="id">H0</span></span> entails <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span>, we have to show that the
+    conjunction of <span class="bracket"><span class="id">H0</span></span> and <span class="bracket"><span class="id">H1</span></span> yields <span class="bracket"><span class="id">H2</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.himpl_hwand_r">himpl_hwand_r</a></span> : <span class="kwd">forall</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H0</span>) ==&gt; <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H0</span> ==&gt; (<span class="id">H1</span> \-* <span class="id">H2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hwand.hwand_equiv">hwand_equiv</a></span>. <span class="id">applys</span> <span class="id">M</span>. Qed.</div></details>
+<br/>
+<div class="doc">The left-to-right direction of the equivalence is an elimination rule: it
+    tells what can be deduced from an entailment <span class="bracket"><span class="id">H0</span> ==&gt; (<span class="id">H1</span> \-* <span class="id">H2</span>)</span> -- namely,
+    if <span class="bracket"><span class="id">H0</span></span> is starred with <span class="bracket"><span class="id">H1</span></span>, then <span class="bracket"><span class="id">H2</span></span> can be recovered. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.himpl_hwand_r_inv">himpl_hwand_r_inv</a></span> : <span class="kwd">forall</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H0</span> ==&gt; (<span class="id">H1</span> \-* <span class="id">H2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H0</span>) ==&gt; <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hwand.hwand_equiv">hwand_equiv</a></span>. <span class="id">applys</span> <span class="id">M</span>. Qed.</div></details>
+<br/>
+<div class="doc">This elimination rule can be equivalently reformulated in the following
+    handy form: <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span>, when starred with <span class="bracket"><span class="id">H1</span></span>, yields <span class="bracket"><span class="id">H2</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_cancel">hwand_cancel</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* (<span class="id">H1</span> \-* <span class="id">H2</span>) ==&gt; <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r_inv">himpl_hwand_r_inv</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_refl">himpl_refl</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.Wand.html#Hwand.hwand_cancel">hwand_cancel</a></span> : <span class="id">clear</span> <span class="id">implicits</span>.<br/>
+<br/>
+<h3> Further Properties of <span class="bracket"><span class="id">hwand</span></span> </h3>
+<br/>
+<div class="doc">We next present the most important properties of the magic wand operator.
+    Here, the tactic <span class="bracket"><span class="id">xsimpl</span></span> is available only in a restricted form that does
+    not support magic wand. (The full <span class="bracket"><span class="id">xsimpl</span></span> tactic would trivially solve many
+    of these lemmas, but using it here would be cheating because the
+    implementation of <span class="bracket"><span class="id">xsimpl</span></span> itself relies on several of these lemmas.) </div>
+<br/>
+<div class="doc">The operator <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> is contravariant in <span class="bracket"><span class="id">H1</span></span> and covariant in <span class="bracket"><span class="id">H2</span></span>,
+    like the implication operator <span class="bracket">-&gt;</span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_himpl">hwand_himpl</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H1'</span> <span class="id">H2</span> <span class="id">H2'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1'</span> ==&gt; <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H2'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \-* <span class="id">H2</span>) ==&gt; (<span class="id">H1'</span> \-* <span class="id">H2'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span>. <span class="id">xchange</span> <span class="id">M1</span>.<br/>
+&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Hwand.hwand_cancel">hwand_cancel</a></span> <span class="id">H1</span> <span class="id">H2</span>). <span class="id">applys</span> <span class="id">M2</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The predicates <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> and <span class="bracket"><span class="id">H2</span> \-* <span class="id">H3</span></span> together simplify to <span class="bracket"><span class="id">H1</span> \-* <span class="id">H3</span></span>.
+    This is reminiscent of the arithmetic identity
+    <span class="bracket">(-<span class="id">H1</span> + <span class="id">H2</span>) + (-<span class="id">H2</span> + <span class="id">H3</span>) = (-<span class="id">H1</span> + <span class="id">H3</span>)</span> (and to the transitivity of ordinary
+    implication). </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_trans_elim">hwand_trans_elim</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \-* <span class="id">H2</span>) \* (<span class="id">H2</span> \-* <span class="id">H3</span>) ==&gt; (<span class="id">H1</span> \-* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span>. <span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Hwand.hwand_cancel">hwand_cancel</a></span> <span class="id">H1</span> <span class="id">H2</span>).<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The predicate <span class="bracket"><span class="id">H</span> \-* <span class="id">H</span></span> holds of the empty heap. Intuitively, we can rewrite
+    <span class="bracket">0</span> as <span class="bracket">-<span class="id">H</span> + <span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.himpl_hempty_hwand_same">himpl_hempty_hwand_same</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;\[] ==&gt; (<span class="id">H</span> \-* <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<div class="doc">Let's now study the interaction of <span class="bracket"><span class="id">hwand</span></span> with <span class="bracket"><span class="id">hempty</span></span> and <span class="bracket"><span class="id">hpure</span></span>. </div>
+<br/>
+<div class="doc">The heap predicate <span class="bracket">\[] \-* <span class="id">H</span></span> is equivalent to <span class="bracket"><span class="id">H</span></span>. Intuitively, we can
+    rewrite <span class="bracket">-0+<span class="id">H</span></span> as <span class="bracket">+<span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_hempty_l">hwand_hempty_l</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(\[] \-* <span class="id">H</span>) = <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#Hwand.hwand">hwand</a></span>. <span class="id">xsimpl</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">H0</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">M</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The lemma above shows that <span class="bracket">\[]</span> can be removed from the LHS of a magic
+    wand.
+    More generally, a pure predicate <span class="bracket">\[<span class="id">P</span>]</span> can be removed from the LHS of a
+    magic wand as long as <span class="bracket"><span class="id">P</span></span> is true. Formally: </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (hwand_hpure_l) </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_hpure_l">hwand_hpure_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \-* <span class="id">H</span>) = <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Reciprocally, to prove that a heap satisfies <span class="bracket">\[<span class="id">P</span>] \-* <span class="id">H2</span></span>, it suffices to
+    prove that this heap satisfies <span class="bracket"><span class="id">H2</span></span> under the assumption that <span class="bracket"><span class="id">P</span></span> is true.
+    Formally: </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.himpl_hwand_hpure_r">himpl_hwand_hpure_r</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">H1</span> ==&gt; <span class="id">H2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; (\[<span class="id">P</span>] \-* <span class="id">H2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span>. <span class="id">xsimpl</span>. <span class="id">applys</span> <span class="id">M</span>. Qed.</div></details>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (himpl_hwand_hpure_lr)
+    Prove that <span class="bracket">\[<span class="id">P1</span> -&gt; <span class="id">P2</span>]</span> entails <span class="bracket">\[<span class="id">P1</span>] \-* \[<span class="id">P2</span>]</span>. Hint: use <span class="bracket"><span class="id">xpull</span></span>, then
+    use <span class="bracket"><span class="id">xsimpl</span></span> by providing an explicit argument to indicate how the <span class="bracket">\<span class="kwd">exists</span></span>
+    on the right-hand side of the entailment should be instantiated. </h3>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.himpl_hwand_hpure_lr">himpl_hwand_hpure_lr</a></span> : <span class="kwd">forall</span> (<span class="id">P1</span> <span class="id">P2</span>:<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;\[<span class="id">P1</span> -&gt; <span class="id">P2</span>] ==&gt; (\[<span class="id">P1</span>] \-* \[<span class="id">P2</span>]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Another interesting property is that arguments on the LHS of a magic wand
+    can equivalently be "curried" or "uncurried", just as a function of type
+    <span class="bracket">(<span class="id">A</span> * <span class="id">B</span>) -&gt; <span class="id">C</span></span> is equivalent to a function of type <span class="bracket"><span class="id">A</span> -&gt; <span class="id">B</span> -&gt; <span class="id">C</span></span>.
+    The heap predicates <span class="bracket">(<span class="id">H1</span> \* <span class="id">H2</span>) \-* <span class="id">H3</span></span>, <span class="bracket"><span class="id">H1</span> \-* (<span class="id">H2</span> \-* <span class="id">H3</span>)</span>, and
+    <span class="bracket"><span class="id">H2</span> \-* (<span class="id">H1</span> \-* <span class="id">H3</span>)</span> are all equivalent. Intuitively, they all describe <span class="bracket"><span class="id">H3</span></span>
+    with the missing pieces <span class="bracket"><span class="id">H1</span></span> and <span class="bracket"><span class="id">H2</span></span>. </div>
+<br/>
+<div class="doc">The equivalence between the uncurried form <span class="bracket">(<span class="id">H1</span> \* <span class="id">H2</span>) \-* <span class="id">H3</span></span> and the
+    curried form <span class="bracket"><span class="id">H1</span> \-* (<span class="id">H2</span> \-* <span class="id">H3</span>)</span> is formalized by the lemma shown below.
+    The third form, <span class="bracket"><span class="id">H2</span> \-* (<span class="id">H1</span> \-* <span class="id">H3</span>)</span>, follows from the commutativity
+    property <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span> = <span class="id">H2</span> \* <span class="id">H1</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_curry_eq">hwand_curry_eq</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) \-* <span class="id">H3</span> = <span class="id">H1</span> \-* (<span class="id">H2</span> \-* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Hwand.hwand_cancel">hwand_cancel</a></span> (<span class="id">H1</span> \* <span class="id">H2</span>) <span class="id">H3</span>). }<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span>. <span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Hwand.hwand_cancel">hwand_cancel</a></span> <span class="id">H1</span> (<span class="id">H2</span> \-* <span class="id">H3</span>)).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Hwand.hwand_cancel">hwand_cancel</a></span> <span class="id">H2</span> <span class="id">H3</span>). }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Yet another interesting property is that the RHS of a magic wand can absorb
+    resources that the magic wand is starred with.
+    Concretely, from <span class="bracket">(<span class="id">H1</span> \-* <span class="id">H2</span>) \* <span class="id">H3</span></span>, we can get the predicate <span class="bracket"><span class="id">H3</span></span> to be
+    absorbed by the <span class="bracket"><span class="id">H2</span></span> in the magic wand, yielding <span class="bracket"><span class="id">H1</span> \-* (<span class="id">H2</span> \* <span class="id">H3</span>)</span>. One
+    way to read this: "if you own <span class="bracket"><span class="id">H3</span></span> and, when given <span class="bracket"><span class="id">H1</span></span>, you own <span class="bracket"><span class="id">H2</span></span>, then,
+    when given <span class="bracket"><span class="id">H1</span></span>, you own both <span class="bracket"><span class="id">H2</span></span> and <span class="bracket"><span class="id">H3</span></span>." </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hstar_hwand">hstar_hwand</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \-* <span class="id">H2</span>) \* <span class="id">H3</span> ==&gt; <span class="id">H1</span> \-* (<span class="id">H2</span> \* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span>. <span class="id">xsimpl</span>. <span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Hwand.hwand_cancel">hwand_cancel</a></span> <span class="id">H1</span> <span class="id">H2</span>).<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The reciprocal entailment is false: <span class="bracket"><span class="id">H1</span> \-* (<span class="id">H2</span> \* <span class="id">H3</span>)</span> does not entail
+    <span class="bracket">(<span class="id">H1</span> \-* <span class="id">H2</span>) \* <span class="id">H3</span></span>.
+    To see why, instantiate <span class="bracket"><span class="id">H1</span></span> with <span class="bracket">\[<span class="id">False</span>]</span>. The predicate
+    <span class="bracket">\[<span class="id">False</span>] \-* (<span class="id">H2</span> \* <span class="id">H3</span>)</span> is equivalent to <span class="bracket"><span class="id">True</span></span>, hence imposes no
+    restriction on the heap. But, to establish <span class="bracket">(\[<span class="id">False</span>] \-* <span class="id">H2</span>) \* <span class="id">H3</span></span>, we
+    would need to exhibit a piece of heap satisfiying <span class="bracket"><span class="id">H3</span></span>. </div>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (himpl_hwand_hstar_same_r)
+    Prove that <span class="bracket"><span class="id">H1</span></span> entails <span class="bracket"><span class="id">H2</span> \-* (<span class="id">H2</span> \* <span class="id">H1</span>)</span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.himpl_hwand_hstar_same_r">himpl_hwand_hstar_same_r</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; (<span class="id">H2</span> \-* (<span class="id">H2</span> \* <span class="id">H1</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (hwand_cancel_part)
+    Prove that <span class="bracket"><span class="id">H1</span> \* ((<span class="id">H1</span> \* <span class="id">H2</span>) \-* <span class="id">H3</span>)</span> simplifies to <span class="bracket"><span class="id">H2</span> \-* <span class="id">H3</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_cancel_part">hwand_cancel_part</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* ((<span class="id">H1</span> \* <span class="id">H2</span>) \-* <span class="id">H3</span>) ==&gt; (<span class="id">H2</span> \-* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 3 stars, standard, optional (hwand_frame)
+    Prove that <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> entails to <span class="bracket">(<span class="id">H1</span> \* <span class="id">H3</span>) \-* (<span class="id">H2</span> \* <span class="id">H3</span>)</span>. Hint: use
+    <span class="bracket"><span class="id">xsimpl</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_frame">hwand_frame</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \-* <span class="id">H2</span> ==&gt; (<span class="id">H1</span> \* <span class="id">H3</span>) \-* (<span class="id">H2</span> \* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 3 stars, standard, optional (hwand_inv)
+    Prove the following inversion lemma for <span class="bracket"><span class="id">hwand</span></span>. This lemma essentially
+    captures the fact that <span class="bracket"><span class="id">hwand</span></span> entails the alternative definition named
+    <span class="bracket"><span class="id">hwand'</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Hwand.hwand_inv">hwand_inv</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \-* <span class="id">H2</span>) <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> <span class="id">h1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> (<span class="id">h1</span> \<span class="id">u</span> <span class="id">h2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#Hwand">Hwand</a></span>.<br/>
+<br/>
+<h2> Definition of the Magic Wand Operator for Postconditions: <span class="bracket"><span class="id">qwand</span></span> </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Qwand">Qwand</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.Wand.html#Hwand">Hwand</a></span>.<br/>
+<br/>
+<div class="doc">In what follows, we generalize the magic wand to operate on postconditions,
+    introducing a heap predicate of the form <span class="bracket"><span class="id">Q1</span> \--* <span class="id">Q2</span></span>, of type <span class="bracket"><span class="id">hprop</span></span>.
+    Note that the magic wand between two postconditions produces a heap
+    predicate, not a postcondition. </div>
+<br/>
+<div class="doc">There are two ways to define the operator <span class="bracket"><span class="id">qwand</span></span>. The first is to follow
+    the same pattern as for <span class="bracket"><span class="id">hwand</span></span>, that is, to quantify some heap predicate
+    <span class="bracket"><span class="id">H0</span></span> such that <span class="bracket"><span class="id">H0</span></span> starred with <span class="bracket"><span class="id">Q1</span></span> yields <span class="bracket"><span class="id">Q2</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">qwand'</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">H0</span>, <span class="id">H0</span> \* \[ <span class="id">Q1</span> \*+ <span class="id">H0</span> ===&gt; <span class="id">Q2</span> ].<br/>
+<br/>
+<div class="doc">The second possibility is to define <span class="bracket"><span class="id">qwand</span></span> directly on top of <span class="bracket"><span class="id">hwand</span></span>, by
+    means of the <span class="bracket"><span class="id">hforall</span></span> quantifier. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="Qwand.qwand">qwand</a></span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">forall</span> <span class="id">v</span>, (<span class="id">Q1</span> <span class="id">v</span>) \-* (<span class="id">Q2</span> <span class="id">v</span>).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"Q1 \--* Q2"</span> := (<span class="id"><a href="SLF.Wand.html#Qwand.qwand">qwand</a></span> <span class="id">Q1</span> <span class="id">Q2</span>) (<span class="kwd">at</span> <span class="id">level</span> 43).<br/>
+<br/>
+<div class="doc">As we establish later in this chapter, <span class="bracket"><span class="id">qwand</span></span> and <span class="bracket"><span class="id">qwand'</span></span> both define the
+    same operator. We prefer taking <span class="bracket"><span class="id">qwand</span></span> as the definition because in
+    practice instantiating the universal quantifier is the most useful way to
+    exploit a magic wand between postconditions. This specialization operation
+    is formalized next. This result is a direct consequence of the
+    specialization result for <span class="bracket">\<span class="kwd">forall</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Qwand.qwand_specialize">qwand_specialize</a></span> : <span class="kwd">forall</span> (<span class="id">v</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> \--* <span class="id">Q2</span>) ==&gt; (<span class="id">Q1</span> <span class="id">v</span> \-* <span class="id">Q2</span> <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#Qwand.qwand">qwand</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_hforall_l">himpl_hforall_l</a></span> <span class="id">v</span>. <span class="id">xsimpl</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The predicate <span class="bracket"><span class="id">qwand</span></span> satisfies numerous properties that are direct
+    counterparts of the properties on <span class="bracket"><span class="id">hwand</span></span>. First, <span class="bracket"><span class="id">qwand</span></span> satisfies a
+    characteristic equivalence rule. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Qwand.qwand_equiv">qwand_equiv</a></span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">H</span> ==&gt; (<span class="id">Q1</span> \--* <span class="id">Q2</span>)<br/>
+&nbsp;&nbsp;&lt;-&gt; (<span class="id">Q1</span> \*+ <span class="id">H</span>) ===&gt; <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">x</span>. <span class="id">xchange</span> <span class="id">M</span>. <span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Qwand.qwand_specialize">qwand_specialize</a></span> <span class="id">x</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Hwand.hwand_cancel">hwand_cancel</a></span> (<span class="id">Q1</span> <span class="id">x</span>)). }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_hforall_r">himpl_hforall_r</a></span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id">M</span> <span class="id">x</span>). }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Second, <span class="bracket"><span class="id">qwand</span></span> satisfies a cancellation rule. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Qwand.qwand_cancel">qwand_cancel</a></span> : <span class="kwd">forall</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ (<span class="id">Q1</span> \--* <span class="id">Q2</span>) ===&gt; <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.Wand.html#Qwand.qwand_equiv">qwand_equiv</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.qimpl_refl">qimpl_refl</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Third, the operation <span class="bracket"><span class="id">Q1</span> \--* <span class="id">Q2</span></span> is contravariant in <span class="bracket"><span class="id">Q1</span></span> and covariant in
+    <span class="bracket"><span class="id">Q2</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Qwand.qwand_himpl">qwand_himpl</a></span> : <span class="kwd">forall</span> <span class="id">Q1</span> <span class="id">Q1'</span> <span class="id">Q2</span> <span class="id">Q2'</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q1'</span> ===&gt; <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q2</span> ===&gt; <span class="id">Q2'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> \--* <span class="id">Q2</span>) ==&gt; (<span class="id">Q1'</span> \--* <span class="id">Q2'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.Wand.html#Qwand.qwand_equiv">qwand_equiv</a></span>. <span class="id">intros</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Qwand.qwand_specialize">qwand_specialize</a></span> <span class="id">x</span>). <span class="id">xchange</span> <span class="id">M1</span>.<br/>
+&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id"><a href="SLF.Wand.html#Hwand.hwand_cancel">hwand_cancel</a></span> (<span class="id">Q1</span> <span class="id">x</span>)). <span class="id">xchange</span> <span class="id">M2</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Fourth the operation <span class="bracket"><span class="id">Q1</span> \--* <span class="id">Q2</span></span> can absorb in its RHS resources to which
+    it is starred. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Qwand.hstar_qwand">hstar_qwand</a></span> : <span class="kwd">forall</span> <span class="id">Q1</span> <span class="id">Q2</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> \--* <span class="id">Q2</span>) \* <span class="id">H</span> ==&gt; <span class="id">Q1</span> \--* (<span class="id">Q2</span> \*+ <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.Wand.html#Qwand.qwand_equiv">qwand_equiv</a></span>. <span class="id">xchange</span> (@<span class="id"><a href="SLF.Wand.html#Qwand.qwand_cancel">qwand_cancel</a></span> <span class="id">Q1</span>).<br/>
+Qed.</div></details>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (himpl_qwand_hstar_same_r)
+    Prove that <span class="bracket"><span class="id">H</span></span> entails <span class="bracket"><span class="id">Q</span> \--* (<span class="id">Q</span> \*+ <span class="id">H</span>)</span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Qwand.himpl_qwand_hstar_same_r">himpl_qwand_hstar_same_r</a></span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> \--* (<span class="id">Q</span> \*+ <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (qwand_cancel_part)
+    Prove that <span class="bracket"><span class="id">H</span> \* ((<span class="id">Q1</span> \*+ <span class="id">H</span>) \--* <span class="id">Q2</span>)</span> simplifies to <span class="bracket"><span class="id">Q1</span> \--* <span class="id">Q2</span></span>. Hint: use
+    <span class="bracket"><span class="id">xchange</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Qwand.qwand_cancel_part">qwand_cancel_part</a></span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> \* ((<span class="id">Q1</span> \*+ <span class="id">H</span>) \--* <span class="id">Q2</span>) ==&gt; (<span class="id">Q1</span> \--* <span class="id">Q2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#Qwand">Qwand</a></span>.<br/>
+<br/>
+<h2> Simplifications of Magic Wands using <span class="bracket"><span class="id">xsimpl</span></span> </h2>
+<br/>
+<div class="doc">We can extend the tactic <span class="bracket"><span class="id">xsimpl</span></span> to recognize the magic wand and
+    automatically perform a number of obvious simplifications. This extension is
+    implemented in the file <span class="bracket"><span class="id">LibSepSimpl</span></span>, which exports the version of <span class="bracket"><span class="id">xsimpl</span></span>
+    illustrated here. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="XsimplDemo">XsimplDemo</a></span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xsimpl</span></span> is able to spot a magic wand that cancels out. For example, if an
+    iterated separating conjunction includes both <span class="bracket"><span class="id">H2</span> \-* <span class="id">H3</span></span> and <span class="bracket"><span class="id">H2</span></span>, then
+    these two heap predicates can be simplified into <span class="bracket"><span class="id">H3</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplDemo.xsimpl_demo_hwand_cancel">xsimpl_demo_hwand_cancel</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> <span class="id">H5</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* (<span class="id">H2</span> \-* <span class="id">H3</span>) \* <span class="id">H4</span> \* <span class="id">H2</span> ==&gt; <span class="id">H5</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xsimpl</span>. Abort.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xsimpl</span></span> is able to simplify uncurried magic wands. For example, if an
+    iterated separating conjunction includes <span class="bracket">(<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span>) \-* <span class="id">H4</span></span> and <span class="bracket"><span class="id">H2</span></span>,
+    the two predicates can be simplified into <span class="bracket">(<span class="id">H1</span> \* <span class="id">H3</span>) \-* <span class="id">H4</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplDemo.xsimpl_demo_hwand_cancel_partial">xsimpl_demo_hwand_cancel_partial</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> <span class="id">H5</span> <span class="id">H6</span>,<br/>
+&nbsp;&nbsp;((<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span>) \-* <span class="id">H4</span>) \* <span class="id">H5</span> \* <span class="id">H2</span> ==&gt; <span class="id">H6</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xsimpl</span>. Abort.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xsimpl</span></span> automatically applies the introduction rule <span class="bracket"><span class="id">himpl_hwand_r</span></span> when
+    the right-hand-side, after prior simplification, reduces to just a magic
+    wand. In the example below, <span class="bracket"><span class="id">H1</span></span> is first cancelled out from both sides,
+    then <span class="bracket"><span class="id">H3</span></span> is moved from the RHS to the LHS. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplDemo.xsimpl_demo_himpl_hwand_r">xsimpl_demo_himpl_hwand_r</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> <span class="id">H5</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> ==&gt; <span class="id">H1</span> \* (<span class="id">H3</span> \-* (<span class="id">H4</span> \* <span class="id">H5</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xsimpl</span>. Abort.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xsimpl</span></span> can iterate a number of simplifications involving different magic
+    wands. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplDemo.xsimpl_demo_hwand_iter">xsimpl_demo_hwand_iter</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> <span class="id">H5</span>,<br/>
+&nbsp;&nbsp;<span class="id">H4</span> \* <span class="id">H3</span> ==&gt; <span class="id">H5</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> \* (<span class="id">H1</span> \-* <span class="id">H3</span>) \* <span class="id">H4</span> \* (<span class="id">H2</span> \-* <span class="id">H1</span>) ==&gt; <span class="id">H5</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xsimpl</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xsimpl</span></span> can iterate simplifications on both sides. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplDemo.xsimpl_demo_hwand_iter_2">xsimpl_demo_hwand_iter_2</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> <span class="id">H5</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> \* ((<span class="id">H1</span> \* <span class="id">H3</span>) \-* (<span class="id">H4</span> \-* <span class="id">H5</span>)) \* <span class="id">H4</span> ==&gt; ((<span class="id">H2</span> \-* <span class="id">H3</span>) \-* <span class="id">H5</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xsimpl</span></span> is also able to deal with the magic wand for postconditions. In
+    particular, it is able to simplify the conjunction of <span class="bracket"><span class="id">Q1</span> \--* <span class="id">Q2</span></span> and
+    <span class="bracket"><span class="id">Q1</span> <span class="id">v</span></span> into <span class="bracket"><span class="id">Q2</span> <span class="id">v</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplDemo.xsimpl_demo_qwand_cancel">xsimpl_demo_qwand_cancel</a></span> : <span class="kwd">forall</span> <span class="id">v</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> \--* <span class="id">Q2</span>) \* <span class="id">H1</span> \* (<span class="id">Q1</span> <span class="id">v</span>) ==&gt; <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xsimpl</span>. Abort.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xsimpl</span></span> is able to prove entailments whose right-hand side is a magic wand.
+    </div>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplDemo.xsimpl_hwand_frame">xsimpl_hwand_frame</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \-* <span class="id">H2</span>) ==&gt; ((<span class="id">H1</span> \* <span class="id">H3</span>) \-* (<span class="id">H2</span> \* <span class="id">H3</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">xsimpl</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#XsimplDemo">XsimplDemo</a></span>.<br/>
+<br/>
+<h2> Summary of All the Separation Logic Operators </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="SummaryHprop">SummaryHprop</a></span>.<br/>
+<br/>
+<div class="doc">The core operators are defined as functions over heaps. </div>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.hempty">hempty</a></span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; (<span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>).<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.hsingle">hsingle</a></span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) (<span class="id">v</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; (<span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.single">Fmap.single</a></span> <span class="id">p</span> <span class="id">v</span>).<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.hstar">hstar</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">exists</span> <span class="id">h1</span> <span class="id">h2</span>, <span class="id">H1</span> <span class="id">h1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id">H2</span> <span class="id">h2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.union">Fmap.union</a></span> <span class="id">h1</span> <span class="id">h2</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.hexists">hexists</a></span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.hforall">hforall</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">J</span> : <span class="id">A</span> -&gt; <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<br/>
+<div class="doc">The remaining operators can be defined in terms of the core operators. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDerived">ReaminingOperatorsDerived</a></span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDerived.hpure">hpure</a></span> (<span class="id">P</span>:<span class="kwd">Prop</span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">p</span>:<span class="id">P</span>), \[].<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDerived.hand">hand</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\<span class="kwd">forall</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>), <span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">H1</span> <span class="kwd">else</span> <span class="id">H2</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDerived.hor">hor</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>), <span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">H1</span> <span class="kwd">else</span> <span class="id">H2</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDerived.hwand">hwand</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">H0</span>, <span class="id">H0</span> \* \[ (<span class="id">H1</span> \* <span class="id">H0</span>) ==&gt; <span class="id">H2</span> ].<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDerived.qwand">qwand</a></span> (<span class="id">Q1</span> <span class="id">Q2</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\<span class="kwd">forall</span> <span class="id">v</span>, (<span class="id">Q1</span> <span class="id">v</span>) \-* (<span class="id">Q2</span> <span class="id">v</span>).<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#SummaryHprop.ReaminingOperatorsDerived">ReaminingOperatorsDerived</a></span>.<br/>
+<br/>
+<div class="doc">Of course, these derived operators could also be defined directly as
+    predicate over heaps. The definitions are shown below. However, establishing
+    properties of such low-level definitions requires more effort than
+    establishing properties for the derived definitions shown above. Indeed,
+    when operators are defined as derived operations, their properties may be
+    established with help of the powerful entailment simplification tactic
+    <span class="bracket"><span class="id">xsimpl</span></span>. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDirect">ReaminingOperatorsDirect</a></span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDirect.hpure">hpure</a></span> (<span class="id">P</span>:<span class="kwd">Prop</span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; (<span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>) /\ <span class="id">P</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDirect.hor">hor</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="id">H1</span> <span class="id">h</span> \/ <span class="id">H2</span> <span class="id">h</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDirect.hand">hand</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="id">H1</span> <span class="id">h</span> /\ <span class="id">H2</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDirect.hwand">hwand</a></span> (<span class="id">H1</span> <span class="id">H2</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">h'</span>, <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h</span> <span class="id">h'</span> -&gt; <span class="id">H1</span> <span class="id">h'</span> -&gt; <span class="id">H2</span> (<span class="id">h</span> \<span class="id">u</span> <span class="id">h'</span>).<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id"><a name="SummaryHprop.ReaminingOperatorsDirect.qwand">qwand</a></span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">v</span> <span class="id">h'</span>, <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h</span> <span class="id">h'</span> -&gt; <span class="id">Q1</span> <span class="id">v</span> <span class="id">h'</span> -&gt; <span class="id">Q2</span> <span class="id">v</span> (<span class="id">h</span> \<span class="id">u</span> <span class="id">h'</span>).<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#SummaryHprop.ReaminingOperatorsDirect">ReaminingOperatorsDirect</a></span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#SummaryHprop">SummaryHprop</a></span>.<br/>
+<br/>
+<h2> The Ramified Frame Rule </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="RamifiedFrame">RamifiedFrame</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.Wand.html#Hwand">Hwand</a></span> <span class="id"><a href="SLF.Wand.html#Qwand">Qwand</a></span>.<br/>
+<br/>
+<div class="doc">Recall the consequence-frame rule, which is used pervasively -- for example
+    by the tactic <span class="bracket"><span class="id">xapp</span></span>, for reasoning about applications. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="RamifiedFrame.triple_conseq_frame">triple_conseq_frame</a></span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">Q1</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">This rule suffers from a practical issue, which we illustrate in detail on a
+    concrete example further on. At a high-level, though, the problem stems from
+    the fact that we need to instantiate <span class="bracket"><span class="id">H2</span></span> when applying the rule. Providing
+    <span class="bracket"><span class="id">H2</span></span> by hand is not practical, thus we need to infer it. The value of <span class="bracket"><span class="id">H2</span></span>
+    can be computed as the subtraction of <span class="bracket"><span class="id">H</span></span> minus <span class="bracket"><span class="id">H1</span></span>. The resulting value
+    may then exploited in the last premise for constructing <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H2</span></span>. This
+    transfer of information via <span class="bracket"><span class="id">H2</span></span> from one subgoal to another can be obtained
+    by introducing an "evar" (Coq unification variable) for <span class="bracket"><span class="id">H2</span></span>. However this
+    approach does not work well in cases where <span class="bracket"><span class="id">H</span></span> contains existential
+    quantifiers. This is because such existential quantifiers are typically
+    first extracted out of the entailment <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span></span> by the tactic
+    <span class="bracket"><span class="id">xsimpl</span></span>. But these existentially quantified variables are not in the scope
+    of <span class="bracket"><span class="id">H2</span></span>, so the instantiation of the evar associated with <span class="bracket"><span class="id">H2</span></span> typically
+    fails. </div>
+<br/>
+<div class="doc">The "ramified frame rule" exploits the magic wand operator to circumvent
+    this problem, by merging the two premises <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span></span> and
+    <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span></span> into a single premise that no longer mentions <span class="bracket"><span class="id">H2</span></span>. This
+    replacement premise is <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H1</span> \* (<span class="id">Q1</span> \--* <span class="id">Q</span>)</span>. To understand where it
+    comes from, observe first that the second premise <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span></span> is
+    equivalent to <span class="bracket"><span class="id">H2</span> ==&gt; (<span class="id">Q1</span> \--* <span class="id">Q</span>)</span>. By replacing <span class="bracket"><span class="id">H2</span></span> with <span class="bracket"><span class="id">Q1</span> \--* <span class="id">Q</span></span>
+    inside the first premise <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span></span>, we obtain the new premise
+    <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H1</span> \* (<span class="id">Q1</span> \--* <span class="id">Q</span>)</span>. This merge of the two entailments leads us to the
+    statement of the "ramified frame rule" shown below. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="RamifiedFrame.triple_ramified_frame">triple_ramified_frame</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">Q1</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* (<span class="id">Q1</span> \--* <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span> <span class="id">W</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#RamifiedFrame.triple_conseq_frame">triple_conseq_frame</a></span> (<span class="id">Q1</span> \--* <span class="id">Q</span>) <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">W</span>. } { <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#Qwand.qwand_cancel">qwand_cancel</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Reciprocally, we can prove that the ramified frame rule entails the
+    consequence-frame rule. Hence, the ramified frame rule has the same
+    expressive power as the consequence-frame rule. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="RamifiedFrame.triple_conseq_frame_of_ramified_frame">triple_conseq_frame_of_ramified_frame</a></span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">Q1</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span> <span class="id">WH</span> <span class="id">WQ</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#RamifiedFrame.triple_ramified_frame">triple_ramified_frame</a></span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">xchange</span> <span class="id">WH</span>. <span class="id">xsimpl</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.Wand.html#Qwand.qwand_equiv">qwand_equiv</a></span>. <span class="id">applys</span> <span class="id">WQ</span>.<br/>
+Qed.</div></details>
+<br/>
+<h1> More Details </h1>
+<br/>
+<h2> Benefits of the Ramified Frame Rule </h2>
+<br/>
+<div class="doc">Earlier on, we sketched an argument claiming that the consequence-frame rule
+    is not very well suited for carrying out proofs in practice, due to issues
+    with working with evars for instantiating the heap predicate <span class="bracket"><span class="id">H2</span></span> in the
+    rule. Let us come back to this point and describe the issue in depth on a
+    concrete example, then show how the ramified frame rule smoothly handles
+    that example. </div>
+<br/>
+<div class="doc">Recall, once again, the consequence-frame rule. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id">triple_conseq_frame'</span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">Q1</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">One practical caveat with this rule is that we must resolve <span class="bracket"><span class="id">H2</span></span>, which
+    corresponds to the difference between <span class="bracket"><span class="id">H</span></span> and <span class="bracket"><span class="id">H1</span></span>. In practice, providing
+    <span class="bracket"><span class="id">H2</span></span> explicitly is extremely tedious. The alternative is to leave <span class="bracket"><span class="id">H2</span></span> as an
+    evar, and count on the fact that the tactic <span class="bracket"><span class="id">xsimpl</span></span>, when applied to
+    <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span></span>, will correctly instantiate <span class="bracket"><span class="id">H2</span></span>. This approach works in
+    simple cases, but fails in particular in the case where <span class="bracket"><span class="id">H</span></span> contains an
+    existential quantifier.
+    For a concrete example, recall the specification of the primitive <span class="bracket"><span class="id">ref</span></span>,
+    which allocates a reference. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="RamifiedFrame.triple_ref">triple_ref</a></span> : <span class="kwd">forall</span> (<span class="id">v</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~&gt; <span class="id">v</span>).<br/>
+<br/>
+<div class="doc">Assume that wish to derive the following triple, which extends both the
+    precondition and the postcondition of <span class="bracket"><span class="id">triple_ref</span></span> with the heap predicate
+    <span class="bracket">\<span class="kwd">exists</span> <span class="id">l'</span> <span class="id">v'</span>, <span class="id">l'</span> ~~&gt; <span class="id">v'</span></span>.
+    This predicate describes the existence of some other, totally unspecified,
+    reference cell. It is a bit artificial but illustrates the issue. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="RamifiedFrame.triple_ref_extended">triple_ref_extended</a></span> : <span class="kwd">forall</span> (<span class="id">v</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(\<span class="kwd">exists</span> <span class="id">l'</span> <span class="id">v'</span>, <span class="id">l'</span> ~~&gt; <span class="id">v'</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~&gt; <span class="id">v</span> \* \<span class="kwd">exists</span> <span class="id">l'</span> <span class="id">v'</span>, <span class="id">l'</span> ~~&gt; <span class="id">v'</span>).<br/>
+<br/>
+<div class="doc">Let's try to prove that this specification is derivable from the original
+    <span class="bracket"><span class="id">triple_ref</span></span>. </div>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#RamifiedFrame.triple_conseq_frame">triple_conseq_frame</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#RamifiedFrame.triple_ref">triple_ref</a></span>. }<br/>
+&nbsp;&nbsp;{ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xsimpl</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">Now, let us apply the ramified frame rule to carry out the same proof, and
+    observe how the problem does not show up. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_ref_extended'</span> : <span class="kwd">forall</span> (<span class="id">v</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(\<span class="kwd">exists</span> <span class="id">l'</span> <span class="id">v'</span>, <span class="id">l'</span> ~~&gt; <span class="id">v'</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~&gt; <span class="id">v</span> \* \<span class="kwd">exists</span> <span class="id">l'</span> <span class="id">v'</span>, <span class="id">l'</span> ~~&gt; <span class="id">v'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#RamifiedFrame.triple_ramified_frame">triple_ramified_frame</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.Wand.html#RamifiedFrame.triple_ref">triple_ref</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">l'</span> <span class="id">v'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.Wand.html#Qwand.qwand_equiv">qwand_equiv</a></span>. <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">xsimpl</span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#RamifiedFrame">RamifiedFrame</a></span>.<br/>
+<br/>
+<h2> Some Tempting, But False, Properties of the Magic Wand </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="HwandFalse">HwandFalse</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.Wand.html#Hwand">Hwand</a></span>.<br/>
+<br/>
+<div class="doc">The entailment <span class="bracket">\[] ==&gt; (<span class="id">H</span> \-* <span class="id">H</span>)</span> holds for any <span class="bracket"><span class="id">H</span></span>. But the symmetrical
+    entailement <span class="bracket">(<span class="id">H</span> \-* <span class="id">H</span>) ==&gt; \[]</span> is false. For a counterexample, instantiate
+    <span class="bracket"><span class="id">H</span></span> as <span class="bracket">\[<span class="id">False</span>]</span>. Any heap satisfies <span class="bracket">\[<span class="id">False</span>] \-* \[<span class="id">False</span>]</span>. But only the
+    empty heap satisfies <span class="bracket">\[]</span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HwandFalse.himpl_hwand_same_hempty_counterexample">himpl_hwand_same_hempty_counterexample</a></span> :<br/>
+&nbsp;&nbsp;~ (<span class="kwd">forall</span> <span class="id">H</span>, (<span class="id">H</span> \-* <span class="id">H</span>) ==&gt; \[]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span>. <br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>]. <span class="id">intros</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">h</span>,<span class="id">Hh</span>): (@<span class="id"><a href="SLF.LibSepReference.html#Fmap.exists_not_empty">Fmap.exists_not_empty</a></span> <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> _).<br/>
+&nbsp;&nbsp;<span class="id">forwards</span> <span class="id">K</span>: <span class="id">M</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id"><a href="SLF.Wand.html#Hwand.himpl_hwand_r">himpl_hwand_r</a></span> (<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="id">h</span> &lt;&gt; <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>). <span class="id">xsimpl</span>*. }<br/>
+&nbsp;&nbsp;<span class="id">lets</span>: <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty_inv">hempty_inv</a></span> <span class="id">K</span>. <span class="id">false</span>* <span class="id">Hh</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">As another tempting yet false property of the magic wand, consider the
+    converse of the cancellation lemma, that is, <span class="bracket"><span class="id">H2</span> ==&gt; <span class="id">H1</span> \* (<span class="id">H1</span> \-* <span class="id">H2</span>)</span>. It
+    does not hold in general. As a counter-example, consider <span class="bracket"><span class="id">H2</span> = \[]</span> and
+    <span class="bracket"><span class="id">H1</span> = \[<span class="id">False</span>]</span>. The empty heap satisfies the left-hand side of the
+    entailment, but it does does not satisfy <span class="bracket">\[<span class="id">False</span>] \* (\[<span class="id">False</span>] \-* \[])</span>,
+    because there is no way to establish <span class="bracket"><span class="id">False</span></span> out of thin air. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HwandFalse.not_himpl_hwand_r_inv_reciprocal">not_himpl_hwand_r_inv_reciprocal</a></span> : <span class="kwd">exists</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;~ (<span class="id">H2</span> ==&gt; <span class="id">H1</span> \* (<span class="id">H1</span> \-* <span class="id">H2</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>] \[]. <span class="id">intros</span> <span class="id">N</span>. <span class="id">forwards</span> <span class="id">K</span>: <span class="id">N</span> (<span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>:<span class="id"><a href="SLF.LibSepReference.html#heap">heap</a></span>).<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty_intro">hempty_intro</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_hpure_l">hstar_hpure_l</a></span> <span class="kwd">in</span> <span class="id">K</span>. <span class="id">destruct</span> <span class="id">K</span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">More generally, we should be suspicious of any entailment that introduces
+    wands "out of nowhere".
+    The entailment <span class="bracket"><span class="id">hwand_trans_elim</span></span>:
+    <span class="bracket">(<span class="id">H1</span> \-* <span class="id">H2</span>) \* (<span class="id">H2</span> \-* <span class="id">H3</span>) ==&gt; (<span class="id">H1</span> \-* <span class="id">H3</span>)</span> is correct because,
+    intuitively, the left-hand-side captures that <span class="bracket"><span class="id">H1</span> &lt;= <span class="id">H2</span></span> and that <span class="bracket"><span class="id">H2</span> &lt;= <span class="id">H3</span></span>
+    for some vaguely defined notion of <span class="bracket">&lt;=</span> as "being a subset of". On the
+    contrary, the reciprocal entailment
+    <span class="bracket">(<span class="id">H1</span> \-* <span class="id">H3</span>) ==&gt; (<span class="id">H1</span> \-* <span class="id">H2</span>) \* (<span class="id">H2</span> \-* <span class="id">H3</span>)</span> is false. Intuitively, from
+    <span class="bracket"><span class="id">H1</span> &lt;= <span class="id">H3</span></span> there is no way to justify <span class="bracket"><span class="id">H1</span> &lt;= <span class="id">H2</span></span> nor <span class="bracket"><span class="id">H2</span> &lt;= <span class="id">H3</span></span>. </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#HwandFalse">HwandFalse</a></span>.<br/>
+<br/>
+<h1> Optional Material </h1>
+<br/>
+<h2> Equivalence Between Alternative Definitions of the Magic Wand </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="HwandEquiv">HwandEquiv</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="kwd">Type</span> <span class="id">op</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<br/>
+<div class="doc">In what follows we prove the equivalence between the three characterizations
+    of <span class="bracket"><span class="id">hwand</span> <span class="id">H1</span> <span class="id">H2</span></span> that we have presented:
+    1. The definition <span class="bracket"><span class="id">hwand</span></span> expressed directly in terms of heaps:
+    <span class="bracket"><span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">h'</span>, <span class="id">Fmap.disjoint</span> <span class="id">h</span> <span class="id">h'</span> -&gt; <span class="id">H1</span> <span class="id">h'</span> -&gt; <span class="id">H2</span> (<span class="id">h'</span> \<span class="id">u</span> <span class="id">h</span>)</span>
+    2. The definition <span class="bracket"><span class="id">hwand</span></span> expressed in terms of existing operators:
+    <span class="bracket">\<span class="kwd">exists</span> <span class="id">H0</span>, <span class="id">H0</span> \* \[ (<span class="id">H1</span> \* <span class="id">H0</span>) ==&gt; <span class="id">H2</span>]</span>
+    3. The characterization via the equivalence <span class="bracket"><span class="id">hwand_equiv</span></span>:
+    <span class="bracket"><span class="kwd">forall</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>, (<span class="id">H0</span> ==&gt; <span class="id">H1</span> \-* <span class="id">H2</span>) &lt;-&gt; (<span class="id">H1</span> \* <span class="id">H0</span> ==&gt; <span class="id">H2</span>)</span>.
+    4. The characterization via the pair of the introduction rule
+    <span class="bracket"><span class="id">himpl_hwand_r</span></span> and the elimination rule <span class="bracket"><span class="id">hwand_cancel</span></span>.
+    To prove the 4-way equivalence, we first prove the equivalence between (1)
+    and (2), then prove the equivalence between (2) and (3), and finally the
+    equivalence between (3) and (4). </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="HwandEquiv.hwand_characterization_1">hwand_characterization_1</a></span> (<span class="id">op</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="id">op</span> = (<span class="kwd">fun</span> <span class="id">H1</span> <span class="id">H2</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">h'</span>, <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h</span> <span class="id">h'</span> -&gt; <span class="id">H1</span> <span class="id">h'</span> -&gt; <span class="id">H2</span> (<span class="id">h'</span> \<span class="id">u</span> <span class="id">h</span>))).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="HwandEquiv.hwand_characterization_2">hwand_characterization_2</a></span> (<span class="id">op</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="id">op</span> = (<span class="kwd">fun</span> <span class="id">H1</span> <span class="id">H2</span> =&gt; \<span class="kwd">exists</span> <span class="id">H0</span>, <span class="id">H0</span> \* \[ <span class="id">H1</span> \* <span class="id">H0</span> ==&gt; <span class="id">H2</span> ]).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="HwandEquiv.hwand_characterization_3">hwand_characterization_3</a></span> (<span class="id">op</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>, (<span class="id">H0</span> ==&gt; <span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span>) &lt;-&gt; (<span class="id">H1</span> \* <span class="id">H0</span> ==&gt; <span class="id">H2</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="HwandEquiv.hwand_characterization_4">hwand_characterization_4</a></span> (<span class="id">op</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>, (<span class="id">H1</span> \* <span class="id">H0</span> ==&gt; <span class="id">H2</span>) -&gt; (<span class="id">H0</span> ==&gt; <span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span>))<br/>
+&nbsp;&nbsp;/\ (<span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>, (<span class="id">H1</span> \* (<span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span>) ==&gt; <span class="id">H2</span>)).<br/>
+<br/>
+<div class="doc">The equivalence proofs are given here for reference. The reader needs not
+    follow through the details of these proofs. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HwandEquiv.hwand_characterization_1_eq_2">hwand_characterization_1_eq_2</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_1">hwand_characterization_1</a></span> = <span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_2">hwand_characterization_2</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. <span class="id">intros</span> <span class="id">op</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_1">hwand_characterization_1</a></span>, <span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_2">hwand_characterization_2</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">K</span>: (<span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>, <span class="id">A</span> = <span class="id">B</span> -&gt; (<span class="id">op</span> = <span class="id">A</span> &lt;-&gt; <span class="id">op</span> = <span class="id">B</span>)).<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">iff</span>; <span class="id">subst</span>*. } <span class="id">apply</span> <span class="id">K</span>; <span class="id">clear</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_3">pred_ext_3</a></span>. <span class="id">intros</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">h</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="kwd">exists</span> (=<span class="id">h</span>). <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_hpure_r">hstar_hpure_r</a></span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">h3</span> <span class="id">K3</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_comm">hstar_comm</a></span> <span class="kwd">in</span> <span class="id">K3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">K3</span> <span class="kwd">as</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">K1</span>&amp;<span class="id">K2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">subst</span> <span class="id">h1</span> <span class="id">h3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id"><a href="SLF.LibSepFmap.html#union_comm_of_disjoint">union_comm_of_disjoint</a></span> <span class="id">D</span>). <span class="id">applys</span> <span class="id">M</span> <span class="id">D</span> <span class="id">K2</span>. } }<br/>
+&nbsp;&nbsp;{ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">h1</span> <span class="id">D</span> <span class="id">K1</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> (<span class="id">H0</span>&amp;<span class="id">M</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> (<span class="id">h0</span>&amp;<span class="id">h2</span>&amp;<span class="id">K0</span>&amp;<span class="id">K2</span>&amp;<span class="id">D'</span>&amp;<span class="id">U</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">N</span>&amp;<span class="id">E</span>): <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hpure_inv">hpure_inv</a></span> (<span class="id"><a href="SLF.LibTactics.html#rm">rm</a></span> <span class="id">K2</span>). <span class="id">subst</span> <span class="id">h</span> <span class="id">h2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.union_empty_r">Fmap.union_empty_r</a></span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">N</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_intro">hstar_intro</a></span> <span class="id">K1</span> <span class="id">K0</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_sym">disjoint_sym</a></span> <span class="id">D</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HwandEquiv.hwand_characterization_2_eq_3">hwand_characterization_2_eq_3</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_2">hwand_characterization_2</a></span> = <span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_3">hwand_characterization_3</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. <span class="id">intros</span> <span class="id">op</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_2">hwand_characterization_2</a></span>, <span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_3">hwand_characterization_3</a></span>. <span class="id">iff</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">intros</span>.  <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xchange</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">H3</span> <span class="id">N</span>. <span class="id">xchange</span> <span class="id">N</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span> <span class="id">H0</span>. <span class="id">xchange</span> <span class="id">M</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_2">fun_ext_2</a></span>. <span class="id">intros</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">lets</span> (<span class="id">M</span>&amp;_): (<span class="id">K</span> (<span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span>) <span class="id">H1</span> <span class="id">H2</span>). <span class="id">xsimpl</span> (<span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_refl">himpl_refl</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">H0</span> <span class="id">M</span>. <span class="id">rewrite</span> <span class="id">K</span>. <span class="id">applys</span> <span class="id">M</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HwandEquiv.hwand_characterization_3_eq_4">hwand_characterization_3_eq_4</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_3">hwand_characterization_3</a></span> = <span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_4">hwand_characterization_4</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. <span class="id">intros</span> <span class="id">op</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_3">hwand_characterization_3</a></span>, <span class="id"><a href="SLF.Wand.html#HwandEquiv.hwand_characterization_4">hwand_characterization_4</a></span>. <span class="id">iff</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">M</span>. <span class="id">apply</span> &lt;- <span class="id">K</span>. <span class="id">apply</span> <span class="id">M</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">apply</span> <span class="id">K</span>. <span class="id">auto</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">K</span> <span class="kwd">as</span> (<span class="id">K1</span>&amp;<span class="id">K2</span>). <span class="id">intros</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">M</span>. <span class="id">xchange</span> (<span class="id">K2</span> <span class="id">H1</span> <span class="id">H2</span>). }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id">K1</span>. <span class="id">applys</span> <span class="id">M</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#HwandEquiv">HwandEquiv</a></span>.<br/>
+<br/>
+<h2> Equivalence Results for the Magic Wand for Postconditions </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="QwandEquiv">QwandEquiv</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="kwd">Type</span> <span class="id">op</span> : (<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>)-&gt;(<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>)-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<br/>
+<div class="doc">In what follows we prove the equivalence between five equivalent
+    characterizations of <span class="bracket"><span class="id">qwand</span> <span class="id">H1</span> <span class="id">H2</span></span>:
+    1. The definition expressed directly in terms of heaps:
+    <span class="bracket"><span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">v</span> <span class="id">h'</span>, <span class="id">Fmap.disjoint</span> <span class="id">h</span> <span class="id">h'</span> -&gt; <span class="id">Q1</span> <span class="id">v</span> <span class="id">h'</span> -&gt; <span class="id">Q2</span> <span class="id">v</span> (<span class="id">h</span> \<span class="id">u</span> <span class="id">h'</span>)</span>
+    2. The definition <span class="bracket"><span class="id">qwand</span></span>, expressed in terms of existing operators:
+    <span class="bracket">\<span class="kwd">exists</span> <span class="id">H0</span>, <span class="id">H0</span> \* \[ (<span class="id">Q1</span> \*+ <span class="id">H0</span>) ===&gt; <span class="id">Q2</span>]</span>
+    3. The definition expressed using the universal quantifier:
+    <span class="bracket">\<span class="kwd">forall</span> <span class="id">v</span>, (<span class="id">Q1</span> <span class="id">v</span>) \-* (<span class="id">Q2</span> <span class="id">v</span>)</span>
+    4. The characterization via the equivalence <span class="bracket"><span class="id">hwand_equiv</span></span>:
+    <span class="bracket"><span class="kwd">forall</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>, (<span class="id">H0</span> ==&gt; <span class="id">H1</span> \-* <span class="id">H2</span>) &lt;-&gt; (<span class="id">H1</span> \* <span class="id">H0</span> ==&gt; <span class="id">H2</span>)</span>.
+    5. The characterization via the pair of the introduction rule
+    <span class="bracket"><span class="id">himpl_qwand_r</span></span> and the elimination rule <span class="bracket"><span class="id">qwand_cancel</span></span>.
+    The proof are essentially identical to the equivalence proofs for <span class="bracket"><span class="id">hwand</span></span>,
+    except for definition (3), which is specific to <span class="bracket"><span class="id">qwand</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="QwandEquiv.qwand_characterization_1">qwand_characterization_1</a></span> <span class="id">op</span> :=<br/>
+&nbsp;&nbsp;<span class="id">op</span> = (<span class="kwd">fun</span> <span class="id">Q1</span> <span class="id">Q2</span> =&gt; (<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">v</span> <span class="id">h'</span>, <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h</span> <span class="id">h'</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q1</span> <span class="id">v</span> <span class="id">h'</span> -&gt; <span class="id">Q2</span> <span class="id">v</span> (<span class="id">h</span> \<span class="id">u</span> <span class="id">h'</span>))).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="QwandEquiv.qwand_characterization_2">qwand_characterization_2</a></span> <span class="id">op</span> :=<br/>
+&nbsp;&nbsp;<span class="id">op</span> = (<span class="kwd">fun</span> <span class="id">Q1</span> <span class="id">Q2</span> =&gt; \<span class="kwd">exists</span> <span class="id">H0</span>, <span class="id">H0</span> \* \[ <span class="id">Q1</span> \*+ <span class="id">H0</span> ===&gt; <span class="id">Q2</span> ]).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="QwandEquiv.qwand_characterization_3">qwand_characterization_3</a></span> <span class="id">op</span> :=<br/>
+&nbsp;&nbsp;<span class="id">op</span> = (<span class="kwd">fun</span> <span class="id">Q1</span> <span class="id">Q2</span> =&gt; \<span class="kwd">forall</span> <span class="id">v</span>, (<span class="id">Q1</span> <span class="id">v</span>) \-* (<span class="id">Q2</span> <span class="id">v</span>)).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="QwandEquiv.qwand_characterization_4">qwand_characterization_4</a></span> <span class="id">op</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">H0</span> <span class="id">Q1</span> <span class="id">Q2</span>, (<span class="id">H0</span> ==&gt; <span class="id">op</span> <span class="id">Q1</span> <span class="id">Q2</span>) &lt;-&gt; (<span class="id">Q1</span> \*+ <span class="id">H0</span> ===&gt; <span class="id">Q2</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="QwandEquiv.qwand_characterization_5">qwand_characterization_5</a></span> <span class="id">op</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">H0</span> <span class="id">Q1</span> <span class="id">Q2</span>, (<span class="id">Q1</span> \*+ <span class="id">H0</span> ===&gt; <span class="id">Q2</span>) -&gt; (<span class="id">H0</span> ==&gt; <span class="id">op</span> <span class="id">Q1</span> <span class="id">Q2</span>))<br/>
+&nbsp;&nbsp;/\ (<span class="kwd">forall</span> <span class="id">Q1</span> <span class="id">Q2</span>, (<span class="id">Q1</span> \*+ (<span class="id">op</span> <span class="id">Q1</span> <span class="id">Q2</span>) ===&gt; <span class="id">Q2</span>)).<br/>
+<br/>
+<div class="doc">Here again, we show proofs for the reference, but the reader needs not
+    follow through the details. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="QwandEquiv.hwand_characterization_1_eq_2">hwand_characterization_1_eq_2</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_1">qwand_characterization_1</a></span> = <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_2">qwand_characterization_2</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. <span class="id">intros</span> <span class="id">op</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_1">qwand_characterization_1</a></span>, <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_2">qwand_characterization_2</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">K</span>: (<span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>, <span class="id">A</span> = <span class="id">B</span> -&gt; (<span class="id">op</span> = <span class="id">A</span> &lt;-&gt; <span class="id">op</span> = <span class="id">B</span>)).<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">iff</span>; <span class="id">subst</span>*. } <span class="id">apply</span> <span class="id">K</span>; <span class="id">clear</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_3">pred_ext_3</a></span>. <span class="id">intros</span> <span class="id">Q1</span> <span class="id">Q2</span> <span class="id">h</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="kwd">exists</span> (=<span class="id">h</span>). <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_hpure_r">hstar_hpure_r</a></span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">v</span> <span class="id">h3</span> <span class="id">K3</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_comm">hstar_comm</a></span> <span class="kwd">in</span> <span class="id">K3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">K3</span> <span class="kwd">as</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">K1</span>&amp;<span class="id">K2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">subst</span> <span class="id">h1</span> <span class="id">h3</span>. <span class="id">applys</span> <span class="id">M</span> <span class="id">D</span> <span class="id">K2</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">v</span> <span class="id">h1</span> <span class="id">D</span> <span class="id">K1</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> (<span class="id">H0</span>&amp;<span class="id">M</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> (<span class="id">h0</span>&amp;<span class="id">h2</span>&amp;<span class="id">K0</span>&amp;<span class="id">K2</span>&amp;<span class="id">D'</span>&amp;<span class="id">U</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">N</span>&amp;<span class="id">E</span>): <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hpure_inv">hpure_inv</a></span> (<span class="id"><a href="SLF.LibTactics.html#rm">rm</a></span> <span class="id">K2</span>). <span class="id">subst</span> <span class="id">h</span> <span class="id">h2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.union_empty_r">Fmap.union_empty_r</a></span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">N</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_comm">hstar_comm</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_intro">hstar_intro</a></span> <span class="id">K0</span> <span class="id">K1</span> <span class="id">D</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="QwandEquiv.qwand_characterization_2_eq_3">qwand_characterization_2_eq_3</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_2">qwand_characterization_2</a></span> = <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_3">qwand_characterization_3</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. <span class="id">intros</span> <span class="id">op</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_2">qwand_characterization_2</a></span>, <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_3">qwand_characterization_3</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">K</span>: (<span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>, <span class="id">A</span> = <span class="id">B</span> -&gt; (<span class="id">op</span> = <span class="id">A</span> &lt;-&gt; <span class="id">op</span> = <span class="id">B</span>)).<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">iff</span>; <span class="id">subst</span>*. } <span class="id">apply</span> <span class="id">K</span>; <span class="id">clear</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_2">fun_ext_2</a></span>. <span class="id">intros</span> <span class="id">Q1</span> <span class="id">Q2</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">H0</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_hforall_r">himpl_hforall_r</a></span>. <span class="id">intros</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hwand_equiv">hwand_equiv</a></span>. <span class="id">xchange</span> <span class="id">M</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.qwand">qwand</a></span> <span class="id">Q1</span> <span class="id">Q2</span>). <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.qwand_cancel">qwand_cancel</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="QwandEquiv.qwand_characterization_2_eq_4">qwand_characterization_2_eq_4</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_2">qwand_characterization_2</a></span> = <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_4">qwand_characterization_4</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. <span class="id">intros</span> <span class="id">op</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_2">qwand_characterization_2</a></span>, <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_4">qwand_characterization_4</a></span>. <span class="id">iff</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">intros</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xchange</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">v</span> <span class="id">H3</span> <span class="id">N</span>. <span class="id">xchange</span> <span class="id">N</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span> <span class="id">H0</span>. <span class="id">xchange</span> <span class="id">M</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_2">fun_ext_2</a></span>. <span class="id">intros</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">lets</span> (<span class="id">M</span>&amp;_): (<span class="id">K</span> (<span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span>) <span class="id">H1</span> <span class="id">H2</span>). <span class="id">xsimpl</span> (<span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_refl">himpl_refl</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">H0</span> <span class="id">M</span>. <span class="id">rewrite</span> <span class="id">K</span>. <span class="id">applys</span> <span class="id">M</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="QwandEquiv.qwand_characterization_4_eq_5">qwand_characterization_4_eq_5</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_4">qwand_characterization_4</a></span> = <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_5">qwand_characterization_5</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. <span class="id">intros</span> <span class="id">op</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_4">qwand_characterization_4</a></span>, <span class="id"><a href="SLF.Wand.html#QwandEquiv.qwand_characterization_5">qwand_characterization_5</a></span>. <span class="id">iff</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">M</span>. <span class="id">apply</span> &lt;- <span class="id">K</span>. <span class="id">apply</span> <span class="id">M</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">apply</span> <span class="id">K</span>. <span class="id">auto</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">K</span> <span class="kwd">as</span> (<span class="id">K1</span>&amp;<span class="id">K2</span>). <span class="id">intros</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">M</span>. <span class="id">xchange</span> (<span class="id">K2</span> <span class="id">Q1</span> <span class="id">Q2</span>). }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id">K1</span>. <span class="id">applys</span> <span class="id">M</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Wand.html#QwandEquiv">QwandEquiv</a></span>.<br/>
+<br/>
+<h2> Historical Notes </h2>
+<br/>
+<div class="doc">The magic wand is an operator that was introduced in the very first days of
+    Separation Logic. From a logical perspective, it makes total sense to have
+    it. From a practical perspective, however, it was not always entirely
+    obvious how the magic wand could simplify specifications and proofs.
+    Experience with CFML-1.0 shows that it is possible to develop a verification
+    framework and verify thousands of lines of advanced data structures and
+    algorithms without ever involving the magic wand operator. The magic wand,
+    however, reveals its interest when exploited (1) in the ramified frame rule,
+    and (2) in weakest-precondition style reasoning rules.
+    The idea of the ramified frame rule was introduced by
+    <span class="bracket"><span class="id">Krishnaswami</span>, <span class="id">Birkedal</span>, <span class="id">and</span> <span class="id">Aldrich</span> 2010</span> (in Bib.v). Its general statement, as
+    formulated in the present chapter, was proposed by
+    <span class="bracket"><span class="id">Hobor</span> <span class="id">and</span> <span class="id">Villard</span> 2013</span> (in Bib.v). The rule has later been popularized by the
+    Iris framework, in particular. </div>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

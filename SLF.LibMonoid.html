@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibMonoid</title>
+<meta name="description" content="Documentation of Coq module LibMonoid" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibMonoid</h1>
+<div class="coq">
+<br/>
+<div class="doc">DISCLAIMER: the current presentation of monoids uses typeclasses,
+    but in fact it's not obvious that typeclasses are needed/useful here.
+    Indeed, there is no overloading involved.
+    Thus, the interface might change in the near future. </div>
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibOperation.html">LibOperation</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span>.<br/>
+<br/>
+<h1> Monoids </h1>
+<br/>
+<h1> Structures </h1>
+<br/>
+<div class="doc">Monoid structure: binary operator and neutral element </div>
+<br/>
+<span class="kwd">Record</span> <span class="id"><a name="monoid_op">monoid_op</a></span> (<span class="id">A</span>:<span class="kwd">Type</span>) : <span class="kwd">Type</span> := <span class="id">monoid_make</span> {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="monoid_oper">monoid_oper</a></span> : <span class="id">A</span> -&gt; <span class="id">A</span> -&gt; <span class="id">A</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="monoid_neutral">monoid_neutral</a></span> : <span class="id">A</span> }.<br/>
+<br/>
+<div class="doc">Monoid properties
+    Note that field names are suffixed by <span class="bracket"><span class="id">_prop</span></span> because the corresponding
+    properties are also available through typeclass instances. </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Monoid">Monoid</a></span> <span class="id">A</span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">A</span>) : <span class="kwd">Prop</span> := <span class="id">Monoid_make</span> {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="monoid_assoc_prop">monoid_assoc_prop</a></span> : <span class="kwd">let</span> (<span class="id">o</span>,<span class="id">n</span>) := <span class="id">m</span> <span class="kwd">in</span> <span class="id"><a href="SLF.LibOperation.html#assoc">assoc</a></span> <span class="id">o</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="monoid_neutral_l_prop">monoid_neutral_l_prop</a></span> : <span class="kwd">let</span> (<span class="id">o</span>,<span class="id">n</span>) := <span class="id">m</span> <span class="kwd">in</span> <span class="id"><a href="SLF.LibOperation.html#neutral_l">neutral_l</a></span> <span class="id">o</span> <span class="id">n</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="monoid_neutral_r_prop">monoid_neutral_r_prop</a></span> : <span class="kwd">let</span> (<span class="id">o</span>,<span class="id">n</span>) := <span class="id">m</span> <span class="kwd">in</span> <span class="id"><a href="SLF.LibOperation.html#neutral_r">neutral_r</a></span> <span class="id">o</span> <span class="id">n</span> }.<br/>
+<br/>
+<div class="doc">Commutative monoid </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Comm_monoid">Comm_monoid</a></span> <span class="id">A</span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">A</span>) : <span class="kwd">Prop</span> := <span class="id">Comm_monoid_make</span> {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="comm_monoid_monoid">comm_monoid_monoid</a></span> : <span class="id"><a href="SLF.LibMonoid.html#Monoid">Monoid</a></span> <span class="id">m</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="comm_monoid_comm">comm_monoid_comm</a></span> : <span class="kwd">let</span> (<span class="id">o</span>,<span class="id">n</span>) := <span class="id">m</span> <span class="kwd">in</span> <span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id">o</span> }.<br/>
+<br/>
+<h1> Examples </h1>
+<br/>
+<div class="doc">Example:
+  Instance monoid_plus_zero:
+    Monoid (monoid_make plus 0).
+  Proof using.
+    constructor; repeat intro; lia.
+  Qed.
+</div>
+<br/>
+<h1> Properties </h1>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="MonoidProp">MonoidProp</a></span>.<br/>
+<span class="kwd">Context</span> {<span class="id">A</span>:<span class="kwd">Type</span>}.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Monoid_assoc">Monoid_assoc</a></span> {<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id"><a href="SLF.LibMonoid.html#MonoidProp.A">A</a></span>} := {<br/>
+&nbsp;&nbsp;<span class="id"><a name="monoid_assoc">monoid_assoc</a></span> : <span class="id"><a href="SLF.LibOperation.html#assoc">assoc</a></span> (<span class="id"><a href="SLF.LibMonoid.html#monoid_oper">monoid_oper</a></span> <span class="id">m</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Monoid_neutral_l">Monoid_neutral_l</a></span> {<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id"><a href="SLF.LibMonoid.html#MonoidProp.A">A</a></span>} := {<br/>
+&nbsp;&nbsp;<span class="id"><a name="monoid_neutral_l">monoid_neutral_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_l">neutral_l</a></span> (<span class="id"><a href="SLF.LibMonoid.html#monoid_oper">monoid_oper</a></span> <span class="id">m</span>) (<span class="id"><a href="SLF.LibMonoid.html#monoid_neutral">monoid_neutral</a></span> <span class="id">m</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Monoid_neutral_r">Monoid_neutral_r</a></span> {<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id"><a href="SLF.LibMonoid.html#MonoidProp.A">A</a></span>} := {<br/>
+&nbsp;&nbsp;<span class="id"><a name="monoid_neutral_r">monoid_neutral_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_r">neutral_r</a></span> (<span class="id"><a href="SLF.LibMonoid.html#monoid_oper">monoid_oper</a></span> <span class="id">m</span>) (<span class="id"><a href="SLF.LibMonoid.html#monoid_neutral">monoid_neutral</a></span> <span class="id">m</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Monoid_comm">Monoid_comm</a></span> {<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id"><a href="SLF.LibMonoid.html#MonoidProp.A">A</a></span>} := {<br/>
+&nbsp;&nbsp;<span class="id"><a name="monoid_comm">monoid_comm</a></span> : <span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> (<span class="id"><a href="SLF.LibMonoid.html#monoid_oper">monoid_oper</a></span> <span class="id">m</span>) }.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMonoid.html#MonoidProp">MonoidProp</a></span>.<br/>
+<br/>
+<h1> Derived Properties </h1>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="MonoidInst">MonoidInst</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="MonoidInst.A">A</a></span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">m</span> : <span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id"><a href="SLF.LibMonoid.html#MonoidInst.A">A</a></span>.<br/>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Monoid_assoc_of_Monoid">Monoid_assoc_of_Monoid</a></span> : <span class="kwd">forall</span> <span class="id">m</span> (<span class="id">M</span>:<span class="id"><a href="SLF.LibMonoid.html#Monoid">Monoid</a></span> <span class="id">m</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Monoid_assoc">Monoid_assoc</a></span> (<span class="id">m</span>:=<span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">constructor</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> [<span class="id">U</span> ? ?]. <span class="id">destruct</span> <span class="id">m</span>. <span class="id">simpl</span>. <span class="id">apply</span> <span class="id">U</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Monoid_neutral_l_of_Monoid">Monoid_neutral_l_of_Monoid</a></span> : <span class="kwd">forall</span> <span class="id">m</span> (<span class="id">M</span>:<span class="id"><a href="SLF.LibMonoid.html#Monoid">Monoid</a></span> <span class="id">m</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Monoid_neutral_l">Monoid_neutral_l</a></span> (<span class="id">m</span>:=<span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">constructor</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> [? <span class="id">U</span> ?]. <span class="id">destruct</span> <span class="id">m</span>. <span class="id">simpl</span>. <span class="id">apply</span> <span class="id">U</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Monoid_neutral_r_of_Monoid">Monoid_neutral_r_of_Monoid</a></span> : <span class="kwd">forall</span> <span class="id">m</span> (<span class="id">M</span>:<span class="id"><a href="SLF.LibMonoid.html#Monoid">Monoid</a></span> <span class="id">m</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Monoid_neutral_r">Monoid_neutral_r</a></span> (<span class="id">m</span>:=<span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">constructor</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> [? ? <span class="id">U</span>]. <span class="id">destruct</span> <span class="id">m</span>. <span class="id">simpl</span>. <span class="id">apply</span> <span class="id">U</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Monoid_of_Comm_monoid">Monoid_of_Comm_monoid</a></span> : <span class="kwd">forall</span> <span class="id">m</span> (<span class="id">M</span>:<span class="id"><a href="SLF.LibMonoid.html#Comm_monoid">Comm_monoid</a></span> <span class="id">m</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Monoid">Monoid</a></span> <span class="id">m</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> [<span class="id">U</span> ?]. <span class="id">destruct</span> <span class="id">m</span>. <span class="id">simpl</span>. <span class="id">apply</span> <span class="id">U</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Monoid_comm_of_Comm_Monoid">Monoid_comm_of_Comm_Monoid</a></span> : <span class="kwd">forall</span> <span class="id">m</span> (<span class="id">M</span>:<span class="id"><a href="SLF.LibMonoid.html#Comm_monoid">Comm_monoid</a></span> <span class="id">m</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Monoid_comm">Monoid_comm</a></span> (<span class="id">m</span>:=<span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">constructor</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> [? <span class="id">U</span>]. <span class="id">destruct</span> <span class="id">m</span>. <span class="id">simpl</span>. <span class="id">apply</span> <span class="id">U</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibMonoid.html#MonoidInst">MonoidInst</a></span>.<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

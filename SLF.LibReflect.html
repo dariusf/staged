@@ -1,0 +1,458 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibReflect</title>
+<meta name="description" content="Documentation of Coq module LibReflect" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibReflect</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibBool.html">LibBool</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="kwd">Type</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="kwd">Type</span> <span class="id">b</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>.<br/>
+<br/>
+<h1> Reflection between booleans and propositions </h1>
+<br/>
+<div class="doc">- <span class="bracket"><span class="id">istrue</span> <span class="id">b</span></span> produces a proposition that is <span class="bracket"><span class="id">True</span></span> if and only if
+      the boolean <span class="bracket"><span class="id">b</span></span> is equal to <span class="bracket"><span class="id">true</span></span>.
+    - <span class="bracket"><span class="id">isTrue</span> <span class="id">P</span></span> produces a boolean expression that is <span class="bracket"><span class="id">true</span></span> if and only
+      if the proposition <span class="bracket"><span class="id">P</span></span> is equal to <span class="bracket"><span class="id">True</span></span>. </div>
+<br/>
+<h2> Translation from booleans into propositions </h2>
+<br/>
+<div class="doc">Any boolean <span class="bracket"><span class="id">b</span></span> can be viewed as a proposition through the
+    relation <span class="bracket"><span class="id">b</span> = <span class="id">true</span></span>. </div>
+<br/>
+<span class="kwd">Coercion</span> <span class="id"><a name="istrue">istrue</a></span> (<span class="id">b</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) : <span class="kwd">Prop</span> := (<span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>).<br/>
+<br/>
+<div class="doc">Specification </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_eq_eq_true">istrue_eq_eq_true</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b</span> = (<span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_true_eq">istrue_true_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#istrue_eq_eq_true">istrue_eq_eq_true</a></span>. <span class="id">extens</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_false_eq">istrue_false_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#istrue_eq_eq_true">istrue_eq_eq_true</a></span>. <span class="id">extens</span>. <span class="id">iff</span>; <span class="id">auto_false</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span>.<br/>
+<br/>
+<div class="doc">Proving the goals <span class="bracket"><span class="id">true</span></span> and <span class="bracket">~ <span class="id">false</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_true">istrue_true</a></span> : <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>. <br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_istrue_false">not_istrue_false</a></span> : ~ (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>). <br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#istrue_false_eq">istrue_false_eq</a></span>. <span class="id">intuition</span>. Qed.</div></details>
+<br/>
+<div class="doc">Equivalence of <span class="bracket"><span class="id">false</span></span> and <span class="bracket"><span class="id">False</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="false_of_False">false_of_False</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> <span class="id">K</span>. <span class="id">false</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="False_of_false">False_of_false</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> <span class="id">K</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibReflect.html#istrue_false_eq">istrue_false_eq</a></span> <span class="kwd">in</span> <span class="id">K</span>. Qed.</div></details>
+<br/>
+<div class="doc">Hints for proving <span class="bracket"><span class="id">false</span></span> and <span class="bracket"><span class="id">False</span></span> </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">istrue_true</span> <span class="id">not_istrue_false</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibReflect.html#false_of_False">false_of_False</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">H</span>: <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> |- _ =&gt; <span class="id">apply</span> (<span class="id"><a href="SLF.LibReflect.html#not_istrue_false">not_istrue_false</a></span> <span class="id">H</span>) <span class="kwd">end</span>.<br/>
+<br/>
+<h2> Translation from propositions into booleans </h2>
+<br/>
+<div class="doc">The expression <span class="bracket"><span class="id">isTrue</span> <span class="id">P</span></span> evaluates to <span class="bracket"><span class="id">true</span></span> if and only if
+    the proposition <span class="bracket"><span class="id">P</span></span> is <span class="bracket"><span class="id">True</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="isTrue">isTrue</a></span> (<span class="id">P</span> : <span class="kwd">Prop</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> <span class="kwd">else</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<br/>
+<div class="doc">Specification </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_eq_if">isTrue_eq_if</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span> = <span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> <span class="kwd">else</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_True">isTrue_True</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfolds</span>. <span class="id">case_if</span>; <span class="id">auto_false</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_False">isTrue_False</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfolds</span>. <span class="id">case_if</span>; <span class="id">auto_false</span>~. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span>.<br/>
+<br/>
+<div class="doc">Lemmas </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_eq_true">isTrue_eq_true</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_if">isTrue_eq_if</a></span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_eq_false">isTrue_eq_false</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;~ <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_if">isTrue_eq_if</a></span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<h2> Extensionality for boolean equality, stated using <span class="bracket"><span class="id">istrue</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="bool_ext">bool_ext</a></span> : <span class="kwd">forall</span> <span class="id">b1</span> <span class="id">b2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">b1</span> &lt;-&gt; <span class="id">b2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">b1</span> = <span class="id">b2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">b1</span>; <span class="id">destruct</span> <span class="id">b2</span>; <span class="id">intros</span>; <span class="id">auto_false</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>. <span class="id">false</span> <span class="id">H</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>. <span class="id">false</span> <span class="id">H0</span>; <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="bool_ext_eq">bool_ext_eq</a></span> : <span class="kwd">forall</span> <span class="id">b1</span> <span class="id">b2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">b1</span> = <span class="id">b2</span>) = (<span class="id">b1</span> &lt;-&gt; <span class="id">b2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">M</span>. { <span class="id">subst</span>*. } { <span class="id">applys</span>* <span class="id"><a href="SLF.LibReflect.html#bool_ext">bool_ext</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="Extensionality_bool">Extensionality_bool</a></span> : <span class="id"><a href="SLF.LibEqual.html#Extensionality">Extensionality</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibEqual.html#Extensionality_make">Extensionality_make</a></span> <span class="id"><a href="SLF.LibReflect.html#bool_ext">bool_ext</a></span>). Defined.</div></details>
+<br/>
+<h2> Specification of boolean equality </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">isTrue_pred</span> <span class="id">p</span> <span class="id">P</span></span> asserts that <span class="bracket"><span class="id">p</span></span> is a boolean function that implements
+    the predicate <span class="bracket"><span class="id">P</span></span>, in the sense that <span class="bracket"><span class="id">p</span> <span class="id">x</span></span> returns <span class="bracket"><span class="id">true</span></span> iff <span class="bracket"><span class="id">P</span> <span class="id">x</span></span> holds. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="isTrue_pred">isTrue_pred</a></span> <span class="id">A</span> (<span class="id">p</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">p</span> <span class="id">x</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id">P</span> <span class="id">x</span>).<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">is_beq</span> <span class="id">f</span></span> asserts that <span class="bracket"><span class="id">f</span></span> is a boolean comparison function
+    that implements logical equality: <span class="bracket"><span class="id">f</span> <span class="id">x</span> <span class="id">y</span></span> returns <span class="bracket"><span class="id">true</span></span> iff
+    <span class="bracket"><span class="id">x</span> = <span class="id">y</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="is_beq">is_beq</a></span> <span class="id">A</span> (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>, <span class="id">f</span> <span class="id">x</span> <span class="id">y</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id">x</span> = <span class="id">y</span>).<br/>
+<br/>
+<h1> Rewriting rules </h1>
+<br/>
+<h2> Rewriting rules for distributing <span class="bracket"><span class="id">istrue</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_isTrue_eq">istrue_isTrue_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span>) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_if">isTrue_eq_if</a></span>. <span class="id">case_if</span>; <span class="id">auto_false</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_neg_eq">istrue_neg_eq</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (!<span class="id">b</span>) = ~ (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_and_eq">istrue_and_eq</a></span> : <span class="kwd">forall</span> <span class="id">b1</span> <span class="id">b2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id">b1</span> &amp;&amp; <span class="id">b2</span>) = (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b1</span> /\ <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_or_eq">istrue_or_eq</a></span> : <span class="kwd">forall</span> <span class="id">b1</span> <span class="id">b2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id">b1</span> || <span class="id">b2</span>) = (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b1</span> \/ <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<div class="doc">Corollary </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_neg_isTrue">istrue_neg_isTrue</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (! <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span>) = ~ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#istrue_neg_eq">istrue_neg_eq</a></span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibReflect.html#istrue_isTrue_eq">istrue_isTrue_eq</a></span>. Qed.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">istrue</span></span> and conditionals </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="If_istrue">If_istrue</a></span> : <span class="kwd">forall</span> <span class="id">b</span> <span class="id">A</span> (<span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">If</span> <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>)<br/>
+&nbsp;&nbsp;= (<span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">case_if</span> <span class="kwd">as</span> <span class="id">C</span>; <span class="id">case_if</span> <span class="kwd">as</span> <span class="id">D</span>; <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_If_eq">istrue_If_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">b1</span> <span class="id">b2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id">b1</span> <span class="kwd">else</span> <span class="id">b2</span>)<br/>
+&nbsp;&nbsp;= (<span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b1</span> <span class="kwd">else</span> <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_if_eq">istrue_if_eq</a></span> : <span class="kwd">forall</span> <span class="id">b1</span> <span class="id">b2</span> <span class="id">b3</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="kwd">if</span> <span class="id">b1</span> <span class="kwd">then</span> <span class="id">b2</span> <span class="kwd">else</span> <span class="id">b3</span>)<br/>
+&nbsp;&nbsp;= (<span class="id">If</span> <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b1</span> <span class="kwd">then</span> <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b2</span> <span class="kwd">else</span> <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">case_if</span>; <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<h2> Rewriting rules for distributing <span class="bracket"><span class="id">isTrue</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_istrue">isTrue_istrue</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b</span>) = <span class="id">b</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibReflect.html#istrue_isTrue_eq">istrue_isTrue_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_not">isTrue_not</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (~ <span class="id">P</span>) = ! <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_if">isTrue_eq_if</a></span>. <span class="id">do</span> 2 <span class="id">case_if</span>; <span class="id">auto_false</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_and">isTrue_and</a></span> : <span class="kwd">forall</span> <span class="id">P1</span> <span class="id">P2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id">P1</span> /\ <span class="id">P2</span>) = (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P1</span> &amp;&amp; <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">do</span> 3 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_if">isTrue_eq_if</a></span>. <span class="id">do</span> 3 <span class="id">case_if</span>; <span class="id">auto_false</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_or">isTrue_or</a></span> : <span class="kwd">forall</span> <span class="id">P1</span> <span class="id">P2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id">P1</span> \/ <span class="id">P2</span>) = (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P1</span> || <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">do</span> 3 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_if">isTrue_eq_if</a></span>. <span class="id">do</span> 3 <span class="id">case_if</span>; <span class="id">auto_false</span>*. Qed.</div></details>
+<br/>
+<div class="doc">Corollary </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_not_istrue">isTrue_not_istrue</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (~ <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b</span>) = !<span class="id">b</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_not">isTrue_not</a></span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibReflect.html#isTrue_istrue">isTrue_istrue</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Simplification of equalities involving isTrue </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="IsTrueEqualities">IsTrueEqualities</a></span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">prove_isTrue_lemma</span> :=<br/>
+&nbsp;&nbsp;<span class="id">intros</span>; <span class="id">try</span> <span class="id">extens</span>; <span class="id">try</span> <span class="id">iff</span>; <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_if">isTrue_eq_if</a></span> <span class="kwd">in</span> *; <span class="id">case_if</span>; <span class="id">auto_false</span>*.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="true_eq_isTrue_eq">true_eq_isTrue_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span>) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_isTrue_lemma</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_eq_true_eq">isTrue_eq_true_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_isTrue_lemma</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="false_eq_isTrue_eq">false_eq_isTrue_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span>) = ~ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_isTrue_lemma</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_eq_false_eq">isTrue_eq_false_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>) = ~ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_isTrue_lemma</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_eq_isTrue_eq">isTrue_eq_isTrue_eq</a></span> : <span class="kwd">forall</span> <span class="id">P1</span> <span class="id">P2</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P1</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P2</span>) = (<span class="id">P1</span> &lt;-&gt; <span class="id">P2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span>; <span class="id">repeat</span> <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_if">isTrue_eq_if</a></span> <span class="kwd">in</span> *;<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">case_if</span>; <span class="id">auto_false</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibReflect.html#IsTrueEqualities">IsTrueEqualities</a></span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">isTrue</span></span> and conditionals </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_isTrue">if_isTrue</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">A</span> (<span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>)<br/>
+&nbsp;&nbsp;= (<span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">case_if</span> <span class="kwd">as</span> <span class="id">C</span>; <span class="id">case_if</span> <span class="kwd">as</span> <span class="id">D</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_true_eq">isTrue_eq_true_eq</a></span> <span class="kwd">in</span> <span class="id">C</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_false_eq">isTrue_eq_false_eq</a></span> <span class="kwd">in</span> <span class="id">C</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_If">isTrue_If</a></span> : <span class="kwd">forall</span> <span class="id">P1</span> <span class="id">P2</span> <span class="id">P3</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id">If</span> <span class="id">P1</span> <span class="kwd">then</span> <span class="id">P2</span> <span class="kwd">else</span> <span class="id">P3</span>)<br/>
+&nbsp;&nbsp;= <span class="id">If</span> <span class="id">P1</span> <span class="kwd">then</span> <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P2</span> <span class="kwd">else</span> <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="isTrue_If_eq_if_isTrue">isTrue_If_eq_if_isTrue</a></span> : <span class="kwd">forall</span> <span class="id">P1</span> <span class="id">P2</span> <span class="id">P3</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id">If</span> <span class="id">P1</span> <span class="kwd">then</span> <span class="id">P2</span> <span class="kwd">else</span> <span class="id">P3</span>)<br/>
+&nbsp;&nbsp;= (<span class="kwd">if</span> <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P1</span> <span class="kwd">then</span> <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P2</span> <span class="kwd">else</span> <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibReflect.html#if_isTrue">if_isTrue</a></span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibReflect.html#isTrue_If">isTrue_If</a></span>. Qed.</div></details>
+<br/>
+<h2> Lemmas for testing booleans </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="bool_inv_or">bool_inv_or</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;<span class="id">b</span> \/ !<span class="id">b</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="bool_inv_or_eq">bool_inv_or_eq</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;<span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> \/ <span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="xor_inv_or">xor_inv_or</a></span> : <span class="kwd">forall</span> <span class="id">b1</span> <span class="id">b2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#xor">xor</a></span> <span class="id">b1</span> <span class="id">b2</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">b1</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> /\ <span class="id">b2</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>)<br/>
+&nbsp;&nbsp;\/ (<span class="id">b1</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> /\ <span class="id">b2</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>; <span class="id">auto_false</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibReflect.html#xor_inv_or">xor_inv_or</a></span> [<span class="id">b1</span>] [<span class="id">b2</span>].<br/>
+<br/>
+<h2> Lemmas for normalizing <span class="bracket"><span class="id">b</span> = <span class="id">true</span></span> and <span class="bracket"><span class="id">b</span> = <span class="id">false</span></span> terms </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="bool_eq_true_eq">bool_eq_true_eq</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;(<span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>) = <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="bool_eq_false_eq">bool_eq_false_eq</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;(<span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>) = <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (!<span class="id">b</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="true_eq_bool_eq">true_eq_bool_eq</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> = <span class="id">b</span>) = <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">b</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="false_eq_bool_eq">false_eq_bool_eq</a></span> : <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> = <span class="id">b</span>) = <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (!<span class="id">b</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<h1> Tactics </h1>
+<br/>
+<h2> Tactics <span class="bracket"><span class="id">rew_istrue</span></span> to distribute <span class="bracket"><span class="id">istrue</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">rew_istrue</span></span> distributes <span class="bracket"><span class="id">istrue</span></span>. It is useful to replace all
+    boolean operators with corresponding logical operators. </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibReflect.html#istrue_true_eq">istrue_true_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_false_eq">istrue_false_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_isTrue_eq">istrue_isTrue_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue_neg_eq">istrue_neg_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_and_eq">istrue_and_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_or_eq">istrue_or_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#If_istrue">If_istrue</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_If_eq">istrue_If_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_if_eq">istrue_if_eq</a></span>: <span class="id">rew_istrue</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_istrue"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_istrue</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_istrue"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_istrue</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_istrue"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_istrue</span>).<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_istrue"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_istrue</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_istrue"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_istrue</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_istrue"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_istrue</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_istrue"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_istrue</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_istrue"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_istrue</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_istrue"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_istrue</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<br/>
+<h2> Tactics <span class="bracket"><span class="id">rew_isTrue</span></span> to distribute <span class="bracket"><span class="id">isTrue</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">rew_isTrue</span></span> distributes <span class="bracket"><span class="id">isTrue</span></span>.
+    This tactic is probably much less useful than <span class="bracket"><span class="id">rew_istrue</span></span>, since logical
+    operators are often simpler to work with. </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibReflect.html#isTrue_True">isTrue_True</a></span> <span class="id"><a href="SLF.LibReflect.html#isTrue_False">isTrue_False</a></span> <span class="id"><a href="SLF.LibReflect.html#isTrue_istrue">isTrue_istrue</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue_not">isTrue_not</a></span> <span class="id"><a href="SLF.LibReflect.html#isTrue_and">isTrue_and</a></span> <span class="id"><a href="SLF.LibReflect.html#isTrue_or">isTrue_or</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#if_isTrue">if_isTrue</a></span> <span class="id"><a href="SLF.LibReflect.html#isTrue_If">isTrue_If</a></span> : <span class="id">rew_isTrue</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_isTrue"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_isTrue</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_isTrue"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_isTrue</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_isTrue"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_isTrue</span>).<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_isTrue"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_isTrue</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_isTrue"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_isTrue</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_isTrue"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_isTrue</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_isTrue"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_isTrue</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_isTrue"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_isTrue</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_isTrue"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_isTrue</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<br/>
+<h2> Tactics useful for program verification, when reasoning about
+       the result of if-statements over boolean expressions, i.e.
+       an expression of the form <span class="bracket"><span class="id">b</span> = ..</span> or <span class="bracket">.. = <span class="id">b</span></span>, which produces
+       hypotheses of the form <span class="bracket"><span class="id">true</span> = ..</span> and <span class="bracket"><span class="id">false</span> = ..</span> or symmetric.
+       It is used as post-treatment for tactic <span class="bracket"><span class="id">case_if</span></span>. </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#true_eq_isTrue_eq">true_eq_isTrue_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_true_eq">isTrue_eq_true_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#false_eq_isTrue_eq">false_eq_isTrue_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#isTrue_eq_false_eq">isTrue_eq_false_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue_eq_isTrue_eq">isTrue_eq_isTrue_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#not_not_eq">not_not_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue_true_eq">istrue_true_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_false_eq">istrue_false_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_isTrue_eq">istrue_isTrue_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue_neg_eq">istrue_neg_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_and_eq">istrue_and_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#istrue_or_eq">istrue_or_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#bool_eq_true_eq">bool_eq_true_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#bool_eq_false_eq">bool_eq_false_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#true_eq_bool_eq">true_eq_bool_eq</a></span> <span class="id"><a href="SLF.LibReflect.html#false_eq_bool_eq">false_eq_bool_eq</a></span><br/>
+&nbsp;&nbsp;: <span class="id">rew_bool_eq</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool_eq"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_bool_eq</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool_eq"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool_eq</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool_eq"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool_eq</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool_eq"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_bool_eq</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool_eq"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool_eq</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool_eq"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool_eq</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool_eq"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_bool_eq</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool_eq"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool_eq</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool_eq"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool_eq</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<br/>
+<h2> Tactics extended for reflection </h2>
+<br/>
+<div class="doc">Extension of the tactic <span class="bracket"><span class="id">case_if</span></span> to automatically performs
+    simplification using <span class="bracket"><span class="id">logics</span></span>.
+    For less aggressive introduction of <span class="bracket"><span class="id">istrue</span></span>, consider rewriting
+    without the lemmas:
+    <span class="bracket"><span class="id">bool_eq_true_eq</span> <span class="id">bool_eq_false_eq</span> <span class="id">true_eq_bool_eq</span> <span class="id">false_eq_bool_eq</span></span>
+</div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">case_if_post</span> <span class="id">H</span> ::=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool_eq</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">tryfalse</span>.<br/>
+<br/>
+<div class="doc">Extension of the tactic <span class="bracket"><span class="id">test_dispatch</span></span> from LibLogic.v, so as to
+    be able to call the tactic <span class="bracket"><span class="id">tests</span></span> directly on boolean expressions </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tests_bool_base</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span> :=<br/>
+&nbsp;&nbsp;<span class="id">tests_prop_base</span> (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> <span class="id">E</span>) <span class="id">H1</span> <span class="id">H2</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tests_dispatch</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span> ::=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">E</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> =&gt; <span class="id">tests_bool_base</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span><br/>
+&nbsp;&nbsp;| <span class="kwd">Prop</span> =&gt; <span class="id">tests_prop_base</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span><br/>
+&nbsp;&nbsp;| {_}+{_} =&gt; <span class="id">tests_ssum_base</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Extension of the tactic <span class="bracket"><span class="id">apply_to_head_of</span></span> (see LibTactics). </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">apply_to_head_of</span> <span class="id">E</span> <span class="id">cont</span> ::=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">go</span> <span class="id">E</span> := <span class="kwd">let</span> <span class="id">P</span> := <span class="id">get_head</span> <span class="id">E</span> <span class="kwd">in</span> <span class="id">cont</span> <span class="id">P</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">E</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> ?<span class="id">A</span> =&gt; <span class="id">go</span> <span class="id">A</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> ?<span class="id">A</span>) =&gt; <span class="id">go</span> <span class="id">A</span><br/>
+&nbsp;&nbsp;| ?<span class="id">A</span> = ?<span class="id">B</span> =&gt; <span class="id">first</span> [ <span class="id">go</span> <span class="id">A</span> | <span class="id">go</span> <span class="id">B</span> ]<br/>
+&nbsp;&nbsp;| ?<span class="id">A</span> =&gt; <span class="id">go</span> <span class="id">A</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

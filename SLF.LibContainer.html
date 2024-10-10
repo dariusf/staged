@@ -1,0 +1,947 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibContainer</title>
+<meta name="description" content="Documentation of Coq module LibContainer" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibContainer</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span> <span class="id"><a href="SLF.LibOperation.html">LibOperation</a></span> <span class="id"><a href="SLF.LibInt.html">LibInt</a></span> <span class="id"><a href="SLF.LibMonoid.html">LibMonoid</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span> <span class="id">K</span> <span class="id">T</span>.<br/>
+<br/>
+<h1> Operators </h1>
+<br/>
+<h2> Definitions </h2>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagEmpty">BagEmpty</a></span> <span class="id">T</span> := { <span class="id"><a name="empty">empty</a></span> : <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagSingle">BagSingle</a></span> <span class="id">A</span> <span class="id">T</span> := { <span class="id"><a name="single">single</a></span> : <span class="id">A</span> -&gt; <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagSingleBind">BagSingleBind</a></span> <span class="id">A</span> <span class="id">B</span> <span class="id">T</span> := { <span class="id"><a name="single_bind">single_bind</a></span> : <span class="id">A</span> -&gt; <span class="id">B</span> -&gt; <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagIn">BagIn</a></span> <span class="id">A</span> <span class="id">T</span> := { <span class="id"><a name="is_in">is_in</a></span> : <span class="id">A</span> -&gt; <span class="id">T</span> -&gt; <span class="kwd">Prop</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagBinds">BagBinds</a></span> <span class="id">A</span> <span class="id">B</span> <span class="id">T</span> := { <span class="id"><a name="binds">binds</a></span> : <span class="id">T</span> -&gt; <span class="id">A</span> -&gt; <span class="id">B</span> -&gt; <span class="kwd">Prop</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagRead">BagRead</a></span> <span class="id">A</span> <span class="id">B</span> <span class="id">T</span> := { <span class="id"><a name="read">read</a></span> : <span class="id">T</span> -&gt; <span class="id">A</span> -&gt; <span class="id">B</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagUpdate">BagUpdate</a></span> <span class="id">A</span> <span class="id">B</span> <span class="id">T</span> := { <span class="id"><a name="update">update</a></span> : <span class="id">T</span> -&gt; <span class="id">A</span> -&gt; <span class="id">B</span> -&gt; <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagUnion">BagUnion</a></span> <span class="id">T</span> := { <span class="id"><a name="union">union</a></span> : <span class="id">T</span> -&gt; <span class="id">T</span> -&gt; <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagInter">BagInter</a></span> <span class="id">T</span> := { <span class="id"><a name="inter">inter</a></span> : <span class="id">T</span> -&gt; <span class="id">T</span> -&gt; <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagIncl">BagIncl</a></span> <span class="id">T</span> := { <span class="id"><a name="incl">incl</a></span> : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagDisjoint">BagDisjoint</a></span> <span class="id">T</span> := { <span class="id"><a name="disjoint">disjoint</a></span> : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagRestrict">BagRestrict</a></span> <span class="id">T</span> <span class="id">K</span> := { <span class="id"><a name="restrict">restrict</a></span> : <span class="id">T</span> -&gt; <span class="id">K</span> -&gt; <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagRemove">BagRemove</a></span> <span class="id">T</span> <span class="id">K</span> := { <span class="id"><a name="remove">remove</a></span> : <span class="id">T</span> -&gt; <span class="id">K</span> -&gt; <span class="id">T</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagFold">BagFold</a></span> <span class="id">I</span> <span class="id">F</span> <span class="id">T</span> := { <span class="id"><a name="fold">fold</a></span> : <span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">I</span> -&gt; <span class="id">F</span> -&gt; <span class="id">T</span> -&gt; <span class="id">I</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagCard">BagCard</a></span> <span class="id">T</span> := { <span class="id"><a name="card">card</a></span> : <span class="id">T</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagDom">BagDom</a></span> <span class="id">T</span> <span class="id">K</span> := { <span class="id"><a name="dom">dom</a></span> : <span class="id">T</span> -&gt; <span class="id">K</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagImg">BagImg</a></span> <span class="id">T</span> <span class="id">K</span> := { <span class="id"><a name="img">img</a></span> : <span class="id">T</span> -&gt; <span class="id">K</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="BagIndex">BagIndex</a></span> <span class="id">A</span> <span class="id">T</span> := { <span class="id"><a name="index">index</a></span> : <span class="id">T</span> -&gt; <span class="id">A</span> -&gt; <span class="kwd">Prop</span> }.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="notin">notin</a></span> `{<span class="id"><a href="SLF.LibContainer.html#BagIn">BagIn</a></span> <span class="id">A</span> <span class="id">T</span>} <span class="id">x</span> <span class="id">m</span> :=<br/>
+&nbsp;&nbsp;~ (<span class="id"><a href="SLF.LibContainer.html#is_in">is_in</a></span> <span class="id">x</span> <span class="id">m</span>).<br/>
+<br/>
+<br/>
+<h2> Notation </h2>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">container_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\{}"</span> := (<span class="id"><a href="SLF.LibContainer.html#empty">empty</a></span>)<br/>
+&nbsp;&nbsp;: <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"\{ x }"</span> := (<span class="id"><a href="SLF.LibContainer.html#single">single</a></span> <span class="id">x</span>)<br/>
+&nbsp;&nbsp;: <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x '\in' m"</span> := (<span class="id"><a href="SLF.LibContainer.html#is_in">is_in</a></span> <span class="id">x</span> <span class="id">m</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x '\notin' E"</span> := (<span class="id"><a href="SLF.LibContainer.html#notin">notin</a></span> <span class="id">x</span> <span class="id">E</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x \:= v"</span> := (<span class="id"><a href="SLF.LibContainer.html#single_bind">single_bind</a></span> <span class="id">x</span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 29) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"m [ x ]"</span> := (<span class="id"><a href="SLF.LibContainer.html#read">read</a></span> <span class="id">m</span> <span class="id">x</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 7, <span class="id">format</span> <span class="string">"m [ x ]"</span>, <span class="id">left</span> <span class="id">associativity</span>).<br/>
+<span class="kwd">Notation</span> <span class="string">"m [ x := v ]"</span> := (<span class="id"><a href="SLF.LibContainer.html#update">update</a></span> <span class="id">m</span> <span class="id">x</span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 7, <span class="id">format</span> <span class="string">"m [ x := v ]"</span>, <span class="id">left</span> <span class="id">associativity</span>).<br/>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"m1 '\c' m2"</span> := (<span class="id"><a href="SLF.LibContainer.html#incl">incl</a></span> <span class="id">m1</span> <span class="id">m2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 38) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"m1 '\u' m2"</span> := (<span class="id"><a href="SLF.LibContainer.html#union">union</a></span> <span class="id">m1</span> <span class="id">m2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 37, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"m1 '\n' m2"</span> := (<span class="id"><a href="SLF.LibContainer.html#inter">inter</a></span> <span class="id">m1</span> <span class="id">m2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 36, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"m1 '\-' m2"</span> := (<span class="id"><a href="SLF.LibContainer.html#remove">remove</a></span> <span class="id">m1</span> <span class="id">m2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 35) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"m1 '\|' m2"</span> := (<span class="id"><a href="SLF.LibContainer.html#restrict">restrict</a></span> <span class="id">m1</span> <span class="id">m2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 34) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"m1 '\#' m2"</span> := (<span class="id"><a href="SLF.LibContainer.html#disjoint">disjoint</a></span> <span class="id">m1</span> <span class="id">m2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 37, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">container_scope</span>.<br/>
+<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">container_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"''{' x '}'"</span> := (<span class="id"><a href="SLF.LibContainer.html#single">single</a></span> <span class="id">x</span>) (<span class="id">format</span> <span class="string">"''{' x '}'"</span>)<br/>
+&nbsp;&nbsp;: <span class="id">container_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"M \-- i"</span> := (<span class="id">M</span> \- \{<span class="id">i</span>}) (<span class="kwd">at</span> <span class="id">level</span> 35) : <span class="id">container_scope</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="kwd">forall</span> <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>, <span class="id">P</span> <span class="id">x</span></span> notation </h2>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'forall_' x '\in' E ',' P"</span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">P</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 200, <span class="id">x</span> <span class="id">name</span>) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"'forall_' x y '\in' E ',' P"</span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">y</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">P</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 200, <span class="id">x</span> <span class="id">name</span>, <span class="id">y</span> <span class="id">name</span>) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"'forall_' x y z '\in' E ',' P"</span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">z</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">y</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">z</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">P</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 200, <span class="id">x</span> <span class="id">name</span>, <span class="id">y</span> <span class="id">name</span>, <span class="id">z</span> <span class="id">name</span>) : <span class="id">container_scope</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="kwd">exists</span> <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> <span class="id">st</span> <span class="id">P</span> <span class="id">x</span></span> notation </h2>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'exists_' x '\in' E ',' P"</span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">P</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 200, <span class="id">x</span> <span class="id">name</span>) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"'exists_' x y '\in' E ',' P"</span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">y</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">P</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 200, <span class="id">x</span> <span class="id">name</span>, <span class="id">y</span> <span class="id">name</span>) : <span class="id">container_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"'exists_' x y z '\in' E ',' P"</span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">y</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">z</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">P</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 200, <span class="id">x</span> <span class="id">name</span>, <span class="id">y</span> <span class="id">name</span>, <span class="id">z</span> <span class="id">name</span>) : <span class="id">container_scope</span>.<br/>
+<br/>
+<h2> Foreach </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="foreach">foreach</a></span> `{<span class="id"><a href="SLF.LibContainer.html#BagIn">BagIn</a></span> <span class="id">A</span> <span class="id">T</span>} (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">E</span>:<span class="id">T</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">P</span> <span class="id">x</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">index</span></span> for natural numbers </h2>
+<br/>
+<span class="id">Local</span> <span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">Int_scope</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="int_index">int_index</a></span> : <span class="id"><a href="SLF.LibContainer.html#BagIndex">BagIndex</a></span> <span class="id">int</span> <span class="id">int</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">constructor</span>. <span class="id">exact</span> (<span class="kwd">fun</span> <span class="id">n</span> (<span class="id">i</span>:<span class="id">int</span>) =&gt; 0 &lt;= <span class="id">i</span> &lt; <span class="id">n</span>). Defined.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="int_index_eq">int_index_eq</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">i</span> : <span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#index">index</a></span> <span class="id">n</span> <span class="id">i</span> = (0 &lt;= <span class="id">i</span> &lt; <span class="id">n</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibContainer.html#int_index">int_index</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="int_index_le">int_index_le</a></span> : <span class="kwd">forall</span> <span class="id">i</span> <span class="id">n</span> <span class="id">m</span> : <span class="id">int</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#index">index</a></span> <span class="id">n</span> <span class="id">i</span> -&gt; <span class="id">n</span> &lt;= <span class="id">m</span> -&gt; <span class="id"><a href="SLF.LibContainer.html#index">index</a></span> <span class="id">m</span> <span class="id">i</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> @<span class="id"><a href="SLF.LibContainer.html#int_index_eq">int_index_eq</a></span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="int_index_prove">int_index_prove</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">i</span> : <span class="id">int</span>),<br/>
+&nbsp;&nbsp;0 &lt;= <span class="id">i</span> -&gt; <span class="id">i</span> &lt; <span class="id">n</span> -&gt; <span class="id"><a href="SLF.LibContainer.html#index">index</a></span> <span class="id">n</span> <span class="id">i</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#int_index_eq">int_index_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="int_index_succ">int_index_succ</a></span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">i</span>, <span class="id">n</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#index">index</a></span> (<span class="id">n</span> + 1) <span class="id">i</span> = (<span class="id"><a href="SLF.LibContainer.html#index">index</a></span> <span class="id">n</span> <span class="id">i</span> \/ <span class="id">i</span> = <span class="id">n</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">P</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#int_index_eq">int_index_eq</a></span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibLogic.html#or_classic_l">or_classic_l</a></span>. <span class="id">math</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>; <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Derivable </h2>
+<br/>
+<div class="doc">Bag update can be defined as bag union with a singleton bag </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="bag_update_as_union_single">bag_update_as_union_single</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> <span class="id">T</span><br/>
+&nbsp;&nbsp;`{<span class="id"><a href="SLF.LibContainer.html#BagSingleBind">BagSingleBind</a></span> <span class="id">A</span> <span class="id">B</span> <span class="id">T</span>} `{<span class="id"><a href="SLF.LibContainer.html#BagUnion">BagUnion</a></span> <span class="id">T</span>},<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#BagUpdate">BagUpdate</a></span> <span class="id">A</span> <span class="id">B</span> <span class="id">T</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">apply</span> (<span class="kwd">fun</span> <span class="id">m</span> <span class="id">k</span> <span class="id">v</span> =&gt; <span class="id">m</span> \<span class="id">u</span> (<span class="id">k</span> \:= <span class="id">v</span>)). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibContainer.html#bag_update_as_union_single">bag_update_as_union_single</a></span>.<br/>
+<br/>
+<br/>
+<h2> Properties </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Properties">Properties</a></span>.<br/>
+<br/>
+<span class="kwd">Context</span> {<span class="id">A</span> <span class="id">T</span>:<span class="kwd">Type</span>}<br/>
+&nbsp;&nbsp;{<span class="id">BI</span>: <span class="id"><a href="SLF.LibContainer.html#BagIn">BagIn</a></span> <span class="id">A</span> <span class="id">T</span>} {<span class="id">BE</span>: <span class="id"><a href="SLF.LibContainer.html#BagEmpty">BagEmpty</a></span> <span class="id">T</span>} {<span class="id">BS</span>: <span class="id"><a href="SLF.LibContainer.html#BagSingle">BagSingle</a></span> <span class="id">A</span> <span class="id">T</span>}<br/>
+&nbsp;&nbsp;{<span class="id">BN</span>: <span class="id"><a href="SLF.LibContainer.html#BagInter">BagInter</a></span> <span class="id">T</span>} {<span class="id">BU</span>: <span class="id"><a href="SLF.LibContainer.html#BagUnion">BagUnion</a></span> <span class="id">T</span>} {<span class="id">BR</span>: <span class="id"><a href="SLF.LibContainer.html#BagRemove">BagRemove</a></span> <span class="id">T</span> <span class="id">T</span>} {<span class="id">BC</span>: <span class="id"><a href="SLF.LibContainer.html#BagCard">BagCard</a></span> <span class="id">T</span>}<br/>
+&nbsp;&nbsp;{<span class="id">BL</span>: <span class="id"><a href="SLF.LibContainer.html#BagIncl">BagIncl</a></span> <span class="id">T</span>} {<span class="id">BD</span>: <span class="id"><a href="SLF.LibContainer.html#BagDisjoint">BagDisjoint</a></span> <span class="id">T</span>}.<br/>
+<br/>
+<div class="doc">In </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_empty_eq">In_empty_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_empty_eq">in_empty_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> \{} = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_empty">In_empty</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_empty">in_empty</a></span> : <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> \{} -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_eq">Notin_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_eq">notin_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, (<span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span>) = ~ (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_empty">Notin_empty</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_empty">notin_empty</a></span> : <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="id">notin</span> \{} }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_single_eq">In_single_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_single_eq">in_single_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>, <span class="id">x</span> \<span class="kwd">in</span> \{<span class="id">y</span>} = (<span class="id">x</span> = <span class="id">y</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_single">In_single</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_single">in_single</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>, <span class="id">x</span> \<span class="kwd">in</span> \{<span class="id">y</span>} -&gt; <span class="id">x</span> = <span class="id">y</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_single_self">In_single_self</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_single_self">in_single_self</a></span> : <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> \{<span class="id">x</span>} }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_extens_eq">In_extens_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_extens_eq">in_extens_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> = <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>) -&gt; <span class="id">E</span> = <span class="id">F</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_extens">In_extens</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_extens">in_extens</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> &lt;-&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>) -&gt; <span class="id">E</span> = <span class="id">F</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Is_empty_eq">Is_empty_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="is_empty_eq">is_empty_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span>, (<span class="id">E</span> = \{}) = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Is_empty_prove">Is_empty_prove</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="is_empty_prove">is_empty_prove</a></span> : <span class="kwd">forall</span> <span class="id">E</span>, (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) -&gt; <span class="id">E</span> = \{} }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Is_empty_inv">Is_empty_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="is_empty_inv">is_empty_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, <span class="id">E</span> = \{} -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Is_nonempty_prove">Is_nonempty_prove</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="is_nonempty_prove">is_nonempty_prove</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">E</span> &lt;&gt; \{} }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Is_single_eq">Is_single_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="is_single_eq">is_single_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, (<span class="id">E</span> = \{<span class="id">x</span>}) = (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ (<span class="kwd">forall</span> <span class="id">y</span>, <span class="id">y</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">y</span> = <span class="id">x</span>)) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Is_single_prove">Is_single_prove</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="is_single_prove">is_single_prove</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; (<span class="kwd">forall</span> <span class="id">y</span>, <span class="id">y</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">y</span> = <span class="id">x</span>) -&gt; <span class="id">E</span> = \{<span class="id">x</span>} }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Is_single_inv">Is_single_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="is_single_inv">is_single_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">E</span>, <span class="id">E</span> = \{<span class="id">x</span>} -&gt; <span class="id">y</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">y</span> = <span class="id">x</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_single_eq">Notin_single_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_single_eq">notin_single_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>, <span class="id">x</span> \<span class="id">notin</span> \{<span class="id">y</span>} = (<span class="id">x</span> &lt;&gt; <span class="id">y</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_inter_eq">In_inter_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_inter_eq">in_inter_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) = (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_inter">In_inter</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_inter">in_inter</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_inter_inv">In_inter_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_inter_inv">in_inter_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_inter_eq">Notin_inter_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_inter_eq">notin_inter_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="id">notin</span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) = (<span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> \/ <span class="id">x</span> \<span class="id">notin</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_inter_l">Notin_inter_l</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_inter_l">notin_inter_l</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="id">notin</span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_inter_r">Notin_inter_r</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_inter_r">notin_inter_r</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="id">notin</span> <span class="id">F</span> -&gt; <span class="id">x</span> \<span class="id">notin</span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_inter_inv">Notin_inter_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_inter_inv">notin_inter_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="id">notin</span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) -&gt; <span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> \/ <span class="id">x</span> \<span class="id">notin</span> <span class="id">F</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_union_eq">In_union_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_union_eq">in_union_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> (<span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibContainer.html#Properties.T">T</a></span>), <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> \/ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_union_l">In_union_l</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_union_l">in_union_l</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_union_r">In_union_r</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_union_r">in_union_r</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_union_inv">In_union_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_union_inv">in_union_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> (<span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibContainer.html#Properties.T">T</a></span>), <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) -&gt; (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> \/ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_union_eq">Notin_union_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_union_eq">notin_union_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="id">notin</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = (<span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> /\ <span class="id">x</span> \<span class="id">notin</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_union">Notin_union</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_union">notin_union</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="id">notin</span> <span class="id">F</span> -&gt; <span class="id">x</span> \<span class="id">notin</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Notin_union_inv">Notin_union_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="notin_union_inv">notin_union_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">x</span> \<span class="id">notin</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) -&gt; <span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> /\ <span class="id">x</span> \<span class="id">notin</span> <span class="id">F</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="In_remove_eq">In_remove_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="in_remove_eq">in_remove_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> (<span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibContainer.html#Properties.T">T</a></span>), <span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \- <span class="id">F</span>) = (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">x</span> \<span class="id">notin</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Remove_incl">Remove_incl</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="remove_incl">remove_incl</a></span> : <span class="kwd">forall</span> (<span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibContainer.html#Properties.T">T</a></span>), (<span class="id">E</span> \- <span class="id">F</span>) \<span class="id">c</span> <span class="id">E</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Remove_disjoint">Remove_disjoint</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="remove_disjoint">remove_disjoint</a></span> : <span class="kwd">forall</span> (<span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibContainer.html#Properties.T">T</a></span>), <span class="id">F</span> \# (<span class="id">E</span> \- <span class="id">F</span>) }.<br/>
+<br/>
+<div class="doc">Incl </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_in_eq">Incl_in_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_in_eq">incl_in_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, (<span class="id">E</span> \<span class="id">c</span> <span class="id">F</span>) = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_prove">Incl_prove</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_prove">incl_prove</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>) -&gt; <span class="id">E</span> \<span class="id">c</span> <span class="id">F</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_inv">Incl_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_inv">incl_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">E</span> \<span class="id">c</span> <span class="id">F</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>}.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_refl">Incl_refl</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_refl">incl_refl</a></span> : <span class="id"><a href="SLF.LibRelation.html#refl">refl</a></span> <span class="id"><a href="SLF.LibContainer.html#incl">incl</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_trans">Incl_trans</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_trans">incl_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id"><a href="SLF.LibContainer.html#incl">incl</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_antisym">Incl_antisym</a></span> := <br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_antisym">incl_antisym</a></span> : <span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> <span class="id"><a href="SLF.LibContainer.html#incl">incl</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_order">Incl_order</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_order">incl_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#order">LibOrder.order</a></span> <span class="id"><a href="SLF.LibContainer.html#incl">incl</a></span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Empty_incl">Empty_incl</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="empty_incl">empty_incl</a></span> : <span class="kwd">forall</span> <span class="id">E</span>, \{} \<span class="id">c</span> <span class="id">E</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_empty">Incl_empty</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_empty">incl_empty</a></span> : <span class="kwd">forall</span> <span class="id">E</span>, (<span class="id">E</span> \<span class="id">c</span> \{}) = (<span class="id">E</span> = \{}) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_empty_inv">Incl_empty_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_empty_inv">incl_empty_inv</a></span> : <span class="kwd">forall</span> <span class="id">E</span>, <span class="id">E</span> \<span class="id">c</span> \{} -&gt; <span class="id">E</span> = \{} }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Single_incl_r_eq">Single_incl_r_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="single_incl_r_eq">single_incl_r_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, (\{<span class="id">x</span>} \<span class="id">c</span> <span class="id">E</span>) = (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Single_incl_r">Single_incl_r</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="single_incl_r">single_incl_r</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; \{<span class="id">x</span>} \<span class="id">c</span> <span class="id">E</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Single_incl_l_eq">Single_incl_l_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="single_incl_l_eq">single_incl_l_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, (<span class="id">E</span> \<span class="id">c</span> \{<span class="id">x</span>}) = (<span class="id">E</span> = \{} \/ <span class="id">E</span> = \{<span class="id">x</span>}) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_union_l">Incl_union_l</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_union_l">incl_union_l</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span>, <span class="id">E</span> \<span class="id">c</span> <span class="id">F</span> -&gt; <span class="id">E</span> \<span class="id">c</span> (<span class="id">F</span> \<span class="id">u</span> <span class="id">G</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_union_r">Incl_union_r</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_union_r">incl_union_r</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span>, <span class="id">E</span> \<span class="id">c</span> <span class="id">G</span> -&gt; <span class="id">E</span> \<span class="id">c</span> (<span class="id">F</span> \<span class="id">u</span> <span class="id">G</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_incl_eq">Union_incl_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_incl_eq">union_incl_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span>, ((<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) \<span class="id">c</span> <span class="id">G</span>) = (<span class="id">E</span> \<span class="id">c</span> <span class="id">G</span> /\ <span class="id">F</span> \<span class="id">c</span> <span class="id">G</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_incl">Union_incl</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_incl">union_incl</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span>, <span class="id">E</span> \<span class="id">c</span> <span class="id">G</span> -&gt; <span class="id">F</span> \<span class="id">c</span> <span class="id">G</span> -&gt; (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) \<span class="id">c</span> <span class="id">G</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_incl_inv">Union_incl_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_incl_inv">union_incl_inv</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span>, (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) \<span class="id">c</span> <span class="id">G</span> -&gt; <span class="id">E</span> \<span class="id">c</span> <span class="id">G</span> /\ <span class="id">F</span> \<span class="id">c</span> <span class="id">G</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_incl_union">Union_incl_union</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_incl_union">union_incl_union</a></span> : <span class="kwd">forall</span> <span class="id">E1</span> <span class="id">F1</span> <span class="id">E2</span> <span class="id">F2</span>, <span class="id">E1</span> \<span class="id">c</span> <span class="id">F1</span> -&gt; <span class="id">E2</span> \<span class="id">c</span> <span class="id">F2</span> -&gt; (<span class="id">E1</span> \<span class="id">u</span> <span class="id">E2</span>) \<span class="id">c</span> (<span class="id">F1</span> \<span class="id">u</span> <span class="id">F2</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_incl_union_same_l">Union_incl_union_same_l</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_incl_union_same_l">union_incl_union_same_l</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F1</span> <span class="id">F2</span>, <span class="id">F1</span> \<span class="id">c</span> <span class="id">F2</span> -&gt; (<span class="id">E</span> \<span class="id">u</span> <span class="id">F1</span>) \<span class="id">c</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F2</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_incl_union_same_r">Union_incl_union_same_r</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_incl_union_same_r">union_incl_union_same_r</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F1</span> <span class="id">F2</span>, <span class="id">F1</span> \<span class="id">c</span> <span class="id">F2</span> -&gt; (<span class="id">F1</span> \<span class="id">u</span> <span class="id">E</span>) \<span class="id">c</span> (<span class="id">F2</span> \<span class="id">u</span> <span class="id">E</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_inter_eq">Incl_inter_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_inter_eq">incl_inter_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span>, <span class="id">E</span> \<span class="id">c</span> (<span class="id">F</span> \<span class="id">n</span> <span class="id">G</span>) = (<span class="id">E</span> \<span class="id">c</span> <span class="id">F</span> /\ <span class="id">E</span> \<span class="id">c</span> <span class="id">G</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_inter">Incl_inter</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_inter">incl_inter</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span>, <span class="id">E</span> \<span class="id">c</span> <span class="id">F</span> -&gt; <span class="id">E</span> \<span class="id">c</span> <span class="id">G</span> -&gt; <span class="id">E</span> \<span class="id">c</span> (<span class="id">F</span> \<span class="id">n</span> <span class="id">G</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Incl_inter_inv">Incl_inter_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="incl_inter_inv">incl_inter_inv</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span>, <span class="id">E</span> \<span class="id">c</span> (<span class="id">F</span> \<span class="id">n</span> <span class="id">G</span>) -&gt; <span class="id">E</span> \<span class="id">c</span> <span class="id">F</span> /\ <span class="id">E</span> \<span class="id">c</span> <span class="id">G</span> }.<br/>
+<br/>
+<div class="doc">Union </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_assoc">Union_assoc</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_assoc">union_assoc</a></span> : <span class="id"><a href="SLF.LibOperation.html#assoc">assoc</a></span> <span class="id"><a href="SLF.LibContainer.html#union">union</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_comm">Union_comm</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_comm">union_comm</a></span> : <span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id"><a href="SLF.LibContainer.html#union">union</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_comm_assoc">Union_comm_assoc</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_comm_assoc">union_comm_assoc</a></span> : <span class="id"><a href="SLF.LibOperation.html#comm_assoc">comm_assoc</a></span> <span class="id"><a href="SLF.LibContainer.html#union">union</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_empty_l">Union_empty_l</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_empty_l">union_empty_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_l">neutral_l</a></span> <span class="id"><a href="SLF.LibContainer.html#union">union</a></span> <span class="id"><a href="SLF.LibContainer.html#empty">empty</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_empty_r">Union_empty_r</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_empty_r">union_empty_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_r">neutral_r</a></span> <span class="id"><a href="SLF.LibContainer.html#union">union</a></span> <span class="id"><a href="SLF.LibContainer.html#empty">empty</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_empty_inv">Union_empty_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_empty_inv">union_empty_inv</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">E</span> \<span class="id">u</span> <span class="id">F</span> = \{} -&gt; <span class="id">E</span> = \{} /\ <span class="id">F</span> = \{} }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Union_self">Union_self</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="union_self">union_self</a></span> : <span class="id"><a href="SLF.LibOperation.html#idempotent2">idempotent2</a></span> <span class="id"><a href="SLF.LibContainer.html#union">union</a></span> }.<br/>
+<br/>
+<div class="doc">Intersection </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Inter_assoc">Inter_assoc</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="inter_assoc">inter_assoc</a></span> : <span class="id"><a href="SLF.LibOperation.html#assoc">assoc</a></span> <span class="id"><a href="SLF.LibContainer.html#inter">inter</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Inter_comm">Inter_comm</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="inter_comm">inter_comm</a></span> : <span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id"><a href="SLF.LibContainer.html#inter">inter</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Inter_comm_assoc">Inter_comm_assoc</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="inter_comm_assoc">inter_comm_assoc</a></span> : <span class="id"><a href="SLF.LibOperation.html#comm_assoc">comm_assoc</a></span> <span class="id"><a href="SLF.LibContainer.html#inter">inter</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Inter_empty_l">Inter_empty_l</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="inter_empty_l">inter_empty_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#absorb_l">absorb_l</a></span> <span class="id"><a href="SLF.LibContainer.html#inter">inter</a></span> <span class="id"><a href="SLF.LibContainer.html#empty">empty</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Inter_empty_r">Inter_empty_r</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="inter_empty_r">inter_empty_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#absorb_r">absorb_r</a></span> <span class="id"><a href="SLF.LibContainer.html#inter">inter</a></span> <span class="id"><a href="SLF.LibContainer.html#empty">empty</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Inter_self">Inter_self</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="inter_self">inter_self</a></span> : <span class="id"><a href="SLF.LibOperation.html#idempotent2">idempotent2</a></span> <span class="id"><a href="SLF.LibContainer.html#inter">inter</a></span> }.<br/>
+<br/>
+<div class="doc">Removal </div>
+<br/>
+<br/>
+<div class="doc">Cardinal </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Card_empty">Card_empty</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="card_empty">card_empty</a></span> : <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> \{} = 0%<span class="id">nat</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Card_single">Card_single</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="card_single">card_single</a></span> : <span class="kwd">forall</span> <span class="id">X</span>, <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> \{<span class="id">X</span>} = 1%<span class="id">nat</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Card_union">Card_union</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="card_union">card_union</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> + <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">F</span>)%<span class="id">nat</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Card_disjoin_union">Card_disjoin_union</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="card_disjoin_union">card_disjoin_union</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">E</span> \# <span class="id">F</span> -&gt; <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> + <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">F</span>)%<span class="id">nat</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Card_union_le">Card_union_le</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="card_union_le">card_union_le</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) &lt;= (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> + <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">F</span>)%<span class="id">nat</span> }.<br/>
+<br/>
+<div class="doc">Disjointness </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Disjoint_sym">Disjoint_sym</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="disjoint_sym">disjoint_sym</a></span> : <span class="id"><a href="SLF.LibRelation.html#sym">sym</a></span> <span class="id"><a href="SLF.LibContainer.html#disjoint">disjoint</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Disjoint_eq">Disjoint_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="disjoint_eq">disjoint_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, (<span class="id">E</span> \# <span class="id">F</span>) = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Disjoint_not_eq">Disjoint_not_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="disjoint_not_eq">disjoint_not_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, (~ (<span class="id">E</span> \# <span class="id">F</span>)) = (<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>) }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Disjoint_prove">Disjoint_prove</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="disjoint_prove">disjoint_prove</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) -&gt; <span class="id">E</span> \# <span class="id">F</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Disjoint_inv">Disjoint_inv</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="disjoint_inv">disjoint_inv</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>, (<span class="id">E</span> \# <span class="id">F</span>) -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Disjoint_single_l_eq">Disjoint_single_l_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="disjoint_single_l_eq">disjoint_single_l_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, (\{<span class="id">x</span>} \# <span class="id">E</span>) = <span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Disjoint_single_r_eq">Disjoint_single_r_eq</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="disjoint_single_r_eq">disjoint_single_r_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span>, (<span class="id">E</span> \# \{<span class="id">x</span>}) = <span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Inter_disjoint">Inter_disjoint</a></span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="inter_disjoint">inter_disjoint</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>, <span class="id">E</span> \# <span class="id">F</span> -&gt; <span class="id">E</span> \<span class="id">n</span> <span class="id">F</span> = \{} }.<br/>
+<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibContainer.html#Properties">Properties</a></span>.<br/>
+<br/>
+<div class="doc">Lemmas with premises and operators in the conclusion
+    need additional Arguments </div>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#is_empty_inv">is_empty_inv</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BE</span>} {<span class="id">Is_empty_inv</span>} [<span class="id">x</span>] [<span class="id">E</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#is_nonempty_prove">is_nonempty_prove</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BE</span>} {<span class="id">Is_nonempty_prove</span>} [<span class="id">x</span>] [<span class="id">E</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#in_single">in_single</a></span> <span class="id">A</span> <span class="id">T</span> {<span class="id">BI</span>} {<span class="id">BS</span>} {<span class="id">In_single</span>} [<span class="id">x</span>] [<span class="id">y</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#is_single_inv">is_single_inv</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BS</span>} {<span class="id">Is_single_inv</span>} [<span class="id">x</span>] <span class="id">y</span> [<span class="id">E</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#in_inter">in_inter</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BN</span>} {<span class="id">In_inter</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#in_inter_inv">in_inter_inv</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BN</span>} {<span class="id">In_inter_inv</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#notin_inter_l">notin_inter_l</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BN</span>} {<span class="id">Notin_inter_l</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#notin_inter_r">notin_inter_r</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BN</span>} {<span class="id">Notin_inter_r</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#notin_inter_inv">notin_inter_inv</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BN</span>} {<span class="id">Notin_inter_inv</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#in_union_l">in_union_l</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BU</span>} {<span class="id">In_union_l</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#in_union_r">in_union_r</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BU</span>} {<span class="id">In_union_r</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#in_union_inv">in_union_inv</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BU</span>} {<span class="id">In_union_inv</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#notin_union">notin_union</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BU</span>} {<span class="id">Notin_union</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#notin_union_inv">notin_union_inv</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BU</span>} {<span class="id">Notin_union_inv</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#incl_prove">incl_prove</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BL</span>} {<span class="id">Incl_prove</span>} [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#incl_inv">incl_inv</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BL</span>} {<span class="id">Incl_inv</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#incl_trans">incl_trans</a></span> {<span class="id">T</span>} [<span class="id">BL</span>] {<span class="id">Incl_trans</span>} <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#incl_empty_inv">incl_empty_inv</a></span> {<span class="id">T</span>} {<span class="id">BE</span>} {<span class="id">BL</span>} {<span class="id">Incl_empty_inv</span>} [<span class="id">E</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#incl_union_l">incl_union_l</a></span> {<span class="id">T</span>} {<span class="id">BU</span>} {<span class="id">BL</span>} {<span class="id">Incl_union_l</span>} [<span class="id">E</span>] [<span class="id">F</span>] [<span class="id">G</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#incl_union_r">incl_union_r</a></span> {<span class="id">T</span>} {<span class="id">BU</span>} {<span class="id">BL</span>} {<span class="id">Incl_union_r</span>} [<span class="id">E</span>] [<span class="id">F</span>] [<span class="id">G</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#incl_inter">incl_inter</a></span> {<span class="id">T</span>} {<span class="id">BN</span>} {<span class="id">BL</span>} {<span class="id">Incl_inter</span>} [<span class="id">E</span>] [<span class="id">F</span>] [<span class="id">G</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#incl_inter_inv">incl_inter_inv</a></span> {<span class="id">T</span>} {<span class="id">BN</span>} {<span class="id">BL</span>} {<span class="id">Incl_inter_inv</span>} [<span class="id">E</span>] [<span class="id">F</span>] [<span class="id">G</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#union_incl_union">union_incl_union</a></span> {<span class="id">T</span>} {<span class="id">BU</span>} {<span class="id">BL</span>} {<span class="id">Union_incl_union</span>} [<span class="id">E1</span>] [<span class="id">F1</span>] [<span class="id">E2</span>] [<span class="id">F2</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#union_incl_union_same_l">union_incl_union_same_l</a></span> {<span class="id">T</span>} {<span class="id">BU</span>} {<span class="id">BL</span>} {<span class="id">Union_incl_union_same_l</span>} [<span class="id">E</span>] [<span class="id">F1</span>] [<span class="id">F2</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#union_incl_union_same_r">union_incl_union_same_r</a></span> {<span class="id">T</span>} {<span class="id">BU</span>} {<span class="id">BL</span>} {<span class="id">Union_incl_union_same_r</span>} [<span class="id">E</span>] [<span class="id">F1</span>] [<span class="id">F2</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#union_empty_inv">union_empty_inv</a></span> {<span class="id">T</span>} {<span class="id">BE</span>} {<span class="id">BU</span>} {<span class="id">Union_empty_inv</span>} [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_sym">disjoint_sym</a></span> {<span class="id">T</span>} {<span class="id">BD</span>} {<span class="id">Disjoint_sym</span>}.<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_prove">disjoint_prove</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BD</span>} {<span class="id">Disjoint_prove</span>} [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_inv">disjoint_inv</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BD</span>} {<span class="id">Disjoint_inv</span>} [<span class="id">x</span>] [<span class="id">E</span>] [<span class="id">F</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_single_l_eq">disjoint_single_l_eq</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BS</span>} {<span class="id">BD</span>} {<span class="id">Disjoint_single_l_eq</span>}.<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_single_r_eq">disjoint_single_r_eq</a></span> {<span class="id">A</span>} {<span class="id">T</span>} {<span class="id">BI</span>} {<span class="id">BS</span>} {<span class="id">BD</span>} {<span class="id">Disjoint_single_r_eq</span>}.<br/>
+<br/>
+<h2> Derived Properties </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="DerivedProperties">DerivedProperties</a></span>.<br/>
+<br/>
+<span class="kwd">Context</span> {<span class="id">A</span> <span class="id">T</span>:<span class="kwd">Type</span>}<br/>
+&nbsp;&nbsp;{<span class="id">BI</span>: <span class="id"><a href="SLF.LibContainer.html#BagIn">BagIn</a></span> <span class="id">A</span> <span class="id">T</span>} {<span class="id">BE</span>: <span class="id"><a href="SLF.LibContainer.html#BagEmpty">BagEmpty</a></span> <span class="id">T</span>} {<span class="id">BS</span>: <span class="id"><a href="SLF.LibContainer.html#BagSingle">BagSingle</a></span> <span class="id">A</span> <span class="id">T</span>}<br/>
+&nbsp;&nbsp;{<span class="id">BN</span>: <span class="id"><a href="SLF.LibContainer.html#BagInter">BagInter</a></span> <span class="id">T</span>} {<span class="id">BU</span>: <span class="id"><a href="SLF.LibContainer.html#BagUnion">BagUnion</a></span> <span class="id">T</span>} {<span class="id">BR</span>: <span class="id"><a href="SLF.LibContainer.html#BagRemove">BagRemove</a></span> <span class="id">T</span> <span class="id">T</span>} {<span class="id">BC</span>: <span class="id"><a href="SLF.LibContainer.html#BagCard">BagCard</a></span> <span class="id">T</span>}<br/>
+&nbsp;&nbsp;{<span class="id">BL</span>: <span class="id"><a href="SLF.LibContainer.html#BagIncl">BagIncl</a></span> <span class="id">T</span>} {<span class="id">BD</span>: <span class="id"><a href="SLF.LibContainer.html#BagDisjoint">BagDisjoint</a></span> <span class="id">T</span>}.<br/>
+<br/>
+<div class="doc">In </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_empty_of_in_empty_eq">in_empty_of_in_empty_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty">In_empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">I</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="notin_eq_of_nothing">notin_eq_of_nothing</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_eq">Notin_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibContainer.html#notin">notin</a></span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="notin_empty_of_in_empty_eq">notin_empty_of_in_empty_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_empty">Notin_empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">I</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_single_of_in_single_eq">in_single_of_in_single_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_single_eq">In_single_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_single">In_single</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">I</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_single_self_of_in_single_eq">in_single_self_of_in_single_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_single_eq">In_single_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_single_self">In_single_self</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_extens_eq_of_in_extens">in_extens_eq_of_in_extens</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens_eq">In_extens_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id">I</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="is_empty_eq_of_in_empty_eq">is_empty_eq_of_in_empty_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_empty_eq">Is_empty_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">introv</span> <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>. <span class="id">iff</span> <span class="id">N</span>. <span class="id">false</span>* <span class="id">M</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="is_empty_prove_of_is_empty_eq">is_empty_prove_of_is_empty_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_empty_eq">Is_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_empty_prove">Is_empty_prove</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#is_empty_eq">is_empty_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="is_empty_inv_of_is_empty_eq">is_empty_inv_of_is_empty_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_empty_eq">Is_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_empty_inv">Is_empty_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I1</span> <span class="id">I2</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#is_empty_eq">is_empty_eq</a></span> <span class="kwd">in</span> <span class="id">I1</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="is_nonempty_prove_of_is_empty_eq">is_nonempty_prove_of_is_empty_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_empty_eq">Is_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_nonempty_prove">Is_nonempty_prove</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I1</span> <span class="id">I2</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#is_empty_eq">is_empty_eq</a></span> <span class="kwd">in</span> <span class="id">I2</span>. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="is_single_eq_of_in_single_eq">is_single_eq_of_in_single_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_single_eq">In_single_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_single_eq">Is_single_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">M</span> (<span class="id">M1</span>&amp;<span class="id">M2</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">split</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span>. <span class="id">introv</span> <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>. <span class="id">iff</span> <span class="id">N</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* (<span class="id">M2</span> <span class="id">x0</span>). <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">subst</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="is_single_prove_of_is_single_eq">is_single_prove_of_is_single_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_single_eq">Is_single_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_single_prove">Is_single_prove</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#is_single_eq">is_single_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="is_single_inv_of_is_single_eq">is_single_inv_of_is_single_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_single_eq">Is_single_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Is_single_inv">Is_single_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I1</span> <span class="id">I2</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#is_single_eq">is_single_eq</a></span> <span class="kwd">in</span> <span class="id">I1</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="notin_single_eq_of_in_single_eq">notin_single_eq_of_in_single_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_single_eq">In_single_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_single_eq">Notin_single_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibContainer.html#notin">notin</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span>. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_inter_of_in_inter_eq">in_inter_of_in_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter_eq">In_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter">In_inter</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I1</span> <span class="id">I2</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_inter_eq">in_inter_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_inter_inv_of_in_inter_eq">in_inter_inv_of_in_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter_eq">In_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter_inv">In_inter_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ &lt;- <span class="id"><a href="SLF.LibContainer.html#in_inter_eq">in_inter_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="notin_inter_l_of_notin_inter_eq">notin_inter_l_of_notin_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_inter_eq">Notin_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_inter_l">Notin_inter_l</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#notin_inter_eq">notin_inter_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="notin_inter_r_of_notin_inter_eq">notin_inter_r_of_notin_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_inter_eq">Notin_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_inter_r">Notin_inter_r</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#notin_inter_eq">notin_inter_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="notin_inter_inv_of_notin_inter_eq">notin_inter_inv_of_notin_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_inter_eq">Notin_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_inter_inv">Notin_inter_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#notin_inter_eq">notin_inter_eq</a></span> <span class="kwd">in</span> <span class="id">I</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_union_l_of_in_union_eq">in_union_l_of_in_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_l">In_union_l</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_union_r_of_in_union_eq">in_union_r_of_in_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_r">In_union_r</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_union_inv_of_in_union_eq">in_union_inv_of_in_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_inv">In_union_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ @<span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span> <span class="kwd">in</span> <span class="id">I</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="notin_union_of_notin_union_eq">notin_union_of_notin_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_union_eq">Notin_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_union">Notin_union</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I1</span> <span class="id">I2</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#notin_union_eq">notin_union_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="notin_union_inv_of_notin_union_eq">notin_union_inv_of_notin_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_union_eq">Notin_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_union_inv">Notin_union_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#notin_union_eq">notin_union_eq</a></span> <span class="kwd">in</span> <span class="id">I</span>. Qed.</div></details>
+<br/>
+<br/>
+<div class="doc">Incl </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_prove_of_in_eq">incl_prove_of_in_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_prove">Incl_prove</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_inv_of_in_eq">incl_inv_of_in_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_inv">Incl_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I1</span> <span class="id">I2</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span> <span class="kwd">in</span> <span class="id">I1</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_order_of_incl_in_eq">incl_order_of_incl_in_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_order">Incl_order</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">constructor</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span> <span class="id">I1</span> <span class="id">I2</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span> <span class="kwd">in</span> <span class="id">I1</span>,<span class="id">I2</span>. <span class="id">autos</span>*.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">E</span> <span class="id">F</span> <span class="id">I1</span> <span class="id">I2</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span> <span class="kwd">in</span> <span class="id">I1</span>,<span class="id">I2</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_refl_of_incl_order">incl_refl_of_incl_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_order">Incl_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_refl">Incl_refl</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#order_refl">order_refl</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#incl_order">incl_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_trans_of_incl_order">incl_trans_of_incl_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_order">Incl_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_trans">Incl_trans</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#order_trans">order_trans</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#incl_order">incl_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_antisym_of_incl_order">incl_antisym_of_incl_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_order">Incl_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_antisym">Incl_antisym</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#order_antisym">order_antisym</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#incl_order">incl_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="empty_incl_inv_of_incl_in_eq_and_in_empty_eq">empty_incl_inv_of_incl_in_eq_and_in_empty_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Empty_incl">Empty_incl</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. <span class="id">introv</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_empty_of_in_empty_eq_and_incl_in_eq">incl_empty_of_in_empty_eq_and_incl_in_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_empty">Incl_empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>. <span class="id">iff</span> <span class="id">N</span>. <span class="id">applys</span>* <span class="id">M</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">false</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">introv</span> <span class="id">N</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_empty_inv_of_incl_empty">incl_empty_inv_of_incl_empty</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_empty">Incl_empty</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_empty_inv">Incl_empty_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#incl_empty">incl_empty</a></span> <span class="kwd">in</span> <span class="id">I</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="single_incl_r_eq_of_in_single_eq_and_and_incl_in_eq">single_incl_r_eq_of_in_single_eq_and_and_incl_in_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_single_eq">In_single_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Single_incl_r_eq">Single_incl_r_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">M</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">subst</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="single_incl_r_of_single_incl_r_eq">single_incl_r_of_single_incl_r_eq</a></span>:<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Single_incl_r_eq">Single_incl_r_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Single_incl_r">Single_incl_r</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#single_incl_r_eq">single_incl_r_eq</a></span>. <span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="single_incl_l_eq_of_in_empty_eq_and_in_single_eq_and_and_incl_in_eq">single_incl_l_eq_of_in_empty_eq_and_in_single_eq_and_and_incl_in_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_single_eq">In_single_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Single_incl_l_eq">Single_incl_l_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">tests</span>: (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">right</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibContainer.html#is_single_prove">is_single_prove</a></span>. <span class="id">introv</span> <span class="id">N</span>. <span class="id">forwards</span>~ <span class="id">R</span>: <span class="id">M</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">R</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">left</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>. <span class="id">iff</span> <span class="id">N</span>. <span class="id">forwards</span>~ <span class="id">R</span>: <span class="id">M</span> <span class="id">x0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">R</span>. <span class="id">subst</span>. <span class="id">false</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">false</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span>. <span class="id">destruct</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">false</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_incl_eq_of_in_union_eq_and_and_incl_in_eq">union_incl_eq_of_in_union_eq_and_and_incl_in_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_eq">Union_incl_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">repeat</span> <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. <span class="id">iff</span> <span class="id">M</span> (<span class="id">M1</span>&amp;<span class="id">M2</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>. <span class="id">intros</span> <span class="id">x</span> <span class="id">N</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">x</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span> <span class="kwd">in</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">N</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">x</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span> <span class="kwd">in</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">N</span>. <span class="id">specializes</span> <span class="id">M1</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">M2</span> <span class="id">x</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_incl_union_of_union_incl_and_incl_union_l_and_incl_union_r">union_incl_union_of_union_incl_and_incl_union_l_and_incl_union_r</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl">Union_incl</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_union_l">Incl_union_l</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_union_r">Incl_union_r</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_union">Union_incl_union</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_incl">union_incl</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id"><a href="SLF.LibContainer.html#incl_union_l">incl_union_l</a></span>. } { <span class="id">applys</span>* <span class="id"><a href="SLF.LibContainer.html#incl_union_r">incl_union_r</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_incl_union_same_l_of_union_incl_union_and_incl_refl">union_incl_union_same_l_of_union_incl_union_and_incl_refl</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_union">Union_incl_union</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_refl">Incl_refl</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_union_same_l">Union_incl_union_same_l</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_incl_union">union_incl_union</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id"><a href="SLF.LibContainer.html#incl_refl">incl_refl</a></span>. } { <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_incl_union_same_r_of_union_incl_union_same_l_and_union_comm">union_incl_union_same_r_of_union_incl_union_same_l_and_union_comm</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_union_same_l">Union_incl_union_same_l</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_comm">Union_comm</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_union_same_r">Union_incl_union_same_r</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#union_comm">union_comm</a></span> <span class="id">F1</span>). <span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#union_comm">union_comm</a></span> <span class="id">F2</span>).<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_incl_union_same_l">union_incl_union_same_l</a></span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_union_l_of_incl_in_eq_and_in_union_eq">incl_union_l_of_incl_in_eq_and_in_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_union_l">Incl_union_l</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span> <span class="kwd">in</span> <span class="id">I</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_union_r_of_incl_union_l">incl_union_r_of_incl_union_l</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_union_l">Incl_union_l</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_comm">Union_comm</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_union_r">Incl_union_r</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#union_comm">union_comm</a></span>. <span class="id">apply</span>* @<span class="id"><a href="SLF.LibContainer.html#incl_union_l">incl_union_l</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_incl_of_union_incl_eq">union_incl_of_union_incl_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_eq">Union_incl_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_eq">Union_incl_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros_all</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#union_incl_eq">union_incl_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_incl_inv_of_union_incl_eq">union_incl_inv_of_union_incl_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_eq">Union_incl_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_incl_inv">Union_incl_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#union_incl_eq">union_incl_eq</a></span> <span class="kwd">in</span> <span class="id">I</span>. <span class="id">destruct</span>* <span class="id">I</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_inter_eq_of_in_inter_eq_and_and_incl_in_eq">incl_inter_eq_of_in_inter_eq_and_and_incl_in_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter_eq">In_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_inter_eq">Incl_inter_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">repeat</span> <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. <span class="id">iff</span> <span class="id">M</span> (<span class="id">M1</span>&amp;<span class="id">M2</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>. <span class="id">intros</span> <span class="id">x</span> <span class="id">N</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">x</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_inter_eq">in_inter_eq</a></span> <span class="kwd">in</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">N</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">x</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_inter_eq">in_inter_eq</a></span> <span class="kwd">in</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">N</span>. <span class="id">specializes</span> <span class="id">M1</span> <span class="id">N</span>. <span class="id">specializes</span> <span class="id">M2</span> <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_inter_eq">in_inter_eq</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_inter_of_incl_inter_eq">incl_inter_of_incl_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_inter_eq">Incl_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_inter">Incl_inter</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#incl_inter_eq">incl_inter_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_inter_inv_of_incl_inter_eq">incl_inter_inv_of_incl_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_inter_eq">Incl_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_inter_inv">Incl_inter_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#incl_inter_eq">incl_inter_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. Qed.</div></details>
+<br/>
+<div class="doc">Local tactic <span class="bracket"><span class="id">contain_by_in_double</span></span> to prove inclusion </div>
+<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> @<span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span> @<span class="id"><a href="SLF.LibContainer.html#in_inter_eq">in_inter_eq</a></span><br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> @<span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> : <span class="id">rew_in_eq</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">contain_by_in_double</span> :=<br/>
+&nbsp;&nbsp;<span class="id">intros_all</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>; <span class="id">intros</span>;<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_in_eq</span>;<br/>
+&nbsp;&nbsp;<span class="id">intuition</span> (<span class="id">try</span> <span class="id">solve</span> [<span class="id">auto</span>|<span class="id">eauto</span>|<span class="id">auto_false</span>|<span class="id">false</span>]).<br/>
+<br/>
+<div class="doc">Union </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_comm_form_in_union_eq">union_comm_form_in_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_comm">Union_comm</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">contain_by_in_double</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_assoc_form_in_union_eq">union_assoc_form_in_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_assoc">Union_assoc</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">contain_by_in_double</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_comm_assoc_of_union_comm_and_union_assoc">union_comm_assoc_of_union_comm_and_union_assoc</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_comm">Union_comm</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_assoc">Union_assoc</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_comm_assoc">Union_comm_assoc</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros_all</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#union_assoc">union_assoc</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#union_comm">union_comm</a></span> _ <span class="id">x</span>). <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_empty_l_of_in_union_eq_and_in_empty_eq">union_empty_l_of_in_union_eq_and_in_empty_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_empty_l">Union_empty_l</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">contain_by_in_double</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_empty_r_of_union_empty_l">union_empty_r_of_union_empty_l</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_empty_l">Union_empty_l</a></span> -&gt; <span class="id"><a href="SLF.LibContainer.html#Union_comm">Union_comm</a></span> -&gt; <span class="id"><a href="SLF.LibContainer.html#Union_empty_r">Union_empty_r</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros_all</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#union_comm">union_comm</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#union_empty_l">union_empty_l</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_empty_inv_of_in_union_eq">union_empty_inv_of_in_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_empty_inv">Union_empty_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">N</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>. <span class="id">iff</span> <span class="id">R</span>. <span class="id">rewrite</span> &lt;- <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">R</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>. <span class="id">iff</span> <span class="id">R</span>. <span class="id">rewrite</span> &lt;- <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">R</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="union_self_of_in_union_eq">union_self_of_in_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Union_self">Union_self</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">contain_by_in_double</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="notin_union_eq_of_in_union_eq">notin_union_eq_of_in_union_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Notin_union_eq">Notin_union_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibContainer.html#notin">notin</a></span>. <span class="id">rewrite</span> @<span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. <span class="id">extens</span>*. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<div class="doc">Inter </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="inter_comm_form_in_inter_eq">inter_comm_form_in_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter_eq">In_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_comm">Inter_comm</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">contain_by_in_double</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="inter_assoc_form_in_inter_eq">inter_assoc_form_in_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter_eq">In_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_assoc">Inter_assoc</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">contain_by_in_double</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="inter_comm_assoc_of_inter_comm_and_inter_assoc">inter_comm_assoc_of_inter_comm_and_inter_assoc</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_comm">Inter_comm</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_assoc">Inter_assoc</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_comm_assoc">Inter_comm_assoc</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros_all</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#inter_assoc">inter_assoc</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id"><a href="SLF.LibContainer.html#inter_comm">inter_comm</a></span> _ <span class="id">x</span>). <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="inter_empty_l_of_in_inter_eq_and_in_empty_eq">inter_empty_l_of_in_inter_eq_and_in_empty_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter_eq">In_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_empty_l">Inter_empty_l</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">contain_by_in_double</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="inter_empty_r_of_inter_empty_l">inter_empty_r_of_inter_empty_l</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_empty_l">Inter_empty_l</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_comm">Inter_comm</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_empty_r">Inter_empty_r</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros_all</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#inter_comm">inter_comm</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#inter_empty_l">inter_empty_l</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="inter_self_of_in_inter_eq">inter_self_of_in_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter_eq">In_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_self">Inter_self</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">contain_by_in_double</span>. Qed.</div></details>
+<br/>
+<div class="doc">Remove </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="remove_incl_of_in_remove_eq_and_incl_in_eq">remove_incl_of_in_remove_eq_and_incl_in_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_remove_eq">In_remove_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Remove_incl">Remove_incl</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. <span class="id">introv</span> <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_remove_eq">in_remove_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="remove_disjoint_of_in_remove_eq_and_disjoint_eq">remove_disjoint_of_in_remove_eq_and_disjoint_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_remove_eq">In_remove_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_eq">Disjoint_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Remove_disjoint">Remove_disjoint</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_eq">disjoint_eq</a></span>. <span class="id">introv</span> <span class="id">N</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_remove_eq">in_remove_eq</a></span> <span class="kwd">in</span> <span class="id">M</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Disjoint </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="disjoint_not_eq_of_disjoint_eq">disjoint_not_eq_of_disjoint_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_eq">Disjoint_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_not_eq">Disjoint_not_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_eq">disjoint_eq</a></span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> [<span class="id">x</span> <span class="id">M</span>]. <span class="id">rew_logic</span>* <span class="kwd">in</span> <span class="id">M</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> [<span class="id">x</span> <span class="id">M</span>]. <span class="id">rew_logic</span>. <span class="kwd">exists</span> <span class="id">x</span>. <span class="id">rew_logic</span>*. }<br/>
+Qed.</div></details>
+ <br/>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="disjoint_prove_of_disjoint_eq">disjoint_prove_of_disjoint_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_eq">Disjoint_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_prove">Disjoint_prove</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#disjoint_eq">disjoint_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="disjoint_inv_of_disjoint_eq">disjoint_inv_of_disjoint_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_eq">Disjoint_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_inv">Disjoint_inv</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">I</span> <span class="id">I1</span> <span class="id">I2</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#disjoint_eq">disjoint_eq</a></span> <span class="kwd">in</span> <span class="id">I</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="disjoint_single_l_eq_of_disjoint_eq_and_in_single_eq">disjoint_single_l_eq_of_disjoint_eq_and_in_single_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_eq">Disjoint_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_single_eq">In_single_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_single_l_eq">Disjoint_single_l_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_eq">disjoint_eq</a></span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibContainer.html#notin">notin</a></span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span>. <span class="id">false</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N1</span> <span class="id">N2</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">N1</span>. <span class="id">subst</span>. <span class="id">false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="disjoint_sym_of_disjoint_eq">disjoint_sym_of_disjoint_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_eq">Disjoint_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_sym">Disjoint_sym</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span> <span class="id">x</span> <span class="id">y</span>. <span class="id">do</span> 2 <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibContainer.html#disjoint_eq">disjoint_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="disjoint_single_r_eq_of_disjoint_single_l">disjoint_single_r_eq_of_disjoint_single_l</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_single_l_eq">Disjoint_single_l_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_sym">Disjoint_sym</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_single_r_eq">Disjoint_single_r_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros_all</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id"><a href="SLF.LibRelation.html#sym_inv_eq">sym_inv_eq</a></span> <span class="id"><a href="SLF.LibContainer.html#disjoint_sym">disjoint_sym</a></span>). <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_single_l_eq">disjoint_single_l_eq</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="inter_disjoint_of_disjoint_eq_and_in_inter_eq">inter_disjoint_of_disjoint_eq_and_in_inter_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Disjoint_eq">Disjoint_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#In_inter_eq">In_inter_eq</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#Inter_disjoint">Inter_disjoint</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_extens">in_extens</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_eq">disjoint_eq</a></span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">iff</span> <span class="id">N</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_inter_eq">in_inter_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">false</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibContainer.html#DerivedProperties">DerivedProperties</a></span>.<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

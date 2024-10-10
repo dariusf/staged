@@ -1,0 +1,1141 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibOrder</title>
+<meta name="description" content="Documentation of Coq module LibOrder" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibOrder</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span> <span class="id"><a href="SLF.LibOperation.html">LibOperation</a></span> <span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span>.<br/>
+<br/>
+<br/>
+<div class="doc">Definition </div>
+<br/>
+<span class="kwd">Record</span> <span class="id"><a name="preorder">preorder</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) : <span class="kwd">Prop</span> := {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="preorder_refl">preorder_refl</a></span> : <span class="id"><a href="SLF.LibRelation.html#refl">refl</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="preorder_trans">preorder_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id">R</span> }.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#preorder_trans">preorder_trans</a></span> [<span class="id">A</span>] [<span class="id">R</span>] [<span class="id">p</span>] <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<br/>
+<div class="doc">Transformations </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="preorder_inverse">preorder_inverse</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#preorder">preorder</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#preorder">preorder</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#trans_inverse">trans_inverse</a></span>. <span class="id">introv</span> [<span class="id">Re</span> <span class="id">Tr</span>]. <span class="id">constructor</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="preorder_rclosure">preorder_rclosure</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#preorder">preorder</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#preorder">preorder</a></span> (<span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#refl_rclosure">refl_rclosure</a></span>, <span class="id"><a href="SLF.LibRelation.html#trans_rclosure">trans_rclosure</a></span>. <span class="id">introv</span> [<span class="id">Re</span> <span class="id">Tr</span>]. <span class="id">constructor</span>~. Qed.</div></details>
+<br/>
+<br/>
+<div class="doc">Definition of total preorder relations </div>
+<br/>
+<span class="kwd">Record</span> <span class="id"><a name="total_preorder">total_preorder</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) : <span class="kwd">Prop</span> := {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="total_preorder_trans">total_preorder_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="total_preorder_total">total_preorder_total</a></span> : <span class="id"><a href="SLF.LibRelation.html#total">total</a></span> <span class="id">R</span> }.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#total_preorder_trans">total_preorder_trans</a></span> [<span class="id">A</span>] [<span class="id">R</span>] <span class="id">t</span> <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<br/>
+<div class="doc">Conversion to preorder </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_preorder_refl">total_preorder_refl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_preorder">total_preorder</a></span> <span class="id">le</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#refl">refl</a></span> <span class="id">le</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> [<span class="id">Tr</span> <span class="id">To</span>]. <span class="id">intros</span> <span class="id">x</span>. <span class="id">destruct</span>~ (<span class="id">To</span> <span class="id">x</span> <span class="id">x</span>). Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">total_preorder_refl</span>.<br/>
+<br/>
+<span class="kwd">Coercion</span> <span class="id"><a name="total_preorder_to_preorder">total_preorder_to_preorder</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>)<br/>
+&nbsp;&nbsp;(<span class="id">O</span>:<span class="id"><a href="SLF.LibOrder.html#total_preorder">total_preorder</a></span> <span class="id">R</span>) : <span class="id"><a href="SLF.LibOrder.html#preorder">preorder</a></span> <span class="id">R</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">lets</span> [<span class="id">M</span> _]: <span class="id">O</span>. <span class="id">constructor</span>~. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">total_preorder_to_preorder</span>.<br/>
+<br/>
+<div class="doc">Transformations </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_preorder_inverse">total_preorder_inverse</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_preorder">total_preorder</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_preorder">total_preorder</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#trans_inverse">trans_inverse</a></span>, <span class="id"><a href="SLF.LibRelation.html#total_inverse">total_inverse</a></span>. <span class="id">introv</span> [<span class="id">Tr</span> <span class="id">To</span>]. <span class="id">constructor</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_preorder_rclosure">total_preorder_rclosure</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_preorder">total_preorder</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_preorder">total_preorder</a></span> (<span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#trans_rclosure">trans_rclosure</a></span>, <span class="id"><a href="SLF.LibRelation.html#total_rclosure">total_rclosure</a></span>. <span class="id">introv</span> [<span class="id">Re</span> <span class="id">Tr</span>]. <span class="id">constructor</span>~. Qed.</div></details>
+<br/>
+<div class="doc">Properties </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="inverse_of_not">inverse_of_not</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#total">total</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">R</span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">T</span> <span class="id">H</span>. <span class="id">destruct</span> (<span class="id">T</span> <span class="id">x</span> <span class="id">y</span>); <span class="id">auto_false</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="inverse_strict_of_not">inverse_strict_of_not</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#total">total</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">R</span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> (<span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id">R</span>) <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">T</span> <span class="id">H</span>. <span class="id">destruct</span> (<span class="id">T</span> <span class="id">x</span> <span class="id">y</span>). <span class="id">auto_false</span>~.<br/>
+&nbsp;&nbsp;<span class="id">hnf</span>. <span class="id">split</span>~. <span class="id">intro_subst</span>~.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<div class="doc">Definition </div>
+<br/>
+<span class="kwd">Record</span> <span class="id"><a name="order">order</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) : <span class="kwd">Prop</span> := {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="order_refl">order_refl</a></span> : <span class="id"><a href="SLF.LibRelation.html#refl">refl</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="order_trans">order_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="order_antisym">order_antisym</a></span> : <span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> <span class="id">R</span> }.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#order_trans">order_trans</a></span> [<span class="id">A</span>] [<span class="id">R</span>] [<span class="id">o</span>] <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#order_antisym">order_antisym</a></span> [<span class="id">A</span>] [<span class="id">R</span>] [<span class="id">o</span>] [<span class="id">x</span>] [<span class="id">y</span>].<br/>
+<br/>
+<div class="doc">Conversion to preorder </div>
+<br/>
+<span class="kwd">Coercion</span> <span class="id"><a name="order_to_preorder">order_to_preorder</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>)<br/>
+&nbsp;&nbsp;(<span class="id">O</span>:<span class="id"><a href="SLF.LibOrder.html#order">order</a></span> <span class="id">R</span>) : <span class="id"><a href="SLF.LibOrder.html#preorder">preorder</a></span> <span class="id">R</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">destruct</span>* <span class="id">O</span>. <span class="id">constructors</span>*. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">order_to_preorder</span>.<br/>
+<br/>
+<div class="doc">Transformations </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="order_inverse">order_inverse</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order">order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order">order</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#trans_inverse">trans_inverse</a></span>, <span class="id"><a href="SLF.LibRelation.html#antisym_inverse">antisym_inverse</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Re</span> <span class="id">Tr</span> <span class="id">An</span>]. <span class="id">constructor</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="order_rclosure">order_rclosure</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order">order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order">order</a></span> (<span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#refl_rclosure">refl_rclosure</a></span>, <span class="id"><a href="SLF.LibRelation.html#trans_rclosure">trans_rclosure</a></span>, <span class="id"><a href="SLF.LibRelation.html#antisym_rclosure">antisym_rclosure</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Re</span> <span class="id">Tr</span> <span class="id">An</span>]. <span class="id">constructor</span>~.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Properties </div>
+<br/>
+<h1> Order relation upto an equivalence relation </h1>
+<br/>
+<div class="doc">Note: this is used in LibFix </div>
+<br/>
+<span class="kwd">Record</span> <span class="id"><a name="order_wrt">order_wrt</a></span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">E</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) : <span class="kwd">Prop</span> := {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="order_wrt_refl">order_wrt_refl</a></span> : <span class="id"><a href="SLF.LibRelation.html#refl">refl</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="order_wrt_trans">order_wrt_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="order_wrt_antisym">order_wrt_antisym</a></span> : <span class="id"><a href="SLF.LibRelation.html#antisym_wrt">antisym_wrt</a></span> <span class="id">E</span> <span class="id">R</span> }.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#order_wrt_trans">order_wrt_trans</a></span> [<span class="id">A</span>] [<span class="id">E</span>] [<span class="id">R</span>] [<span class="id">o</span>] <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#order_wrt_antisym">order_wrt_antisym</a></span> [<span class="id">A</span>] [<span class="id">E</span>] [<span class="id">R</span>] [<span class="id">o</span>] [<span class="id">x</span>] [<span class="id">y</span>].<br/>
+<br/>
+<div class="doc">Conversion to preorder </div>
+<br/>
+<span class="kwd">Coercion</span> <span class="id"><a name="order_wrt_to_preorder">order_wrt_to_preorder</a></span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>)<br/>
+&nbsp;&nbsp;(<span class="id">O</span>:<span class="id"><a href="SLF.LibOrder.html#order_wrt">order_wrt</a></span> <span class="id">E</span> <span class="id">R</span>) : <span class="id"><a href="SLF.LibOrder.html#preorder">preorder</a></span> <span class="id">R</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">destruct</span>* <span class="id">O</span>. <span class="id">constructors</span>*. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">order_wrt_to_preorder</span>.<br/>
+<br/>
+<div class="doc">Transformations </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="order_wrt_inverse">order_wrt_inverse</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order_wrt">order_wrt</a></span> <span class="id">E</span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order_wrt">order_wrt</a></span> <span class="id">E</span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#trans_inverse">trans_inverse</a></span>, <span class="id"><a href="SLF.LibRelation.html#antisym_wrt_inverse">antisym_wrt_inverse</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Re</span> <span class="id">Tr</span> <span class="id">An</span>]. <span class="id">constructor</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="order_wrt_rclosure">order_wrt_rclosure</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order_wrt">order_wrt</a></span> <span class="id">E</span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order_wrt">order_wrt</a></span> (<span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id">E</span>) (<span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#refl_rclosure">refl_rclosure</a></span>, <span class="id"><a href="SLF.LibRelation.html#trans_rclosure">trans_rclosure</a></span>, <span class="id"><a href="SLF.LibRelation.html#antisym_wrt_rclosure">antisym_wrt_rclosure</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Re</span> <span class="id">Tr</span> <span class="id">An</span>]. <span class="id">constructor</span>~.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Properties </div>
+<br/>
+<br/>
+<div class="doc">Definition </div>
+<br/>
+<span class="kwd">Record</span> <span class="id"><a name="total_order">total_order</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) : <span class="kwd">Prop</span> := {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="total_order_order">total_order_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#order">order</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="total_order_total">total_order_total</a></span> : <span class="id"><a href="SLF.LibRelation.html#total">total</a></span> <span class="id">R</span> }.<br/>
+<br/>
+<div class="doc">Projections </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="total_order_refl">total_order_refl</a></span> := <span class="id"><a href="SLF.LibOrder.html#order_refl">order_refl</a></span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="total_order_trans">total_order_trans</a></span> := <span class="id"><a href="SLF.LibOrder.html#order_trans">order_trans</a></span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="total_order_antisym">total_order_antisym</a></span> := <span class="id"><a href="SLF.LibOrder.html#order_antisym">order_antisym</a></span>.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#total_order_trans">total_order_trans</a></span> [<span class="id">A</span>] [<span class="id">R</span>] [<span class="id">o</span>] <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#total_order_antisym">total_order_antisym</a></span> [<span class="id">A</span>] [<span class="id">R</span>] [<span class="id">o</span>] [<span class="id">x</span>] [<span class="id">y</span>].<br/>
+<br/>
+<div class="doc">Construction </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_intro">total_order_intro</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#total">total</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id">R</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Tra</span> <span class="id">Ant</span> <span class="id">Tot</span>. <span class="id">constructor</span>~. <span class="id">constructor</span>~.<br/>
+&nbsp;&nbsp;<span class="id">intros_all</span>. <span class="id">destruct</span>~ (<span class="id">Tot</span> <span class="id">x</span> <span class="id">x</span>).<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Conversion to order </div>
+<br/>
+<span class="kwd">Coercion</span> <span class="id"><a name="total_order_to_total_preorder">total_order_to_total_preorder</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>)<br/>
+&nbsp;&nbsp;(<span class="id">O</span>:<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id">R</span>) : <span class="id"><a href="SLF.LibOrder.html#total_preorder">total_preorder</a></span> <span class="id">R</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">destruct</span>* <span class="id">O</span>. <span class="id">constructors</span>*. <span class="id">applys</span>* <span class="id"><a href="SLF.LibOrder.html#order_trans">order_trans</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="total_order_to_order">total_order_to_order</a></span> := <span class="id"><a href="SLF.LibOrder.html#total_order_order">total_order_order</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">total_order_to_order</span> <span class="id">total_order_to_total_preorder</span>.<br/>
+<br/>
+<div class="doc">Transformations </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_inverse">total_order_inverse</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#total_inverse">total_inverse</a></span>, <span class="id"><a href="SLF.LibOrder.html#order_inverse">order_inverse</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Or</span> <span class="id">To</span>]. <span class="id">constructor</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_rclosure">total_order_rclosure</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> (<span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#total_rclosure">total_rclosure</a></span>, <span class="id"><a href="SLF.LibOrder.html#order_rclosure">order_rclosure</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Or</span> <span class="id">To</span>]. <span class="id">constructor</span>~.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Properties </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="TotalOrderProp">TotalOrderProp</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="TotalOrderProp.A">A</a></span>:<span class="kwd">Type</span>) (<span class="id"><a name="TotalOrderProp.R">R</a></span> : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>).<br/>
+<br/>
+<div class="doc">WARNING: notations here are not typeclass operators
+    -- TODO: is this really what we want?
+    perhaps it would be clearer to inline these notations. </div>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'le'"</span> := (<span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>).<br/>
+<span class="kwd">Notation</span> <span class="string">"'ge'"</span> := (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>).<br/>
+<span class="kwd">Notation</span> <span class="string">"'lt'"</span> := (<span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>).<br/>
+<span class="kwd">Notation</span> <span class="string">"'gt'"</span> := (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">lt</span>).<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">total_order_normalize</span> :=<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">rewrite</span> <span class="id"><a href="SLF.LibRelation.html#rclosure_eq_fun">rclosure_eq_fun</a></span>;<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">rewrite</span> <span class="id"><a href="SLF.LibRelation.html#inverse_eq_fun">inverse_eq_fun</a></span>;<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">rewrite</span> <span class="id"><a href="SLF.LibRelation.html#strict_eq_fun">strict_eq_fun</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_le_is_rclosure_lt">total_order_le_is_rclosure_lt</a></span> : <span class="kwd">forall</span> (<span class="id">To</span>:<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">le</span> = <span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id">lt</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">intros</span>. <span class="id">total_order_normalize</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">tests</span>~: (<span class="id">x</span> = <span class="id">y</span>).<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">M</span>. <span class="id">autos</span>*. <span class="id">subst</span>*. <span class="id">dintuition</span> <span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_lt_is_strict_le">total_order_lt_is_strict_le</a></span> : <span class="kwd">forall</span> (<span class="id">To</span>:<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">lt</span> = <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id">le</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_ge_is_rclosure_gt">total_order_ge_is_rclosure_gt</a></span> : <span class="kwd">forall</span> (<span class="id">To</span>:<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">ge</span> = <span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id">gt</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">intros</span>. <span class="id">total_order_normalize</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">tests</span>~: (<span class="id">x</span> = <span class="id">y</span>).<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">M</span>. <span class="id">autos</span>*. <span class="id">subst</span>*. <span class="id">dintuition</span> <span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_gt_is_strict_ge">total_order_gt_is_strict_ge</a></span> : <span class="kwd">forall</span> (<span class="id">To</span>:<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">gt</span> = <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id">ge</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">intros</span>. <span class="id">total_order_normalize</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">tests</span>~: (<span class="id">x</span> = <span class="id">y</span>).<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">M</span>. <span class="id">autos</span>*.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">M</span>. <span class="id">autos</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_lt_or_eq_or_gt">total_order_lt_or_eq_or_gt</a></span> : <span class="kwd">forall</span> (<span class="id">To</span>:<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>) <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">lt</span> <span class="id">x</span> <span class="id">y</span> \/ <span class="id">x</span> = <span class="id">y</span> \/ <span class="id">gt</span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">intros</span>. <span class="id">total_order_normalize</span>. <span class="id">tests</span>: (<span class="id">x</span> = <span class="id">y</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">branch</span>~ 2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id"><a href="SLF.LibOrder.html#total_order_total">total_order_total</a></span> <span class="id">H</span> <span class="id">x</span> <span class="id">y</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">branch</span>~ 1.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">branch</span>~ 3.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_lt_or_ge">total_order_lt_or_ge</a></span> : <span class="kwd">forall</span> (<span class="id">To</span>:<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>) <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">lt</span> <span class="id">x</span> <span class="id">y</span> \/ <span class="id">ge</span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">branches</span> (<span class="id"><a href="SLF.LibOrder.html#total_order_lt_or_eq_or_gt">total_order_lt_or_eq_or_gt</a></span> <span class="id">To</span> <span class="id">x</span> <span class="id">y</span>).<br/>
+&nbsp;&nbsp;<span class="id">left</span>~.<br/>
+&nbsp;&nbsp;<span class="id">right</span>~. <span class="id">subst</span>. <span class="id">hnf</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibOrder.html#total_order_refl">total_order_refl</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">right</span>~. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibOrder.html#total_order_ge_is_rclosure_gt">total_order_ge_is_rclosure_gt</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">total_order_normalize</span>. <span class="id">hnfs</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="total_order_le_or_gt">total_order_le_or_gt</a></span> : <span class="kwd">forall</span> (<span class="id">To</span>:<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp.R">R</a></span>) <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">le</span> <span class="id">x</span> <span class="id">y</span> \/ <span class="id">gt</span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">branches</span>~ (<span class="id"><a href="SLF.LibOrder.html#total_order_lt_or_eq_or_gt">total_order_lt_or_eq_or_gt</a></span> <span class="id">To</span> <span class="id">x</span> <span class="id">y</span>).<br/>
+&nbsp;&nbsp;<span class="id">left</span>~. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibOrder.html#total_order_le_is_rclosure_lt">total_order_le_is_rclosure_lt</a></span>. <span class="id">total_order_normalize</span>. <span class="id">hnfs</span>~.<br/>
+&nbsp;&nbsp;<span class="id">left</span>~. <span class="id">subst</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibOrder.html#total_order_refl">total_order_refl</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibOrder.html#TotalOrderProp">TotalOrderProp</a></span>.<br/>
+<br/>
+<br/>
+<div class="doc">Definition </div>
+<br/>
+<span class="kwd">Record</span> <span class="id"><a name="strict_order">strict_order</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) : <span class="kwd">Prop</span> := {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="strict_order_irrefl">strict_order_irrefl</a></span> : <span class="id"><a href="SLF.LibRelation.html#irrefl">irrefl</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="strict_order_asym">strict_order_asym</a></span> : <span class="id"><a href="SLF.LibRelation.html#asym">asym</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="strict_order_trans">strict_order_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id">R</span> }.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#strict_order_trans">strict_order_trans</a></span> [<span class="id">A</span>] [<span class="id">R</span>] [<span class="id">s</span>] <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<br/>
+<div class="doc">Transformations </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="strict_order_inverse">strict_order_inverse</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#strict_order">strict_order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#strict_order">strict_order</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#antisym_inverse">antisym_inverse</a></span>, <span class="id"><a href="SLF.LibRelation.html#trans_inverse">trans_inverse</a></span>, <span class="id"><a href="SLF.LibRelation.html#asym_inverse">asym_inverse</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Ir</span> <span class="id">As</span> <span class="id">Tr</span>]. <span class="id">constructor</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="strict_order_strict">strict_order_strict</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order">order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#strict_order">strict_order</a></span> (<span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Re</span> <span class="id">As</span> <span class="id">Tr</span>]. <span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>. <span class="id">constructor</span>; <span class="id">intros_all</span>; <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id"><a href="SLF.LibRelation.html#antisym_inv">antisym_inv</a></span> <span class="id">x</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">split</span>. <span class="id">applys</span>* <span class="id">As</span>. <span class="id">intros</span> <span class="id">E</span>. <span class="id">subst</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibRelation.html#antisym_inv">antisym_inv</a></span> <span class="id">y</span> <span class="id">z</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="order_rclosure_of_strict_order">order_rclosure_of_strict_order</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#strict_order">strict_order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order">order</a></span> (<span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Re</span> <span class="id">As</span> <span class="id">Tr</span>]. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibRelation.html#rclosure_eq_fun">rclosure_eq_fun</a></span>. <span class="id">constructor</span>; <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros_all</span>~.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">H1</span>|<span class="id">E1</span>] [<span class="id">H2</span>|<span class="id">E2</span>]; <span class="id">subst</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">left</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibRelation.html#trans_inv">trans_inv</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">H1</span>|<span class="id">E1</span>] [<span class="id">H2</span>|<span class="id">E2</span>]; <span class="id">try</span> <span class="id">subst</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span>. <span class="id">apply</span>* <span class="id">As</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<div class="doc">Definition </div>
+<br/>
+<span class="kwd">Record</span> <span class="id"><a name="strict_total_order">strict_total_order</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) : <span class="kwd">Prop</span> := {<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="strict_total_order_trans">strict_total_order_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id">R</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a name="strict_total_order_trichotomous">strict_total_order_trichotomous</a></span> : <span class="id"><a href="SLF.LibRelation.html#trichotomous">trichotomous</a></span> <span class="id">R</span> }.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#strict_total_order_trans">strict_total_order_trans</a></span> [<span class="id">A</span>] [<span class="id">R</span>] [<span class="id">s</span>] <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<br/>
+<div class="doc">Conversion to strict order and back </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="strict_total_order_irrefl">strict_total_order_irrefl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#strict_total_order">strict_total_order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#irrefl">irrefl</a></span> <span class="id">R</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> [<span class="id">Tr</span> <span class="id">Tk</span>]. <span class="id">intros</span> <span class="id">x</span>. <span class="id">lets</span>: (<span class="id">Tk</span> <span class="id">x</span> <span class="id">x</span>). <span class="id">inverts</span>~ <span class="id">H</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="strict_total_order_asym">strict_total_order_asym</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#strict_total_order">strict_total_order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#asym">asym</a></span> <span class="id">R</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> [<span class="id">Tr</span> <span class="id">Tk</span>]. <span class="id">intros</span> <span class="id">x</span> <span class="id">y</span>. <span class="id">lets</span>: (<span class="id">Tk</span> <span class="id">x</span> <span class="id">y</span>). <span class="id">inverts</span>~ <span class="id">H</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Coercion</span> <span class="id"><a name="strict_total_order_to_strict_order">strict_total_order_to_strict_order</a></span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>)<br/>
+&nbsp;&nbsp;(<span class="id">O</span>:<span class="id"><a href="SLF.LibOrder.html#strict_total_order">strict_total_order</a></span> <span class="id">R</span>) : <span class="id"><a href="SLF.LibOrder.html#strict_order">strict_order</a></span> <span class="id">R</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> [<span class="id">M</span> _]: <span class="id">O</span>. <span class="id">constructor</span>;<br/>
+&nbsp;&nbsp;<span class="id">autos</span>~ <span class="id"><a href="SLF.LibOrder.html#strict_total_order_irrefl">strict_total_order_irrefl</a></span> <span class="id"><a href="SLF.LibOrder.html#strict_total_order_asym">strict_total_order_asym</a></span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">strict_total_order_to_strict_order</span>.<br/>
+<br/>
+<div class="doc">Transformation </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="strict_total_order_inverse">strict_total_order_inverse</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#strict_total_order">strict_total_order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#strict_total_order">strict_total_order</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">Tr</span> <span class="id">Tk</span>]. <span class="id">constructor</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibRelation.html#trans_inverse">trans_inverse</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibRelation.html#trichotomous_inverse">trichotomous_inverse</a></span>.<br/>
+Qed.</div></details>
+<div class="doc">From total order </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="strict_total_order_of_total_order">strict_total_order_of_total_order</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#strict_total_order">strict_total_order</a></span> (<span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [[<span class="id">Re</span> <span class="id">Tr</span> <span class="id">As</span>] <span class="id">To</span>]. <span class="id">constructor</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibRelation.html#trans_strict">trans_strict</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">y</span>. <span class="id">tests</span>: (<span class="id">x</span> = <span class="id">y</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibRelation.html#trichotomy_eq">trichotomy_eq</a></span>. <span class="id">unfolds</span>* <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>. <span class="id">destruct</span> (<span class="id">To</span> <span class="id">x</span> <span class="id">y</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id"><a href="SLF.LibRelation.html#trichotomy_left">trichotomy_left</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id"><a href="SLF.LibRelation.html#trichotomy_right">trichotomy_right</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<h1> Definition of order operators </h1>
+<br/>
+<h2> Classes and notation for comparison operators </h2>
+<br/>
+<div class="doc">Operators </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le">Le</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) := { <span class="id"><a name="le">le</a></span> : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge">Ge</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) := { <span class="id"><a name="ge">ge</a></span> : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt">Lt</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) := { <span class="id"><a name="lt">lt</a></span> : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Gt">Gt</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) := { <span class="id"><a name="gt">gt</a></span> : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span> }.<br/>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span>.<br/>
+<br/>
+<div class="doc">Structures </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_preorder">Le_preorder</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_preorder">le_preorder</a></span> : <span class="id"><a href="SLF.LibOrder.html#preorder">preorder</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_total_preorder">Le_total_preorder</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_total_preorder">le_total_preorder</a></span> : <span class="id"><a href="SLF.LibOrder.html#total_preorder">total_preorder</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_order">Le_order</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_order">le_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#order">order</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_total_order">Le_total_order</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_total_order">le_total_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt_strict_order">Lt_strict_order</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Lt">Lt</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="lt_strict_order">lt_strict_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#strict_order">strict_order</a></span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt_strict_total_order">Lt_strict_total_order</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Lt">Lt</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="lt_strict_total_order">lt_strict_total_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#strict_total_order">strict_total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> }.<br/>
+<br/>
+<div class="doc">Notation </div>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">comp_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"x &lt;= y"</span> := (<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">x</span> <span class="id">y</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">no</span> <span class="id">associativity</span>) : <span class="id">comp_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x &gt;= y"</span> := (<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> <span class="id">x</span> <span class="id">y</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">no</span> <span class="id">associativity</span>) : <span class="id">comp_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x &lt; y"</span> := (<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id">x</span> <span class="id">y</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">no</span> <span class="id">associativity</span>) : <span class="id">comp_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x &gt; y"</span> := (<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> <span class="id">x</span> <span class="id">y</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">no</span> <span class="id">associativity</span>) : <span class="id">comp_scope</span>.<br/>
+<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">comp_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"x &lt;= y &lt;= z"</span> := (<span class="id">x</span> &lt;= <span class="id">y</span> /\ <span class="id">y</span> &lt;= <span class="id">z</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">y</span> <span class="kwd">at</span> <span class="id">next</span> <span class="id">level</span>) : <span class="id">comp_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x &lt;= y &lt; z"</span> := (<span class="id">x</span> &lt;= <span class="id">y</span> /\ <span class="id">y</span> &lt; <span class="id">z</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">y</span> <span class="kwd">at</span> <span class="id">next</span> <span class="id">level</span>) : <span class="id">comp_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x &lt; y &lt;= z"</span> := (<span class="id">x</span> &lt; <span class="id">y</span> /\ <span class="id">y</span> &lt;= <span class="id">z</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">y</span> <span class="kwd">at</span> <span class="id">next</span> <span class="id">level</span>) : <span class="id">comp_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x &lt; y &lt; z"</span> := (<span class="id">x</span> &lt; <span class="id">y</span> /\ <span class="id">y</span> &lt; <span class="id">z</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">y</span> <span class="kwd">at</span> <span class="id">next</span> <span class="id">level</span>) : <span class="id">comp_scope</span>.<br/>
+<br/>
+<h2> The operators <span class="bracket"><span class="id">ge</span></span>, <span class="bracket"><span class="id">lt</span></span> and <span class="bracket"><span class="id">gt</span></span> are deduced from <span class="bracket"><span class="id">le</span></span> </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="ge_of_le">ge_of_le</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>}, <span class="id"><a href="SLF.LibOrder.html#Ge">Ge</a></span> <span class="id">A</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>). Defined.</div></details>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="lt_of_le">lt_of_le</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>}, <span class="id"><a href="SLF.LibOrder.html#Lt">Lt</a></span> <span class="id">A</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>). Defined.</div></details>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="gt_of_le">gt_of_le</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>}, <span class="id"><a href="SLF.LibOrder.html#Gt">Gt</a></span> <span class="id">A</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span>). Defined.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ge_is_inverse_le">ge_is_inverse_le</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>}, <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> = <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="lt_is_strict_le">lt_is_strict_le</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>}, <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> = <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="gt_is_inverse_lt">gt_is_inverse_lt</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>}, <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> = <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="gt_is_inverse_strict_le">gt_is_inverse_strict_le</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>}, <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> = <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> (<span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#gt_is_inverse_lt">gt_is_inverse_lt</a></span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibOrder.html#lt_is_strict_le">lt_is_strict_le</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibOrder.html#ge_of_le">ge_of_le</a></span> <span class="id"><a href="SLF.LibOrder.html#lt_of_le">lt_of_le</a></span> <span class="id"><a href="SLF.LibOrder.html#gt_of_le">gt_of_le</a></span>.<br/>
+<br/>
+<div class="doc">Local tactic <span class="bracket"><span class="id">rew_to_le</span></span> </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> @<span class="id"><a href="SLF.LibOrder.html#gt_is_inverse_strict_le">gt_is_inverse_strict_le</a></span> @<span class="id"><a href="SLF.LibOrder.html#ge_is_inverse_le">ge_is_inverse_le</a></span> @<span class="id"><a href="SLF.LibOrder.html#lt_is_strict_le">lt_is_strict_le</a></span> : <span class="id">rew_to_le</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_to_le"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_to_le</span> <span class="kwd">in</span> *.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> @<span class="id"><a href="SLF.LibOrder.html#ge_is_inverse_le">ge_is_inverse_le</a></span> @<span class="id"><a href="SLF.LibOrder.html#gt_is_inverse_lt">gt_is_inverse_lt</a></span> : <span class="id">rew_to_le_lt</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_to_le_lt"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_to_le_lt</span> <span class="kwd">in</span> *.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="gt_is_strict_inverse_le">gt_is_strict_inverse_le</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>},<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> = <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibRelation.html#inverse_strict">inverse_strict</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="le_is_rclosure_lt">le_is_rclosure_lt</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>},<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#refl">refl</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> = <span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibRelation.html#rclosure_strict">rclosure_strict</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="le_is_inverse_ge">le_is_inverse_ge</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>},<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> = <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibRelation.html#inverse_inverse">inverse_inverse</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="lt_is_inverse_gt">lt_is_inverse_gt</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>},<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> = <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibRelation.html#inverse_inverse">inverse_inverse</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="gt_is_strict_ge">gt_is_strict_ge</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>},<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> = <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibRelation.html#inverse_strict">inverse_strict</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ge_is_rclosure_gt">ge_is_rclosure_gt</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>},<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#refl">refl</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> = <span class="id"><a href="SLF.LibRelation.html#rclosure">rclosure</a></span> <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#gt_is_strict_ge">gt_is_strict_ge</a></span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibRelation.html#rclosure_strict">rclosure_strict</a></span>. Qed.</div></details>
+<br/>
+<h1> Classes for comparison properties </h1>
+<br/>
+<h2> Definition of classes </h2>
+<br/>
+<div class="doc">symmetric structure </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_preorder">Ge_preorder</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_preorder">ge_preorder</a></span> : <span class="id"><a href="SLF.LibOrder.html#preorder">preorder</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_total_preorder">Ge_total_preorder</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_total_preorder">ge_total_preorder</a></span> : <span class="id"><a href="SLF.LibOrder.html#total_preorder">total_preorder</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_order">Ge_order</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_order">ge_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#order">order</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_total_order">Ge_total_order</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_total_order">ge_total_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#total_order">total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Gt_strict_order">Gt_strict_order</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="gt_strict_order">gt_strict_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#strict_order">strict_order</a></span> <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Gt_strict_total_order">Gt_strict_total_order</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="gt_strict_total_order">gt_strict_total_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#strict_total_order">strict_total_order</a></span> <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> }.<br/>
+<br/>
+<div class="doc">properties of le </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_refl">Le_refl</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_refl">le_refl</a></span> : <span class="id"><a href="SLF.LibRelation.html#refl">refl</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_trans">Le_trans</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_trans">le_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_antisym">Le_antisym</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_antisym">le_antisym</a></span> : <span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_total">Le_total</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_total">le_total</a></span> : <span class="id"><a href="SLF.LibRelation.html#total">total</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> }.<br/>
+<br/>
+<div class="doc">properties of ge </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_refl">Ge_refl</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Ge">Ge</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_refl">ge_refl</a></span> : <span class="id"><a href="SLF.LibRelation.html#refl">refl</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_trans">Ge_trans</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Ge">Ge</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_trans">ge_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_antisym">Ge_antisym</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Ge">Ge</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_antisym">ge_antisym</a></span> : <span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_total">Ge_total</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Ge">Ge</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_total">ge_total</a></span> : <span class="id"><a href="SLF.LibRelation.html#total">total</a></span> <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> }.<br/>
+<br/>
+<div class="doc">properties of lt </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt_irrefl">Lt_irrefl</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Lt">Lt</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="lt_irrefl">lt_irrefl</a></span> : <span class="id"><a href="SLF.LibRelation.html#irrefl">irrefl</a></span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt_trans">Lt_trans</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Lt">Lt</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="lt_trans">lt_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> }.<br/>
+<br/>
+<div class="doc">properties of gt </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Gt_irrefl">Gt_irrefl</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Gt">Gt</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="gt_irrefl">gt_irrefl</a></span> : <span class="id"><a href="SLF.LibRelation.html#irrefl">irrefl</a></span> <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Gt_trans">Gt_trans</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Gt">Gt</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="gt_trans">gt_trans</a></span> : <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> }.<br/>
+<br/>
+<div class="doc">mixed transitivity results </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt_le_trans">Lt_le_trans</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="lt_le_trans">lt_le_trans</a></span> : <span class="kwd">forall</span> <span class="id">y</span> <span class="id">x</span> <span class="id">z</span>, <span class="id">x</span> &lt; <span class="id">y</span> -&gt; <span class="id">y</span> &lt;= <span class="id">z</span> -&gt; <span class="id">x</span> &lt; <span class="id">z</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_lt_trans">Le_lt_trans</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_lt_trans">le_lt_trans</a></span> : <span class="kwd">forall</span> <span class="id">y</span> <span class="id">x</span> <span class="id">z</span>, <span class="id">x</span> &lt;= <span class="id">y</span> -&gt; <span class="id">y</span> &lt; <span class="id">z</span> -&gt; <span class="id">x</span> &lt; <span class="id">z</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Gt_ge_trans">Gt_ge_trans</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="gt_ge_trans">gt_ge_trans</a></span> : <span class="kwd">forall</span> <span class="id">y</span> <span class="id">x</span> <span class="id">z</span>, <span class="id">x</span> &gt; <span class="id">y</span> -&gt; <span class="id">y</span> &gt;= <span class="id">z</span> -&gt; <span class="id">x</span> &gt; <span class="id">z</span> }.<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_gt_trans">Ge_gt_trans</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_gt_trans">ge_gt_trans</a></span> : <span class="kwd">forall</span> <span class="id">y</span> <span class="id">x</span> <span class="id">z</span>, <span class="id">x</span> &gt;= <span class="id">y</span> -&gt; <span class="id">y</span> &gt; <span class="id">z</span> -&gt; <span class="id">x</span> &gt; <span class="id">z</span> }.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#lt_irrefl">lt_irrefl</a></span> [<span class="id">A</span>] [<span class="id">H</span>] [<span class="id">Lt_irrefl</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#le_trans">le_trans</a></span> {<span class="id">A</span>} {<span class="id">H</span>} {<span class="id">Le_trans</span>} <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#ge_trans">ge_trans</a></span> {<span class="id">A</span>} {<span class="id">H</span>} {<span class="id">Ge_trans</span>} <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#lt_trans">lt_trans</a></span> {<span class="id">A</span>} {<span class="id">H</span>} {<span class="id">Lt_trans</span>} <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOrder.html#gt_trans">gt_trans</a></span> {<span class="id">A</span>} {<span class="id">H</span>} {<span class="id">Gt_trans</span>} <span class="id">y</span> [<span class="id">x</span>] [<span class="id">z</span>].<br/>
+<br/>
+<div class="doc">conversion between operators </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_as_sle">Ge_as_sle</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_as_sle">ge_as_sle</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (<span class="id">x</span> &gt;= <span class="id">y</span>) = (<span class="id">y</span> &lt;= <span class="id">x</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Gt_as_slt">Gt_as_slt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="gt_as_slt">gt_as_slt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (<span class="id">x</span> &gt; <span class="id">y</span>) = (<span class="id">y</span> &lt; <span class="id">x</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ngt_as_sle">Ngt_as_sle</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ngt_as_sle">ngt_as_sle</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (~ <span class="id">x</span> &lt; <span class="id">y</span>) = (<span class="id">y</span> &lt;= <span class="id">x</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Nlt_as_ge">Nlt_as_ge</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="nlt_as_ge">nlt_as_ge</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (~ <span class="id">x</span> &lt; <span class="id">y</span>) = (<span class="id">x</span> &gt;= <span class="id">y</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ngt_as_le">Ngt_as_le</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ngt_as_le">ngt_as_le</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (~ <span class="id">x</span> &gt; <span class="id">y</span>) = (<span class="id">x</span> &lt;= <span class="id">y</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Nle_as_gt">Nle_as_gt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="nle_as_gt">nle_as_gt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (~ <span class="id">x</span> &lt;= <span class="id">y</span>) = (<span class="id">x</span> &gt; <span class="id">y</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Nge_as_lt">Nge_as_lt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="nge_as_lt">nge_as_lt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (~ <span class="id">x</span> &gt;= <span class="id">y</span>) = (<span class="id">x</span> &lt; <span class="id">y</span>) }.<br/>
+<br/>
+<div class="doc">inclusion between operators </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt_to_le">Lt_to_le</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="lt_to_le">lt_to_le</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (<span class="id">x</span> &lt; <span class="id">y</span>) -&gt; (<span class="id">x</span> &lt;= <span class="id">y</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Gt_to_ge">Gt_to_ge</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="gt_to_ge">gt_to_ge</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (<span class="id">x</span> &gt; <span class="id">y</span>) -&gt; (<span class="id">x</span> &gt;= <span class="id">y</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Nle_to_sle">Nle_to_sle</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="nle_to_sle">nle_to_sle</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (~ <span class="id">x</span> &lt;= <span class="id">y</span>) -&gt; (<span class="id">y</span> &lt;= <span class="id">x</span>) }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Nle_to_slt">Nle_to_slt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="nle_to_slt">nle_to_slt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, (~ <span class="id">x</span> &lt;= <span class="id">y</span>) -&gt; (<span class="id">y</span> &lt; <span class="id">x</span>) }.<br/>
+<br/>
+<div class="doc">case analysis </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Case_eq_lt_gt">Case_eq_lt_gt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="case_eq_lt_gt">case_eq_lt_gt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> = <span class="id">y</span> \/ <span class="id">x</span> &lt; <span class="id">y</span> \/ <span class="id">x</span> &gt; <span class="id">y</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Case_eq_lt_slt">Case_eq_lt_slt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="case_eq_lt_slt">case_eq_lt_slt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> = <span class="id">y</span> \/ <span class="id">x</span> &lt; <span class="id">y</span> \/ <span class="id">y</span> &lt; <span class="id">x</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Case_le_gt">Case_le_gt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="case_le_gt">case_le_gt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt;= <span class="id">y</span> \/ <span class="id">x</span> &gt; <span class="id">y</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Case_le_slt">Case_le_slt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="case_le_slt">case_le_slt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt;= <span class="id">y</span> \/ <span class="id">y</span> &lt; <span class="id">x</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Case_lt_ge">Case_lt_ge</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="case_lt_ge">case_lt_ge</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt; <span class="id">y</span> \/ <span class="id">x</span> &gt;= <span class="id">y</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Case_lt_sle">Case_lt_sle</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="case_lt_sle">case_lt_sle</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt; <span class="id">y</span> \/ <span class="id">y</span> &lt;= <span class="id">x</span> }.<br/>
+<br/>
+<div class="doc">case analysis under one assumption </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Neq_case_lt_gt">Neq_case_lt_gt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="neq_case_lt_gt">neq_case_lt_gt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt;&gt; <span class="id">y</span> -&gt; <span class="id">x</span> &lt; <span class="id">y</span> \/ <span class="id">x</span> &gt; <span class="id">y</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Neq_case_lt_slt">Neq_case_lt_slt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="neq_case_lt_slt">neq_case_lt_slt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt;&gt; <span class="id">y</span> -&gt; <span class="id">x</span> &lt; <span class="id">y</span> \/ <span class="id">y</span> &lt; <span class="id">x</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_case_eq_lt">Le_case_eq_lt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_case_eq_lt">le_case_eq_lt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt;= <span class="id">y</span> -&gt; <span class="id">x</span> = <span class="id">y</span> \/ <span class="id">x</span> &lt; <span class="id">y</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_case_eq_gt">Ge_case_eq_gt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_case_eq_gt">ge_case_eq_gt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &gt;= <span class="id">y</span> -&gt; <span class="id">x</span> = <span class="id">y</span> \/ <span class="id">x</span> &gt; <span class="id">y</span> }.<br/>
+<br/>
+<div class="doc">case analysis under two assumptions </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Le_neq_to_lt">Le_neq_to_lt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="le_neq_to_lt">le_neq_to_lt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt;= <span class="id">y</span> -&gt; <span class="id">x</span> &lt;&gt; <span class="id">y</span> -&gt; <span class="id">x</span> &lt; <span class="id">y</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Ge_neq_to_gt">Ge_neq_to_gt</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="ge_neq_to_gt">ge_neq_to_gt</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &gt;= <span class="id">y</span> -&gt; <span class="id">x</span> &lt;&gt; <span class="id">y</span> -&gt; <span class="id">x</span> &gt; <span class="id">y</span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Nlt_nslt_to_eq">Nlt_nslt_to_eq</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="nlt_nslt_to_eq">nlt_nslt_to_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, ~ (<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id">x</span> <span class="id">y</span>) -&gt; ~ (<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id">y</span> <span class="id">x</span>) -&gt; <span class="id">x</span> = <span class="id">y</span> }.<br/>
+<br/>
+<div class="doc">contradiction from case analysis </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt_ge_false">Lt_ge_false</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="lt_ge_false">lt_ge_false</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt; <span class="id">y</span> -&gt; <span class="id">x</span> &gt;= <span class="id">y</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt_gt_false">Lt_gt_false</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="lt_gt_false">lt_gt_false</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt; <span class="id">y</span> -&gt; <span class="id">x</span> &gt; <span class="id">y</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> }.<br/>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Lt_slt_false">Lt_slt_false</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="lt_slt_false">lt_slt_false</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> : <span class="id">A</span>, <span class="id">x</span> &lt; <span class="id">y</span> -&gt; <span class="id">y</span> &lt; <span class="id">x</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> }.<br/>
+<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Instances">Instances</a></span>.<br/>
+<span class="kwd">Context</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>}.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">auto_star</span> ::= <span class="id">try</span> <span class="id">solve</span> [ <span class="id">dauto</span> ].<br/>
+<br/>
+<div class="doc">derived structures </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_preorder_of_Le_order">Le_preorder_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_preorder">Le_preorder</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#order_to_preorder">order_to_preorder</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_total_preorder_of_Le_total_order">Le_total_preorder_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_preorder">Le_total_preorder</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#total_order_to_total_preorder">total_order_to_total_preorder</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_preorder_of_Total_preorder">Le_preorder_of_Total_preorder</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_preorder">Le_total_preorder</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_preorder">Le_preorder</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#total_preorder_to_preorder">total_preorder_to_preorder</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_order_of_Le_total_order">Le_order_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#total_order_to_order">total_order_to_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="lt_strict_order_of_lt_strict_total_order">lt_strict_order_of_lt_strict_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_strict_total_order">Lt_strict_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_strict_order">Lt_strict_order</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#strict_total_order_to_strict_order">strict_total_order_to_strict_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Lt_strict_order_of_Le_order">Lt_strict_order_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_strict_order">Lt_strict_order</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#strict_order_strict">strict_order_strict</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Lt_strict_total_order_of_Le_total_order">Lt_strict_total_order_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_strict_total_order">Lt_strict_total_order</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#strict_total_order_of_total_order">strict_total_order_of_total_order</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">symmetric structures </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_preorder_of_Le_order">Ge_preorder_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_preorder">Ge_preorder</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#preorder_inverse">preorder_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_preorder">le_preorder</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_total_preorder_of_Le_total_order">Ge_total_preorder_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_total_preorder">Ge_total_preorder</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#total_preorder_inverse">total_preorder_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_total_preorder">le_total_preorder</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_preorder_of_Total_preorder">Ge_preorder_of_Total_preorder</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_preorder">Le_total_preorder</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_preorder">Ge_preorder</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#preorder_inverse">preorder_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_preorder">le_preorder</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_order_of_Le_total_order">Ge_order_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_order">Ge_order</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#order_inverse">order_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_order">le_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Gt_strict_order_of_lt_strict_total_order">Gt_strict_order_of_lt_strict_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_strict_total_order">Lt_strict_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Gt_strict_order">Gt_strict_order</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#gt_is_inverse_lt">gt_is_inverse_lt</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#strict_order_inverse">strict_order_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#lt_strict_order">lt_strict_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Gt_strict_order_of_Le_order">Gt_strict_order_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Gt_strict_order">Gt_strict_order</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#gt_is_inverse_lt">gt_is_inverse_lt</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#strict_order_inverse">strict_order_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#lt_strict_order">lt_strict_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Gt_strict_total_order_of_Le_total_order">Gt_strict_total_order_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Gt_strict_total_order">Gt_strict_total_order</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#gt_is_inverse_lt">gt_is_inverse_lt</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#strict_total_order_inverse">strict_total_order_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#lt_strict_total_order">lt_strict_total_order</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">properties of le </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_refl_of_Le_preorder">Le_refl_of_Le_preorder</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_preorder">Le_preorder</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_refl">Le_refl</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> [[<span class="id">Re</span> <span class="id">Tr</span>]]. <span class="id">constructor</span>~. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_trans_of_Le_preorder">Le_trans_of_Le_preorder</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_preorder">Le_preorder</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_trans">Le_trans</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> [[<span class="id">Re</span> <span class="id">Tr</span>]]. <span class="id">constructor</span>~. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_antisym_of_Le_order">Le_antisym_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_antisym">Le_antisym</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#order_antisym">order_antisym</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_total_of_Le_total_order">Le_total_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total">Le_total</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#total_order_total">total_order_total</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">properties of ge </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_refl_of_Le_preorder">Ge_refl_of_Le_preorder</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_preorder">Le_preorder</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_refl">Ge_refl</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibRelation.html#refl_inverse">refl_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_refl">le_refl</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_trans_of_Le_preorder">Ge_trans_of_Le_preorder</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_preorder">Le_preorder</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_trans">Ge_trans</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibRelation.html#trans_inverse">trans_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_trans">le_trans</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_antisym_of_Le_order">Ge_antisym_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_antisym">Ge_antisym</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibRelation.html#antisym_inverse">antisym_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_antisym">le_antisym</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_total_of_Le_total_order">Ge_total_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_total">Ge_total</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">rew_to_le</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibRelation.html#total_inverse">total_inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_total">le_total</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">properties of lt </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Lt_irrefl_of_Le_order">Lt_irrefl_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_irrefl">Lt_irrefl</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#strict_order_irrefl">strict_order_irrefl</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#lt_strict_order">lt_strict_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Lt_trans_of_Le_order">Lt_trans_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_trans">Lt_trans</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#strict_order_trans">strict_order_trans</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#lt_strict_order">lt_strict_order</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">properties of gt </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Gt_irrefl_of_Le_order">Gt_irrefl_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Gt_irrefl">Gt_irrefl</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#strict_order_irrefl">strict_order_irrefl</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#gt_strict_order">gt_strict_order</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Gt_trans_of_Le_order">Gt_trans_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Gt_trans">Gt_trans</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#strict_order_trans">strict_order_trans</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#gt_strict_order">gt_strict_order</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">mixed transitivity results </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Lt_le_trans_of_Le_order">Lt_le_trans_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_le_trans">Lt_le_trans</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">K</span> <span class="id">L</span>. <span class="id">rew_to_le</span>. <span class="id">destruct</span> <span class="id">K</span> <span class="kwd">as</span> [<span class="id">U</span> <span class="id">V</span>].<br/>
+&nbsp;&nbsp;<span class="id">split</span>~. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#le_trans">le_trans</a></span>. <span class="id">intro_subst</span>. <span class="id">apply</span> <span class="id">V</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#le_antisym">le_antisym</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_lt_trans_of_Le_order">Le_lt_trans_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_lt_trans">Le_lt_trans</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">K</span> <span class="id">L</span>. <span class="id">rew_to_le</span>. <span class="id">destruct</span> <span class="id">L</span> <span class="kwd">as</span> [<span class="id">U</span> <span class="id">V</span>].<br/>
+&nbsp;&nbsp;<span class="id">split</span>~. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#le_trans">le_trans</a></span>. <span class="id">intro_subst</span>. <span class="id">apply</span> <span class="id">V</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#le_antisym">le_antisym</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="gt_ge_trans_of_Le_order">gt_ge_trans_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Gt_ge_trans">Gt_ge_trans</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">K</span> <span class="id">L</span>. <span class="id">rew_to_le_lt</span>. <span class="id">hnf</span> <span class="kwd">in</span> *. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#le_lt_trans">le_lt_trans</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="ge_gt_trans_of_Le_order">ge_gt_trans_of_Le_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_order">Le_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_gt_trans">Ge_gt_trans</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">K</span> <span class="id">L</span>. <span class="id">rew_to_le_lt</span>. <span class="id">hnf</span> <span class="kwd">in</span> *. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#lt_le_trans">lt_le_trans</a></span>.<br/>
+Qed.</div></details>
+<div class="doc">conversion between operators </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_as_sle_of">Ge_as_sle_of</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_as_sle">Ge_as_sle</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Gt_as_slt_of">Gt_as_slt_of</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Gt_as_slt">Gt_as_slt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ngt_as_sle_of_Le_total_order">Ngt_as_sle_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ngt_as_sle">Ngt_as_sle</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>. <span class="id">rew_logic</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">forwards</span> <span class="id">K</span>:(<span class="id"><a href="SLF.LibOrder.html#inverse_strict_of_not">inverse_strict_of_not</a></span> (<span class="id">R</span>:=<span class="id"><a href="SLF.LibOrder.html#le">le</a></span>)); <span class="id">eauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_total">le_total</a></span>. <span class="id">apply</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> <span class="id">K</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#le_refl">le_refl</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibLogic.html#or_classic_l">or_classic_l</a></span>. <span class="id">intros</span> <span class="id">P</span> <span class="id">Q</span>. <span class="id">apply</span> <span class="id">P</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#le_antisym">le_antisym</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Nlt_as_ge_of_Le_total_order">Nlt_as_ge_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Nlt_as_ge">Nlt_as_ge</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le_lt</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#ngt_as_sle">ngt_as_sle</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ngt_as_le_of_Le_total_order">Ngt_as_le_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ngt_as_le">Ngt_as_le</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le_lt</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#ngt_as_sle">ngt_as_sle</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Nle_as_gt_of_Le_total_order">Nle_as_gt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Nle_as_gt">Nle_as_gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le_lt</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibOrder.html#ngt_as_sle">ngt_as_sle</a></span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibLogic.html#not_not_eq">not_not_eq</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Nge_as_lt_of_Le_total_order">Nge_as_lt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Nge_as_lt">Nge_as_lt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le_lt</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#nle_as_gt">nle_as_gt</a></span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibOrder.html#gt_is_inverse_lt">gt_is_inverse_lt</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">inclusion between operators </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Lt_to_le_of">Lt_to_le_of</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_to_le">Lt_to_le</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">unfolds</span>* <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Gt_to_ge_of">Gt_to_ge_of</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Gt_to_ge">Gt_to_ge</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">unfolds</span>* <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>, <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Nle_to_sle_of_Le_total_order">Nle_to_sle_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Nle_to_sle">Nle_to_sle</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">K</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#nle_as_gt">nle_as_gt</a></span> <span class="kwd">in</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_to_le</span>. <span class="id">unfolds</span>* <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>, <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Nle_to_slt_of_Le_total_order">Nle_to_slt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Nle_to_slt">Nle_to_slt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">K</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#nle_as_gt">nle_as_gt</a></span> <span class="kwd">in</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_to_le</span>. <span class="id">unfolds</span>* <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>, <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">case analysis under no assumption </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Case_eq_lt_gt_of_Le_total_order">Case_eq_lt_gt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Case_eq_lt_gt">Case_eq_lt_gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">K</span>. <span class="id">constructor</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> [(<span class="id">M1</span>&amp;<span class="id">M2</span>)|[<span class="id">M</span>|(<span class="id">M1</span>&amp;<span class="id">M2</span>)]]: (<span class="id"><a href="SLF.LibOrder.html#total_order_lt_or_eq_or_gt">total_order_lt_or_eq_or_gt</a></span> <span class="id"><a href="SLF.LibOrder.html#le_total_order">le_total_order</a></span> <span class="id">x</span> <span class="id">y</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#le_is_rclosure_lt">le_is_rclosure_lt</a></span> <span class="kwd">in</span> <span class="id">M1</span> <span class="kwd">by</span> <span class="id">applys</span>* <span class="id"><a href="SLF.LibOrder.html#total_order_refl">total_order_refl</a></span>. <span class="id">destruct</span>* <span class="id">M1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">autos</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#le_is_rclosure_lt">le_is_rclosure_lt</a></span> <span class="kwd">in</span> <span class="id">M1</span> <span class="kwd">by</span> <span class="id">applys</span>* <span class="id"><a href="SLF.LibOrder.html#total_order_refl">total_order_refl</a></span>. <span class="id">destruct</span>* <span class="id">M1</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Case_eq_lt_slt_of_Le_total_order">Case_eq_lt_slt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Case_eq_lt_slt">Case_eq_lt_slt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">pattern</span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="kwd">at</span> 2. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#lt_is_inverse_gt">lt_is_inverse_gt</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#case_eq_lt_gt">case_eq_lt_gt</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Case_le_gt_of_Le_total_order">Case_le_gt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Case_le_gt">Case_le_gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#le_is_rclosure_lt">le_is_rclosure_lt</a></span> <span class="kwd">by</span> <span class="id">applys</span>* <span class="id"><a href="SLF.LibOrder.html#total_order_refl">total_order_refl</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibRelation.html#rclosure_eq">rclosure_eq</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">branches</span> (<span class="id"><a href="SLF.LibOrder.html#total_order_lt_or_eq_or_gt">total_order_lt_or_eq_or_gt</a></span> <span class="id"><a href="SLF.LibOrder.html#le_total_order">le_total_order</a></span> <span class="id">x</span> <span class="id">y</span>); <span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Case_eq_lt_ge_of_Le_total_order">Case_eq_lt_ge_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Case_lt_ge">Case_lt_ge</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#ge_is_rclosure_gt">ge_is_rclosure_gt</a></span> <span class="kwd">by</span> <span class="id">applys</span>* <span class="id"><a href="SLF.LibOrder.html#total_order_refl">total_order_refl</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibRelation.html#rclosure_eq">rclosure_eq</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">branches</span> (<span class="id"><a href="SLF.LibOrder.html#total_order_lt_or_eq_or_gt">total_order_lt_or_eq_or_gt</a></span> <span class="id"><a href="SLF.LibOrder.html#le_total_order">le_total_order</a></span> <span class="id">x</span> <span class="id">y</span>); <span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Case_le_slt_of_Le_total_order">Case_le_slt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Case_le_slt">Case_le_slt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#lt_is_inverse_gt">lt_is_inverse_gt</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#case_le_gt">case_le_gt</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Case_eq_lt_sle_of_Le_total_order">Case_eq_lt_sle_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Case_lt_sle">Case_lt_sle</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibOrder.html#le_is_inverse_ge">le_is_inverse_ge</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibOrder.html#case_lt_ge">case_lt_ge</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">case analysis under one assumption </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Neq_case_lt_gt_of_Le_total_order">Neq_case_lt_gt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Neq_case_lt_gt">Neq_case_lt_gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">destruct</span>* (<span class="id"><a href="SLF.LibOrder.html#case_eq_lt_gt">case_eq_lt_gt</a></span> <span class="id">x</span> <span class="id">y</span>). Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Neq_case_lt_slt_of_Le_total_order">Neq_case_lt_slt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Neq_case_lt_slt">Neq_case_lt_slt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">destruct</span>* (<span class="id"><a href="SLF.LibOrder.html#case_eq_lt_gt">case_eq_lt_gt</a></span> <span class="id">x</span> <span class="id">y</span>). Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_case_eq_lt_of_Le_total_order">Le_case_eq_lt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_case_eq_lt">Le_case_eq_lt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>. <span class="id">tests</span>*: (<span class="id">x</span> = <span class="id">y</span>). Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_case_eq_gt_of_Le_total_order">Ge_case_eq_gt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_case_eq_gt">Ge_case_eq_gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>, <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>. <span class="id">tests</span>*: (<span class="id">x</span> = <span class="id">y</span>). Qed.</div></details>
+<br/>
+<div class="doc">case analysis under two assumptions </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Le_neq_to_lt_of_Le_total_order">Le_neq_to_lt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_neq_to_lt">Le_neq_to_lt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">hnfs</span>*. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Ge_neq_to_gt_of_Le_total_order">Ge_neq_to_gt_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Ge_neq_to_gt">Ge_neq_to_gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rew_to_le</span>. <span class="id">hnfs</span>*. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Nlt_nslt_to_eq_of_Le_total_order">Nlt_nslt_to_eq_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Nlt_nslt_to_eq">Nlt_nslt_to_eq</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">branches</span>* (<span class="id"><a href="SLF.LibOrder.html#case_eq_lt_gt">case_eq_lt_gt</a></span> <span class="id">x</span> <span class="id">y</span>). Qed.</div></details>
+<br/>
+<div class="doc">contradiction from case analysis </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Lt_ge_false_of_Le_total_order">Lt_ge_false_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_ge_false">Lt_ge_false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">rewrite</span>~ &lt;- <span class="id"><a href="SLF.LibOrder.html#nlt_as_ge">nlt_as_ge</a></span> <span class="kwd">in</span> <span class="id">H2</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Lt_gt_false_of_Le_total_order">Lt_gt_false_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_gt_false">Lt_gt_false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">rewrite</span>~ &lt;- <span class="id"><a href="SLF.LibOrder.html#nle_as_gt">nle_as_gt</a></span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H2</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#lt_to_le">lt_to_le</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Lt_slt_false_of_Le_total_order">Lt_slt_false_of_Le_total_order</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#Lt_slt_false">Lt_slt_false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibOrder.html#gt_as_slt">gt_as_slt</a></span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>* <span class="id"><a href="SLF.LibOrder.html#lt_gt_false">lt_gt_false</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibOrder.html#Instances">Instances</a></span>.<br/>
+<br/>
+<div class="doc">-- Other lemmas needs arguments to be implicit? </div>
+<br/>
+<h1> Boolean comparison </h1>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="BooleanComparison">BooleanComparison</a></span>.<br/>
+<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">comp_scope</span>.<br/>
+<br/>
+<div class="doc">Additional notation for reflected boolean comparison.
+    Use <span class="bracket"><span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">comp_scope_reflect</span></span> to use them. </div>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">comp_scope_reflect</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"x ''&lt;=' y"</span> := (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (@<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> _ _ <span class="id">x</span> <span class="id">y</span>))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">no</span> <span class="id">associativity</span>) : <span class="id">comp_scope_reflect</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x ''&gt;=' y"</span> := (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (@<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> _ _ <span class="id">x</span> <span class="id">y</span>))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">no</span> <span class="id">associativity</span>) : <span class="id">comp_scope_reflect</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x ''&lt;' y"</span> := (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (@<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> _ _ <span class="id">x</span> <span class="id">y</span>))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">no</span> <span class="id">associativity</span>) : <span class="id">comp_scope_reflect</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"x ''&gt;' y"</span> := (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (@<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> _ _ <span class="id">x</span> <span class="id">y</span>))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 70, <span class="id">no</span> <span class="id">associativity</span>) : <span class="id">comp_scope_reflect</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibOrder.html#BooleanComparison">BooleanComparison</a></span>.<br/>
+<br/>
+<h1> Order on relations and on predicates </h1>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="order_rel_incl">order_rel_incl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order">order</a></span> (@<span class="id"><a href="SLF.LibRelation.html#rel_incl">rel_incl</a></span> <span class="id">A</span> <span class="id">B</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#refl_rel_incl">refl_rel_incl</a></span>, <span class="id"><a href="SLF.LibRelation.html#antisym_rel_incl">antisym_rel_incl</a></span>, <span class="id"><a href="SLF.LibRelation.html#trans_rel_incl">trans_rel_incl</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">constructors</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="order_pred_incl">order_pred_incl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#order">order</a></span> (@<span class="id"><a href="SLF.LibRelation.html#rel_incl">rel_incl</a></span> <span class="id">A</span> <span class="id">B</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibRelation.html#refl_rel_incl">refl_rel_incl</a></span>, <span class="id"><a href="SLF.LibRelation.html#antisym_rel_incl">antisym_rel_incl</a></span>, <span class="id"><a href="SLF.LibRelation.html#trans_rel_incl">trans_rel_incl</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">constructors</span>*.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="min">min</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} (<span class="id">n</span> <span class="id">m</span>:<span class="id">A</span>) : <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="id">If</span> <span class="id">n</span> &lt;= <span class="id">m</span> <span class="kwd">then</span> <span class="id">n</span> <span class="kwd">else</span> <span class="id">m</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="min_l">min_l</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} (<span class="id">n</span> <span class="id">m</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">n</span> &lt;= <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#min">min</a></span> <span class="id">n</span> <span class="id">m</span> = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">T</span> <span class="id">M</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibOrder.html#min">min</a></span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="min_r">min_r</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} (<span class="id">n</span> <span class="id">m</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">m</span> &lt;= <span class="id">n</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#min">min</a></span> <span class="id">n</span> <span class="id">m</span> = <span class="id">m</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">T</span> <span class="id">M</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibOrder.html#min">min</a></span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="max">max</a></span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} (<span class="id">n</span> <span class="id">m</span>:<span class="id">A</span>) : <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="id">If</span> <span class="id">n</span> &lt;= <span class="id">m</span> <span class="kwd">then</span> <span class="id">m</span> <span class="kwd">else</span> <span class="id">n</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="max_l">max_l</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} (<span class="id">n</span> <span class="id">m</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">n</span> &gt;= <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#max">max</a></span> <span class="id">n</span> <span class="id">m</span> = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">T</span> <span class="id">M</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibOrder.html#max">max</a></span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="max_r">max_r</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} (<span class="id">n</span> <span class="id">m</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">n</span> &lt;= <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOrder.html#max">max</a></span> <span class="id">n</span> <span class="id">m</span> = <span class="id">m</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">T</span> <span class="id">M</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibOrder.html#max">max</a></span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

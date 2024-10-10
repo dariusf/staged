@@ -1,0 +1,818 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module WPsem</title>
+<meta name="description" content="Documentation of Coq module WPsem" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module WPsem</h1>
+<div class="coq">
+<h1> WPsem: Semantics of Weakest Preconditions </h1>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.Rules.html">Rules</a></span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> : <span class="id"><a href="SLF.LibSepVar.html#var">var</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">b</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">v</span> <span class="id">w</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">p</span> : <span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">h</span> : <span class="id"><a href="SLF.LibSepReference.html#heap">heap</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">H</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">Q</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<br/>
+<h1> First Pass </h1>
+<br/>
+<div class="doc">In this chapter, we introduce the notion of "weakest precondition" for
+    Separation Logic triples, written <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span>.
+    The intention is for <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> to be a heap predicate (of type <span class="bracket"><span class="id">hprop</span></span>) such
+    that <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> iff <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span>. </div>
+<br/>
+<div class="doc">The benefits of introducing weakest preconditions are twofold.
+      - The use of <span class="bracket"><span class="id">wp</span></span> greatly reduces the number of structural rules required,
+        thus reducing the number of tactics required for carrying out proofs in
+        practice;
+      - The predicate <span class="bracket"><span class="id">wp</span></span> will serve as guidelines for setting up (in the next
+        chapter) a "characteristic formula generator", which is the key
+        ingredient at the heart of the CFML tool. </div>
+<br/>
+<div class="doc">The high-level picture is:
+       - (1) wp and triples are equivalent presentations of the same thing.
+       - (2) wp has practical benefits, reducing the number of reasoning rules
+             and tactics that are needed, by a fair amount.
+       - (3) specifications of functions remain more intuitive to read with
+             triples.
+</div>
+<br/>
+<div class="doc">The chapter presents:
+      - the notion of weakest precondition, as captured by <span class="bracket"><span class="id">wp</span></span>,
+      - the reformulation of structural rules in <span class="bracket"><span class="id">wp</span></span>-style, and
+      - the reformulation of reasoning rules in <span class="bracket"><span class="id">wp</span></span>-style.
+    Throughout the chapter, we aim to establish reasoning rules in <span class="bracket"><span class="id">wp</span></span>-style
+    directly with respect to the semantics defined by <span class="bracket"><span class="id">eval</span></span>, as opposed to
+    deriving <span class="bracket"><span class="id">wp</span></span>-style rules from the reasoning rules on triples proved in the
+    previous chapters. The interest is to present the proofs involved in the
+    most direct construction of a program verification framework based on <span class="bracket"><span class="id">wp</span></span>.
+    </div>
+<br/>
+<div class="doc">The "optional material" section presents several equivalent definitions for
+    <span class="bracket"><span class="id">wp</span></span>, alternative proofs for deriving <span class="bracket"><span class="id">wp</span></span>-style reasoning rules, as well as
+    a presentation of "Texan triples", which reformulate function specifications
+    using magic wands instead of triples. </div>
+<br/>
+<h2> Definition of Weakest Preconditions </h2>
+<br/>
+<div class="doc">Consider a term <span class="bracket"><span class="id">t</span></span> and a postcondition <span class="bracket"><span class="id">Q</span></span>.
+    The expression <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> is called the "weakest precondition" of the term <span class="bracket"><span class="id">t</span></span>
+    with respect to the postcondition <span class="bracket"><span class="id">Q</span></span>.
+    It is a heap predicate such that, for any heap predicate <span class="bracket"><span class="id">H</span></span>, the entailment
+    <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> holds if and only if <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span> does. </div>
+<br/>
+<div class="doc">The concept of <span class="bracket"><span class="id">wp</span></span> might seem a bit mysterious at this point. Hopefully it
+    will become clearer in the rest of this chapter. </div>
+<br/>
+<div class="doc">The first critical observation is that <span class="bracket"><span class="id">wp</span></span> is in fact nothing but a
+    reformulation of the predicate <span class="bracket"><span class="id">eval</span></span>. To see why, recall the definition of
+    <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span>.
+    Definition triple (t:trm) (H:hprop) (Q:val-&gt;hprop) : Prop :=
+      forall s, H s -&gt; eval s t Q.
+    By definition, the predicate <span class="bracket"><span class="id">wp</span></span> should be such that <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> is
+    equivalent to <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span>. But <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> unfolds to
+    <span class="bracket"><span class="kwd">forall</span> <span class="id">s</span>, <span class="id">H</span> <span class="id">s</span> -&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span> <span class="id">s</span></span>. If we compare <span class="bracket"><span class="kwd">forall</span> <span class="id">s</span>, <span class="id">H</span> <span class="id">s</span> -&gt; <span class="id">eval</span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q</span></span>
+    with <span class="bracket"><span class="kwd">forall</span> <span class="id">s</span>, <span class="id">H</span> <span class="id">s</span> -&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span> <span class="id">s</span></span>, we see that <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span> <span class="id">s</span></span> should match
+    <span class="bracket"><span class="id">eval</span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q</span></span>. In other words, <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> should correspond to
+    <span class="bracket"><span class="kwd">fun</span> <span class="id">s</span> =&gt; <span class="id">eval</span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="wp">wp</a></span> (<span class="id">t</span> : <span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">Q</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">s</span> =&gt; <span class="id"><a href="SLF.LibSepReference.html#eval">eval</a></span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Remark: the reader may wonder why <span class="bracket"><span class="id">wp</span></span> is not just defined to *be* <span class="bracket"><span class="id">eval</span></span>,
+    by simply modifying our earlier definition of <span class="bracket"><span class="id">eval</span></span> to take its arguments
+    in a different order. Certainly, it could be done. However, the benefits of
+    identifying <span class="bracket"><span class="id">wp</span></span> and <span class="bracket"><span class="id">eval</span></span> are limited, and there are two orthogonal
+    motivations for not following that route.
+    Firstly, the omni-big-step predicate <span class="bracket"><span class="id">eval</span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q</span></span> is devised as an immediate
+    generalization of the big-step predicate <span class="bracket"><span class="id">eval</span> <span class="id">s</span> <span class="id">t</span> <span class="id">s'</span> <span class="id">v</span></span>, by generalizing
+    from out final configuration <span class="bracket">(<span class="id">s'</span>,<span class="id">v</span>)</span> to a set <span class="bracket"><span class="id">Q</span></span> of final configurations.
+    From the perspective of a semantics, we view the configuration <span class="bracket">(<span class="id">s</span>,<span class="id">t</span>)</span> as an
+    input and the set <span class="bracket"><span class="id">Q</span></span> as an output, thus it would be fairly awckward to
+    write <span class="bracket"><span class="id">eval</span> <span class="id">t</span> <span class="id">Q</span> <span class="id">s</span></span>, with the input state <span class="bracket"><span class="id">s</span></span> taken as last argument.
+    Secondly, we are looking here at a simple Separation Logic where heap
+    predicates are predicates over the physical state. They have type
+    <span class="bracket"><span class="id">heap</span>-&gt;<span class="kwd">Prop</span></span>, where <span class="bracket"><span class="id">heap</span></span> corresponds exactly to the type of of a state
+    <span class="bracket"><span class="id">s</span></span>. More advanced Separation Logic feature something known as "ghost state"
+    (used, e.g., to represent invariants associated with locks). In such logics,
+    heap predicates are predicates over both the physical and the ghost state.
+    In other words, the type <span class="bracket"><span class="id">heap</span></span> in general may consist of more than just a
+    state <span class="bracket"><span class="id">s</span></span>. The point of this discussion is that, for more advanced
+    Separation Logics, <span class="bracket"><span class="id">wp</span></span> is more than just <span class="bracket"><span class="id">eval</span></span>. Thus, there is no reason
+    to attempt to identify the two. </div>
+<br/>
+<div class="doc">As intended, the entailment <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> holds if and only if
+    <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span> does.</div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_equiv">wp_equiv</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>) &lt;-&gt; (<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">iff</span> <span class="id">M</span>. { <span class="id">introv</span> <span class="id">Hs</span>. <span class="id">applys</span> <span class="id">M</span> <span class="id">Hs</span>. } { <span class="id">introv</span> <span class="id">Hs</span>. <span class="id">applys</span> <span class="id">M</span> <span class="id">Hs</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">There are several other ways of defining <span class="bracket"><span class="id">wp</span></span>. As we show near the end of
+    this chapter, they are all equivalent. The definition above is the one that
+    leads to the simplest proofs for the reasoning rules. Indeed, reasoning
+    rules must be proved correct with respect to the semantics, and the
+    semantics is captured by the predicate <span class="bracket"><span class="id">eval</span></span>. </div>
+<br/>
+<div class="doc">Let us now explain why <span class="bracket"><span class="id">wp</span></span> is called a "weakest precondition". First,
+    <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> is always a _valid_ precondition for <span class="bracket"><span class="id">t</span></span> with respect to the
+    postcondition <span class="bracket"><span class="id">Q</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_pre">wp_pre</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> (<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_refl">himpl_refl</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Second, <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> is the "weakest" of all valid preconditions for <span class="bracket"><span class="id">t</span></span> and
+    <span class="bracket"><span class="id">Q</span></span>, in the sense that, for any other valid precondition <span class="bracket"><span class="id">H</span></span> (i.e., such
+    that <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span> holds), it is the case that <span class="bracket"><span class="id">H</span></span> entails <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_weakest">wp_weakest</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">applys</span> <span class="id">M</span>. Qed.</div></details>
+<br/>
+<h2> Structural Rules in Weakest-Precondition Style </h2>
+<br/>
+<div class="doc">We next present reformulations of the frame rule and the rule of consequence
+    in _weakest-precondition style_.
+    Given a term <span class="bracket"><span class="id">t</span></span> and a postcondition <span class="bracket"><span class="id">Q</span></span>, we say that "<span class="bracket"><span class="id">t</span></span> produces <span class="bracket"><span class="id">Q</span></span>" if
+    <span class="bracket"><span class="id">t</span></span> terminates and produces a output value and an output state that,
+    together, satisfy the postcondition <span class="bracket"><span class="id">Q</span></span>. </div>
+<br/>
+<h3> The Frame Rule </h3>
+<br/>
+<div class="doc">The frame rule for <span class="bracket"><span class="id">wp</span></span> asserts that <span class="bracket">(<span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span>) \* <span class="id">H</span></span> entails
+    <span class="bracket"><span class="id">wp</span> <span class="id">t</span> (<span class="id">Q</span> \*+ <span class="id">H</span>)</span>. This statement can be read as follows: if you own both a
+    piece of state satisfying <span class="bracket"><span class="id">H</span></span> and a piece of state in which the execution of
+    <span class="bracket"><span class="id">t</span></span> produces <span class="bracket"><span class="id">Q</span></span>, then you own a piece of state in which the execution of
+    <span class="bracket"><span class="id">t</span></span> produces <span class="bracket"><span class="id">Q</span> \*+ <span class="id">H</span></span>, that is, produces both <span class="bracket"><span class="id">Q</span></span> and <span class="bracket"><span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_frame">wp_frame</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>) \* <span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> (<span class="id">Q</span> \*+ <span class="id">H</span>).<br/>
+<br/>
+<div class="doc">The lemma is proved by exploiting the frame property on <span class="bracket"><span class="id">eval</span></span>. (It could
+    also be derived using <span class="bracket"><span class="id">wp_equiv</span></span> and <span class="bracket"><span class="id">triple_frame</span></span>, but the point here is
+    to derive properties of <span class="bracket"><span class="id">wp</span></span> without mentioning <span class="bracket"><span class="id">triple</span></span>.) </div>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">HF</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">MD</span>&amp;<span class="id">MU</span>): <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_inv">hstar_inv</a></span> <span class="id">HF</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_conseq">eval_conseq</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_frame">eval_frame</a></span> <span class="id">M1</span> <span class="id">MD</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">h'</span> -&gt;. <span class="id">applys</span> <span class="id">M2</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Looking at the entaileent expressed by <span class="bracket"><span class="id">wp_frame</span></span>, the reader may wander
+    whether the reverse entailment holds, that is, if <span class="bracket"><span class="id">wp</span> <span class="id">t</span> (<span class="id">Q</span> \*+ <span class="id">H</span>)</span> entails
+    <span class="bracket">(<span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span>) \* <span class="id">H</span></span>. This reverse entailment does not hold in general. Consider
+    the following counterexample term <span class="bracket"><span class="id">t</span></span>, defined as <span class="bracket"><span class="kwd">let</span> <span class="id">p</span> = <span class="id">ref</span> 1 <span class="kwd">in</span> 0</span>. This
+    term returns <span class="bracket">0</span> and produces a dangling reference cell that can be
+    described as <span class="bracket">\<span class="kwd">exists</span> <span class="id">p</span>, (<span class="id">p</span> ~~&gt; 1)</span>. Let <span class="bracket"><span class="id">Q</span></span> be <span class="bracket"><span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = 0]</span> and <span class="bracket"><span class="id">H</span></span>
+    be <span class="bracket">\<span class="kwd">exists</span> <span class="id">p</span>, (<span class="id">p</span> ~~&gt; 1)</span>. The term <span class="bracket"><span class="id">t</span></span>, executed in the empty heap,
+    terminates with postcondition <span class="bracket"><span class="id">Q</span> \*+ <span class="id">H</span></span>. Therefore, the predicate
+    <span class="bracket"><span class="id">wp</span> <span class="id">t</span> (<span class="id">Q</span> \*+ <span class="id">H</span>)</span> holds of the empty heap. However, <span class="bracket">(<span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span>) \* <span class="id">H</span></span> does not
+    hold of the empty heap, because <span class="bracket"><span class="id">H</span></span>, which describes one memory cell, cannot
+    be carved out of the empty heap. We conclude that <span class="bracket"><span class="id">wp</span> <span class="id">t</span> (<span class="id">Q</span> \*+ <span class="id">H</span>)</span> does not
+    entail <span class="bracket">(<span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span>) \* <span class="id">H</span></span> in general. </div>
+<br/>
+<div class="doc">The connection between <span class="bracket"><span class="id">wp_frame</span></span> and the rule <span class="bracket"><span class="id">triple_frame</span></span> is not be
+    totally obvious. Recall the statement of the frame rule for triples.
+    triple t H1 Q -&gt;
+    triple t (H1 \* H) (Q \*+ H)
+    Let us replace the pattern <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span> with the pattern <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span>,
+    following the characteristic equivalence <span class="bracket"><span class="id">wp_equiv</span></span>. We obtain the statement
+    shown below. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_frame_trans">wp_frame_trans</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> (<span class="id">Q</span> \*+ <span class="id">H</span>).<br/>
+<br/>
+<div class="doc">If we exploit transitivity of entailment to eliminate <span class="bracket"><span class="id">H1</span></span>, then we obtain
+    exactly <span class="bracket"><span class="id">wp_frame</span></span>, as illustrated by the proof script below. </div>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">M</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.WPsem.html#wp_frame">wp_frame</a></span>. Qed.</div></details>
+<br/>
+<h3> The Rule of Consequence </h3>
+<br/>
+<div class="doc">The rule of consequence for <span class="bracket"><span class="id">wp</span></span> is a covariance property: it asserts that
+    <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> is covariant in <span class="bracket"><span class="id">Q</span></span>. In other words, if <span class="bracket"><span class="id">Q1</span></span> entails <span class="bracket"><span class="id">Q2</span></span>, then
+    <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q1</span></span> entails <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q2</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_conseq">wp_conseq</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> ===&gt; <span class="id">Q2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q1</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">s</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_conseq">eval_conseq</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Here again, the connection with the corresponding reasoning rule for triples
+    is not totally obvious. Recall the statement of the rule of consequence.
+    triple t H1 Q1 -&gt;
+    H2 ==&gt; H1 -&gt;
+    Q1 ===&gt; Q2 -&gt;
+    triple t H2 Q2
+    Let us replace <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span> with <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> to obtain the following
+    statement: </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_conseq_trans">wp_conseq_trans</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> ===&gt; <span class="id">Q2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q2</span>.<br/>
+<br/>
+<div class="doc">If we exploit transitivity of entailment to eliminate <span class="bracket"><span class="id">H1</span></span> and <span class="bracket"><span class="id">H2</span></span>, then we
+    obtain exactly <span class="bracket"><span class="id">wp_conseq</span></span>, as illustrated by the proof script below. </div>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span> <span class="id">WH</span> <span class="id">WQ</span>. <span class="id">xchange</span> <span class="id">WH</span>. <span class="id">xchange</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_conseq">wp_conseq</a></span> <span class="id">WQ</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> The Extraction Rules </h3>
+<br/>
+<div class="doc">The extraction rules <span class="bracket"><span class="id">triple_hpure</span></span> and <span class="bracket"><span class="id">triple_hexists</span></span> have no specific
+    counterpart with the <span class="bracket"><span class="id">wp</span></span> presentation. Indeed, in a weakest-precondition
+    style presentation, the extraction rules for triples correspond exactly to
+    the extraction rules for entailment.
+    To see why, consider the rule <span class="bracket"><span class="id">triple_hpure</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_hpure">triple_hpure</a></span> : <span class="kwd">forall</span> <span class="id">t</span> (<span class="id">P</span>:<span class="kwd">Prop</span>) <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> (\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Replacing <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span> with <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> yields the following: </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_hpure_with_wp">triple_hpure_with_wp</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> (<span class="id">P</span>:<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; (<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>)) -&gt;<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \* <span class="id">H</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">This implication is just a special case of the extraction lemma for pure
+    facts on the left on an entailment, <span class="bracket"><span class="id">himpl_hstar_hpure_l</span></span>:
+    (P -&gt; (H ==&gt; H')) -&gt;
+    (\<span class="bracket"><span class="id">P</span></span> \* H) ==&gt; H'.
+</div>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_hstar_hpure_l">himpl_hstar_hpure_l</a></span> <span class="id">M</span>. Qed.</div></details>
+<br/>
+<div class="doc">Similar reasoning applies to the extraction rule for existentials. </div>
+<br/>
+<h3> The Ramified Frame Rule </h3>
+<br/>
+<div class="doc">Recall the ramified frame rule: </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_ramified_frame">triple_ramified_frame</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">Q1</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* (<span class="id">Q1</span> \--* <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">The ramified frame rule in weakest-precondition style, named <span class="bracket"><span class="id">wp_ramified</span></span>,
+    admits a concise statement and subsumes all the other structural rules of
+    Separation Logic. Its very elegant statement is as follows. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_ramified">wp_ramified</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q1</span>) \* (<span class="id">Q1</span> \--* <span class="id">Q2</span>) ==&gt; (<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#wp_conseq_frame">wp_conseq_frame</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.qwand_cancel">qwand_cancel</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">The following reformulation of <span class="bracket"><span class="id">wp_ramified</span></span> can be more practical to
+    exploit in practice, because it applies to any goal of the form
+    <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_ramified_trans">wp_ramified_trans</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q1</span>) \* (<span class="id">Q1</span> \--* <span class="id">Q2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_ramified">wp_ramified</a></span>. Qed.</div></details>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (wp_conseq_of_wp_ramified)
+    Prove that <span class="bracket"><span class="id">wp_conseq</span></span> is derivable from <span class="bracket"><span class="id">wp_ramified</span></span>. Concretely, prove
+    <span class="bracket"><span class="id">wp_conseq</span></span> using only <span class="bracket"><span class="id">wp_ramified</span></span> or <span class="bracket"><span class="id">wp_ramified_trans</span></span>, plus properties
+    of the entailment relation. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_conseq_of_wp_ramified">wp_conseq_of_wp_ramified</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> ===&gt; <span class="id">Q2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q1</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (wp_frame_of_wp_ramified)
+    Prove that <span class="bracket"><span class="id">wp_frame</span></span> is derivable from <span class="bracket"><span class="id">wp_ramified</span></span>. Concretely, prove
+    <span class="bracket"><span class="id">wp_frame</span></span> using only <span class="bracket"><span class="id">wp_ramified</span></span> plus properties of entailment. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_frame_of_wp_ramified">wp_frame_of_wp_ramified</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>) \* <span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> (<span class="id">Q</span> \*+ <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Reasoning Rules for Terms in Weakest-Precondition Style </h2>
+<br/>
+<h3> Values </h3>
+<br/>
+<div class="doc">Recall the rule <span class="bracket"><span class="id">triple_val</span></span> which establishes a triple for a value <span class="bracket"><span class="id">v</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_val">triple_val</a></span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_val">trm_val</a></span> <span class="id">v</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">If we rewrite this rule in <span class="bracket"><span class="id">wp</span></span> style, we obtain this:
+    H ==&gt; Q v -&gt;
+    H ==&gt; wp (trm_val v) Q.
+    By exploiting transitivity of entailment, we can eliminate <span class="bracket"><span class="id">H</span></span>. We obtain
+    the following rule: If you own a state satisfying <span class="bracket"><span class="id">Q</span> <span class="id">v</span></span>, then you own a
+    state from which the evaluation of the value <span class="bracket"><span class="id">v</span></span> produces <span class="bracket"><span class="id">Q</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_val">wp_val</a></span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q</span> <span class="id">v</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_val">trm_val</a></span> <span class="id">v</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_val">eval_val</a></span>. Qed.</div></details>
+<br/>
+<h3> Sequences </h3>
+<br/>
+<div class="doc">Recall the reasoning rule for a sequence <span class="bracket"><span class="id">trm_seq</span> <span class="id">t1</span> <span class="id">t2</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_seq">triple_seq</a></span> : <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">H1</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t1</span> <span class="id">H</span> (<span class="kwd">fun</span> _ =&gt; <span class="id">H1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t2</span> <span class="id">H1</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Replacing <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span> with <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> gives this:
+      H ==&gt; (wp t1) (fun _ =&gt; H1) -&gt;
+      H1 ==&gt; (wp t2) Q -&gt;
+      H ==&gt; wp (trm_seq t1 t2) Q.
+    This entailment holds for any <span class="bracket"><span class="id">H</span></span> and <span class="bracket"><span class="id">H1</span></span>. Let us specialize it to
+    <span class="bracket"><span class="id">H1</span> := (<span class="id">wp</span> <span class="id">t2</span>) <span class="id">Q</span></span> and <span class="bracket"><span class="id">H</span> := (<span class="id">wp</span> <span class="id">t1</span>) (<span class="kwd">fun</span> <span class="id">v</span> =&gt; (<span class="id">wp</span> <span class="id">t2</span>) <span class="id">Q</span>)</span>.
+    This leads us to the following rule: If you own a state from which the
+    evaluation of <span class="bracket"><span class="id">t1</span></span> produces a state from which the evaluation of <span class="bracket"><span class="id">t2</span></span>
+    produces the postcondition <span class="bracket"><span class="id">Q</span></span>, then you own a state from which the
+    evaluation of the sequence <span class="bracket"><span class="id">t1</span>;<span class="id">t2</span></span> produces <span class="bracket"><span class="id">Q</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_seq">wp_seq</a></span> : <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t1</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t2</span> <span class="id">Q</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_seq">eval_seq</a></span>. Qed.</div></details>
+<br/>
+<h3> Let-Bindings </h3>
+<br/>
+<div class="doc">Recall the reasoning rule for a term <span class="bracket"><span class="id">trm_let</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_let">triple_let</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v1</span>, <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v1</span> <span class="id">t2</span>) (<span class="id">Q1</span> <span class="id">v1</span>) <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">The rule of <span class="bracket"><span class="id">trm_let</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span></span> is very similar to that for <span class="bracket"><span class="id">trm_seq</span></span>, the
+    only difference being the substitution of <span class="bracket"><span class="id">x</span></span> by <span class="bracket"><span class="id">v</span></span> in <span class="bracket"><span class="id">t2</span></span>, where <span class="bracket"><span class="id">v</span></span>
+    denotes the result of <span class="bracket"><span class="id">t1</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_let">wp_let</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t1</span> (<span class="kwd">fun</span> <span class="id">v1</span> =&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v1</span> <span class="id">t2</span>) <span class="id">Q</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_let">eval_let</a></span>. Qed.</div></details>
+<br/>
+<h3> Functions </h3>
+<br/>
+<div class="doc">Recall the reasoning rule for a term <span class="bracket"><span class="id">trm_fun</span> <span class="id">x</span> <span class="id">t1</span></span>, which evaluates to the
+    value <span class="bracket"><span class="id">val_fun</span> <span class="id">x</span> <span class="id">t1</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_fun">triple_fun</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_fun">trm_fun</a></span> <span class="id">x</span> <span class="id">t1</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">The rule for functions follows exactly the same pattern as for values. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_fun">wp_fun</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_fun">trm_fun</a></span> <span class="id">x</span> <span class="id">t</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_fun">eval_fun</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">A similar rule holds for the evaluation of a recursive function. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_fix">wp_fix</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_fix">trm_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_fix">eval_fix</a></span>. Qed.</div></details>
+<br/>
+<h3> Conditionals </h3>
+<br/>
+<div class="doc">Recall the reasoning rule for a term <span class="bracket"><span class="id">triple_if</span> <span class="id">b</span> <span class="id">t1</span> <span class="id">t2</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_if">triple_if</a></span> : <span class="kwd">forall</span> <span class="id">b</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">t1</span> <span class="kwd">else</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_if">trm_if</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_bool">val_bool</a></span> <span class="id">b</span>) <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Replacing <span class="bracket"><span class="id">triple</span></span> using <span class="bracket"><span class="id">wp</span></span> entailments yields
+    H ==&gt; wp (if b then t1 else t2) Q -&gt;
+    H ==&gt; wp (trm_if (val_bool b) t1 t2) Q
+    A necessary and sufficient condition to prove a proposition of the form
+    <span class="bracket"><span class="kwd">forall</span> <span class="id">H</span>, (<span class="id">H</span> ==&gt; <span class="id">H1</span>) -&gt; (<span class="id">H</span> ==&gt; <span class="id">H2</span>)</span> is <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H2</span></span>. Indeed, if we
+    instantiate <span class="bracket"><span class="id">H</span></span> with <span class="bracket"><span class="id">H1</span></span>, we have <span class="bracket">(<span class="id">H1</span> ==&gt; <span class="id">H1</span>) -&gt; (<span class="id">H1</span> ==&gt; <span class="id">H2</span>)</span>, thus we
+    deduce <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H2</span></span>. Reciprocally, if we have <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H2</span></span> and <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H1</span></span>,
+    then by the transitivity property <span class="bracket"><span class="id">himpl_trans</span></span>, we deduce <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H2</span></span>.
+    Therefore, the previous entailment simplifies to:
+    wp (if b then t1 else t2) Q ==&gt; wp (trm_if (val_bool b) t1 t2) Q.
+    This is the wp-style reasoning rule for conditionals. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_if">wp_if</a></span> : <span class="kwd">forall</span> <span class="id">b</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">t1</span> <span class="kwd">else</span> <span class="id">t2</span>) <span class="id">Q</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_if">trm_if</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_bool">val_bool</a></span> <span class="id">b</span>) <span class="id">t1</span> <span class="id">t2</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_if">eval_if</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Equivalently, the rule may be stated with the conditional around the calls
+    to <span class="bracket"><span class="id">wp</span> <span class="id">t1</span> <span class="id">Q</span></span> and <span class="bracket"><span class="id">wp</span> <span class="id">t2</span> <span class="id">Q</span></span>. </div>
+<br/>
+<h3> Exercise: 1 star, standard, optional (wp_if')
+    Prove the alternative statement of rule <span class="bracket"><span class="id">wp_if</span></span>, either from <span class="bracket"><span class="id">wp_if</span></span> or
+    directly from <span class="bracket"><span class="id">eval_if</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">wp_if'</span> : <span class="kwd">forall</span> <span class="id">b</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> (<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t1</span> <span class="id">Q</span>) <span class="kwd">else</span> (<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t2</span> <span class="id">Q</span>)) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_if">trm_if</a></span> <span class="id">b</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Rule For Function Applications </h3>
+<br/>
+<div class="doc">Recall the reasoning rule for an application <span class="bracket">(<span class="id">val_fun</span> <span class="id">x</span> <span class="id">t1</span>) <span class="id">v2</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_app_fun">triple_app_fun</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> <span class="id">t1</span>) <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">The corresponding <span class="bracket"><span class="id">wp</span></span> rule is: </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_app_fun">wp_app_fun</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">t1</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> <span class="id">t1</span>) <span class="id">Q</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_app_fun">eval_app_fun</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">A similar rule holds for the application of a recursive function. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_app_fix">wp_app_fix</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">t1</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">f</span> <span class="id">v1</span> <span class="id">t1</span>)) <span class="id">Q</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_app_fix">eval_app_fix</a></span>. Qed.</div></details>
+<br/>
+<h1> More Details </h1>
+<br/>
+<h2> Combined Structural Rule </h2>
+<br/>
+<div class="doc">Recall the combined consequence-frame rule for <span class="bracket"><span class="id">triple</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_conseq_frame">triple_conseq_frame</a></span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">Q1</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Let us reformulate this rule using <span class="bracket"><span class="id">wp</span></span>, replacing <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span> with
+    <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span>. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (wp_conseq_frame_trans)
+    Prove the combined structural rule in <span class="bracket"><span class="id">wp</span></span> style. Hint: exploit
+    <span class="bracket"><span class="id">wp_conseq_trans</span></span> and <span class="bracket"><span class="id">wp_frame</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_conseq_frame_trans">wp_conseq_frame_trans</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Q1</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The combined structural rule for <span class="bracket"><span class="id">wp</span></span> can actually be stated in a more
+    concise way. The rule reads as follows: If you own a state from which the
+    execution of <span class="bracket"><span class="id">t</span></span> produces (a result and a state satisfying) <span class="bracket"><span class="id">Q1</span></span> and you
+    also own <span class="bracket"><span class="id">H</span></span>; and if, furthermore, you can trade the combination of <span class="bracket"><span class="id">Q1</span></span> and
+    <span class="bracket"><span class="id">H</span></span> against <span class="bracket"><span class="id">Q2</span></span>; then you own a piece of state from which the execution of
+    <span class="bracket"><span class="id">t</span></span> produces <span class="bracket"><span class="id">Q2</span></span>. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (wp_conseq_frame)
+    Prove the concise version of the combined structural rule in <span class="bracket"><span class="id">wp</span></span> style.
+    (Many proofs are possible.) </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_conseq_frame">wp_conseq_frame</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ <span class="id">H</span> ===&gt; <span class="id">Q2</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q1</span>) \* <span class="id">H</span> ==&gt; (<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Let us reformulate the rule <span class="bracket"><span class="id">wp_conseq_frame</span></span> using a magic wand. The
+    premise <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H</span> ===&gt; <span class="id">Q2</span></span> can be rewritten as <span class="bracket"><span class="id">H</span> ==&gt; (<span class="id">Q1</span> \--* <span class="id">Q2</span>)</span>. By
+    replacing <span class="bracket"><span class="id">H</span></span> with <span class="bracket"><span class="id">Q1</span> \--* <span class="id">Q2</span></span> in the conclusion of <span class="bracket"><span class="id">wp_conseq_frame</span></span>, we
+    obtain the ramified rule for <span class="bracket"><span class="id">wp</span></span>.
+    Lemma wp_ramified : forall t Q1 Q2,
+      (wp t Q1) \* (Q1 \--* Q2) ==&gt; (wp t Q2).
+    This explaination suggests how one might have come up with the statement of
+    the ramified frame rule. </div>
+<br/>
+<h1> Optional Material </h1>
+<br/>
+<h2> Weakest Preconditions Derived from Triples, a First Route </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="WpFromTriple">WpFromTriple</a></span>.<br/>
+<br/>
+<div class="doc">The lemma <span class="bracket"><span class="id">wp_equiv</span></span> captures the characteristic property of <span class="bracket"><span class="id">wp</span></span>, that is,
+    <span class="bracket">(<span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span>) &lt;-&gt; (<span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>)</span>. The predicate <span class="bracket"><span class="id">wp</span></span> can be defined in
+    terms of <span class="bracket"><span class="id">eval</span></span>, like <span class="bracket"><span class="id">triple</span></span>. Interestingly, <span class="bracket"><span class="id">wp</span></span> may also be defined in
+    terms of <span class="bracket"><span class="id">triple</span></span>. The idea is to define <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> as the predicate
+    <span class="bracket">\<span class="kwd">exists</span> <span class="id">H</span>, <span class="id">H</span> \* \[<span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>]</span>, which, reading literally, is satisfied by
+    "any" heap predicate <span class="bracket"><span class="id">H</span></span> which is a valid precondition for a triple for the
+    term <span class="bracket"><span class="id">t</span></span> and the postcondition <span class="bracket"><span class="id">Q</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="WpFromTriple.wp_1">wp_1</a></span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">Q</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">H</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>), <span class="id">H</span> \* \[<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>].<br/>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (wp_equiv_1)
+    Prove that the alternative definition <span class="bracket"><span class="id">wp_1</span></span> satisfies the characteristic
+    equivalence for weakest preconditions. Hint: use the consequence rule and
+    the extraction rules. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="WpFromTriple.wp_equiv_1">wp_equiv_1</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#WpFromTriple.wp_1">wp_1</a></span> <span class="id">t</span> <span class="id">Q</span>) &lt;-&gt; (<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.WPsem.html#WpFromTriple">WpFromTriple</a></span>.<br/>
+<br/>
+<h2> Weakest Preconditions Derived From Triples, a Second Route </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="WpFromTriple2">WpFromTriple2</a></span>.<br/>
+<br/>
+<div class="doc">The concrete definition for <span class="bracket"><span class="id">wp</span></span> given above is expressed in terms of
+    Separation Logic combinators. In contrast to this "high level" definition,
+    there exists a more "low level" definition, expressed directly as a function
+    over heaps. In this alternative definition, the heap predicate <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> is
+    defined as a predicate that holds of a heap <span class="bracket"><span class="id">h</span></span> if and only if the execution
+    of <span class="bracket"><span class="id">t</span></span> starting in exactly the heap <span class="bracket"><span class="id">h</span></span> produces the post-condition <span class="bracket"><span class="id">Q</span></span>. The
+    latter statement is formally captured as <span class="bracket"><span class="id">triple</span> <span class="id">t</span> (<span class="kwd">fun</span> <span class="id">h'</span> =&gt; <span class="id">h'</span> = <span class="id">h</span>) <span class="id">Q</span></span>.
+    The low-level definition of <span class="bracket"><span class="id">wp</span></span> is thus as shown below. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="WpFromTriple2.wp_2">wp_2</a></span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">Q</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepReference.html#heap">heap</a></span>) =&gt; <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> (<span class="kwd">fun</span> <span class="id">h'</span> =&gt; (<span class="id">h'</span> = <span class="id">h</span>)) <span class="id">Q</span>.<br/>
+<br/>
+<h3> Exercise: 4 stars, standard, optional (wp_equiv_2)
+    Prove that the low-level definition <span class="bracket"><span class="id">wp_2</span></span> also satisfies the characteristic
+    equivalence <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">Q</span> &lt;-&gt; <span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span>. Hint: exploit the lemma
+    <span class="bracket"><span class="id">triple_named_heap</span></span> which was established as an exercise in the chapter
+    <span class="bracket"><span class="id">Triples</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="WpFromTriple2.wp_equiv_2">wp_equiv_2</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#WpFromTriple2.wp_2">wp_2</a></span> <span class="id">t</span> <span class="id">Q</span>) &lt;-&gt; (<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.WPsem.html#WpFromTriple2">WpFromTriple2</a></span>.<br/>
+<br/>
+<h2> Equivalent Characterizations of <span class="bracket"><span class="id">wp</span></span> </h2>
+<br/>
+<div class="doc">First, we establish that the equivalence <span class="bracket">(<span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>) &lt;-&gt; (<span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span>)</span>
+    defines a unique predicate <span class="bracket"><span class="id">wp</span></span>. In other words, all possible definitions of
+    <span class="bracket"><span class="id">wp</span></span> are equivalent to each another. Thus, it really does not matter which
+    concrete definition of <span class="bracket"><span class="id">wp</span></span> we consider: they are all equivalent.
+    Concretely, assume two predicates <span class="bracket"><span class="id">wp1</span></span> and <span class="bracket"><span class="id">wp2</span></span> to both satisfy the
+    characteristic equivalence. We prove that they are equal. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_unique">wp_unique</a></span> : <span class="kwd">forall</span> <span class="id">wp1</span> <span class="id">wp2</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>, (<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>) &lt;-&gt; (<span class="id">H</span> ==&gt; <span class="id">wp1</span> <span class="id">t</span> <span class="id">Q</span>)) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>, (<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>) &lt;-&gt; (<span class="id">H</span> ==&gt; <span class="id">wp2</span> <span class="id">t</span> <span class="id">Q</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">wp1</span> = <span class="id">wp2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_2">fun_ext_2</a></span>. <span class="id">intros</span> <span class="id">t</span> <span class="id">Q</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> &lt;- <span class="id">M2</span>. <span class="id">rewrite</span> <span class="id">M1</span>. <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> &lt;- <span class="id">M1</span>. <span class="id">rewrite</span> <span class="id">M2</span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Second, we establish that the property of "being the weakest precondition"
+    also uniquely characterizes the definition of <span class="bracket"><span class="id">wp</span></span>. This property is the
+    conjunction of two facts: <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> must be a valid precondition for a triple
+    involving <span class="bracket"><span class="id">t</span></span> and <span class="bracket"><span class="id">Q</span></span>; and <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span> must be entailed by any valid
+    precondition of a triple involving <span class="bracket"><span class="id">t</span></span> and <span class="bracket"><span class="id">Q</span></span>. These two facts correspond
+    to <span class="bracket"><span class="id">wp_pre</span></span> and <span class="bracket"><span class="id">wp_weakest</span></span>. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (wp_equiv_iff_wp_pre_and_wp_weakest)
+    Prove that the conjunction of the properties <span class="bracket"><span class="id">wp_pre</span></span> and <span class="bracket"><span class="id">wk_weakest</span></span> is
+    equivalent to the property <span class="bracket"><span class="id">wp_equiv</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wp_equiv_iff_wp_pre_and_wp_weakest">wp_equiv_iff_wp_pre_and_wp_weakest</a></span> : <span class="kwd">forall</span> <span class="id">wp'</span>,<br/>
+&nbsp;&nbsp;(   (<span class="kwd">forall</span> <span class="id">t</span> <span class="id">Q</span>, <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> (<span class="id">wp'</span> <span class="id">t</span> <span class="id">Q</span>) <span class="id">Q</span>) <br/>
+&nbsp;&nbsp;&nbsp;/\ (<span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>, <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> -&gt; <span class="id">H</span> ==&gt; <span class="id">wp'</span> <span class="id">t</span> <span class="id">Q</span>)) <br/>
+&nbsp;&nbsp;&lt;-&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>, <span class="id">H</span> ==&gt; <span class="id">wp'</span> <span class="id">t</span> <span class="id">Q</span> &lt;-&gt; <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>). <br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Texan Triples </h2>
+<br/>
+<div class="doc">In this section, we show that specification triples can be presented in a
+    different style using weakest preconditions. This style has appeared under
+    the name "Texan triples" in certain work related to the Iris framework. The
+    main motivation is to slighly simplify the implementation of the tactic
+    <span class="bracket"><span class="id">xapp</span></span>. The main drawback is that it makes specifications, one could argue,
+    slightly less easy to read. For this reason, users of the Iris framework
+    usually stick to the standard triple notation in their publications. Despite
+    the readability issue, it may be interesting for the reader to be aware of
+    the possibility of stating specifications directly using <span class="bracket"><span class="id">wp</span></span>, as there
+    might be useful applications of this technique in certain contexts. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="TexanTriples">TexanTriples</a></span>.<br/>
+<br/>
+<h3> 1. An Example </h3>
+<br/>
+<div class="doc">Consider the specification triple for allocation. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="TexanTriples.triple_ref">triple_ref</a></span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~&gt; <span class="id">v</span>).<br/>
+<br/>
+<div class="doc">This specification may be equivalently reformulated in the form of an
+    entailment, as shown below. Note that we purposely leave an empty heap
+    predicate at the front to indicate where the precondition, if it were not
+    empty, would go in the reformulation. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="TexanTriples.wp_ref">wp_ref</a></span> : <span class="kwd">forall</span> <span class="id">Q</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;\[] \* (\<span class="kwd">forall</span> <span class="id">p</span>, <span class="id">p</span> ~~&gt; <span class="id">v</span> \-* <span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_loc">val_loc</a></span> <span class="id">p</span>)) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>) <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">In what follows, we describe a chain of transformations that can take us
+    from the triple form to the <span class="bracket"><span class="id">wp</span></span> form, and we establish the reciprocal.
+    Afterwards, we will formalize the general pattern of the translation from a
+    triple to a "texan triple", that is, to a wp-based specification. </div>
+<br/>
+<div class="doc">By replacing <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span> with <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span>, the specification
+    <span class="bracket"><span class="id">triple_ref</span></span> can be reformulated as follows. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="TexanTriples.wp_ref_0">wp_ref_0</a></span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;\[] ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>) (<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~&gt; <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#TexanTriples.triple_ref">triple_ref</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">We wish to cast the RHS in the form <span class="bracket"><span class="id">wp</span> (<span class="id">val_ref</span> <span class="id">v</span>) <span class="id">Q</span></span> for an abstract
+    postcondition <span class="bracket"><span class="id">Q</span></span>. To that end, we reformulate the above statement by
+    including a magic wand relating the postcondition <span class="bracket">(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~&gt; <span class="id">v</span>)</span>
+    with <span class="bracket"><span class="id">Q</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="TexanTriples.wp_ref_1">wp_ref_1</a></span> : <span class="kwd">forall</span> <span class="id">Q</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;((<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~&gt; <span class="id">v</span>) \--* <span class="id">Q</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xchange</span> (<span class="id"><a href="SLF.WPsem.html#TexanTriples.wp_ref_0">wp_ref_0</a></span> <span class="id">v</span>). <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_ramified">wp_ramified</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">This statement can be made slightly more readable by unfolding the
+    definition of the magic wand for postconditions. Doing so amounts to
+    quantifying explicitly on the result, named <span class="bracket"><span class="id">r</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="TexanTriples.wp_ref_2">wp_ref_2</a></span> : <span class="kwd">forall</span> <span class="id">Q</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;(\<span class="kwd">forall</span> <span class="id">r</span>,     (\<span class="kwd">exists</span> <span class="id">p</span>, \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_loc">val_loc</a></span> <span class="id">p</span>] \* <span class="id">p</span> ~~&gt; <span class="id">v</span>) \-* <span class="id">Q</span> <span class="id">r</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id"><a href="SLF.WPsem.html#TexanTriples.wp_ref_1">wp_ref_1</a></span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<div class="doc">Interestingly, the variable <span class="bracket"><span class="id">r</span></span>, which is equal to <span class="bracket"><span class="id">val_loc</span> <span class="id">p</span></span>, can now be
+    substituted away, further increasing readability. We obtain the
+    specification of <span class="bracket"><span class="id">val_ref</span></span> in "Texan triple style". </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="TexanTriples.wp_ref_3">wp_ref_3</a></span> : <span class="kwd">forall</span> <span class="id">Q</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;(\<span class="kwd">forall</span> <span class="id">p</span>, (<span class="id">p</span> ~~&gt; <span class="id">v</span>) \-* <span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_loc">val_loc</a></span> <span class="id">p</span>)) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id"><a href="SLF.WPsem.html#TexanTriples.wp_ref_2">wp_ref_2</a></span>. <span class="id">xsimpl</span>. <span class="id">intros</span> ? <span class="id">p</span> -&gt;.<br/>
+&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hforall_specialize">hforall_specialize</a></span> <span class="id">p</span>).<br/>
+Qed.</div></details>
+<br/>
+<h3> 2. The General Pattern </h3>
+<br/>
+<div class="doc">Most specification triples can be cast in the form:
+    <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="kwd">exists</span> <span class="id">x1</span> .. <span class="id">xN</span>, \[<span class="id">r</span> = <span class="id">v</span>] \* <span class="id">H'</span>)</span>. In such a
+    specification:
+    - the value <span class="bracket"><span class="id">v</span></span> may depend on the <span class="bracket"><span class="id">xi</span></span> variables,
+    - the heap predicate <span class="bracket"><span class="id">H'</span></span> may depend on <span class="bracket"><span class="id">r</span></span> and the <span class="bracket"><span class="id">xi</span></span>,
+    - the number of existentials <span class="bracket"><span class="id">xi</span></span> may vary, possibly be zero,
+    - the equality <span class="bracket">\[<span class="id">r</span> = <span class="id">v</span>]</span> may be removed if no pure fact is needed
+      about <span class="bracket"><span class="id">r</span></span>.
+    Such a specification triple of the form
+    <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="kwd">exists</span> <span class="id">x1</span> <span class="id">xN</span>, \[<span class="id">r</span> = <span class="id">v</span>] \* <span class="id">H'</span></span> can be be reformulated
+    as the Texan triple: <span class="bracket">(\<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">xN</span>, <span class="id">H</span> \-* <span class="id">Q</span> <span class="id">v</span>) ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span>.
+    We next formalize the equivalence between the two presentations, for the
+    specific case where the specification involves a single auxiliary variable,
+    named <span class="bracket"><span class="id">x</span></span>. The statement below makes it explicit that <span class="bracket"><span class="id">v</span></span> may depend on <span class="bracket"><span class="id">x</span></span>,
+    and that <span class="bracket"><span class="id">H</span></span> may depend on <span class="bracket"><span class="id">r</span></span> and <span class="bracket"><span class="id">x</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="TexanTriples.texan_triple_equiv">texan_triple_equiv</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">A</span> (<span class="id">Hof</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) (<span class="id">vof</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \<span class="kwd">exists</span> <span class="id">x</span>, \[<span class="id">r</span> = <span class="id">vof</span> <span class="id">x</span>] \* <span class="id">Hof</span> <span class="id">r</span> <span class="id">x</span>))<br/>
+&nbsp;&nbsp;&lt;-&gt; (<span class="kwd">forall</span> <span class="id">Q</span>, <span class="id">H</span> \* (\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">Hof</span> (<span class="id">vof</span> <span class="id">x</span>) <span class="id">x</span> \-* <span class="id">Q</span> (<span class="id">vof</span> <span class="id">x</span>)) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">Q</span>. <span class="id">xchange</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_ramified_trans">wp_ramified_trans</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">r</span> <span class="id">x</span> -&gt;.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hforall_specialize">hforall_specialize</a></span> <span class="id">x</span>). }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id">M</span>. <span class="id">xsimpl</span>~. }<br/>
+Qed.</div></details>
+<br/>
+<h3> 3. Further Examples </h3>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="TexanTriples.WpSpecRef">WpSpecRef</a></span>.<br/>
+<br/>
+<div class="doc">The wp-style specifications of <span class="bracket"><span class="id">ref</span></span>, <span class="bracket"><span class="id">get</span></span>, and <span class="bracket"><span class="id">set</span></span> are presented next.
+    </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="TexanTriples.wp_get">wp_get</a></span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">p</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>) \* (<span class="id">p</span> ~~&gt; <span class="id">v</span> \-* <span class="id">Q</span> <span class="id">v</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_get">val_get</a></span> <span class="id">p</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#triple_conseq_frame">triple_conseq_frame</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_get">triple_get</a></span>. } { <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_refl">himpl_refl</a></span>. } { <span class="id">xsimpl</span>. <span class="id">intros</span> ? -&gt;. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="TexanTriples.wp_set">wp_set</a></span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">w</span> <span class="id">p</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>) \* (\<span class="kwd">forall</span> <span class="id">r</span>, <span class="id">p</span> ~~&gt; <span class="id">w</span> \-* <span class="id">Q</span> <span class="id">r</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_set">val_set</a></span> <span class="id">p</span> <span class="id">w</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#triple_conseq_frame">triple_conseq_frame</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_set">triple_set</a></span>. } { <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_refl">himpl_refl</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">r</span>. <span class="id">xchange</span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hforall_specialize">hforall_specialize</a></span> <span class="id">r</span>). <span class="id">xsimpl</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="TexanTriples.wp_free">wp_free</a></span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">p</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>) \* (\<span class="kwd">forall</span> <span class="id">r</span>, <span class="id">Q</span> <span class="id">r</span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_free">val_free</a></span> <span class="id">p</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#triple_conseq_frame">triple_conseq_frame</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_free">triple_free</a></span>. } { <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_refl">himpl_refl</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">r</span>. <span class="id">xchange</span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hforall_specialize">hforall_specialize</a></span> <span class="id">r</span>). }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Alternatively, the specifications of <span class="bracket"><span class="id">set</span></span> and <span class="bracket"><span class="id">free</span></span> may advertize that the
+    output value is the unit value. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id">triple_set'</span> : <span class="kwd">forall</span> <span class="id">w</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_set">val_set</a></span> <span class="id">p</span> <span class="id">w</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_unit">val_unit</a></span>] \* <span class="id">p</span> ~~&gt; <span class="id">w</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">wp_set'</span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">w</span> <span class="id">p</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>) \* (<span class="id">p</span> ~~&gt; <span class="id">w</span> \-* <span class="id">Q</span> <span class="id"><a href="SLF.LibSepReference.html#val_unit">val_unit</a></span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_set">val_set</a></span> <span class="id">p</span> <span class="id">w</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#triple_conseq_frame">triple_conseq_frame</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">triple_set'</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_refl">himpl_refl</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>. <span class="id">intros</span> ? -&gt;. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Parameter</span> <span class="id">triple_free'</span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_free">val_free</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_unit">val_unit</a></span>]).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">wp_free'</span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">w</span> <span class="id">p</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>) \* (<span class="id">Q</span> <span class="id"><a href="SLF.LibSepReference.html#val_unit">val_unit</a></span>) ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_free">val_free</a></span> <span class="id">p</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#triple_conseq_frame">triple_conseq_frame</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">triple_free'</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_refl">himpl_refl</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>. <span class="id">intros</span> ? -&gt;. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.WPsem.html#TexanTriples.WpSpecRef">WpSpecRef</a></span>.<br/>
+<br/>
+<h3> 4. Exercise </h3>
+<br/>
+<div class="doc">Let us put to practice the use of a Texan triple on a different example.
+    Recall the function <span class="bracket"><span class="id">incr</span></span> and its specification (from <span class="bracket"><span class="id">Hprop.v</span></span>). </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="TexanTriples.incr">incr</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="TexanTriples.triple_incr">triple_incr</a></span> : <span class="kwd">forall</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.WPsem.html#TexanTriples.incr">incr</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">v</span> =&gt; \[<span class="id">v</span> = <span class="id"><a href="SLF.LibSepReference.html#val_unit">val_unit</a></span>] \* (<span class="id">p</span> ~~&gt; (<span class="id">n</span>+1))).<br/>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (wp_incr)
+    State a Texan triple for <span class="bracket"><span class="id">incr</span></span> as a lemma called <span class="bracket"><span class="id">wp_incr</span></span>, then prove this
+    lemma from <span class="bracket"><span class="id">triple_incr</span></span>. </h3>
+<br/>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.WPsem.html#TexanTriples">TexanTriples</a></span>.<br/>
+<br/>
+<h2> Historical Notes </h2>
+<br/>
+<div class="doc">The idea of weakest precondition was introduced by <span class="bracket"><span class="id">Dijstra</span> 1975</span> (in Bib.v) in
+    his seminal paper "Guarded Commands, Nondeterminacy and Formal Derivation of
+    Programs". Weakest preconditions provide a reformulation of Floyd-Hoare
+    logic. Numerous practical verification tools leverage weakest preconditions,
+    e.g. ESC/Java, Why3, Boogie, Spec#, etc.
+    In the context of Separation Logic in proof assistants, the Iris framework
+    (https://iris-project.org/), developed since 2015, prevasively exploits
+    weakest preconditions to state reasoning rules. The developers of Iris and
+    VST have advocated for this rule. The ramified frame rule was integrated in
+    CFML 2.0 in 2018. </div>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

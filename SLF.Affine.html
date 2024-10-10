@@ -1,0 +1,1184 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Affine</title>
+<meta name="description" content="Documentation of Coq module Affine" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Affine</h1>
+<div class="coq">
+<h1> Affine: Affine Separation Logic </h1>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="id"><a href="SLF.Rules.html">Rules</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibSepReference.html">LibSepReference</a></span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> : <span class="id"><a href="SLF.LibSepVar.html#var">var</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">b</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">v</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">h</span> : <span class="id"><a href="SLF.LibSepReference.html#heap">heap</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">H</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">Q</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<br/>
+<h1> First Pass </h1>
+<br/>
+<div class="doc">The Separation Logic framework that we have constructed is well suited for a
+    language with explicit deallocation, but cannot be used as-is for a language
+    equipped with a garbage collector. As pointed out in chapter <span class="bracket"><span class="id">Basic</span></span>,
+    there is no rule in our basic Separation Logic that allows discarding a heap
+    predicate from the precondition or the postcondition. From a theoretical
+    perspective, discarding predicates from the postcondition is sufficient.
+    From a practical perspective, however, the user may wish to clarify the
+    proof obligations by discarding predicates appearing in the precondition as
+    soon as they are no longer useful.
+    In this chapter, we explain how to generalize the Separation Logic framework
+    to support a "discard rule", which one may invoke to discard heap predicates
+    from the precondition or postcondition.
+    The framework extended with the discard rule corresponds to an "affine"
+    logic, where heap predicates may be freely discarded, as opposed to a
+    "linear" logic, where heap predicates cannot be thrown away. As we argue, it
+    may be interesting for a program logic to accomodate both "affine"
+    predicates and "linear" predicates. We will explain how to fine tune which
+    heap predicates may be freely discarded.
+    For example, even in a programming language featuring a garbage collector,
+    it may be useful to ensure that every file handle opened eventually gets
+    closed, or that every lock acquired is eventually released. File handles and
+    locks are example of resources that may be described in Separation Logic,
+    yet that one should not be allowed to discard freely.
+    Regarding garbage-collected data, another possible approach is to require
+    the programmer to integrate "free" operations defined as no-ops, to
+    materialize the places where memory cells can and should be discarded. This
+    approach, however, is cumbersome for freeing recursive data structures. For
+    example, to free a mutable list, the programmer would need to iterate over
+    the list to free its cells one by one. In contrast, with a "discard rule" in
+    the program logic, the user can discard at once the representation predicate
+    for the full list, without involving any form of iteration. </div>
+<br/>
+<div class="doc">The chapter is organized as follows:
+    - first, we recall the example illustrating the limitation of a logic
+      without a discard rule for a garbage-collected language;
+    - second, we present several versions of the "discard rule";
+    - third, we show how to refine the definition of Separation Logic
+      triples in such a way that the discard rules are satisfied
+      for certain classes of heap predicates. </div>
+<br/>
+<h2> Motivation for the Discard Rule </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="MotivatingExample">MotivatingExample</a></span>.<br/>
+<span class="kwd">Export</span> <span class="id"><a href="SLF.LibSepReference.html#DemoPrograms">DemoPrograms</a></span>.<br/>
+<br/>
+<div class="doc">Recall the example of the function <span class="bracket"><span class="id">succ_using_incr_attempt</span></span> from chapter
+    <span class="bracket"><span class="id">Basic</span></span>. This function allocates a reference with contents <span class="bracket"><span class="id">n</span></span>, then
+    increments that reference, and finally returning its contents, that is,
+    <span class="bracket"><span class="id">n</span>+1</span>. Let us revisit this example, this time with the intention of
+    establishing for it a postcondition that does not leak the existence of a
+    left-over reference cell. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="MotivatingExample.succ_using_incr">succ_using_incr</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">n</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p</span> = <span class="id">ref</span> '<span class="id">n</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#DemoPrograms.incr">incr</a></span> '<span class="id">p</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;! '<span class="id">p</span> }&gt;.<br/>
+<br/>
+<div class="doc">In the framework developed so far, the heap predicate describing the
+    reference cell allocated by the function cannot be discarded, because the
+    code does not include a deallocation operation. Thus, we are forced to
+    include in the postcondition the description of a left-over reference with a
+    heap predicate, e.g., <span class="bracket">\<span class="kwd">exists</span> <span class="id">p</span>, <span class="id">p</span> ~~&gt; (<span class="id">n</span>+1)</span>, or <span class="bracket">\<span class="kwd">exists</span> <span class="id">p</span> <span class="id">m</span>, <span class="id">p</span> ~~&gt; <span class="id">m</span></span>.
+    </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="MotivatingExample.triple_succ_using_incr">triple_succ_using_incr</a></span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Affine.html#MotivatingExample.succ_using_incr">succ_using_incr</a></span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">n</span>+1] \* \<span class="kwd">exists</span> <span class="id">p</span>, (<span class="id">p</span> ~~&gt; (<span class="id">n</span>+1))).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>. <span class="id">xapp</span>. <span class="id">intros</span> <span class="id">p</span>. <span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">xsimpl</span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">If we try to prove a specification that does not mention the left-over
+    reference, then we get stuck with a proof obligation of the form
+    <span class="bracket"><span class="id">p</span> ~~&gt; (<span class="id">n</span>+1) ==&gt; \[]</span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_succ_using_incr'</span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Affine.html#MotivatingExample.succ_using_incr">succ_using_incr</a></span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">n</span>+1]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>. <span class="id">xapp</span>. <span class="id">intros</span> <span class="id">p</span>. <span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">xsimpl</span>. { <span class="id">auto</span>. } <br/>
+Abort.</div></details>
+<br/>
+<div class="doc">In what follows, we extend our Separation Logic with a "discard rule" that
+    allows proving the above specification for <span class="bracket"><span class="id">succ_using_incr</span></span>. </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#MotivatingExample">MotivatingExample</a></span>.<br/>
+<br/>
+<h2> Statement of The Discard Rule </h2>
+<br/>
+<div class="doc">There are several ways to state the "discard rule". Let us begin with two
+    variants: one that discards a heap predicate <span class="bracket"><span class="id">H'</span></span> from the postcondition,
+    and one that discards a heap predicate <span class="bracket"><span class="id">H'</span></span> from the precondition.
+    The first rule, named <span class="bracket"><span class="id">triple_hany_post</span></span>, asserts that an arbitrary heap
+    predicate <span class="bracket"><span class="id">H'</span></span> can be dropped from the postcondition, simplifying it from
+    <span class="bracket"><span class="id">Q</span> \*+ <span class="id">H'</span></span> to <span class="bracket"><span class="id">Q</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_hany_post">triple_hany_post</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">H'</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> (<span class="id">Q</span> \*+ <span class="id">H'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Let us show that, using the rule <span class="bracket"><span class="id">triple_hany_post</span></span>, we can derive the
+    desired specification for the motivating example from the specification that
+    mentions the left-over postcondition. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="MotivatingExampleSolved">MotivatingExampleSolved</a></span>.<br/>
+<span class="kwd">Export</span> <span class="id"><a href="SLF.Affine.html#MotivatingExample">MotivatingExample</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_succ_using_incr'</span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Affine.html#MotivatingExample.succ_using_incr">succ_using_incr</a></span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">n</span>+1]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#triple_hany_post">triple_hany_post</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#MotivatingExample.triple_succ_using_incr">triple_succ_using_incr</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#MotivatingExampleSolved">MotivatingExampleSolved</a></span>.<br/>
+<br/>
+<div class="doc">A symmetric rule, named <span class="bracket"><span class="id">triple_hany_pre</span></span>, asserts that an arbitrary heap
+    predicate <span class="bracket"><span class="id">H'</span></span> can be dropped from the precondition, simplifying it from
+    <span class="bracket"><span class="id">H</span> \* <span class="id">H'</span></span> to <span class="bracket"><span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_hany_pre">triple_hany_pre</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">H'</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> (<span class="id">H</span> \* <span class="id">H'</span>) <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Observe the difference between the two rules. In <span class="bracket"><span class="id">triple_hany_post</span></span>, the
+    discarded predicate <span class="bracket"><span class="id">H'</span></span> appears in the premise, reflecting the fact that we
+    discard it after the evaluation of the term <span class="bracket"><span class="id">t</span></span>.
+    Conversely, in <span class="bracket"><span class="id">triple_hany_pre</span></span>, the discarded predicate <span class="bracket"><span class="id">H'</span></span> appears in
+    the conclusion, reflecting the fact that we discard it before the evaluation
+    of <span class="bracket"><span class="id">t</span></span>. </div>
+<br/>
+<div class="doc">The rules <span class="bracket"><span class="id">triple_hany_pre</span></span> and <span class="bracket"><span class="id">triple_hany_post</span></span> can be derived from each
+    other. As we will establish further on, <span class="bracket"><span class="id">triple_hany_pre</span></span> is derivable from
+    <span class="bracket"><span class="id">triple_hany_post</span></span> by a simple application of the frame rule. Reciprocally,
+    <span class="bracket"><span class="id">triple_hany_post</span></span> is derivable from <span class="bracket"><span class="id">triple_hany_pre</span></span>, though the proof is
+    slightly more involved. This proof appears in lemma
+    <span class="bracket"><span class="id">triple_hgc_post_from_hgc_pre</span></span> in the "optional material" section. </div>
+<br/>
+<h2> Fine-grained Control of Collectable Predicates </h2>
+<br/>
+<h3> Axiomatization of <span class="bracket"><span class="id">heap_affine</span></span> and <span class="bracket"><span class="id">haffine</span></span> </h3>
+<br/>
+<div class="doc">As suggested in the introduction, it may be useful to constrain the discard
+    rule in such a way that it can be used to discard only certain types of heap
+    predicates, not arbitrary ones.
+    The idea is to restrict the discard rules so that only predicates satisfying
+    a predicate called <span class="bracket"><span class="id">haffine</span></span> may be discarded.
+    The two discard rules should thus feature an extra premise: to discard a
+    heap predicate <span class="bracket"><span class="id">H'</span></span>, the proposition <span class="bracket"><span class="id">haffine</span> <span class="id">H'</span></span> must hold. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Preview">Preview</a></span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="Preview.haffine">haffine</a></span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> -&gt; <span class="kwd">Prop</span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="Preview.triple_haffine_post">triple_haffine_post</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">H'</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#Preview.haffine">haffine</a></span> <span class="id">H'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> (<span class="id">Q</span> \*+ <span class="id">H'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="Preview.triple_haffine_pre">triple_haffine_pre</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">H'</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#Preview.haffine">haffine</a></span> <span class="id">H'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> (<span class="id">H</span> \* <span class="id">H'</span>) <span class="id">Q</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#Preview">Preview</a></span>.<br/>
+<br/>
+<div class="doc">The predicate <span class="bracket"><span class="id">haffine</span> <span class="id">H</span></span> is defined in terms of a lower-level predicate
+    <span class="bracket"><span class="id">heap_affine</span></span>. The proposition <span class="bracket"><span class="id">heap_affine</span> <span class="id">h</span></span> asserts that the piece of
+    heap <span class="bracket"><span class="id">h</span></span> may be freely discarded, in the sense that it does not have to be
+    accounted for in the program logic. The question of whether a heap or a heap
+    predicate should be affine or not is to be decided on a case-by-case basis.
+    It depends on the intention of the designer of the program logic. For the
+    moment, we leave the predicate <span class="bracket"><span class="id">heap_affine</span></span> abstract, and allow it to be
+    customized later on. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="heap_affine">heap_affine</a></span> : <span class="id"><a href="SLF.LibSepReference.html#heap">heap</a></span> -&gt; <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">The only assumptions we need to make about <span class="bracket"><span class="id">heap_affine</span></span> is that it holds of
+    the empty heap and that it is preserved by a disjoint union operation. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="heap_affine_empty">heap_affine_empty</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="heap_affine_union">heap_affine_union</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> (<span class="id"><a href="SLF.LibSepReference.html#Fmap.union">Fmap.union</a></span> <span class="id">h1</span> <span class="id">h2</span>).<br/>
+<br/>
+<div class="doc">We will later show two extreme instantiations: one that leads to a logic
+    where all predicates are affine (i.e. can be freely discarded), and one that
+    leads to a logic where all predicates are linear (i.e. none can be freely
+    discarded, like in our previous set up). </div>
+<br/>
+<h3> Definition and Properties of <span class="bracket"><span class="id">heap_affine</span></span> </h3>
+<br/>
+<div class="doc">The predicate <span class="bracket"><span class="id">haffine</span> <span class="id">H</span></span> captures the notion of "affine heap predicate".
+    A heap predicate is affine iff it holds only of affine heaps. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="haffine">haffine</a></span> (<span class="id">H</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">h</span>, <span class="id">H</span> <span class="id">h</span> -&gt; <span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h</span>.<br/>
+<br/>
+<div class="doc">The predicate <span class="bracket"><span class="id">haffine</span></span> distributes in a natural way over each of the
+    operators of Separation Logic -- i.e., the combination of affine heap
+    predicates yields affine heap predicates. In particular:
+    - <span class="bracket">\[]</span> and <span class="bracket">\[<span class="id">P</span>]</span>, which describe empty heaps, can always be discarded;
+    - <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span> can be discarded if both <span class="bracket"><span class="id">H1</span></span> and <span class="bracket"><span class="id">H2</span></span> can be discarded;
+    - <span class="bracket">\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">H</span></span> can be discarded if <span class="bracket"><span class="id">H</span></span> can be discarded for at least one
+      <span class="bracket"><span class="id">x</span></span>;
+    - <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">H</span></span> can be discarded if <span class="bracket"><span class="id">H</span></span> can be discarded for every <span class="bracket"><span class="id">x</span></span>.
+    The treatment of universal quantifiers can be explained as follows. Consider
+    a heap <span class="bracket"><span class="id">h</span></span> that satisfies <span class="bracket">\<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">H</span></span>, and consider a particular
+    value <span class="bracket"><span class="id">v</span></span> of type <span class="bracket"><span class="id">A</span></span>. The heap <span class="bracket"><span class="id">h</span></span> also satisfies <span class="bracket">[<span class="id">x</span>:=<span class="id">v</span>]<span class="id">H</span></span>. Thus, if the
+    heap predicate <span class="bracket">[<span class="id">x</span>:=<span class="id">v</span>]<span class="id">H</span></span> can be discarded, the stronger predicate
+    <span class="bracket">\<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">H</span></span> can also be discarded.
+    Existential quantifiers can be explained as follows. Consider a heap <span class="bracket"><span class="id">h</span></span>
+    that satisfies <span class="bracket">\<span class="kwd">exists</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">H</span></span>. We know that there exists a value <span class="bracket"><span class="id">v</span></span> of
+    type <span class="bracket"><span class="id">A</span></span> such that <span class="bracket"><span class="id">h</span></span> satisfies <span class="bracket">[<span class="id">x</span>:=<span class="id">v</span>]<span class="id">H</span></span>. However, we know nothing about
+    this value <span class="bracket"><span class="id">v</span></span>. Therefore, to discard <span class="bracket">\<span class="kwd">exists</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">H</span></span>, we need to know
+    that <span class="bracket">[<span class="id">x</span>:=<span class="id">v</span>]<span class="id">H</span></span> can be discarded for every possible <span class="bracket"><span class="id">v</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="haffine_hempty">haffine_hempty</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> \[].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">K</span>. <span class="id">lets</span> <span class="id">E</span>: <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty_inv">hempty_inv</a></span> <span class="id">K</span>. <span class="id">subst</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#heap_affine_empty">heap_affine_empty</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="haffine_hpure">haffine_hpure</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> \[<span class="id">P</span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">lets</span> (<span class="id">HP</span>&amp;<span class="id">M</span>): <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hpure_inv">hpure_inv</a></span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#heap_affine_empty">heap_affine_empty</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="haffine_hstar">haffine_hstar</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (<span class="id">H1</span> \* <span class="id">H2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span> <span class="id">K</span>. <span class="id">lets</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">K1</span>&amp;<span class="id">K2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>): <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_inv">hstar_inv</a></span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.Affine.html#heap_affine_union">heap_affine_union</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="haffine_hexists">haffine_hexists</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (<span class="id">J</span> <span class="id">x</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (\<span class="kwd">exists</span> <span class="id">x</span>, (<span class="id">J</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">F1</span> (<span class="id">x</span>&amp;<span class="id">Hx</span>). <span class="id">applys</span>* <span class="id">F1</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">haffine_hforall'</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">x</span>, <span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (<span class="id">J</span> <span class="id">x</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (\<span class="kwd">forall</span> <span class="id">x</span>, (<span class="id">J</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> (<span class="id">x</span>&amp;<span class="id">Hx</span>) <span class="id">M</span>. <span class="id">lets</span> <span class="id">N</span>: <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hforall_inv">hforall_inv</a></span> <span class="id">M</span>. <span class="id">applys</span>* <span class="id">Hx</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The rule <span class="bracket"><span class="id">haffine_hforall'</span></span> requires the user to provide evidence that there
+    exists at least one value <span class="bracket"><span class="id">x</span></span> of type <span class="bracket"><span class="id">A</span></span> for which <span class="bracket"><span class="id">haffine</span> (<span class="id">J</span> <span class="id">x</span>)</span> is true.
+    In practice, the user is generally not interested in proving properties of a
+    specific value <span class="bracket"><span class="id">x</span></span>, but is happy to justify that <span class="bracket"><span class="id">J</span> <span class="id">x</span></span> is affine for any
+    <span class="bracket"><span class="id">x</span></span>. The corresponding statement appears below, with an assumption <span class="bracket"><span class="id">Inhab</span> <span class="id">A</span></span>
+    asserting that the type <span class="bracket"><span class="id">A</span></span> is inhabited. In practice, the <span class="bracket">\<span class="kwd">forall</span></span>
+    quantifier is always invoked on inhabited types, so this is a benign
+    restriction. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="haffine_hforall">haffine_hforall</a></span> : <span class="kwd">forall</span> <span class="id">A</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (<span class="id">J</span> <span class="id">x</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (\<span class="kwd">forall</span> <span class="id">x</span>, (<span class="id">J</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">IA</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id">haffine_hforall'</span>. <span class="kwd">exists</span> (<span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span> (<span class="id">A</span>:=<span class="id">A</span>)). <span class="id">applys</span> <span class="id">M</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Another useful fact about <span class="bracket"><span class="id">haffine</span></span> is that to prove <span class="bracket"><span class="id">haffine</span> (\[<span class="id">P</span>] \* <span class="id">H</span>)</span>
+    it is sufficient to prove <span class="bracket"><span class="id">haffine</span> <span class="id">H</span></span> under the hypothesis that <span class="bracket"><span class="id">P</span></span> is true.
+    Formally: </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="haffine_hstar_hpure_l">haffine_hstar_hpure_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (\[<span class="id">P</span>] \* <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_hpure_l">hstar_hpure_l</a></span> <span class="kwd">in</span> <span class="id">K</span>. <span class="id">applys</span>* <span class="id">M</span>. Qed.</div></details>
+<br/>
+<h2> The Affine-Top Heap Predicate: <span class="bracket">\<span class="id">GC</span></span> </h2>
+<br/>
+<h3> Definition of The Affine-Top Predicate </h3>
+<br/>
+<div class="doc">We next introduce a new heap predicate, called "affine top", that is very
+    handy for describing "the possibility to discard a heap predicate". We use
+    this predicate to reformulate the discard rules in a more concise and usable
+    manner. This predicate is written <span class="bracket">\<span class="id">GC</span></span> and named <span class="bracket"><span class="id">hgc</span></span> in the
+    formalization. The predicate <span class="bracket">\<span class="id">GC</span></span> holds of any affine heap.
+    The reason <span class="bracket">\<span class="id">GC</span></span> is named "affine top" is because it refines a
+    representation predicate called "top", and written <span class="bracket">\<span class="id">Top</span></span>. The predicate
+    <span class="bracket">\<span class="id">Top</span></span> is the heap predicate that holds of any heap. It can be defined as
+    <span class="bracket"><span class="kwd">fun</span> (<span class="id">h</span>:<span class="id">heap</span>) =&gt; <span class="id">True</span></span>, or, equivalently, as <span class="bracket">\<span class="kwd">exists</span> (<span class="id">H</span>:<span class="id">hprop</span>), <span class="id">H</span></span>. The
+    characteristic property of <span class="bracket">\<span class="id">Top</span></span> is the entailment
+    <span class="bracket"><span class="kwd">forall</span> <span class="id">H</span>, (<span class="id">H</span> ==&gt; \<span class="id">Top</span>)</span>.
+    The affine top predicate <span class="bracket">\<span class="id">GC</span></span> can be defined as
+    <span class="bracket"><span class="kwd">exists</span> <span class="id">H</span>, \[<span class="id">haffine</span> <span class="id">H</span>] \* <span class="id">H</span></span>. As we prove further on, it could be
+    equivalently defined as <span class="bracket"><span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="id">heap_affine</span> <span class="id">h</span></span>. We prefer the former
+    definition as it is easier to manipulate using the <span class="bracket"><span class="id">xsimpl</span></span> tactic. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hgc">hgc</a></span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">H</span>, \[<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span>] \* <span class="id">H</span>.<br/>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">hgc_scope</span>.<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">hgc_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\GC"</span> := (<span class="id"><a href="SLF.Affine.html#hgc">hgc</a></span>) : <span class="id">hgc_scope</span>.<br/>
+<br/>
+<div class="doc">The following introduction lemma asserts that <span class="bracket">\<span class="id">GC</span> <span class="id">h</span></span> holds when <span class="bracket"><span class="id">h</span></span>
+    satisfies <span class="bracket"><span class="id">heap_affine</span></span>. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (triple_frame)
+    Prove that the affine heap predicate holds of any affine heap. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hgc_intro">hgc_intro</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;\<span class="id">GC</span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The elimination lemma asserts the converse. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (hgc_inv)
+    Prove the elimination lemma for <span class="bracket">\<span class="id">GC</span></span> expressed using <span class="bracket"><span class="id">heap_affine</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hgc_inv">hgc_inv</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\<span class="id">GC</span> <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Together, the introduction and the elimination rule justify the fact that
+    <span class="bracket"><span class="id">hgc</span></span> could equivalently have been defined as <span class="bracket"><span class="id">heap_affine</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hgc_eq_heap_affine">hgc_eq_heap_affine</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#hgc">hgc</a></span> = <span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">h</span> <span class="id">M</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.Affine.html#hgc_inv">hgc_inv</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">h</span> <span class="id">M</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.Affine.html#hgc_intro">hgc_intro</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<h3> Properties of the Affine-Top Predicate </h3>
+<br/>
+<div class="doc">One fundamental property of <span class="bracket">\<span class="id">GC</span></span> that is useful in the soundness proofs is
+    that the conjunction of two occurences of <span class="bracket">\<span class="id">GC</span></span> may be merged into a single
+    <span class="bracket">\<span class="id">GC</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_hgc_hgc">hstar_hgc_hgc</a></span> :<br/>
+&nbsp;&nbsp;(\<span class="id">GC</span> \* \<span class="id">GC</span>) = \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#hgc">hgc</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">H1</span> <span class="id">K1</span> <span class="id">H2</span> <span class="id">K2</span>. <span class="id">xsimpl</span> (<span class="id">H1</span> \* <span class="id">H2</span>). <span class="id">applys</span>* <span class="id"><a href="SLF.Affine.html#haffine_hstar">haffine_hstar</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">H</span> <span class="id">K</span>. <span class="id">xsimpl</span> <span class="id">H</span> \[]. <span class="id">auto</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#haffine_hempty">haffine_hempty</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Another useful property is that the heap predicate <span class="bracket">\<span class="id">GC</span></span> itself satisifes
+    <span class="bracket"><span class="id">haffine</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="haffine_hgc">haffine_hgc</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#haffine_hexists">haffine_hexists</a></span>. <span class="id">intros</span> <span class="id">H</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#haffine_hstar_hpure_l">haffine_hstar_hpure_l</a></span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The process of exploiting <span class="bracket">\<span class="id">GC</span></span> to "absorb" affine heap predicates is
+    captured by the following lemma, which asserts that a heap predicate <span class="bracket"><span class="id">H</span></span>
+    entails <span class="bracket">\<span class="id">GC</span></span> whenever <span class="bracket"><span class="id">H</span></span> is affine. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hgc_r">himpl_hgc_r</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#hgc_intro">hgc_intro</a></span>. <span class="id">applys</span> <span class="id">M</span> <span class="id">K</span>. Qed.</div></details>
+<br/>
+<div class="doc">In particular, the empty heap predicate <span class="bracket">\[]</span> entails <span class="bracket">\<span class="id">GC</span></span>, because the
+    empty heap predicate is affine (lemma <span class="bracket"><span class="id">haffine_hempty</span></span>). </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hempty_himpl_hgc">hempty_himpl_hgc</a></span> :<br/>
+&nbsp;&nbsp;\[] ==&gt; \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#himpl_hgc_r">himpl_hgc_r</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#haffine_hempty">haffine_hempty</a></span>. Qed.</div></details>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (himpl_hgc_absorb)
+    Show that <span class="bracket">\<span class="id">GC</span> * <span class="id">H</span></span> entails <span class="bracket">\<span class="id">GC</span></span> for any <span class="bracket"><span class="id">H</span></span> satisfying <span class="bracket"><span class="id">haffine</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hgc_absorb_r">himpl_hgc_absorb_r</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span> -&gt;<br/>
+&nbsp;&nbsp;\<span class="id">GC</span> \* <span class="id">H</span> ==&gt; \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Using the predicate <span class="bracket">\<span class="id">GC</span></span>, we can reformulate the constrained discard rule
+    <span class="bracket"><span class="id">triple_haffine_post</span></span> as follows. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="triple_hgc_post">triple_hgc_post</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">This rule is more concise than <span class="bracket"><span class="id">triple_haffine_post</span></span>. Moreover, the piece of
+    heap being discarded, previously described by <span class="bracket"><span class="id">H'</span></span>, no longer needs to be
+    provided up front, at the moment of applying the rule. Instead, it can be
+    provided further on in the reasoning, by exploiting <span class="bracket"><span class="id">himpl_hgc_r</span></span> to prove
+    an entailment of the form <span class="bracket"><span class="id">H'</span> ==&gt; \<span class="id">GC</span></span>. </div>
+<br/>
+<h2> Example Instantiations of <span class="bracket"><span class="id">heap_affine</span></span> </h2>
+<br/>
+<h3> Instantiation of <span class="bracket"><span class="id">heap_affine</span></span> for a Fully Affine Logic </h3>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="FullyAffineLogic">FullyAffineLogic</a></span>.<br/>
+<br/>
+<div class="doc">To set up a fully affine logic, we consider a definition of <span class="bracket"><span class="id">heap_affine</span></span>
+    that holds of any heap. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="FullyAffineLogic.heap_affine_def">heap_affine_def</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>.<br/>
+<br/>
+<div class="doc">It is trivial to check that <span class="bracket"><span class="id">heap_affine</span></span> satisfies the required
+    distribution properties on the empty heap and the union of heaps. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="FullyAffineLogic.heap_affine_empty">heap_affine_empty</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.Affine.html#FullyAffineLogic.heap_affine_def">heap_affine_def</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="FullyAffineLogic.heap_affine_union">heap_affine_union</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> (<span class="id"><a href="SLF.LibSepReference.html#Fmap.union">Fmap.union</a></span> <span class="id">h1</span> <span class="id">h2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.Affine.html#FullyAffineLogic.heap_affine_def">heap_affine_def</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">With that instantiation, <span class="bracket"><span class="id">haffine</span></span> holds of any heap predicate. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="FullyAffineLogic.haffine_equiv">haffine_equiv</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span>) &lt;-&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.Affine.html#FullyAffineLogic.heap_affine_def">heap_affine_def</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Moreover, the affine top predicate <span class="bracket">\<span class="id">GC</span></span> is equivalent to the top predicate
+    <span class="bracket"><span class="id">htop</span></span>, defined as <span class="bracket"><span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="id">True</span></span> or equivalently as <span class="bracket">\<span class="kwd">exists</span> <span class="id">H</span>, <span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="FullyAffineLogic.htop">htop</a></span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">H</span>, <span class="id">H</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="FullyAffineLogic.hgc_eq_htop">hgc_eq_htop</a></span> : <span class="id"><a href="SLF.Affine.html#hgc">hgc</a></span> = <span class="id"><a href="SLF.Affine.html#FullyAffineLogic.htop">htop</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#hgc">hgc</a></span>, <span class="id"><a href="SLF.Affine.html#FullyAffineLogic.htop">htop</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.Affine.html#FullyAffineLogic.haffine_equiv">haffine_equiv</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#FullyAffineLogic">FullyAffineLogic</a></span>.<br/>
+<br/>
+<h3> Instantiation of <span class="bracket"><span class="id">heap_affine</span></span> for a Fully Linear Logic </h3>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="FullyLinearLogic">FullyLinearLogic</a></span>.<br/>
+<br/>
+<div class="doc">To set up a fully affine logic, we consider a definition of <span class="bracket"><span class="id">heap_affine</span></span>
+    that holds only of empty heaps. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="FullyLinearLogic.heap_affine_def">heap_affine_def</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h</span> = (<span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>).<br/>
+<br/>
+<div class="doc">Again, it is not hard to check that <span class="bracket"><span class="id">heap_affine</span></span> satisfies the required
+    distributivity properties. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="FullyLinearLogic.heap_affine_empty">heap_affine_empty</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.Affine.html#FullyLinearLogic.heap_affine_def">heap_affine_def</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="FullyLinearLogic.heap_affine_union">heap_affine_union</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#heap_affine">heap_affine</a></span> (<span class="id"><a href="SLF.LibSepReference.html#Fmap.union">Fmap.union</a></span> <span class="id">h1</span> <span class="id">h2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">K1</span> <span class="id">K2</span> <span class="id">D</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.Affine.html#FullyLinearLogic.heap_affine_def">heap_affine_def</a></span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepReference.html#Fmap.union_empty_r">Fmap.union_empty_r</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">With that instantiation, the predicate <span class="bracket"><span class="id">haffine</span> <span class="id">H</span></span> is equivalent to
+    <span class="bracket"><span class="id">H</span> ==&gt; \[]</span>, that is, it characterizes heap predicates that hold of the
+    empty heap. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="FullyLinearLogic.haffine_equiv">haffine_equiv</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span> &lt;-&gt; (<span class="id">H</span> ==&gt; \[]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">K</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.Affine.html#FullyLinearLogic.heap_affine_def">heap_affine_def</a></span> <span class="kwd">in</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty_intro">hempty_intro</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">K</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.Affine.html#FullyLinearLogic.heap_affine_def">heap_affine_def</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty_inv">hempty_inv</a></span> <span class="id">M</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Moreover, the affine top predicate <span class="bracket">\<span class="id">GC</span></span> is equivalent to the empty heap
+    predicate <span class="bracket"><span class="id">hempty</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="FullyLinearLogic.hgc_eq_hempty">hgc_eq_hempty</a></span> : <span class="id"><a href="SLF.Affine.html#hgc">hgc</a></span> = <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty">hempty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#hgc">hgc</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">xpull</span>. <span class="id">introv</span> <span class="id">N</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.Affine.html#FullyLinearLogic.haffine_equiv">haffine_equiv</a></span> <span class="kwd">in</span> <span class="id">N</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span> \[]. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#haffine_hempty">haffine_hempty</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#FullyLinearLogic">FullyLinearLogic</a></span>.<br/>
+<br/>
+<h2> Definition of a Partially Affine Separation Logic </h2>
+<br/>
+<h3> Refined Definition of Triples </h3>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="NewTriples">NewTriples</a></span>.<br/>
+<br/>
+<div class="doc">We now explain how to refine the notion of Separation Logic triple so as to
+    accomodate the discard rule. Recall the previous definition of triples,
+    capturing a linear logic.
+    Definition triple (t:trm) (H:hprop) (Q:val-&gt;hprop) : Prop :=
+      forall s, H s -&gt; eval s t Q.
+    The new discard rule <span class="bracket"><span class="id">triple_htop_post</span></span> asserts that postconditions may be
+    freely extended with the <span class="bracket">\<span class="id">GC</span></span> predicate. To support this rule, it suffices
+    to modify the definition of <span class="bracket"><span class="id">triple</span></span> to include the predicate <span class="bracket">\<span class="id">GC</span></span> in the
+    postcondition of the underlying Hoare triple, as follows. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="NewTriples.triple">triple</a></span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">H</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) (<span class="id">Q</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">s</span>, <span class="id">H</span> <span class="id">s</span> -&gt; <span class="id"><a href="SLF.LibSepReference.html#eval">eval</a></span> <span class="id">s</span> <span class="id">t</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>).<br/>
+<br/>
+<div class="doc">Next, for the updated definition of <span class="bracket"><span class="id">triple</span></span> using <span class="bracket">\<span class="id">GC</span></span>, we establish:
+    - that all the existing reasoning rules of Separation Logic remain sound,
+      and
+    - that the new discard rules <span class="bracket"><span class="id">triple_htop_post</span></span>, <span class="bracket"><span class="id">triple_haffine_hpost</span></span>, and
+      <span class="bracket"><span class="id">triple_haffine_hpre</span></span> are provable. </div>
+<br/>
+<h3> Soundness of the Existing Rules </h3>
+<br/>
+<div class="doc">Let us update the soundness proof of the rules of Separation Logic to
+    account for the addition of <span class="bracket">\<span class="id">GC</span></span> in the definition of <span class="bracket"><span class="id">triples</span></span>. All the
+    rules are proved using exactly the same proof scripts as before, with
+    <span class="bracket"><span class="id">xsimpl</span></span> possibly performing extra work for cancelling out occurrences of
+    <span class="bracket">\<span class="id">GC</span></span> on both sides of an entailment. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_conseq">triple_conseq</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H'</span> <span class="id">Q'</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H'</span> <span class="id">Q'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q'</span> ===&gt; <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">MH</span> <span class="id">MQ</span> <span class="id">HF</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_conseq">eval_conseq</a></span>. <span class="id">xsimpl</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_frame">triple_frame</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">H'</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> (<span class="id">H</span> \* <span class="id">H'</span>) (<span class="id">Q</span> \*+ <span class="id">H'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span> <span class="id">HF</span>. <span class="id">lets</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">MD</span>&amp;<span class="id">MU</span>): <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_inv">hstar_inv</a></span> (<span class="id"><a href="SLF.LibTactics.html#rm">rm</a></span> <span class="id">HF</span>).<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">M1</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_conseq">eval_conseq</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_frame">eval_frame</a></span> <span class="id">M</span> <span class="id">MD</span>. } { <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">h'</span> -&gt;. <span class="id">applys</span> <span class="id">M2</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_hpure">triple_hpure</a></span> : <span class="kwd">forall</span> <span class="id">t</span> (<span class="id">P</span>:<span class="kwd">Prop</span>) <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> (\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">destruct</span> <span class="id">M1</span> <span class="kwd">as</span> (<span class="id">M1</span>&amp;<span class="id">HP</span>).<br/>
+&nbsp;&nbsp;<span class="id">lets</span> <span class="id">E</span>: <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty_inv">hempty_inv</a></span> <span class="id">HP</span>. <span class="id">subst</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.union_empty_l">Fmap.union_empty_l</a></span>. <span class="id">applys</span>~ <span class="id">M</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_hexists">triple_hexists</a></span> : <span class="kwd">forall</span> <span class="id">t</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> (<span class="id">J</span> <span class="id">x</span>) <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hexists">hexists</a></span> <span class="id">J</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> (<span class="id">x</span>&amp;<span class="id">K</span>). <span class="id">applys</span> <span class="id">M</span> <span class="id">K</span>. Qed.</div></details>
+<br/>
+<div class="doc">We also need to update the reasoning rules for terms. We present one
+    representative example: the proof rule for sequences. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_seq">triple_seq</a></span> : <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">H1</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t1</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">H1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t2</span> <span class="id">H1</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+<div class="doc">The proof is structured like in lemma <span class="bracket"><span class="id">triple_seq</span></span> from chapter
+    <span class="bracket"><span class="id">Rules</span></span>. </div>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">intros</span> <span class="id">s</span> <span class="id">Hs</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_seq">eval_seq</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">M1</span> <span class="id">Hs</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">simpl</span>. <span class="id">intros</span> <span class="id">v1</span> <span class="id">s2</span> <span class="id">Hs2</span>. <span class="id">lets</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">N1</span>&amp;<span class="id">N2</span>&amp;<span class="id">D</span>&amp;-&gt;): <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_inv">hstar_inv</a></span> (<span class="id"><a href="SLF.LibTactics.html#rm">rm</a></span> <span class="id">Hs2</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_conseq">eval_conseq</a></span>. { <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_frame">eval_frame</a></span> <span class="id">D</span>. <span class="id">applys</span>* <span class="id">M2</span>. }<br/>
+<div class="doc">The main difference is the need to to invoke the lemma <span class="bracket"><span class="id">hstar_hgc_hgc</span></span> for
+    merging the left-over that originates from <span class="bracket"><span class="id">t1</span></span> with the <span class="bracket">\<span class="id">GC</span></span> that
+    originates from <span class="bracket"><span class="id">t2</span></span> into a single <span class="bracket">\<span class="id">GC</span></span>. </div>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">R</span>: ((= <span class="id">h2</span>) ==&gt; \<span class="id">GC</span>). { <span class="id">intros</span> ? -&gt;. <span class="id">auto</span>. } <span class="id">xchange</span> (<span class="id"><a href="SLF.LibTactics.html#rm">rm</a></span> <span class="id">R</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xchange</span> <span class="id"><a href="SLF.Affine.html#hstar_hgc_hgc">hstar_hgc_hgc</a></span>. <span class="id">xsimpl</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h3> Soundness of the Discard Rules </h3>
+<br/>
+<div class="doc">Let us first establish the soundness of the discard rule <span class="bracket"><span class="id">triple_htop_post</span></span>.
+    </div>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (triple_hgc_post)
+    Prove <span class="bracket"><span class="id">triple_hgc_post</span></span> with respect to the refined definition of <span class="bracket"><span class="id">triple</span></span>
+    that includes <span class="bracket">\<span class="id">GC</span></span> in the postcondition. Hint: exploit <span class="bracket"><span class="id">hstar_hgc_hgc</span></span>,
+    with help from the tactics <span class="bracket"><span class="id">xchange</span></span> and <span class="bracket"><span class="id">xsimpl</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_hgc_post">triple_hgc_post</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (triple_haffine_post)
+    Prove that <span class="bracket"><span class="id">triple_haffine_post</span></span> is derivable from <span class="bracket"><span class="id">triple_hgc_post</span></span>. Hint:
+    use the property <span class="bracket"><span class="id">himpl_hgc_r</span></span>, which asserts <span class="bracket"><span class="id">H'</span> ==&gt; \<span class="id">GC</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_haffine_post">triple_haffine_post</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">H'</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> (<span class="id">Q</span> \*+ <span class="id">H'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 1 star, standard, optional (triple_hgc_post_from_triple_haffine_post)
+    Conversely, prove that <span class="bracket"><span class="id">triple_hgc_post</span></span> is derivable from
+    <span class="bracket"><span class="id">triple_haffine_post</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_hgc_post_from_triple_haffine_post">triple_hgc_post_from_triple_haffine_post</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 1 star, standard, optional (triple_haffine_pre)
+    Prove that <span class="bracket"><span class="id">triple_haffine_pre</span></span> is derivable from <span class="bracket"><span class="id">triple_hgc_post</span></span>. Hint:
+    exploit the frame rule, and leverage <span class="bracket"><span class="id">triple_hgc_post</span></span> either directly or by
+    invoking its corollary <span class="bracket"><span class="id">triple_haffine_post</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_haffine_pre">triple_haffine_pre</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">H'</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> (<span class="id">H</span> \* <span class="id">H'</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Combined Structural Rules </h3>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (triple_conseq_frame_hgc)
+    Prove the combined structural rule <span class="bracket"><span class="id">triple_conseq_frame_hgc</span></span>, which extends
+    <span class="bracket"><span class="id">triple_conseq_frame</span></span> with the discard rule, replacing <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span></span>
+    with <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span> \*+ \<span class="id">GC</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_conseq_frame_hgc">triple_conseq_frame_hgc</a></span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">Q1</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q</span> \*+ \<span class="id">GC</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 1 star, standard, optional (triple_ramified_frame_hgc)
+    Prove the following generalization of the ramified frame rule that includes
+    the discard rule. Hint: take inspiration from the proof of
+    <span class="bracket"><span class="id">triple_ramified_frame</span></span> presented in the chapter <span class="bracket"><span class="id">Wand</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.triple_ramified_frame_hgc">triple_ramified_frame_hgc</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">Q1</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* (<span class="id">Q1</span> \--* (<span class="id">Q</span> \*+ \<span class="id">GC</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h1> More Details </h1>
+<br/>
+<h2> Discard Rules in WP Style </h2>
+<br/>
+<h3> Definition of WP for a Partially Affine Separation Logic </h3>
+<br/>
+<div class="doc">In chapter <span class="bracket"><span class="id">WPsem</span></span>, we defined <span class="bracket"><span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span> <span class="id">s</span></span> as <span class="bracket"><span class="id">eval</span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q</span></span>. To account
+    for affine heaps, we refine the definition to <span class="bracket"><span class="id">eval</span> <span class="id">s</span> <span class="id">t</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>)</span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="NewTriples.wp">wp</a></span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">Q</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">s</span> =&gt; <span class="id"><a href="SLF.LibSepReference.html#eval">eval</a></span> <span class="id">s</span> <span class="id">t</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>).<br/>
+<br/>
+<div class="doc">The characteristic equivalence of <span class="bracket"><span class="id">wp</span></span> remains valid, with respect to the
+    definition of <span class="bracket"><span class="id">wp</span></span> extended with <span class="bracket">\<span class="id">GC</span></span> and the definition of <span class="bracket"><span class="id">triple</span></span>
+    extended with <span class="bracket">\<span class="id">GC</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.wp_equiv">wp_equiv</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>) &lt;-&gt; (<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">iff</span> <span class="id">M</span>; <span class="id">introv</span> <span class="id">Hs</span>; <span class="id">applys</span> <span class="id">M</span> <span class="id">Hs</span>. Qed.</div></details>
+<br/>
+<div class="doc">The structural reasoning rules also remain valid. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.wp_conseq">wp_conseq</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> ===&gt; <span class="id">Q2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> <span class="id">Q1</span> ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">s</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_conseq">eval_conseq</a></span>. <span class="id">xsimpl</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.wp_frame">wp_frame</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>) \* <span class="id">H</span> ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> (<span class="id">Q</span> \*+ <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">HF</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">MD</span>&amp;<span class="id">MU</span>): <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_inv">hstar_inv</a></span> (<span class="id"><a href="SLF.LibTactics.html#rm">rm</a></span> <span class="id">HF</span>).<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_conseq">eval_conseq</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_frame">eval_frame</a></span> <span class="id">M1</span> <span class="id">MD</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">h'</span> -&gt;. <span class="id">applys</span> <span class="id">M2</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">In weakest precondition style, the discard rule <span class="bracket"><span class="id">triple_hgc_post</span></span> translates
+    into the entailment <span class="bracket"><span class="id">wp</span> <span class="id">t</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span>. </div>
+<br/>
+<h3> Exercise: 1 star, standard, optional (wp_hgc_post) </h3>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.wp_hgc_post">wp_hgc_post</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The wp-style presentation of the rule <span class="bracket"><span class="id">triple_hgc_pre</span></span> is captured by the
+    lemma <span class="bracket"><span class="id">wp_haffine_pre</span></span> shown below. </div>
+<br/>
+<h3> Exercise: 3 stars, standard, optional (wp_haffine_pre)
+    Prove <span class="bracket"><span class="id">wp_haffine_pre</span></span>. Hint: one possibility is to use <span class="bracket"><span class="id">eval_conseq</span></span> and
+    <span class="bracket"><span class="id">wp_frame</span></span>, as well as <span class="bracket"><span class="id">himpl_hgc_r</span></span> and <span class="bracket"><span class="id">hstar_hgc_hgc</span></span>. Another
+    possibility is to refine the proof of <span class="bracket"><span class="id">wp_frame</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.wp_haffine_pre">wp_haffine_pre</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>) \* <span class="id">H</span> ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The revised presentation of the wp-style ramified frame rule includes an
+    extra <span class="bracket">\<span class="id">GC</span></span> predicate. This rule captures at once all the structural
+    properties of Separation Logic, including the discard rule. </div>
+<br/>
+<h3> Exercise: 3 stars, standard, optional (wp_haffine_pre)
+    Prove <span class="bracket"><span class="id">wp_ramified</span></span> with support for <span class="bracket">\<span class="id">GC</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.wp_ramified">wp_ramified</a></span> : <span class="kwd">forall</span> <span class="id">Q1</span> <span class="id">Q2</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> <span class="id">Q1</span>) \* (<span class="id">Q1</span> \--* (<span class="id">Q2</span> \*+ \<span class="id">GC</span>)) ==&gt; (<span class="id"><a href="SLF.Affine.html#NewTriples.wp">wp</a></span> <span class="id">t</span> <span class="id">Q2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exploiting the Discard Rule in Proofs </h3>
+<br/>
+<div class="doc">In a practical verification proof, there are two useful ways to discard heap
+    predicates that are no longer needed:
+    - by invoking <span class="bracket"><span class="id">triple_haffine_pre</span></span> to remove a specific
+      predicate from the current state, i.e., the precondition; or
+    - by invoking <span class="bracket"><span class="id">triple_htop_post</span></span> to add a <span class="bracket">\<span class="id">GC</span></span> into the
+      current postcondition and allow subsequent removal of any
+      predicate that may be left-over in the final entailment
+      justifying that the final state satisfies the postcondition.
+    Eager removal of predicates from the current state is never necessary: one
+    can always be lazy and postpone the application of the discard rule until
+    the last step of reasoning.
+    It is cumbersome for the user to anticipate, right from the beginning of the
+    proof of a function, the need to discard heap predicates at the last line of
+    the function body. To ease the work of the user, it suffices to
+    systematically apply the rule <span class="bracket"><span class="id">triple_htop_post</span></span> as very first step of the
+    proof of every function. The effect is to extend the postcondition of the
+    function with a <span class="bracket">\<span class="id">GC</span></span> predicate. This predicate may be used to absorb any
+    garbage left-over at the end of the proof of the function body. If there is
+    no such garbage, the tactic <span class="bracket"><span class="id">xsimpl</span></span> automatically discards the <span class="bracket">\<span class="id">GC</span></span>
+    predicate.
+    We implement this strategy by integrating the rule <span class="bracket"><span class="id">triple_htop_post</span></span> into
+    the tactic <span class="bracket"><span class="id">xwp</span></span>, which sets up the verification proof by computing the
+    characteristic formula. To that end, we generalize the lemma <span class="bracket"><span class="id">xwp_lemma</span></span>,
+    which the tactic <span class="bracket"><span class="id">xwp</span></span> applies. Its original statement is as follows. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="NewTriples.xwp_lemma">xwp_lemma</a></span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.LibSepReference.html#wpgen">wpgen</a></span> ((<span class="id">x</span>,<span class="id">v2</span>)::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>) <span class="id">t1</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Its generalized form extends the postcondition from <span class="bracket"><span class="id">Q</span></span> to <span class="bracket"><span class="id">Q</span> \*+ \<span class="id">GC</span></span>, as
+    shown below. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">xwp_lemma'</span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.LibSepReference.html#wpgen">wpgen</a></span> ((<span class="id">x</span>,<span class="id">v2</span>)::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>) <span class="id">t1</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#NewTriples.triple_hgc_post">triple_hgc_post</a></span>. <span class="id">applys</span>* <span class="id"><a href="SLF.Affine.html#NewTriples.xwp_lemma">xwp_lemma</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">We update the tactic <span class="bracket"><span class="id">xwp</span></span> to exploit the lemma <span class="bracket"><span class="id">xwp_lemma'</span></span> instead of
+    <span class="bracket"><span class="id">xwp_lemma</span></span>. </div>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"xwp"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">intros</span>; <span class="id">applys</span> <span class="id">xwp_lemma'</span>;<br/>
+&nbsp;&nbsp;[ <span class="id">reflexivity</span> | <span class="id">simpl</span>; <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepReference.html#wpgen_var">wpgen_var</a></span>; <span class="id">simpl</span> ].<br/>
+<br/>
+<h3> Example Proof in an Affine Separation Logic </h3>
+<br/>
+<div class="doc">Using the updated version of <span class="bracket"><span class="id">xwp</span></span>, let us revisite the proof of our
+    motivating example <span class="bracket"><span class="id">succ_using_incr</span></span> in a fully affine logic where any
+    predicate can be discarded. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="NewTriples.MotivatingExampleWithUpdatedXwp">MotivatingExampleWithUpdatedXwp</a></span>.<br/>
+<span class="kwd">Export</span> <span class="id"><a href="SLF.Affine.html#MotivatingExample">MotivatingExample</a></span>.<br/>
+<br/>
+<div class="doc">Assume a fully affine logic. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="NewTriples.MotivatingExampleWithUpdatedXwp.haffine_hany">haffine_hany</a></span> : <span class="kwd">forall</span> (<span class="id">H</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span>.<br/>
+<br/>
+<div class="doc">Observe, in the proof below, the <span class="bracket">\<span class="id">GC</span></span> introduced in the postcondition by
+    the call to <span class="bracket"><span class="id">xwp</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.MotivatingExampleWithUpdatedXwp.triple_succ_using_incr">triple_succ_using_incr</a></span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.triple">triple</a></span> (<span class="id"><a href="SLF.Affine.html#MotivatingExample.succ_using_incr">succ_using_incr</a></span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">n</span>+1]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>. <span class="id">xapp</span>. <span class="id">intros</span> <span class="id">r</span>. <span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">xsimpl</span>. { <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#himpl_hgc_r">himpl_hgc_r</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#NewTriples.MotivatingExampleWithUpdatedXwp.haffine_hany">haffine_hany</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">We will show further on how to automate the work from the last line of the
+    proof above, by setting up <span class="bracket"><span class="id">xsimpl</span></span> to automatically resolve goals of the
+    form <span class="bracket"><span class="id">H</span> ==&gt; \<span class="id">GC</span></span>. </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#NewTriples.MotivatingExampleWithUpdatedXwp">MotivatingExampleWithUpdatedXwp</a></span>.<br/>
+<br/>
+<h2> Revised Definition of <span class="bracket"><span class="id">mkstruct</span></span> </h2>
+<br/>
+<div class="doc">Recall the definition <span class="bracket"><span class="id">mkstruct</span></span>, which is key to implementing <span class="bracket"><span class="id">wpgen</span></span> and
+    the x-tactics.
+    Definition mkstruct (F:formula) : formula :=
+      fun Q =&gt; \exists Q', (F Q') \* (Q' \--* Q).
+    This definition can be generalized to handle not just the consequence and
+    frame rules, but also the discard rule. To that end, <span class="bracket"><span class="id">mkstruct</span></span> is extended
+    with an additional <span class="bracket">\<span class="id">GC</span></span>, as follows. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="NewTriples.mkstruct">mkstruct</a></span> (<span class="id">F</span>:<span class="id"><a href="SLF.LibSepReference.html#formula">formula</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#formula">formula</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">Q</span> =&gt; \<span class="kwd">exists</span> <span class="id">Q'</span>, <span class="id">F</span> <span class="id">Q'</span> \* (<span class="id">Q'</span> \--* (<span class="id">Q</span> \*+ \<span class="id">GC</span>)).<br/>
+<br/>
+<div class="doc">Let us prove that this revised definition of <span class="bracket"><span class="id">mkstruct</span></span> does indeed satisfy
+    the <span class="bracket"><span class="id">wp</span></span>-style statement of the discard rule, which is stated in a way
+    similar to <span class="bracket"><span class="id">wp_hgc_post</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.mkstruct_hgc">mkstruct_hgc</a></span> : <span class="kwd">forall</span> <span class="id">Q</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span>. <span class="id">set</span> (<span class="id">X</span> := <span class="id"><a href="SLF.Affine.html#hgc">hgc</a></span>) <span class="kwd">at</span> 3. <span class="id">replace</span> <span class="id">X</span> <span class="kwd">with</span> (\<span class="id">GC</span> \* \<span class="id">GC</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>. } { <span class="id">subst</span> <span class="id">X</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#hstar_hgc_hgc">hstar_hgc_hgc</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Further, let us prove that the revised definition of <span class="bracket"><span class="id">mkstruct</span></span> still
+    satisfies the four originally required properties: erasure, consequence,
+    frame, and monoticity. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.mkstruct_erase">mkstruct_erase</a></span> : <span class="kwd">forall</span> <span class="id">F</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">F</span> <span class="id">Q</span> ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span>. <span class="id">xsimpl</span> <span class="id">Q</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#himpl_hgc_r">himpl_hgc_r</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#haffine_hempty">haffine_hempty</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.mkstruct_conseq">mkstruct_conseq</a></span> : <span class="kwd">forall</span> <span class="id">F</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> ===&gt; <span class="id">Q2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q1</span> ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">WQ</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span>. <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">Q'</span>. <span class="id">xsimpl</span> <span class="id">Q'</span>. <span class="id">xchange</span> <span class="id">WQ</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.mkstruct_frame">mkstruct_frame</a></span> : <span class="kwd">forall</span> <span class="id">F</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>) \* <span class="id">H</span> ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> (<span class="id">Q</span> \*+ <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span>. <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">Q'</span>. <span class="id">xsimpl</span> <span class="id">Q'</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.mkstruct_monotone">mkstruct_monotone</a></span> : <span class="kwd">forall</span> <span class="id">F1</span> <span class="id">F2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">Q</span>, <span class="id">F1</span> <span class="id">Q</span> ==&gt; <span class="id">F2</span> <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F1</span> <span class="id">Q</span> ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F2</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">WF</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span>. <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">Q'</span>. <span class="id">xchange</span> <span class="id">WF</span>. <span class="id">xsimpl</span> <span class="id">Q'</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (mkstruct_haffine_post)
+    Prove the reformulation of <span class="bracket"><span class="id">triple_haffine_post</span></span> adapted to <span class="bracket"><span class="id">mkstruct</span></span>, for
+    discarding an affine piece of postcondition. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.mkstruct_haffine_post">mkstruct_haffine_post</a></span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> (<span class="id">Q</span> \*+ <span class="id">H</span>) ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (mkstruct_haffine_pre)
+    Prove the reformulation of <span class="bracket"><span class="id">triple_haffine_pre</span></span> adapted to <span class="bracket"><span class="id">mkstruct</span></span>, for
+    discarding an affine piece of postcondition. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="NewTriples.mkstruct_haffine_pre">mkstruct_haffine_pre</a></span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>) \* <span class="id">H</span> ==&gt; <span class="id"><a href="SLF.Affine.html#NewTriples.mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#NewTriples">NewTriples</a></span>.<br/>
+<br/>
+<h2> The Tactic <span class="bracket"><span class="id">xaffine</span></span> and the Behavior of <span class="bracket"><span class="id">xsimpl</span></span> on <span class="bracket">\<span class="id">GC</span></span> </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Xaffine">Xaffine</a></span>.<br/>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xaffine</span></span> applies to a goal of the form <span class="bracket"><span class="id">haffine</span> <span class="id">H</span></span>. It
+    simplifies the goal using all the distributivity rules associated with
+    <span class="bracket"><span class="id">haffine</span></span>. Ultimately, it invokes <span class="bracket"><span class="id">eauto</span> <span class="kwd">with</span> <span class="id">haffine</span></span>, which can leverage
+    knowledge specific to the definition of <span class="bracket"><span class="id">haffine</span></span> from the Separation Logic
+    setup at hand. </div>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">haffine</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"xaffine"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> |- <span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> ?<span class="id">H</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">H</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty">hempty</a></span>) =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#haffine_hempty">haffine_hempty</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hpure">hpure</a></span> _) =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#haffine_hpure">haffine_hpure</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar">hstar</a></span> _ _) =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#haffine_hstar">haffine_hstar</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hexists">hexists</a></span> _) =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#haffine_hexists">haffine_hexists</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hforall">hforall</a></span> _) =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#haffine_hforall">haffine_hforall</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| (<span class="id"><a href="SLF.Affine.html#hgc">hgc</a></span>) =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#haffine_hgc">haffine_hgc</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| _ =&gt; <span class="id">eauto</span> <span class="kwd">with</span> <span class="id">haffine</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Xaffine.xaffine_demo">xaffine_demo</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> <span class="id">H3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">K1</span> <span class="id">KJ</span>. <span class="id">xaffine</span>.  Abort.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#Xaffine">Xaffine</a></span>.<br/>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="XsimplExtended">XsimplExtended</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.LibSepReference.html">LibSepReference</a></span>.<br/>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xsimpl</span></span> is extended with support for simplifying goals of the
+    form <span class="bracket"><span class="id">H</span> ==&gt; \<span class="id">GC</span></span> into <span class="bracket"><span class="id">haffine</span> <span class="id">H</span></span>, using lemma <span class="bracket"><span class="id">himpl_hgc_r</span></span>. For example,
+    <span class="bracket"><span class="id">xsimpl</span></span> can simplify the goal <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span> ==&gt; <span class="id">H2</span> \* \<span class="id">GC</span></span> into just
+    <span class="bracket"><span class="id">haffine</span> <span class="id">H1</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplExtended.xsimpl_xgc_demo">xsimpl_xgc_demo</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> ==&gt; <span class="id">H2</span> \* \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xsimpl</span>.  Abort.</div></details>
+<br/>
+<div class="doc">In addition, <span class="bracket"><span class="id">xsimpl</span></span> invokes the tactic <span class="bracket"><span class="id">xaffine</span></span> to simplify
+    side-conditions of the form <span class="bracket"><span class="id">haffine</span> <span class="id">H</span></span>. For example, <span class="bracket"><span class="id">xsimpl</span></span> can prove the
+    following lemma. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplExtended.xsimpl_xaffine_demo">xsimpl_xaffine_demo</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.haffine">haffine</a></span> <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> ==&gt; <span class="id">H2</span> \* \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">K1</span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#XsimplExtended">XsimplExtended</a></span>.<br/>
+<br/>
+<h2> Tactics for Applying the Discard Rules </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="XGC">XGC</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.LibSepReference.html">LibSepReference</a></span>.<br/>
+<br/>
+<div class="doc">This section presents the discard tactics <span class="bracket"><span class="id">xgc</span></span>, <span class="bracket"><span class="id">xc_keep</span></span>, and <span class="bracket"><span class="id">xgc_post</span></span>.
+    Their implementation leverages the discard property of <span class="bracket"><span class="id">mkstruct</span></span>,
+    reproduced below. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XGC.mkstruct_hgc">mkstruct_hgc</a></span> : <span class="kwd">forall</span> <span class="id">Q</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) ==&gt; <span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xgc</span> <span class="id">H1</span></span> removes <span class="bracket"><span class="id">H1</span></span> from the precondition (i.e., from the
+    current state), in the course of a proof exploiting a formula produced by
+    <span class="bracket"><span class="id">wpgen</span></span>. More precisely, the tactic <span class="bracket"><span class="id">xgc</span> <span class="id">H1</span></span> removes <span class="bracket"><span class="id">H1</span></span> from the current
+    precondition <span class="bracket"><span class="id">H</span></span>. It leverages <span class="bracket"><span class="id">xsimpl</span></span> to simplify the entailment
+    <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span></span> and infer <span class="bracket"><span class="id">H2</span></span>, which describes what remains after removing
+    <span class="bracket"><span class="id">H1</span></span> from <span class="bracket"><span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XGC.xgc_lemma">xgc_lemma</a></span>: <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H</span> <span class="id">F</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.haffine">haffine</a></span> <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">WH</span> <span class="id">K</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">WH</span>. <span class="id">xchange</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id"><a href="SLF.LibSepReference.html#mkstruct_frame">mkstruct_frame</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id"><a href="SLF.Affine.html#XGC.mkstruct_hgc">mkstruct_hgc</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#mkstruct_conseq">mkstruct_conseq</a></span>. <span class="id">xsimpl</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"xgc"</span> <span class="id">constr</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> (@<span class="id"><a href="SLF.Affine.html#XGC.xgc_lemma">xgc_lemma</a></span> <span class="id">H</span>); [ <span class="id">xsimpl</span> | <span class="id">xaffine</span> | ].<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XGC.xgc_demo">xgc_demo</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">F</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.haffine">haffine</a></span> <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span>) ==&gt; <span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">K2</span>. <span class="id">xgc</span> <span class="id">H2</span>.  Abort.</div></details>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xgc_keep</span> <span class="id">H</span></span> is a variant of <span class="bracket"><span class="id">xgc</span></span> that enables discarding
+    everything but <span class="bracket"><span class="id">H</span></span> from the precondition.
+    The implementation of the tactic leverages the same lemma <span class="bracket"><span class="id">xgc_lemma</span></span>, but
+    providing <span class="bracket"><span class="id">H2</span></span> instead of <span class="bracket"><span class="id">H1</span></span>. </div>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"xgc_keep"</span> <span class="id">constr</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> (@<span class="id"><a href="SLF.Affine.html#XGC.xgc_lemma">xgc_lemma</a></span> _ <span class="id">H</span>); [ <span class="id">xsimpl</span> | <span class="id">xaffine</span> | ].<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XGC.xgc_keep_demo">xgc_keep_demo</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">F</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.haffine">haffine</a></span> <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.haffine">haffine</a></span> <span class="id">H3</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span>) ==&gt; <span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">K1</span> <span class="id">K3</span>. <span class="id">xgc_keep</span> <span class="id">H2</span>. Abort.</div></details>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xgc_post</span></span> simply extends the postcondition with a <span class="bracket">\<span class="id">GC</span></span>, to
+    enable subsequent discarding of heap predicates in the final entailment. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XGC.xgc_post_lemma">xgc_post_lemma</a></span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#XGC.mkstruct_hgc">mkstruct_hgc</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"xgc_post"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.Affine.html#XGC.xgc_post_lemma">xgc_post_lemma</a></span>.<br/>
+<br/>
+<div class="doc">The example below illustrates a usage of the <span class="bracket"><span class="id">xgc_post</span></span> tactic. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XGC.xgc_keep_demo">xgc_keep_demo</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">F</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.haffine">haffine</a></span> <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.haffine">haffine</a></span> <span class="id">H3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> (<span class="id">Q</span> \*+ <span class="id">H2</span> \*+ <span class="id">H3</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id"><a href="SLF.LibSepReference.html#mkstruct">mkstruct</a></span> <span class="id">F</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">K1</span> <span class="id">K3</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">xgc_post</span>. <br/>
+&nbsp;&nbsp;<span class="id">xchange</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#mkstruct_conseq">mkstruct_conseq</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">xsimpl</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#XGC">XGC</a></span>.<br/>
+<br/>
+<h1> Optional Material </h1>
+<br/>
+<h2> Alternative Statement for Distribution of <span class="bracket"><span class="id">haffine</span></span> on Quantifiers </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="HaffineQuantifiers">HaffineQuantifiers</a></span>.<br/>
+<br/>
+<div class="doc">Recall the lemmas <span class="bracket"><span class="id">haffine_hexists</span></span> and <span class="bracket"><span class="id">haffine_hforall</span></span>.
+    Lemma haffine_hexists : forall A (J:A-&gt;hprop),
+      (forall x, haffine (J x)) -&gt;
+      haffine (\exists x, (J x)).
+    Lemma haffine_hforall : forall A `{Inhab A} (J:A-&gt;hprop),
+      (forall x, haffine (J x)) -&gt;
+      haffine (\forall x, (J x)).
+    They can be reformulated in a more concise way, as explained next. </div>
+<br/>
+<div class="doc">First, to smoothly handle the distribution on the quantifiers, let us extend
+    the notion of "affinity" to postconditions. The predicate <span class="bracket"><span class="id">haffine_post</span> <span class="id">J</span></span>
+    asserts that <span class="bracket"><span class="id">haffine</span></span> holds of <span class="bracket"><span class="id">J</span> <span class="id">x</span></span> for any <span class="bracket"><span class="id">x</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="HaffineQuantifiers.haffine_post">haffine_post</a></span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (<span class="id">J</span> <span class="id">x</span>).<br/>
+<br/>
+<div class="doc">The rules then reformulate as follows. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HaffineQuantifiers.haffine_hexists">haffine_hexists</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#HaffineQuantifiers.haffine_post">haffine_post</a></span> <span class="id">J</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hexists">hexists</a></span> <span class="id">J</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">F1</span> (<span class="id">x</span>&amp;<span class="id">Hx</span>). <span class="id">applys</span>* <span class="id">F1</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HaffineQuantifiers.haffine_hforall">haffine_hforall</a></span> : <span class="kwd">forall</span> <span class="id">A</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#HaffineQuantifiers.haffine_post">haffine_post</a></span> <span class="id">J</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Affine.html#haffine">haffine</a></span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hforall">hforall</a></span> <span class="id">J</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">IA</span> <span class="id">F1</span> <span class="id">Hx</span>. <span class="id">lets</span> <span class="id">N</span>: <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hforall_inv">hforall_inv</a></span> <span class="id">Hx</span>. <span class="id">applys</span>* <span class="id">F1</span> (<span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span> (<span class="id">A</span>:=<span class="id">A</span>)).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#HaffineQuantifiers">HaffineQuantifiers</a></span>.<br/>
+<br/>
+<h2> Deriving the Rule GC-Post from the Rule GC-Pre </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="FromPreToPostGC">FromPreToPostGC</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.Rules.html">Rules</a></span> <span class="id"><a href="SLF.Rules.html#ProofsSameSemantics">ProofsSameSemantics</a></span>.<br/>
+<br/>
+<div class="doc">Earlier on, we proved that <span class="bracket"><span class="id">triple_hgc_pre</span></span> is derivable from
+    <span class="bracket"><span class="id">triple_hgc_post</span></span>, through a simple application of the frame rule. We wrote
+    that, reciprocally, the rule <span class="bracket"><span class="id">triple_hgc_post</span></span> is derivable from
+    <span class="bracket"><span class="id">triple_hgc_pre</span></span>, yet with a slightly more involved proof. Let us present
+    this proof. Concretely, assume <span class="bracket"><span class="id">triple_hgc_pre</span></span> and let us prove the result
+    <span class="bracket"><span class="id">triple_hgc_post</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="FromPreToPostGC.triple_hgc_pre">triple_hgc_pre</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> (<span class="id">H</span> \* \<span class="id">GC</span>) <span class="id">Q</span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="FromPreToPostGC.triple_hgc_post">triple_hgc_post</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">The key idea of the proof is that a term <span class="bracket"><span class="id">t</span></span> admits the same behavior as
+    <span class="bracket"><span class="kwd">let</span> <span class="id">x</span> = <span class="id">t</span> <span class="kwd">in</span> <span class="id">x</span></span>. Recall from chapter <span class="bracket"><span class="id">Rules</span></span> the lemma
+    <span class="bracket"><span class="id">eta_same_triples</span></span> which asserts the equivalence of <span class="bracket"><span class="id">t</span></span> and
+    <span class="bracket"><span class="kwd">let</span> <span class="id">x</span> = <span class="id">t</span> <span class="kwd">in</span> <span class="id">x</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="FromPreToPostGC.eta_same_triples">eta_same_triples</a></span> : <span class="kwd">forall</span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">x</span>:<span class="id"><a href="SLF.LibSepVar.html#var">var</a></span>) <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> &lt;-&gt; <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t</span> <span class="id">x</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">To discard a predicate from the postcondition of <span class="bracket"><span class="id">t</span></span> if we only have at hand
+    a rule for discarding predicates from preconditions, we replace <span class="bracket"><span class="id">t</span></span> with
+    <span class="bracket"><span class="kwd">let</span> <span class="id">x</span> = <span class="id">t</span> <span class="kwd">in</span> <span class="id">x</span></span> and apply the discard rule after evaluating <span class="bracket"><span class="id">t</span></span> but before
+    returning the variable <span class="bracket"><span class="id">x</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="FromPreToPostGC.triple_hgc_post_from_hgc_pre">triple_hgc_post_from_hgc_pre</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> (<span class="id">Q</span> \*+ \<span class="id">GC</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">rewrite</span> (<span class="id"><a href="SLF.Affine.html#FromPreToPostGC.eta_same_triples">eta_same_triples</a></span> <span class="id">t</span> <span class="string">"x"</span>). <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_let">triple_let</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">M</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">v</span>. <span class="id">simpl</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Affine.html#FromPreToPostGC.triple_hgc_pre">triple_hgc_pre</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_val">triple_val</a></span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Affine.html#FromPreToPostGC">FromPreToPostGC</a></span>.<br/>
+<br/>
+<h2> Historical Notes </h2>
+<br/>
+<div class="doc">The seminal presentation of Separation Logic concerned a linear logic for a
+    programming language with explicit deallocation. More recent works on
+    Separation Logic for ML-style languages equipped with a garbage collector
+    consider affine logics. For example, the original presentation of the Iris
+    framework provides an affine entailment, for which <span class="bracket"><span class="id">H</span> ==&gt; \[]</span> is always
+    true. Follow-up work on Iris provides encodings for supporting linear
+    resources, i.e., resources that cannot be dropped on the floor.
+    The present chapter gives a presentation of Separation Logic featuring a
+    customizable predicate <span class="bracket"><span class="id">haffine</span></span> for controlling which resources should be
+    treated as affine, and which ones should be treated as linear. This direct
+    approach to controlling linearity was introduced in the context of CFML, in
+    work by <span class="bracket"><span class="id">Guéneau</span>, <span class="id">Jourdan</span>, <span class="id">Charguéraud</span>, <span class="id">and</span> <span class="id">Pottier</span> 2019</span> (in Bib.v). </div>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

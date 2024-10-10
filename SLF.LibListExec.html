@@ -1,0 +1,295 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibListExec</title>
+<meta name="description" content="Documentation of Coq module LibListExec" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibListExec</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibNat.html">LibNat</a></span> <span class="id"><a href="SLF.LibList.html">LibList</a></span>.<br/>
+<br/>
+<div class="doc">This module shadows the function from LibList. Hence, it is not meant
+    to be "imported". Instead, just use <span class="bracket"><span class="kwd">Import</span> <span class="id">RewListExec</span>.</span> </div>
+<br/>
+<br/>
+<span class="kwd">Module</span> <span class="kwd">Import</span> <span class="id"><a name="RewListExec">RewListExec</a></span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_list_exec"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_list_exec</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_list_exec"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_list_exec</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_list_exec"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_list_exec</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibListExec.html#RewListExec">RewListExec</a></span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="is_nil">is_nil</a></span> <span class="id">A</span> (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">l</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="is_nil_eq">is_nil_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#is_nil">is_nil</a></span> <span class="id">l</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id">l</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">destruct</span> <span class="id">l</span>; <span class="id">simpl</span>; <span class="id">rew_bool_eq</span>; <span class="id">auto_false</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="is_not_nil">is_not_nil</a></span> <span class="id">A</span> (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">l</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="is_not_nil_eq">is_not_nil_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#is_not_nil">is_not_nil</a></span> <span class="id">l</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id">l</span> &lt;&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">destruct</span> <span class="id">l</span>; <span class="id">simpl</span>; <span class="id">rew_bool_eq</span>; <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#is_nil_eq">is_nil_eq</a></span> <span class="id"><a href="SLF.LibListExec.html#is_not_nil_eq">is_not_nil_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="length">length</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> :=<br/>
+&nbsp;&nbsp;@<span class="id"><a href="https://coq.inria.fr/library/Coq.Lists.List.html#length">List.length</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="length_eq">length_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#length">length</a></span> = <span class="id"><a href="SLF.LibList.html#length">LibList.length</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span> ;=&gt; <span class="id">A</span> <span class="id">l</span>. <span class="id">induction</span> <span class="id">l</span>; <span class="id">simpl</span>; <span class="id">rew_list</span>; <span class="id">auto</span>. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#length_eq">length_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="app">app</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;@<span class="id"><a href="https://coq.inria.fr/library/Coq.Lists.List.html#app">List.app</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="app_eq">app_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#app">app</a></span> = <span class="id"><a href="SLF.LibList.html#app">LibList.app</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span> ;=&gt; <span class="id">A</span> <span class="id">L1</span> <span class="id">L2</span>. <span class="id">induction</span> <span class="id">L1</span>; <span class="id">simpl</span>; <span class="id">rew_list</span>; <span class="id">congruence</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#app_eq">app_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="rev">rev</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;@<span class="id"><a href="https://coq.inria.fr/library/Coq.Lists.List.html#rev">List.rev</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="rev_eq">rev_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <br/>
+&nbsp;&nbsp;@<span class="id"><a href="https://coq.inria.fr/library/Coq.Lists.List.html#rev">List.rev</a></span> <span class="id">A</span> = @<span class="id"><a href="SLF.LibList.html#rev">LibList.rev</a></span> <span class="id">A</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span> ;=&gt; <span class="id">L</span>. <span class="id">induction</span> <span class="id">L</span>; <span class="id">simpl</span>; <span class="id">rew_list</span>. { <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id">IHL</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibListExec.html#app_eq">app_eq</a></span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibListExec.html#app">app</a></span>. <span class="id">fequals</span>. }<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#rev_eq">rev_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map">map</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>, (<span class="id">A</span>-&gt;<span class="id">B</span>) -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;@<span class="id"><a href="https://coq.inria.fr/library/Coq.Lists.List.html#map">List.map</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="map_eq">map_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#map">map</a></span> = <span class="id"><a href="SLF.LibList.html#map">LibList.map</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span> ;=&gt; <span class="id">A</span> <span class="id">B</span> <span class="id">f</span> <span class="id">L</span>. <span class="id">induction</span> <span class="id">L</span>; <span class="id">simpl</span>; <span class="id">rew_listx</span>; <span class="id">congruence</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#map_eq">map_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="mem">mem</a></span> <span class="id">A</span> (<span class="id">cmp</span>:<span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">l</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;| <span class="id">y</span>::<span class="id">l'</span> =&gt; <span class="id">cmp</span> <span class="id">x</span> <span class="id">y</span> || <span class="id">mem</span> <span class="id">cmp</span> <span class="id">x</span> <span class="id">l'</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mem_eq">mem_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">cmp</span>:<span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) <span class="id">x</span> <span class="id">l</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#is_beq">is_beq</a></span> <span class="id">cmp</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#mem">mem</a></span> <span class="id">cmp</span> <span class="id">x</span> <span class="id">l</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id"><a href="SLF.LibList.html#mem">LibList.mem</a></span> <span class="id">x</span> <span class="id">l</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">induction</span> <span class="id">l</span> <span class="kwd">as</span> [|<span class="id">y</span> <span class="id">l'</span>]; <span class="id">simpl</span>; <span class="id">rew_listx</span>; <span class="id">rew_isTrue</span>; <span class="id">fequals</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#mem_eq">mem_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">concat</span></span> </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="concat">concat</a></span> <span class="id">A</span> (<span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>)) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#fold_right">fold_right</a></span> (@<span class="id"><a href="SLF.LibListExec.html#app">app</a></span> <span class="id">A</span>) (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">A</span>) <span class="id">m</span>.<br/>
+<br/>
+<span class="kwd">Transparent</span> <span class="id"><a href="SLF.LibList.html#concat">LibList.concat</a></span>.<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="concat_eq">concat_eq</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#concat">concat</a></span> = <span class="id"><a href="SLF.LibList.html#concat">LibList.concat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibListExec.html#concat">concat</a></span>. <span class="id">rew_list_exec</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibList.html#concat">LibList.concat</a></span>. <span class="id">rew_list_exec</span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#concat_eq">concat_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">filter</span></span> </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="filter">filter</a></span> <span class="id">A</span> (<span class="id">p</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#fold_right">fold_right</a></span> (<span class="kwd">fun</span> <span class="id">x</span> <span class="id">acc</span> =&gt; <span class="kwd">if</span> <span class="id">p</span> <span class="id">x</span> <span class="kwd">then</span> <span class="id">x</span>::<span class="id">acc</span> <span class="kwd">else</span> <span class="id">acc</span>) (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">A</span>) <span class="id">l</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="filter_eq">filter_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">p</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) <span class="id">l</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue_pred">isTrue_pred</a></span> <span class="id">p</span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#filter">filter</a></span> <span class="id">p</span> <span class="id">l</span> = <span class="id"><a href="SLF.LibList.html#filter">LibList.filter</a></span> <span class="id">P</span> <span class="id">l</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">Local</span> <span class="kwd">Transparent</span> <span class="id"><a href="SLF.LibList.html#filter">LibList.filter</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibListExec.html#filter">filter</a></span>, <span class="id"><a href="SLF.LibList.html#filter">LibList.filter</a></span>. <span class="id">rew_list_exec</span>.<br/>
+&nbsp;&nbsp;<span class="id">fequals</span>. <span class="id">extens</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibReflect.html#if_isTrue">if_isTrue</a></span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#filter_eq">filter_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">remove</span></span> </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="remove">remove</a></span> <span class="id">A</span> (<span class="id">cmp</span>:<span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">a</span>:<span class="id">A</span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#filter">filter</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> (<span class="id">cmp</span> <span class="id">a</span> <span class="id">x</span>)) <span class="id">l</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="remove_eq">remove_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">cmp</span>:<span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">a</span>:<span class="id">A</span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#is_beq">is_beq</a></span> <span class="id">cmp</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#remove">remove</a></span> <span class="id">cmp</span> <span class="id">a</span> <span class="id">l</span> = <span class="id"><a href="SLF.LibList.html#remove">LibList.remove</a></span> <span class="id">a</span> <span class="id">l</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">Local</span> <span class="kwd">Transparent</span> <span class="id"><a href="SLF.LibList.html#remove">LibList.remove</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibListExec.html#remove">remove</a></span>, <span class="id"><a href="SLF.LibList.html#remove">LibList.remove</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span>* (&gt;&gt; <span class="id"><a href="SLF.LibListExec.html#filter_eq">filter_eq</a></span> (&lt;&gt; <span class="id">a</span>)).<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">x</span>. <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">rew_isTrue</span>. <span class="id">fequals</span>. <span class="id">rew_bool_eq</span>*. }<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#remove_eq">remove_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="noduplicates">noduplicates</a></span> <span class="id">A</span> (<span class="id">cmp</span>:<span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">l</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;| <span class="id">x</span>::<span class="id">l'</span> =&gt; <span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> (<span class="id"><a href="SLF.LibListExec.html#mem">mem</a></span> <span class="id">cmp</span> <span class="id">x</span> <span class="id">l'</span>) &amp;&amp; <span class="id">noduplicates</span> <span class="id">cmp</span> <span class="id">l'</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="noduplicates_eq">noduplicates_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">cmp</span>:<span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#is_beq">is_beq</a></span> <span class="id">cmp</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#noduplicates">noduplicates</a></span> <span class="id">cmp</span> <span class="id">l</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id"><a href="SLF.LibList.html#noduplicates">LibList.noduplicates</a></span> <span class="id">l</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">extens</span>. <span class="id">induction</span> <span class="id">l</span> <span class="kwd">as</span> [|<span class="id">x</span> <span class="id">l'</span>]; <span class="id">simpl</span>; <span class="id">rew_listx</span>; <span class="id">rew_bool_eq</span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;{ <span class="id">autos</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibListExec.html#mem_eq">mem_eq</a></span>. <span class="id">rew_bool_eq</span>. <span class="id">iff</span> (<span class="id">M1</span>&amp;<span class="id">M2</span>); <span class="id">splits</span>*. }<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#noduplicates_eq">noduplicates_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="remove_duplicates">remove_duplicates</a></span> <span class="id">A</span> (<span class="id">cmp</span>:<span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">l</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span><br/>
+&nbsp;&nbsp;| <span class="id">x</span>::<span class="id">l'</span> =&gt; <span class="id">x</span> :: (<span class="id"><a href="SLF.LibListExec.html#remove">remove</a></span> <span class="id">cmp</span> <span class="id">x</span> (<span class="id">remove_duplicates</span> <span class="id">cmp</span> <span class="id">l'</span>))<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="remove_duplicates_eq">remove_duplicates_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">cmp</span>:<span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#is_beq">is_beq</a></span> <span class="id">cmp</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#remove_duplicates">remove_duplicates</a></span> <span class="id">cmp</span> <span class="id">l</span> = <span class="id"><a href="SLF.LibList.html#remove_duplicates">LibList.remove_duplicates</a></span> <span class="id">l</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">Local</span> <span class="kwd">Transparent</span> <span class="id"><a href="SLF.LibList.html#remove_duplicates">LibList.remove_duplicates</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">induction</span> <span class="id">l</span> <span class="kwd">as</span> [|<span class="id">x</span> <span class="id">l'</span>]; <span class="id">simpl</span>; <span class="id">fequals</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibListExec.html#remove_eq">remove_eq</a></span>. <span class="id">congruence</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#remove_duplicates_eq">remove_duplicates_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="Forall">Forall</a></span> <span class="id">A</span> (<span class="id">p</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">l</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;| <span class="id">x</span>::<span class="id">l'</span> =&gt; <span class="id">p</span> <span class="id">x</span> &amp;&amp; <span class="id">Forall</span> <span class="id">p</span> <span class="id">l'</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Forall_eq">Forall_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">p</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) <span class="id">l</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue_pred">isTrue_pred</a></span> <span class="id">p</span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#Forall">Forall</a></span> <span class="id">p</span> <span class="id">l</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id"><a href="SLF.LibList.html#Forall">LibList.Forall</a></span> <span class="id">P</span> <span class="id">l</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">extens</span>. <span class="id">induction</span> <span class="id">l</span> <span class="kwd">as</span> [|<span class="id">x</span> <span class="id">l'</span>]; <span class="id">simpl</span>; <span class="id">rew_listx</span> <span class="kwd">in</span> *; <span class="id">rew_bool_eq</span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;{ <span class="id">iff</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">rew_bool_eq</span>. <span class="id">iff</span>*. }<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#Forall_eq">Forall_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="Exists">Exists</a></span> <span class="id">A</span> (<span class="id">p</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">l</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;| <span class="id">x</span>::<span class="id">l'</span> =&gt; <span class="id">p</span> <span class="id">x</span> || <span class="id">Exists</span> <span class="id">p</span> <span class="id">l'</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Exists_eq">Exists_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">p</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) <span class="id">l</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue_pred">isTrue_pred</a></span> <span class="id">p</span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#Exists">Exists</a></span> <span class="id">p</span> <span class="id">l</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id"><a href="SLF.LibList.html#Exists">LibList.Exists</a></span> <span class="id">P</span> <span class="id">l</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">extens</span>. <span class="id">induction</span> <span class="id">l</span> <span class="kwd">as</span> [|<span class="id">x</span> <span class="id">l'</span>]; <span class="id">simpl</span>; <span class="id">rew_listx</span> <span class="kwd">in</span> *; <span class="id">rew_bool_eq</span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;{ <span class="id">iff</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">rew_bool_eq</span>. <span class="id">iff</span>*. }<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#Exists_eq">Exists_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="count">count</a></span> <span class="id">A</span> (<span class="id">p</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">l</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; 0%<span class="id">nat</span><br/>
+&nbsp;&nbsp;| <span class="id">x</span>::<span class="id">l'</span> =&gt; <span class="kwd">if</span> <span class="id">p</span> <span class="id">x</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> (<span class="id">count</span> <span class="id">p</span> <span class="id">l'</span>) <span class="kwd">else</span> <span class="id">count</span> <span class="id">p</span> <span class="id">l'</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="count_eq">count_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">p</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) <span class="id">l</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#isTrue_pred">isTrue_pred</a></span> <span class="id">p</span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#count">count</a></span> <span class="id">p</span> <span class="id">l</span> = <span class="id"><a href="SLF.LibList.html#count">LibList.count</a></span> <span class="id">P</span> <span class="id">l</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">induction</span> <span class="id">l</span> <span class="kwd">as</span> [|<span class="id">x</span> <span class="id">l'</span>]; <span class="id">simpl</span>; <span class="id">rew_listx</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id">IHl'</span>. <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">do</span> 2 <span class="id">case_if</span>; <span class="id">try</span> <span class="id">nat_math</span>. }<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#count_eq">count_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="combine">combine</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">B</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> (<span class="id">A</span>*<span class="id">B</span>) :=<br/>
+&nbsp;&nbsp;@<span class="id"><a href="https://coq.inria.fr/library/Coq.Lists.List.html#combine">List.combine</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="combine_eq">combine_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">L1</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) (<span class="id">L2</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#length">LibList.length</a></span> <span class="id">L1</span> = <span class="id"><a href="SLF.LibList.html#length">LibList.length</a></span> <span class="id">L2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibListExec.html#combine">combine</a></span> <span class="id">L1</span> <span class="id">L2</span> = <span class="id"><a href="SLF.LibList.html#combine">LibList.combine</a></span> <span class="id">L1</span> <span class="id">L2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">gen</span> <span class="id">L2</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">L1</span> <span class="kwd">as</span> [|<span class="id">x1</span> <span class="id">L1'</span>]; <span class="id">intros</span>; <span class="id">destruct</span> <span class="id">L2</span> <span class="kwd">as</span> [|<span class="id">x2</span> <span class="id">L2'</span>]; <span class="id">tryfalse</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rew_list</span> <span class="kwd">in</span> <span class="id">E</span>. <span class="id">rew_listx</span>. <span class="id">simpl</span>. <span class="id">fequals</span>~. }<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#combine_eq">combine_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">LibList.fold_right</span></span> computes well. Here, we prove that it matches
+    Coq's standard library <span class="bracket"><span class="id">fold_right</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fold_right_eq">fold_right_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>,<br/>
+&nbsp;&nbsp;@<span class="id"><a href="https://coq.inria.fr/library/Coq.Lists.List.html#fold_right">List.fold_right</a></span> <span class="id">B</span> <span class="id">A</span> = @<span class="id"><a href="SLF.LibList.html#fold_right">LibList.fold_right</a></span> <span class="id">A</span> <span class="id">B</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>. <span class="id">intros</span> <span class="id">a</span> <span class="id">b</span> <span class="id">l</span>. <span class="id">induction</span> <span class="id">l</span>; <span class="id">simpl</span>; <span class="id">rew_listx</span>; <span class="id">fequals</span>. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibListExec.html#fold_right_eq">fold_right_eq</a></span> : <span class="id">rew_list_exec</span>.<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

@@ -1,0 +1,1517 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Repr</title>
+<meta name="description" content="Documentation of Coq module Repr" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Repr</h1>
+<div class="coq">
+<h1> Repr: Representation Predicates </h1>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibSepReference.html">LibSepReference</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.LibSepReference.html#ProgramSyntax">ProgramSyntax</a></span> <span class="id"><a href="SLF.LibSepReference.html#DemoPrograms">DemoPrograms</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.Basic.html">Basic</a></span>.<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">liblist_scope</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">n</span> <span class="id">m</span> : <span class="id">int</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">p</span> <span class="id">q</span> <span class="id">s</span> <span class="id">c</span> : <span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>.<br/>
+<br/>
+<h1> First Pass </h1>
+<br/>
+<div class="doc">The previous chapter (<span class="bracket"><span class="id">Basic</span></span>) covered simple programs that manipulate
+    individual mutable cells. This chapter focuses on the specification and
+    verification of programs manipulating mutable data structures like lists and
+    trees. In Separation Logic, such data structures are specified using
+    _representation predicates_.
+    A representation predicate is a heap predicate that describes a mutable data
+    structure. For example, the heap predicate <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p</span></span> describes a mutable
+    linked list whose head cell is at location <span class="bracket"><span class="id">p</span></span> and whose elements are
+    described by the Coq list <span class="bracket"><span class="id">L</span></span>. In this chapter, we will see how to define
+    <span class="bracket"><span class="id">MList</span></span> and how to use this predicate for specifying and verifying functions
+    that operate on mutable linked lists. We will also study representation
+    predicates for mutable trees, as well as for counter functions, which
+    feature an internal state.
+    As explained in the <span class="bracket"><span class="id">Preface</span></span>, this chapter, like all the following
+    ones, is structured in three parts:
+    - The _First Pass_ section presents the most important ideas only.
+    - The _More Details_ section presents additional material explaining in more
+      depth the meaning and the consequences of the key results. By default,
+      readers would eventually read all this material.
+    - The _Optional Material_ section contains more advanced material, for
+      readers who can afford to invest more time in the topic.
+    While going through proofs, we will introduce a few additional tactics.
+    - <span class="bracket"><span class="id">xpull</span></span> to extract pure facts and quantifiers from the LHS of <span class="bracket">==&gt;</span>.
+    - <span class="bracket"><span class="id">xchange</span> <span class="id">E</span></span> for exploiting a lemma <span class="bracket"><span class="id">E</span></span> with a conclusion of the
+      form <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H2</span></span> or <span class="bracket"><span class="id">H1</span> = <span class="id">H2</span></span>.
+    - <span class="bracket"><span class="id">xchange</span> &lt;- <span class="id">E</span></span> for exploiting an entailment <span class="bracket"><span class="id">H2</span> ==&gt; <span class="id">H1</span></span> in the case
+      <span class="bracket"><span class="id">E</span></span> is a lemma with a conclusion of the form <span class="bracket"><span class="id">H1</span> = <span class="id">H2</span></span>.
+    - <span class="bracket"><span class="id">xchanges</span></span> is a shorthand for <span class="bracket"><span class="id">xchange</span></span> followed with <span class="bracket"><span class="id">xsimpl</span></span>.
+    - <span class="bracket"><span class="id">xfun</span></span> to reason about function definitions.
+    - <span class="bracket"><span class="id">xtriple</span></span> to establish specifications for abstract functions.
+    - <span class="bracket"><span class="id">introv</span></span> (a TLC tactic) like <span class="bracket"><span class="id">intros</span></span> but takes as arguments
+      only the name of the hypotheses, not of all variables.
+    - <span class="bracket"><span class="id">rew_list</span></span> (a TLC tactic) to normalize list expressions.
+    Furthermore, TLC tactics and most x-tactics may be followed with a star
+    symbol to invoke <span class="bracket"><span class="id">eauto</span></span>. For example, <span class="bracket"><span class="id">xsimpl</span>*</span> is a shorthand for
+    <span class="bracket"><span class="id">xsimpl</span>; <span class="id">eauto</span></span>. The star symbol is used to make proof scripts more concise,
+    yet exercises can all be solved without this feature. </div>
+<br/>
+<h2> The List Representation Predicate </h2>
+<br/>
+<div class="doc">The implementation of mutable lists and trees involves the use of records.
+    For simplicity, field names are represented as natural numbers. For example,
+    to represent a list cell with a head and a tail field, we define <span class="bracket"><span class="id">head</span></span> as
+    the constant zero, and <span class="bracket"><span class="id">tail</span></span> as the constant one. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="head">head</a></span> : <span class="id"><a href="SLF.LibSepReference.html#field">field</a></span> := 0%<span class="id">nat</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="tail">tail</a></span> : <span class="id"><a href="SLF.LibSepReference.html#field">field</a></span> := 1%<span class="id">nat</span>.<br/>
+<br/>
+<div class="doc">The heap predicate <span class="bracket"><span class="id">p</span> ~~~&gt;`{ <span class="id">head</span> := <span class="id">x</span>; <span class="id">tail</span> := <span class="id">q</span> }</span> describes a record
+    allocated at location <span class="bracket"><span class="id">p</span></span>, with a head field storing <span class="bracket"><span class="id">x</span></span> and a tail field
+    storing <span class="bracket"><span class="id">q</span></span>. The arrow <span class="bracket">~~~&gt;</span> is provided by the framework for describing
+    records. The notation <span class="bracket">`{...}</span> is a handy notation for a list of pairs of
+    field names and values of arbitrary types. (Further details on the
+    formalization of records are presented in chapter <span class="bracket"><span class="id">Records</span></span>.)
+    A mutable list consists of a chain of cells. Each cell stores a tail pointer
+    that gives the location of the next cell in the chain. The last cell stores
+    the <span class="bracket"><span class="id">null</span></span> value in its tail field.
+    The heap predicate <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p</span></span> describes a list whose head cell is at
+    location <span class="bracket"><span class="id">p</span></span> and whose elements are described by the list <span class="bracket"><span class="id">L</span></span>. This
+    predicate is defined recursively on the structure of <span class="bracket"><span class="id">L</span></span>.
+    - If <span class="bracket"><span class="id">L</span></span> is empty, then <span class="bracket"><span class="id">p</span></span> is the null pointer.
+    - If <span class="bracket"><span class="id">L</span></span> is of the form <span class="bracket"><span class="id">x</span>::<span class="id">L'</span></span>, then <span class="bracket"><span class="id">p</span></span> is not null, the head field of
+      <span class="bracket"><span class="id">p</span></span> contains <span class="bracket"><span class="id">x</span></span>, and the tail field of <span class="bracket"><span class="id">p</span></span> contains a pointer <span class="bracket"><span class="id">q</span></span> such
+      that <span class="bracket"><span class="id">MList</span> <span class="id">L'</span> <span class="id">q</span></span> describes the tail of the list.
+    This definition is formalized as follows. </div>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="MList">MList</a></span> (<span class="id">L</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">L</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; \[<span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>]<br/>
+&nbsp;&nbsp;| <span class="id">x</span>::<span class="id">L'</span> =&gt; \<span class="kwd">exists</span> <span class="id">q</span>, (<span class="id">p</span> ~~~&gt; `{ <span class="id"><a href="SLF.Repr.html#head">head</a></span> := <span class="id">x</span>; <span class="id"><a href="SLF.Repr.html#tail">tail</a></span> := <span class="id">q</span>}) \* (<span class="id">MList</span> <span class="id">L'</span> <span class="id">q</span>)<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h2> Alternative Characterizations of <span class="bracket"><span class="id">MList</span></span> </h2>
+<br/>
+<div class="doc">Carrying out proofs directly with <span class="bracket"><span class="id">MList</span></span> can be slightly cumbersome, mainly
+    due to Coq's limited support for re-folding definitions. We find it more
+    practical to explicitly state equalities that paraphrase the definition of
+    <span class="bracket"><span class="id">MList</span></span>. There is one equality for the <span class="bracket"><span class="id">nil</span></span> case and one for the <span class="bracket"><span class="id">cons</span></span>
+    case. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="MList_nil">MList_nil</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">p</span>) = \[<span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="MList_cons">MList_cons</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">x</span> <span class="id">L'</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> (<span class="id">x</span>::<span class="id">L'</span>) <span class="id">p</span> =<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">q</span>, (<span class="id">p</span> ~~~&gt; `{ <span class="id"><a href="SLF.Repr.html#head">head</a></span> := <span class="id">x</span>; <span class="id"><a href="SLF.Repr.html#tail">tail</a></span> := <span class="id">q</span>}) \* (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L'</span> <span class="id">q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<div class="doc">In addition, it is also very useful in proofs to reformulate the definition
+    of <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p</span></span> in the form of a case analysis on whether the pointer <span class="bracket"><span class="id">p</span></span> is
+    null or not. This corresponds to the programming pattern
+    <span class="bracket"><span class="kwd">if</span> <span class="id">p</span> == <span class="id">null</span> <span class="kwd">then</span> ... <span class="kwd">else</span> ...</span>. This alternative characterization of
+    <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p</span></span> asserts the following.
+    - If <span class="bracket"><span class="id">p</span></span> is null, then <span class="bracket"><span class="id">L</span></span> is empty.
+    - Otherwise, <span class="bracket"><span class="id">L</span></span> decomposes as <span class="bracket"><span class="id">x</span>::<span class="id">L'</span></span>, the head field of <span class="bracket"><span class="id">p</span></span> contains <span class="bracket"><span class="id">x</span></span>,
+      and the tail field of <span class="bracket"><span class="id">p</span></span> contains a pointer <span class="bracket"><span class="id">q</span></span> such that <span class="bracket"><span class="id">MList</span> <span class="id">L'</span> <span class="id">q</span></span>
+      describes the tail of the list. </div>
+<br/>
+<div class="doc">The corresponding lemma, shown below, is stated using the
+    <span class="bracket"><span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id">X</span> <span class="kwd">else</span> <span class="id">Y</span></span> construction, which generalizes Coq's construction
+    <span class="bracket"><span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">X</span> <span class="kwd">else</span> <span class="id">Y</span></span> to discriminate over a proposition <span class="bracket"><span class="id">P</span></span> as opposed to a
+    boolean value <span class="bracket"><span class="id">b</span></span>. The <span class="bracket"><span class="id">If</span></span> construct leverages classical logic; it is
+    provided by the TLC library. The tactic <span class="bracket"><span class="id">case_if</span></span> is convenient for
+    performing the case analysis on whether <span class="bracket"><span class="id">P</span></span> is true or false. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="MList_if">MList_if</a></span> : <span class="kwd">forall</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) (<span class="id">L</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;==&gt; (<span class="id">If</span> <span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> \[<span class="id">L</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span> \<span class="kwd">exists</span> <span class="id">x</span> <span class="id">q</span> <span class="id">L'</span>, \[<span class="id">L</span> = <span class="id">x</span>::<span class="id">L'</span>]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\* (<span class="id">p</span> ~~~&gt; `{ <span class="id"><a href="SLF.Repr.html#head">head</a></span> := <span class="id">x</span>; <span class="id"><a href="SLF.Repr.html#tail">tail</a></span> := <span class="id">q</span>}) \* (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L'</span> <span class="id">q</span>)).<br/>
+<div class="doc">The proof is a bit technical: it may be skipped on a first reading. </div>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc">Note that the reciprocal entailment to the one stated in <span class="bracket"><span class="id">MList_if</span></span> is also
+    true, but we do not need it so we do not bother proving it here. In the rest
+    of the course, we will never unfold the definition <span class="bracket"><span class="id">MList</span></span>, but only work
+    with <span class="bracket"><span class="id">MList_nil</span></span>, <span class="bracket"><span class="id">MList_cons</span></span>, and <span class="bracket"><span class="id">MList_if</span></span>. We therefore make the
+    definition of <span class="bracket"><span class="id">MList</span></span> opaque to prevent Coq from performing undesired
+    simplifications. </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.Repr.html#MList">MList</a></span>.<br/>
+<br/>
+<h2> In-place Concatenation of Two Mutable Lists </h2>
+<br/>
+<div class="doc">The function <span class="bracket"><span class="id">append</span></span> expects two arguments: a pointer <span class="bracket"><span class="id">p1</span></span> to a nonempty
+    list, and a pointer <span class="bracket"><span class="id">p2</span></span> to another list, possibly empty. The function
+    updates the last cell from the first list in such a way that its tail points
+    to the head cell of <span class="bracket"><span class="id">p2</span></span>. After this operation, the pointer <span class="bracket"><span class="id">p1</span></span> points to a
+    list that corresponds to the concatenation of the two input lists.
+OCaml:
+    let rec append p1 p2 =
+      if p1.tail == null
+        then p1.tail &lt;- p2
+        else append p1.tail p2
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="append">append</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">p1</span> '<span class="id">p2</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">q1</span> = '<span class="id">p1</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">q1</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> '<span class="id">p1</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> := '<span class="id">p2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span> '<span class="id">f</span> '<span class="id">q1</span> '<span class="id">p2</span> }&gt;.<br/>
+<br/>
+<div class="doc">The append function is specified and verified as shown below. The proof
+    pattern is representative of that of many list-manipulating functions, so it
+    is essential that you take the time to play through every step of this
+    proof. Several exercises will require a very similar proof pattern. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_append">triple_append</a></span> : <span class="kwd">forall</span> (<span class="id">L1</span> <span class="id">L2</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">p1</span> <span class="id">p2</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">p1</span> &lt;&gt; <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#append">append</a></span> <span class="id">p1</span> <span class="id">p2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L1</span> <span class="id">p1</span> \* <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L2</span> <span class="id">p2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> _ =&gt; <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> (<span class="id">L1</span>++<span class="id">L2</span>) <span class="id">p1</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+<div class="doc">The TLC tactic <span class="bracket"><span class="id">introv</span></span> is very convenient for providing explicit names for
+    hypotheses without having to provide names for the variables already named
+    in the lemma statement. </div>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>.<br/>
+<div class="doc">The induction principle provides a hypothesis for the tail of <span class="bracket"><span class="id">L1</span></span>. The
+    predicate <span class="bracket"><span class="id">list_sub</span> <span class="id">L1'</span> <span class="id">L1</span></span> asserts that <span class="bracket"><span class="id">L1</span></span> decomposes as <span class="bracket"><span class="id">x</span>::<span class="id">L1'</span></span> for
+    some <span class="bracket"><span class="id">x</span></span>. </div>
+&nbsp;&nbsp;<span class="id">gen</span> <span class="id">p1</span>. <span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id"><a href="SLF.LibList.html#list_sub">list_sub</a></span> <span class="id">L1</span>. <span class="id">intros</span>. <span class="id">xwp</span>.<br/>
+<div class="doc">To begin the proof, we reveal the head cell of <span class="bracket"><span class="id">p1</span></span>, exploiting the
+    assumption that <span class="bracket"><span class="id">p1</span> &lt;&gt; <span class="id">null</span></span>. </div>
+&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id"><a href="SLF.Repr.html#MList_if">MList_if</a></span> <span class="id">p1</span>). <span class="id">case_if</span>.<br/>
+<div class="doc">Using <span class="bracket"><span class="id">xpull</span></span>, we extract the existentially quantified variables: we let
+    <span class="bracket"><span class="id">q1</span></span> denote the tail of <span class="bracket"><span class="id">p1</span></span>, <span class="bracket"><span class="id">x</span></span> the head element of <span class="bracket"><span class="id">L1</span></span>, and <span class="bracket"><span class="id">L1'</span></span> the
+    tail of <span class="bracket"><span class="id">L1</span></span>. </div>
+&nbsp;&nbsp;<span class="id">xpull</span>.<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">intros</span> -&gt;</span> is a shorthand for <span class="bracket"><span class="id">intros</span> <span class="id">E</span>; <span class="id">rewrite</span> <span class="id">E</span>; <span class="id">clear</span> <span class="id">E</span></span>. </div>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">q1</span> <span class="id">L1'</span> -&gt;.<br/>
+<div class="doc">We then reason about the if statement. </div>
+&nbsp;&nbsp;<span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">xif</span>; <span class="id">intros</span> <span class="id">Cq1</span>.<br/>
+<div class="doc">If <span class="bracket"><span class="id">q1</span></span> is null, then <span class="bracket"><span class="id">L1'</span></span> is empty. </div>
+&nbsp;&nbsp;{ <span class="id">xchange</span> (<span class="id"><a href="SLF.Repr.html#MList_if">MList_if</a></span> <span class="id">q1</span>). <span class="id">case_if</span>. <span class="id">xpull</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> -&gt;.<br/>
+<div class="doc">In this case, we reason about the assignment, then we fold back the head
+    cell. To that end, we exploit the tactic <span class="bracket"><span class="id">xchange</span> &lt;- <span class="id">MList_cons</span></span>, which is
+    similar to <span class="bracket"><span class="id">xchange</span> <span class="id">MList_cons</span></span> but exploits the equality asserted by
+    <span class="bracket"><span class="id">MList_cons</span></span> in the reverse direction. </div>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xapp</span>. <span class="id">xchange</span> &lt;- <span class="id"><a href="SLF.Repr.html#MList_cons">MList_cons</a></span>.<br/>
+<div class="doc">Above, the tactic <span class="bracket"><span class="id">xchange</span></span> discharges the goal because the LHS, after the
+    operation, matches the RHS. To see the details, change the line of script
+    to: <span class="bracket"><span class="id">xapp</span>. <span class="id">eapply</span> <span class="id">himpl_trans</span>. <span class="id">xchange</span> &lt;- <span class="id">MList_cons</span>. <span class="id">apply</span> <span class="id">himpl_refl</span>.</span> </div>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+<div class="doc">Otherwise, if <span class="bracket"><span class="id">q1</span></span> is not null, we reason about the recursive call using the
+    induction hypothesis; then we re-fold the head cell. </div>
+&nbsp;&nbsp;{ <span class="id">xapp</span>. <span class="id">xchange</span> &lt;- <span class="id"><a href="SLF.Repr.html#MList_cons">MList_cons</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<h2> Smart Constructors for Linked Lists </h2>
+<br/>
+<div class="doc">We next introduce two smart constructors for linked lists, called <span class="bracket"><span class="id">mnil</span></span> and
+    <span class="bracket"><span class="id">mcons</span></span>. The operation <span class="bracket"><span class="id">mnil</span>()</span> creates an empty list. Its implementation
+    simply returns the value <span class="bracket"><span class="id">null</span></span>. Its specification asserts that the return
+    value is a pointer <span class="bracket"><span class="id">p</span></span> such that <span class="bracket"><span class="id">MList</span> <span class="id">nil</span> <span class="id">p</span></span>. In the specification below,
+    recall that <span class="bracket"><span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">H</span></span> is a notation for
+    <span class="bracket"><span class="kwd">fun</span> (<span class="id">r</span>:<span class="id">val</span>) =&gt; \<span class="kwd">exists</span> (<span class="id">p</span>:<span class="id">loc</span>), \[<span class="id">r</span> = <span class="id">val_loc</span> <span class="id">p</span>] \* <span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mnil">mnil</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">u</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#null">null</a></span> }&gt;.<br/>
+<br/>
+<div class="doc">Note: in theory, we could present <span class="bracket"><span class="id">mnil</span></span> as a constant rather than as a
+    function that takes unit as argument. However, viewing it as a function like
+    all the other example programs helps keep the framework minimal. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_mnil">triple_mnil</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mnil">mnil</a></span> ())<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">p</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>.<br/>
+<div class="doc">We are requested to prove that, under the empty precondition, the value
+    <span class="bracket"><span class="id">null</span></span> satisfies the postcondition
+    <span class="bracket"><span class="kwd">fun</span> (<span class="id">r</span>:<span class="id">val</span>) =&gt; \<span class="kwd">exists</span> (<span class="id">p</span>:<span class="id">loc</span>), \[<span class="id">r</span> = <span class="id">val_loc</span> <span class="id">p</span>] \* (<span class="id">MList</span> <span class="id">nil</span> <span class="id">p</span>)</span>. As the
+    tactic <span class="bracket"><span class="id">xval</span></span> shows, this is equivalent to proving that the precondition
+    <span class="bracket">\[]</span> entails <span class="bracket"><span class="kwd">exists</span> <span class="id">p</span>, \[<span class="id">null</span> = <span class="id">val_loc</span> <span class="id">p</span>] \* (<span class="id">MList</span> <span class="id">nil</span> <span class="id">p</span>))</span>. </div>
+&nbsp;&nbsp;<span class="id">xval</span>.<br/>
+<div class="doc">To conclude the proof, it suffices to instantiate <span class="bracket"><span class="id">p</span></span> with <span class="bracket"><span class="id">null</span></span>, and to
+    argue that <span class="bracket"><span class="id">MList</span> <span class="id">nil</span> <span class="id">null</span></span> can created out of thin air. This is indeed true
+    because <span class="bracket"><span class="id">MList</span> <span class="id">nil</span> <span class="id">null</span></span> is equivalent to <span class="bracket">\[]</span>. The first step is to obtain
+    an explicit statement of this equivalence, in the form of an hypothesis
+    named <span class="bracket"><span class="id">E</span></span>. By instantiating the lemma <span class="bracket"><span class="id">MList_nil</span></span>, which asserts that
+    <span class="bracket"><span class="kwd">forall</span> <span class="id">p</span>, <span class="id">MList</span> <span class="id">nil</span> <span class="id">p</span> = \[<span class="id">p</span> = <span class="id">null</span>]</span>, we obtain the equality
+    <span class="bracket"><span class="id">MList</span> <span class="id">nil</span> <span class="id">null</span> = \[<span class="id">null</span> = <span class="id">null</span>]</span>. </div>
+&nbsp;&nbsp;<span class="id">generalize</span> (<span class="id"><a href="SLF.Repr.html#MList_nil">MList_nil</a></span> <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>). <span class="id">intros</span> <span class="id">E</span>.<br/>
+<div class="doc">Then, we invoke <span class="bracket"><span class="id">xchange</span> &lt;- <span class="id">E</span></span>. In exchange for proving <span class="bracket"><span class="id">null</span> = <span class="id">null</span></span>, this
+    tactic replaces the empty heap predicate <span class="bracket">\[]</span> with <span class="bracket"><span class="id">MList</span> <span class="id">nil</span> <span class="id">null</span></span>. </div>
+&nbsp;&nbsp;<span class="id">xchange</span> &lt;- <span class="id">E</span>. { <span class="id">auto</span>. }<br/>
+<div class="doc">At this stage, the tactic <span class="bracket"><span class="id">xsimpl</span></span> is able to automatically instantiate <span class="bracket"><span class="id">p</span></span>
+    with <span class="bracket"><span class="id">null</span></span>, and <span class="bracket"><span class="id">auto</span></span> checks that <span class="bracket"><span class="id">null</span> = <span class="id">null</span></span>. </div>
+&nbsp;&nbsp;&nbsp;<span class="id">xsimpl</span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The proof above can be greatly shortened by using the tactic <span class="bracket"><span class="id">xchanges</span></span>,
+    which is a shorthand for <span class="bracket"><span class="id">xchange</span> &lt;- <span class="id">E</span></span> followed by <span class="bracket"><span class="id">xsimpl</span></span>. In fact, we
+    even use <span class="bracket"><span class="id">xchanges</span>* &lt;- <span class="id">E</span></span>, to invoke <span class="bracket"><span class="id">xchanges</span> &lt;- <span class="id">E</span></span> followed by <span class="bracket"><span class="id">eauto</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_mnil'</span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mnil">mnil</a></span> ())<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">p</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">xwp</span>. <span class="id">xval</span>. <span class="id">xchanges</span>* &lt;- (<span class="id"><a href="SLF.Repr.html#MList_nil">MList_nil</a></span> <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>). Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">triple_mnil</span> : <span class="id">triple</span>.<br/>
+<br/>
+<div class="doc">Observe that the specification <span class="bracket"><span class="id">triple_mnil</span></span> does not mention the <span class="bracket"><span class="id">null</span></span>
+    pointer anywhere. Hence, this specification abstracts away from the
+    implementation details of how mutable lists are represented internally. </div>
+<br/>
+<div class="doc">The operation <span class="bracket"><span class="id">mcons</span> <span class="id">x</span> <span class="id">q</span></span> creates a fresh list cell, with <span class="bracket"><span class="id">x</span></span> in the head
+    field and <span class="bracket"><span class="id">q</span></span> in the tail. Its implementation allocates and initializes a
+    fresh record made of two fields. The allocation operation leverages the
+    allocation construct written <span class="bracket">`{ <span class="id">head</span> := '<span class="id">x</span>; <span class="id">tail</span> := '<span class="id">q</span> }</span> in the code. This
+    construct is in fact a notation for a primitive operation called
+    <span class="bracket"><span class="id">val_new_hrecord_2</span></span>. The details of record constructions are explained in
+    the chapter <span class="bracket"><span class="kwd">Record</span></span>. There is no need to understand the details at
+    this stage. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mcons">mcons</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">x</span> '<span class="id">q</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`{ <span class="id"><a href="SLF.Repr.html#head">head</a></span> := '<span class="id">x</span>; <span class="id"><a href="SLF.Repr.html#tail">tail</a></span> := '<span class="id">q</span> } }&gt;.<br/>
+<br/>
+<div class="doc">The operation <span class="bracket"><span class="id">mcons</span></span> admits two specifications. The first one says that it
+    produces a record described with a record heap predicate. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_mcons">triple_mcons</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mcons">mcons</a></span> <span class="id">x</span> <span class="id">q</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~~&gt; `{ <span class="id"><a href="SLF.Repr.html#head">head</a></span> := <span class="id">x</span> ; <span class="id"><a href="SLF.Repr.html#tail">tail</a></span> := <span class="id">q</span> }).<br/>
+<br/>
+<div class="doc">To prove this lemma, we need to know that the record allocation operation is
+    in fact a notation for a call to <span class="bracket"><span class="id">val_new_hrecord_2</span></span>, hence we need to
+    invoke a library lemma called <span class="bracket"><span class="id">triple_new_hrecord_2</span></span> for reasoning about
+    this call. (Don't worry: this proof pattern will not appear in exercises!)
+    </div>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">xwp</span>. <span class="id">xapp</span> <span class="id"><a href="SLF.LibSepReference.html#triple_new_hrecord_2">triple_new_hrecord_2</a></span>; <span class="id">auto</span>. <span class="id">xsimpl</span>*. Qed.</div></details>
+<br/>
+<div class="doc">The second specification asserts that <span class="bracket"><span class="id">mcons</span></span> can be used to extend a
+    mutable list. It assumes that the argument <span class="bracket"><span class="id">q</span></span> comes with a list
+    representation of the form <span class="bracket"><span class="id">Mlist</span> <span class="id">q</span> <span class="id">L</span></span>, and it specifies that the function
+    <span class="bracket"><span class="id">mcons</span></span> produces the representation predicate <span class="bracket"><span class="id">Mlist</span> <span class="id">p</span> (<span class="id">x</span>::<span class="id">L</span>)</span>. This second
+    specification is derivable from the first one, by folding the representation
+    predicate <span class="bracket"><span class="id">MList</span></span> using the tactic <span class="bracket"><span class="id">xchange</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_mcons'</span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">x</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mcons">mcons</a></span> <span class="id">x</span> <span class="id">q</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">q</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> (<span class="id">x</span>::<span class="id">L</span>) <span class="id">p</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xapp</span> <span class="id"><a href="SLF.Repr.html#triple_mcons">triple_mcons</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">p</span>. <span class="id">xchange</span> &lt;- <span class="id"><a href="SLF.Repr.html#MList_cons">MList_cons</a></span>. <span class="id">xsimpl</span>*.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">In practice, this second specification is more often useful than the first
+    one, hence we register it in the database for <span class="bracket"><span class="id">xapp</span></span>. It remains possible to
+    invoke <span class="bracket"><span class="id">xapp</span> <span class="id">triple_mcons</span></span> to exploit the first specification, where needed.
+    </div>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">triple_mcons'</span> : <span class="id">triple</span>.<br/>
+<br/>
+<div class="doc">In what follows, we consider several classic operations on mutable lists,
+    each illustrating an idiomatic proof pattern. </div>
+<br/>
+<h2> Copy Function for Lists </h2>
+<br/>
+<div class="doc">The function <span class="bracket"><span class="id">mcopy</span></span> takes a mutable linked list and builds an independent
+    copy of it, with the help of the functions <span class="bracket"><span class="id">mnil</span></span> and <span class="bracket"><span class="id">mcons</span></span>.
+OCaml:
+    let rec mcopy p =
+      if p == null
+        then mnil ()
+        else mcons (p.head) (mcopy p.tail)
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mcopy">mcopy</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> <span class="id"><a href="SLF.Repr.html#mnil">mnil</a></span> ()<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">x</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#head">head</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">q</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">q2</span> = ('<span class="id">f</span> '<span class="id">q</span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#mcons">mcons</a></span> '<span class="id">x</span> '<span class="id">q2</span> }&gt;.<br/>
+<br/>
+<div class="doc">The precondition of <span class="bracket"><span class="id">mcopy</span></span> requires a linked list described as
+    <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p</span></span>. The postcondition asserts that the function returns a pointer
+    <span class="bracket"><span class="id">p'</span></span> and a list described as <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p'</span></span>, in addition to the original list
+    <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p</span></span>. The two lists are totally disjoint and independent, as captured
+    by the separating conjunction symbol (the star). </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_mcopy">triple_mcopy</a></span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mcopy">mcopy</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p'</span> =&gt; (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>) \* (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p'</span>)).<br/>
+<br/>
+<div class="doc">The proof structure is like the previous ones. While playing the script, try
+    to spot the places where - <span class="bracket"><span class="id">mnil</span></span> produces an empty list of the form
+    <span class="bracket"><span class="id">MList</span> <span class="id">nil</span> <span class="id">p'</span></span>, - the recursive call produces a list of the form
+    <span class="bracket"><span class="id">MList</span> <span class="id">L'</span> <span class="id">q'</span></span>, and - <span class="bracket"><span class="id">mcons</span></span> produces a list of the form <span class="bracket"><span class="id">MList</span> (<span class="id">x</span>::<span class="id">L'</span>) <span class="id">p'</span></span>.
+    </div>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">gen</span> <span class="id">p</span>. <span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id"><a href="SLF.LibList.html#list_sub">list_sub</a></span> <span class="id">L</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>. <span class="id">xapp</span>. <span class="id">xchange</span> <span class="id"><a href="SLF.Repr.html#MList_if">MList_if</a></span>. <span class="id">xif</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">C</span>.<br/>
+<div class="doc">Note that <span class="bracket"><span class="id">C</span></span> is actually <span class="bracket"><span class="id">val_loc</span> <span class="id">p</span> = <span class="id">val_loc</span> <span class="id">null</span></span>, and not simply
+    <span class="bracket"><span class="id">p</span> = <span class="id">null</span></span>. This explains why a call to <span class="bracket"><span class="id">subst</span></span> does nothing. If needed, use
+    the TLC tactic, <span class="bracket"><span class="id">inverts</span> <span class="id">C</span></span> or <span class="bracket"><span class="id">invert</span> <span class="id">C</span></span> to exploit the equality. In this
+    specific proof, though, we don't need that. </div>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">case_if</span>. <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xpull</span>. <span class="id">intros</span> <span class="id">E</span>. <span class="id">subst</span> <span class="id">L</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xapp</span>. <span class="id">xsimpl</span>. { <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">xchange</span> &lt;- <span class="id"><a href="SLF.Repr.html#MList_nil">MList_nil</a></span>. <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">C</span>. <span class="id">case_if</span>. <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xpull</span>. <span class="id">intros</span> <span class="id">x</span> <span class="id">q</span> <span class="id">L'</span> <span class="id">E</span>. <span class="id">subst</span> <span class="id">L</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">intros</span> <span class="id">q'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xapp</span>. <span class="id">intros</span> <span class="id">p'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xchange</span> &lt;- <span class="id"><a href="SLF.Repr.html#MList_cons">MList_cons</a></span>. <span class="id">xsimpl</span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">A Coq expert would typically write the same proof script in a more compact
+    fashion, as follows. Recall that the token <span class="bracket">-&gt;</span> can be provided instead of a
+    fresh name to indicate on-the-fly substitution, and that the star token
+    after a tactic indicates a call to <span class="bracket"><span class="id">eauto</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_mcopy'</span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mcopy">mcopy</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p'</span> =&gt; (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>) \* (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p'</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">gen</span> <span class="id">p</span>. <span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id"><a href="SLF.LibList.html#list_sub">list_sub</a></span> <span class="id">L</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>. <span class="id">xapp</span>. <span class="id">xchange</span> <span class="id"><a href="SLF.Repr.html#MList_if">MList_if</a></span>. <span class="id">xif</span>; <span class="id">intros</span> <span class="id">C</span>; <span class="id">case_if</span>; <span class="id">xpull</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> -&gt;. <span class="id">xapp</span>. <span class="id">xsimpl</span>*. <span class="id">subst</span>. <span class="id">xchange</span>* &lt;- <span class="id"><a href="SLF.Repr.html#MList_nil">MList_nil</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">x</span> <span class="id">q</span> <span class="id">L'</span> -&gt;. <span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">intros</span> <span class="id">q'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xapp</span>. <span class="id">intros</span> <span class="id">p'</span>. <span class="id">xchange</span> &lt;- <span class="id"><a href="SLF.Repr.html#MList_cons">MList_cons</a></span>. <span class="id">xsimpl</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<h2> Length Function for Lists </h2>
+<br/>
+<div class="doc">The function <span class="bracket"><span class="id">mlength</span></span> computes the length of a mutable linked list.
+OCaml:
+    let rec mlength p =
+      if p == null
+        then 0
+        else 1 + mlength p.tail
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mlength">mlength</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> 0<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span> (<span class="kwd">let</span> '<span class="id">q</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n</span> = '<span class="id">f</span> '<span class="id">q</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">n</span> + 1) }&gt;.<br/>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (triple_mlength)
+    Prove the correctness of the function <span class="bracket"><span class="id">mlength</span></span>. Hint: use the tactic
+    <span class="bracket"><span class="id">rew_list</span></span> to normalize list expressions -- in particular, to prove
+    <span class="bracket"><span class="id">length</span> <span class="id">L'</span> + 1 = <span class="id">length</span> (<span class="id">x</span> :: <span class="id">L'</span>)</span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_mlength">triple_mlength</a></span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mlength">mlength</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>)] \* (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Alternative Length Function for Lists </h2>
+<br/>
+<div class="doc">In this section, we consider an alternative implementation of <span class="bracket"><span class="id">mlength</span></span> that
+    uses an auxiliary reference cell to keep track of the number of cells
+    traversed so far. The list is traversed recursively, incrementing the
+    contents of the reference once for every cell.
+OCaml:
+    let rec listacc c p =
+      if p == null
+        then ()
+        else (incr c; listacc c p.tail)
+    let mlength' p =
+      let c = ref 0 in
+      listacc c p;
+      !c
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="acclength">acclength</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">c</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">p</span> &lt;&gt; <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span> <span class="kwd">then</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Basic.html#incr">incr</a></span> '<span class="id">c</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">q</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">f</span> '<span class="id">c</span> '<span class="id">q</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span> }&gt;.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">mlength'</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">c</span> = <span class="id">ref</span> 0 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#acclength">acclength</a></span> '<span class="id">c</span> '<span class="id">p</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Basic.html#get_and_free">get_and_free</a></span> '<span class="id">c</span> }&gt;.<br/>
+<br/>
+<div class="doc">(Recall that <span class="bracket"><span class="id">get_and_free</span></span> was defined in chapter <span class="bracket"><span class="id">Basic</span></span>. </div>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (triple_mlength')
+    Prove the correctness of the function <span class="bracket"><span class="id">mlength'</span></span>. Hint: start by stating a
+    lemma <span class="bracket"><span class="id">triple_acclength</span></span> expressing the specification of the recursive
+    function <span class="bracket"><span class="id">acclength</span></span>. Make sure to generalize the appropriate variables
+    before applying the well-founded induction tactic. Then complete the proof
+    of the specification <span class="bracket"><span class="id">triple_mlength'</span></span>, using <span class="bracket"><span class="id">xapp</span> <span class="id">triple_acclength</span></span> to
+    reason about the call to the auxiliary function. Recall that <span class="bracket"><span class="id">rew_list</span></span> can
+    be used to simplify <span class="bracket"><span class="id">length</span> (<span class="id">x</span> :: <span class="id">L'</span>)</span> into <span class="bracket"><span class="id">length</span> <span class="id">L'</span> + 1</span> and that <span class="bracket"><span class="id">math</span></span>
+    can be used to prove arithmetic equalities such as
+    <span class="bracket">(<span class="id">n</span> + 1) + <span class="id">m</span> = <span class="id">n</span> + (<span class="id">m</span> + 1)</span>. </h3>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_mlength'</span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id">mlength'</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>)] \* (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Free Function for Lists </h2>
+<br/>
+<div class="doc">The operation <span class="bracket"><span class="id">mfree</span></span> deallocates all the cells in a given list. Each cell
+    consists of a record that can be deallocated using the primitive operation
+    <span class="bracket"><span class="id">delete</span></span>. The deallocation of a list is implemented by recursively
+    traversing the list, invoking <span class="bracket"><span class="id">delete</span></span> on each cell after reading its tail
+    pointer.
+OCaml:
+    let rec mfree p =
+      if p != null then begin
+        let q = p.tail in
+        delete p;
+        mfree q
+      end
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mfree">mfree</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">p</span> &lt;&gt; <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span> <span class="kwd">then</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">q</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">delete</span> '<span class="id">p</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">f</span> '<span class="id">q</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span> }&gt;.<br/>
+<br/>
+<div class="doc">The precondition of <span class="bracket"><span class="id">mfree</span></span> requires a full list <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p</span></span>. The
+    postcondition is empty: the entire list is destroyed. </div>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (Triple_mfree)
+    Verify the function <span class="bracket"><span class="id">mfree</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_mfree">triple_mfree</a></span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mfree">mfree</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> _ =&gt; \[]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> In-Place Reversal Function for Lists </h2>
+<br/>
+<div class="doc">The function <span class="bracket"><span class="id">mrev</span></span> takes as argument a pointer to a mutable list, and
+    returns a pointer on the reverse list, that is, a list with elements in the
+    reverse order. The cells from the input list are reused for constructing the
+    output list: the operation is said to be "in place".
+OCaml:
+    let rec mrev_aux p1 p2 =
+      if p2 == null
+        then p1
+        else (let p3 = p2.tail in
+              p2.tail &lt;- p1;
+              mrev_aux p2 p3)
+    let mrev p =
+      mrev_aux null p
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mrev_aux">mrev_aux</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">p1</span> '<span class="id">p2</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">p2</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> '<span class="id">p1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span> (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p3</span> = '<span class="id">p2</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">p2</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> := '<span class="id">p1</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">f</span> '<span class="id">p2</span> '<span class="id">p3</span>) }&gt;.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mrev">mrev</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#mrev_aux">mrev_aux</a></span> <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span> '<span class="id">p</span> }&gt;.<br/>
+<br/>
+<h3> Exercise: 4 stars, standard, optional (triple_mrev)
+    Prove the correctness of the functions <span class="bracket"><span class="id">mrev_aux</span></span> and <span class="bracket"><span class="id">mrev</span></span>. Hint: here
+    again, start by stating a lemma <span class="bracket"><span class="id">triple_mrev_aux</span></span> expressing the
+    specification of the recursive function <span class="bracket"><span class="id">mrev_aux</span></span>. Make sure to generalize
+    the appropriate variables before applying the well-founded induction tactic.
+    Then complete the proof of <span class="bracket"><span class="id">triple_mrev</span></span>, using <span class="bracket"><span class="id">xapp</span> <span class="id">triple_mrev_aux</span></span>.
+    Hint: in <span class="bracket"><span class="id">triple_mrev</span></span>, you will need to create an empty list out of thin
+    air, using <span class="bracket"><span class="id">xchange</span> &lt;- (<span class="id">MList_nil</span> <span class="id">null</span>)</span>. Also, make sure to call <span class="bracket"><span class="id">rew_list</span></span>
+    before <span class="bracket"><span class="id">xsimpl</span></span>; otherwise <span class="bracket"><span class="id">xsimpl</span></span> might not guess the right existential
+    variable. The syntax <span class="bracket"><span class="id">xsimpl</span> <span class="id">v</span></span> is also available if you want to specify the
+    witness <span class="bracket"><span class="id">x</span></span> inside a goal of the form <span class="bracket"><span class="id">H1</span> ==&gt; (\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">H2</span>)</span>. </h3>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_mrev">triple_mrev</a></span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mrev">mrev</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">q</span> =&gt; <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> (<span class="id"><a href="SLF.LibList.html#rev">rev</a></span> <span class="id">L</span>) <span class="id">q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h1> More Details </h1>
+<br/>
+<div class="doc">The rest of this chapter presents the formal verification of more advanced
+    data structures and algorithms. The remaining chapters in the book explain
+    how to construct the program verification framework that we have been using
+    so far.
+    The two aspects are completely orthogonal. Thus, if you have time and are
+    interested in the practical aspects of program verification, you should
+    complete the present chapter before moving on. On the other hand, if you are
+    eager to dive into the construction of Separation Logic, then you may safely
+    move on to the next chapter and come back to this later. </div>
+<br/>
+<h2> A Stack Represented as a List and a Size </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="SizedStack">SizedStack</a></span>.<br/>
+<br/>
+<div class="doc">In this section, we consider the implementation of a mutable stack featuring
+    a constant-time access to the size of the stack. This stack structure
+    consists of a 2-field record storing a pointer to a mutable linked list plus
+    an integer recording the length of that list. The implementation includes a
+    function <span class="bracket"><span class="id">create</span></span> to allocate an empty stack, a function <span class="bracket"><span class="id">sizeof</span></span> for
+    reading the size, and functions <span class="bracket"><span class="id">push</span></span>, <span class="bracket"><span class="id">top</span></span>, and <span class="bracket"><span class="id">pop</span></span> for manipulating
+    the top of the stack.
+OCaml:
+    type 'a stack = {
+      data : 'a list;
+      size : int }
+    let create () =
+      { data = null;
+        size = 0 }
+    let sizeof s =
+      s.size
+    let push p x =
+      s.data &lt;- mcons x s.data;
+      s.size &lt;- s.size + 1
+    let top s =
+      let p = s.data in
+      p.head
+    let pop s =
+      let p = s.data in
+      let x = p.head in
+      let q = p.tail in
+      delete p;
+      s.data &lt;- q in
+      s.size &lt;- s.size - 1;
+      x
+</div>
+<br/>
+<div class="doc">The constants <span class="bracket"><span class="id">data</span></span> and <span class="bracket"><span class="id">size</span></span> are introduced as identifiers for the record
+    fields of the type <span class="bracket">'<span class="id">a</span> <span class="id">stack</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="SizedStack.data">data</a></span> : <span class="id"><a href="SLF.LibSepReference.html#field">field</a></span> := 0%<span class="id">nat</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="SizedStack.size">size</a></span> : <span class="id"><a href="SLF.LibSepReference.html#field">field</a></span> := 1%<span class="id">nat</span>.<br/>
+<br/>
+<div class="doc">The representation predicate for the stack takes the form <span class="bracket"><span class="id">Stack</span> <span class="id">L</span> <span class="id">s</span></span>, where
+    <span class="bracket"><span class="id">s</span></span> denotes the location of the record describing the stack and <span class="bracket"><span class="id">L</span></span> denotes
+    the list of items stored in the stack. The underlying mutable list is
+    described as <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p</span></span>, where <span class="bracket"><span class="id">p</span></span> is the location <span class="bracket"><span class="id">p</span></span> stored in the first
+    field of the record. The definition of <span class="bracket"><span class="id">Stack</span></span> is as follows. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="SizedStack.Stack">Stack</a></span> (<span class="id">L</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">s</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">p</span>, <span class="id">s</span> ~~~&gt;`{ <span class="id"><a href="SLF.Repr.html#SizedStack.data">data</a></span> := <span class="id">p</span>; <span class="id"><a href="SLF.Repr.html#SizedStack.size">size</a></span> := <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span> } \* (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>).<br/>
+<br/>
+<div class="doc">Observe that the predicate <span class="bracket"><span class="id">Stack</span></span> does not expose the location of the
+    mutable list; this location is existentially quantified in the definition.
+    It also does not expose the size of the stack, as this value can be obtained
+    from <span class="bracket"><span class="id">length</span> <span class="id">L</span></span>. Let's start with the specification and verification of
+    <span class="bracket"><span class="id">create</span></span> and <span class="bracket"><span class="id">sizeof</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="SizedStack.create">create</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">u</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`{ <span class="id"><a href="SLF.Repr.html#SizedStack.data">data</a></span> := <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>; <span class="id"><a href="SLF.Repr.html#SizedStack.size">size</a></span> := 0 } }&gt;.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="SizedStack.triple_create">triple_create</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#SizedStack.create">create</a></span> ())<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">s</span> =&gt; <span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">s</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>. <span class="id">xapp</span> <span class="id"><a href="SLF.LibSepReference.html#triple_new_hrecord_2">triple_new_hrecord_2</a></span>; <span class="id">auto</span>. <span class="id">intros</span> <span class="id">s</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span>. <span class="id">xsimpl</span>*. <span class="id">xchange</span>* &lt;- (<span class="id"><a href="SLF.Repr.html#MList_nil">MList_nil</a></span> <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>).<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The <span class="bracket"><span class="id">sizeof</span></span> operation returns the contents of the <span class="bracket"><span class="id">size</span></span> field of a stack.
+    </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="SizedStack.sizeof">sizeof</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.size">size</a></span> }&gt;.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="SizedStack.triple_sizeof">triple_sizeof</a></span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">s</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#SizedStack.sizeof">sizeof</a></span> <span class="id">s</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span> <span class="id">L</span> <span class="id">s</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>] \* <span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span> <span class="id">L</span> <span class="id">s</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span>. <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">p</span>. <span class="id">xapp</span>. <span class="id">xsimpl</span>*.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The <span class="bracket"><span class="id">push</span></span> operation extends the head of the list and increments the size
+    field. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="SizedStack.push">push</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">s</span> '<span class="id">x</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p</span> = '<span class="id">s</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.data">data</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p2</span> = <span class="id"><a href="SLF.Repr.html#mcons">mcons</a></span> '<span class="id">x</span> '<span class="id">p</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">s</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.data">data</a></span> := '<span class="id">p2</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n</span> = '<span class="id">s</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.size">size</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n2</span> = '<span class="id">n</span> + 1 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">s</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.size">size</a></span> := '<span class="id">n2</span> }&gt;.<br/>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (triple_push)
+    Prove the following specification for the <span class="bracket"><span class="id">push</span></span> operation. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="SizedStack.triple_push">triple_push</a></span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">s</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#SizedStack.push">push</a></span> <span class="id">s</span> <span class="id">x</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span> <span class="id">L</span> <span class="id">s</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">u</span> =&gt; <span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span> (<span class="id">x</span>::<span class="id">L</span>) <span class="id">s</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The <span class="bracket"><span class="id">pop</span></span> operation extracts the element at the head of the list, updates
+    the <span class="bracket"><span class="id">data</span></span> field to the tail of the list and decrements the size field. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="SizedStack.pop">pop</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">s</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p</span> = '<span class="id">s</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.data">data</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">x</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#head">head</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p2</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">delete</span> '<span class="id">p</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">s</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.data">data</a></span> := '<span class="id">p2</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n</span> = '<span class="id">s</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.size">size</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n2</span> = '<span class="id">n</span> - 1 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">s</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.size">size</a></span> := '<span class="id">n2</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">x</span> }&gt;.<br/>
+<br/>
+<h3> Exercise: 4 stars, standard, especially useful (triple_pop)
+    Prove the following specification for the <span class="bracket"><span class="id">pop</span></span> operation. Hint: You'll need
+    to unfold the definition of <span class="bracket"><span class="id">Stack</span></span> as in the proofs above, and at some
+    point you'll want to destruct <span class="bracket"><span class="id">L</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="SizedStack.triple_pop">triple_pop</a></span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">s</span>,<br/>
+&nbsp;&nbsp;<span class="id">L</span> &lt;&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#SizedStack.pop">pop</a></span> <span class="id">s</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span> <span class="id">L</span> <span class="id">s</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x</span> =&gt; \<span class="kwd">exists</span> <span class="id">L'</span>, \[<span class="id">L</span> = <span class="id">x</span>::<span class="id">L'</span>] \* <span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span> <span class="id">L'</span> <span class="id">s</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The <span class="bracket"><span class="id">top</span></span> operation extracts the element at the head of the list. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="SizedStack.top">top</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">s</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p</span> = '<span class="id">s</span>`.<span class="id"><a href="SLF.Repr.html#SizedStack.data">data</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#head">head</a></span> }&gt;.<br/>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (triple_top)
+    Prove the following specification for the <span class="bracket"><span class="id">top</span></span> operation. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="SizedStack.triple_top">triple_top</a></span> : <span class="kwd">forall</span> <span class="id">L</span> <span class="id">s</span>,<br/>
+&nbsp;&nbsp;<span class="id">L</span> &lt;&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#SizedStack.top">top</a></span> <span class="id">s</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span> <span class="id">L</span> <span class="id">s</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x</span> =&gt; \<span class="kwd">exists</span> <span class="id">L'</span>, \[<span class="id">L</span> = <span class="id">x</span>::<span class="id">L'</span>] \* <span class="id"><a href="SLF.Repr.html#SizedStack.Stack">Stack</a></span> <span class="id">L</span> <span class="id">s</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Repr.html#SizedStack">SizedStack</a></span>.<br/>
+<br/>
+<h2> Formalization of the Tree Representation Predicate <span class="bracket"><span class="id">MTree</span></span> </h2>
+<br/>
+<div class="doc">In this section, we generalize the ideas presented for linked lists to
+    binary trees that store integer values in their nodes. Just as mutable lists
+    are specified with respect to Coq's purely functional lists, mutable binary
+    trees are specified with respect to Coq trees.
+    Consider the following inductive definition of the type <span class="bracket"><span class="id">tree</span></span>. A leaf is
+    represented by the constructor <span class="bracket"><span class="id">Leaf</span></span>, and a node takes the form
+    <span class="bracket"><span class="id">Node</span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span></span>, where <span class="bracket"><span class="id">n</span></span> is an integer and <span class="bracket"><span class="id">T1</span></span> and <span class="bracket"><span class="id">T2</span></span> are its two
+    subtrees. </div>
+<br/>
+<span class="kwd">Inductive</span> <span class="id"><a name="tree">tree</a></span> : <span class="kwd">Type</span> :=<br/>
+&nbsp;&nbsp;| <span class="id"><a name="Leaf">Leaf</a></span> : <span class="id">tree</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="Node">Node</a></span> : <span class="id">int</span> -&gt; <span class="id">tree</span> -&gt; <span class="id">tree</span> -&gt; <span class="id">tree</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">T</span> : <span class="id"><a href="SLF.Repr.html#tree">tree</a></span>.<br/>
+<br/>
+<div class="doc">In a program manipulating a mutable tree, an empty tree is represented using
+    the <span class="bracket"><span class="id">null</span></span> pointer, and a node is represented in memory using a three-cell
+    record. The first field, "item", stores an integer. The other two fields,
+    "left" and "right", store pointers to the left and right subtrees,
+    respectively. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="item">item</a></span> : <span class="id"><a href="SLF.LibSepReference.html#field">field</a></span> := 0%<span class="id">nat</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="left">left</a></span> : <span class="id"><a href="SLF.LibSepReference.html#field">field</a></span> := 1%<span class="id">nat</span>.<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="right">right</a></span> : <span class="id"><a href="SLF.LibSepReference.html#field">field</a></span> := 2%<span class="id">nat</span>.<br/>
+<br/>
+<div class="doc">The heap predicate <span class="bracket"><span class="id">p</span> ~~~&gt;`{ <span class="id">item</span> := <span class="id">n</span>; <span class="id">left</span> := <span class="id">p1</span>; <span class="id">right</span> := <span class="id">p2</span> }</span> describes
+    a record allocated at location <span class="bracket"><span class="id">p</span></span>, storing the integer <span class="bracket"><span class="id">n</span></span> and the two
+    pointers <span class="bracket"><span class="id">p1</span></span> and <span class="bracket"><span class="id">p2</span></span>.
+    The representation predicate <span class="bracket"><span class="id">MTree</span> <span class="id">T</span> <span class="id">p</span></span>, of type <span class="bracket"><span class="id">hprop</span></span>, asserts that the
+    mutable tree structure with root at location <span class="bracket"><span class="id">p</span></span> describes the logical tree
+    <span class="bracket"><span class="id">T</span></span>. The predicate is defined recursively on the structure of <span class="bracket"><span class="id">T</span></span>.
+    - If <span class="bracket"><span class="id">T</span></span> is a <span class="bracket"><span class="id">Leaf</span></span>, then <span class="bracket"><span class="id">p</span></span> is the null pointer.
+    - If <span class="bracket"><span class="id">T</span></span> is a node <span class="bracket"><span class="id">Node</span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span></span>, then <span class="bracket"><span class="id">p</span></span> is not null and at location
+      <span class="bracket"><span class="id">p</span></span> one finds a record with field contents <span class="bracket"><span class="id">n</span></span>, <span class="bracket"><span class="id">p1</span></span> and <span class="bracket"><span class="id">p2</span></span>, with
+      <span class="bracket"><span class="id">MTree</span> <span class="id">T1</span> <span class="id">p1</span></span> and <span class="bracket"><span class="id">MTree</span> <span class="id">T2</span> <span class="id">p2</span></span> describing the two subtrees. </div>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="MTree">MTree</a></span> (<span class="id">T</span>:<span class="id"><a href="SLF.Repr.html#tree">tree</a></span>) (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">T</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.Repr.html#Leaf">Leaf</a></span> =&gt; \[<span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>]<br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.Repr.html#Node">Node</a></span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span> =&gt; \<span class="kwd">exists</span> <span class="id">p1</span> <span class="id">p2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~~&gt;`{ <span class="id"><a href="SLF.Repr.html#item">item</a></span> := <span class="id">n</span>; <span class="id"><a href="SLF.Repr.html#left">left</a></span> := <span class="id">p1</span>; <span class="id"><a href="SLF.Repr.html#right">right</a></span> := <span class="id">p2</span> })<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\* (<span class="id">MTree</span> <span class="id">T1</span> <span class="id">p1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\* (<span class="id">MTree</span> <span class="id">T2</span> <span class="id">p2</span>)<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h2> Alternative Characterization of <span class="bracket"><span class="id">MTree</span></span> </h2>
+<br/>
+<div class="doc">As for <span class="bracket"><span class="id">MList</span></span>, it is very useful for proofs to state three lemmas that
+    paraphrase the definition of <span class="bracket"><span class="id">MTree</span></span>. The first two lemmas correspond to the
+    folding/unfolding rules for leaves and nodes. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="MTree_Leaf">MTree_Leaf</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id"><a href="SLF.Repr.html#Leaf">Leaf</a></span> <span class="id">p</span>) = \[<span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="MTree_Node">MTree_Node</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> (<span class="id"><a href="SLF.Repr.html#Node">Node</a></span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>) <span class="id">p</span>) =<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">p1</span> <span class="id">p2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~~&gt;`{ <span class="id"><a href="SLF.Repr.html#item">item</a></span> := <span class="id">n</span>; <span class="id"><a href="SLF.Repr.html#left">left</a></span> := <span class="id">p1</span>; <span class="id"><a href="SLF.Repr.html#right">right</a></span> := <span class="id">p2</span> })<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\* (<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T1</span> <span class="id">p1</span>) \* (<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T2</span> <span class="id">p2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<div class="doc">The third lemma reformulates <span class="bracket"><span class="id">MTree</span> <span class="id">T</span> <span class="id">p</span></span> using a case analysis on whether
+    <span class="bracket"><span class="id">p</span></span> is the null pointer. This formulation matches the case analysis
+    typically performed in the code of functions that operates on trees. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="MTree_if">MTree_if</a></span> : <span class="kwd">forall</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) (<span class="id">T</span>:<span class="id"><a href="SLF.Repr.html#tree">tree</a></span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;==&gt; (<span class="id">If</span> <span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> \[<span class="id">T</span> = <span class="id"><a href="SLF.Repr.html#Leaf">Leaf</a></span>]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span> \<span class="kwd">exists</span> <span class="id">n</span> <span class="id">p1</span> <span class="id">p2</span> <span class="id">T1</span> <span class="id">T2</span>, \[<span class="id">T</span> = <span class="id"><a href="SLF.Repr.html#Node">Node</a></span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\* (<span class="id">p</span> ~~~&gt;`{ <span class="id"><a href="SLF.Repr.html#item">item</a></span> := <span class="id">n</span>; <span class="id"><a href="SLF.Repr.html#left">left</a></span> := <span class="id">p1</span>; <span class="id"><a href="SLF.Repr.html#right">right</a></span> := <span class="id">p2</span> })<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\* (<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T1</span> <span class="id">p1</span>) \* (<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T2</span> <span class="id">p2</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">destruct</span> <span class="id">T</span> <span class="kwd">as</span> [|<span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>].<br/>
+&nbsp;&nbsp;{ <span class="id">xchange</span> <span class="id"><a href="SLF.Repr.html#MTree_Leaf">MTree_Leaf</a></span>. <span class="id">intros</span> <span class="id">M</span>. <span class="id">case_if</span>. <span class="id">xsimpl</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">xchange</span> <span class="id"><a href="SLF.Repr.html#MTree_Node">MTree_Node</a></span>. <span class="id">intros</span> <span class="id">p1</span> <span class="id">p2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xchange</span> <span class="id"><a href="SLF.LibSepReference.html#hrecord_not_null">hrecord_not_null</a></span>. <span class="id">intros</span> <span class="id">N</span>. <span class="id">case_if</span>. <span class="id">xsimpl</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Beyond this point, the definition of <span class="bracket"><span class="id">Mtree</span></span> not longer needs to be
+    unfolded: we make it opaque. </div>
+<br/>
+<span class="kwd">Opaque</span> <span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span>.<br/>
+<br/>
+<h2> Additional Tooling for <span class="bracket"><span class="id">MTree</span></span> </h2>
+<br/>
+<div class="doc">For reasoning about recursive functions over trees, it is useful to exploit
+    the well-founded order associated with "immediate subtrees". Concretely,
+    <span class="bracket"><span class="id">tree_sub</span> <span class="id">T1</span> <span class="id">T</span></span> asserts that the tree <span class="bracket"><span class="id">T1</span></span> is either the left or the right
+    subtree of the tree <span class="bracket"><span class="id">T</span></span>. This order may be exploited for verifying recursive
+    functions over trees using the tactic <span class="bracket"><span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">tree_sub</span> <span class="id">T</span></span>. The
+    relation <span class="bracket"><span class="id">tree_sub</span></span> is defined as follows. </div>
+<br/>
+<span class="kwd">Inductive</span> <span class="id"><a name="tree_sub">tree_sub</a></span> : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> (<span class="id"><a href="SLF.Repr.html#tree">tree</a></span>) :=<br/>
+&nbsp;&nbsp;| <span class="id"><a name="tree_sub_1">tree_sub_1</a></span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">tree_sub</span> <span class="id">T1</span> (<span class="id"><a href="SLF.Repr.html#Node">Node</a></span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>)<br/>
+&nbsp;&nbsp;| <span class="id"><a name="tree_sub_2">tree_sub_2</a></span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">tree_sub</span> <span class="id">T2</span> (<span class="id"><a href="SLF.Repr.html#Node">Node</a></span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="tree_sub_wf">tree_sub_wf</a></span> : <span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id"><a href="SLF.Repr.html#tree_sub">tree_sub</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">T</span>. <span class="id">induction</span> <span class="id">T</span>; <span class="id">constructor</span>; <span class="id">intros</span> <span class="id">t'</span> <span class="id">H</span>; <span class="id">inversions</span>~ <span class="id">H</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">tree_sub_wf</span> : <span class="id">wf</span>.<br/>
+<br/>
+<div class="doc">For allocating fresh tree nodes as a 3-field record, we introduce the
+    operation <span class="bracket"><span class="id">mnode</span> <span class="id">n</span> <span class="id">p1</span> <span class="id">p2</span></span>, defined and specified as follows. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mnode">mnode</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#val_new_hrecord_3">val_new_hrecord_3</a></span> <span class="id"><a href="SLF.Repr.html#item">item</a></span> <span class="id"><a href="SLF.Repr.html#left">left</a></span> <span class="id"><a href="SLF.Repr.html#right">right</a></span>.<br/>
+<br/>
+<div class="doc">A first specification of <span class="bracket"><span class="id">mnode</span></span> describes the allocation of a record. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_mnode">triple_mnode</a></span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">p1</span> <span class="id">p2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mnode">mnode</a></span> <span class="id">n</span> <span class="id">p1</span> <span class="id">p2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~~&gt; `{ <span class="id"><a href="SLF.Repr.html#item">item</a></span> := <span class="id">n</span> ; <span class="id"><a href="SLF.Repr.html#left">left</a></span> := <span class="id">p1</span> ; <span class="id"><a href="SLF.Repr.html#right">right</a></span> := <span class="id">p2</span> }).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepReference.html#triple_new_hrecord_3">triple_new_hrecord_3</a></span>; <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<div class="doc">A second specification, derived from the first, asserts that, when provided
+    two subtrees <span class="bracket"><span class="id">T1</span></span> and <span class="bracket"><span class="id">T2</span></span> at locations <span class="bracket"><span class="id">p1</span></span> and <span class="bracket"><span class="id">p2</span></span>, the operation
+    <span class="bracket"><span class="id">mnode</span> <span class="id">n</span> <span class="id">p1</span> <span class="id">p2</span></span> builds, at a fresh location <span class="bracket"><span class="id">p</span></span>, a tree described by
+    <span class="bracket"><span class="id">Mtree</span> [<span class="id">Node</span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>] <span class="id">p</span></span>. Compared with the first specification, this second
+    specification is said to "transfer ownership" of the two subtrees. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (triple_mnode')
+    Prove the specification <span class="bracket"><span class="id">triple_mnode'</span></span> for node allocation. Because this
+    specification refines the previous specification <span class="bracket"><span class="id">triple_mnode</span></span>, the proof
+    should begin with <span class="bracket"><span class="id">xapp</span> <span class="id">triple_mnode</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_mnode'</span> : <span class="kwd">forall</span> <span class="id">T1</span> <span class="id">T2</span> <span class="id">n</span> <span class="id">p1</span> <span class="id">p2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mnode">mnode</a></span> <span class="id">n</span> <span class="id">p1</span> <span class="id">p2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T1</span> <span class="id">p1</span> \* <span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T2</span> <span class="id">p2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> (<span class="id"><a href="SLF.Repr.html#Node">Node</a></span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span>) <span class="id">p</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">triple_mnode'</span> : <span class="id">triple</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Similarly to what we had done for <span class="bracket"><span class="id">mnil</span></span>, we could implement a function
+    <span class="bracket"><span class="id">mleaf</span></span> that returns the <span class="bracket"><span class="id">null</span></span> pointer and derive a specification for it in
+    terms of <span class="bracket"><span class="id">MTree</span></span>. Instead, we will see through the next examples how one may
+    directly reason about occurrences of <span class="bracket"><span class="id">null</span></span> appearing in tree- manipulating
+    code, using <span class="bracket"><span class="id">xchange</span> &lt;- (<span class="id">MTree_Leaf</span> <span class="id">null</span>)</span> directly. </div>
+<br/>
+<h2> Deep-Copy of a Tree </h2>
+<br/>
+<div class="doc">The operation <span class="bracket"><span class="id">tree_copy</span></span> takes as argument a pointer <span class="bracket"><span class="id">p</span></span> on a mutable tree
+    and returns a fresh copy of that tree. It is defined in a similar way to the
+    function <span class="bracket"><span class="id">mcopy</span></span> for lists.
+OCaml:
+    let rec tree_copy p =
+      if p = null
+        then null
+        else mnode p.item (tree_copy p.left) (tree_copy p.right)
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="tree_copy">tree_copy</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">p</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span> <span class="kwd">then</span> <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span> <span class="kwd">else</span> (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#item">item</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p1</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#left">left</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p2</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#right">right</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">q1</span> = '<span class="id">f</span> '<span class="id">p1</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">q2</span> = '<span class="id">f</span> '<span class="id">p2</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#mnode">mnode</a></span> '<span class="id">n</span> '<span class="id">q1</span> '<span class="id">q2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) }&gt;.<br/>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (triple_tree_copy)
+    Prove the specification of <span class="bracket"><span class="id">tree_copy</span></span>. Hint: you'll need to use
+    <span class="bracket"><span class="id">xchange</span> &lt;- (<span class="id">MTree_Leaf</span> <span class="id">null</span>)</span> twice. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_tree_copy">triple_tree_copy</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">T</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#tree_copy">tree_copy</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">q</span> =&gt; (<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T</span> <span class="id">p</span>) \* (<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T</span> <span class="id">q</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Computing the Sum of the Items in a Tree </h2>
+<br/>
+<div class="doc">The operation <span class="bracket"><span class="id">mtreesum</span></span> takes as argument the location <span class="bracket"><span class="id">p</span></span> of a mutable
+    tree, and it returns the sum of all the integers stored in the nodes of that
+    tree. The implementation traverses the tree, using an auxiliary reference
+    cell to maintain the sum of all the items visited so far.
+OCaml:
+    let rec treeacc c p =
+      if p &lt;&gt; null then (
+        c := !c + p.item;
+        treeacc c p.left;
+        treeacc c p.right)
+    let mtreesum p =
+      let c = ref 0 in
+      treeacc c p;
+      !c
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="treeacc">treeacc</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">c</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">p</span> &lt;&gt; <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span> <span class="kwd">then</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">m</span> = ! '<span class="id">c</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">x</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#item">item</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">m2</span> = '<span class="id">m</span> + '<span class="id">x</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">c</span> := '<span class="id">m2</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p1</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#left">left</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">f</span> '<span class="id">c</span> '<span class="id">p1</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p2</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#right">right</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">f</span> '<span class="id">c</span> '<span class="id">p2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span> }&gt;.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mtreesum">mtreesum</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">c</span> = <span class="id">ref</span> 0 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#treeacc">treeacc</a></span> '<span class="id">c</span> '<span class="id">p</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Basic.html#get_and_free">get_and_free</a></span> '<span class="id">c</span> }&gt;.<br/>
+<br/>
+<div class="doc">The specification of <span class="bracket"><span class="id">mtreesum</span></span> is expressed in terms of the Coq function
+    <span class="bracket"><span class="id">treesum</span></span>, which computes the sum of the node items stored in a logical
+    tree. This operation is defined by recursion over the tree. </div>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="treesum">treesum</a></span> (<span class="id">T</span>:<span class="id"><a href="SLF.Repr.html#tree">tree</a></span>) : <span class="id">int</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">T</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.Repr.html#Leaf">Leaf</a></span> =&gt; 0<br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.Repr.html#Node">Node</a></span> <span class="id">n</span> <span class="id">T1</span> <span class="id">T2</span> =&gt; <span class="id">n</span> + <span class="id">treesum</span> <span class="id">T1</span> + <span class="id">treesum</span> <span class="id">T2</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h3> Exercise: 4 stars, standard, optional (triple_mtreesum)
+    Prove the correctness of the function <span class="bracket"><span class="id">mtreesum</span></span>. Hint: to begin with, state
+    and prove the specification lemma <span class="bracket"><span class="id">triple_treeacc</span></span>. </h3>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_mtreesum">triple_mtreesum</a></span> : <span class="kwd">forall</span> <span class="id">T</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mtreesum">mtreesum</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.Repr.html#treesum">treesum</a></span> <span class="id">T</span>] \* (<span class="id"><a href="SLF.Repr.html#MTree">MTree</a></span> <span class="id">T</span> <span class="id">p</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Verification of a Counter Function with Local State </h2>
+<br/>
+<div class="doc">This section is concerned with the verification of counter functions, which
+    feature internal, mutable state. A counter function <span class="bracket"><span class="id">f</span></span> is a function that,
+    each time it is called, returns the next integer. Concretely, the first call
+    to <span class="bracket"><span class="id">f</span>()</span> returns <span class="bracket">1</span>, the second call returns <span class="bracket">2</span>, the third returns <span class="bracket">3</span>,
+    and so on.
+    A counter function can be implemented using a reference cell, <span class="bracket"><span class="id">p</span></span>, that
+    stores the integer last returned by the counter. Initially, the contents of
+    the cell is zero. Each time the counter function is called, the contents is
+    increased by one unit, and the new value of the contents is returned to the
+    caller.
+    The function <span class="bracket"><span class="id">create_counter</span></span> produces a fresh counter function. Concretely,
+    <span class="bracket"><span class="id">create_counter</span>()</span> returns a counter function <span class="bracket"><span class="id">f</span></span> that is independent from
+    any other previously existing counter function.
+OCaml:
+    let create_counter () =
+       let p = ref 0 in
+       (fun () -&gt; (incr p; !p))
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="create_counter">create_counter</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">u</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">p</span> = <span class="id">ref</span> 0 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">fun_</span> '<span class="id">u</span> =&gt; (<span class="id"><a href="SLF.Basic.html#incr">incr</a></span> '<span class="id">p</span>; !'<span class="id">p</span>)) }&gt;.<br/>
+<br/>
+<div class="doc">In this section, we present two specifications for counter functions. The
+    first specification is the most direct, but it exposes the existence of the
+    reference cell, revealing implementation details about the counter function.
+    The second specification is more abstract, hiding from the client the
+    internal representation of the counter using an abstract representation
+    predicate. </div>
+<br/>
+<div class="doc">Let us begin with the simple, direct specification. The proposition
+    <span class="bracket"><span class="id">CounterSpec</span> <span class="id">f</span> <span class="id">p</span></span> asserts that <span class="bracket"><span class="id">f</span></span> is a counter function <span class="bracket"><span class="id">f</span></span> whose internal
+    state is stored in a reference cell at location <span class="bracket"><span class="id">p</span></span>. Thus, invoking <span class="bracket"><span class="id">f</span></span> in a
+    state <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">m</span></span> updates the state to <span class="bracket"><span class="id">p</span> ~~&gt; (<span class="id">m</span>+1)</span> and produces the output
+    value <span class="bracket"><span class="id">m</span>+1</span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="CounterSpec">CounterSpec</a></span> (<span class="id">f</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">m</span>, <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id">f</span> ())<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">m</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">m</span>+1] \* <span class="id">p</span> ~~&gt; (<span class="id">m</span>+1)).<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="kwd">Type</span> <span class="id">f</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>.<br/>
+<br/>
+<div class="doc">The function <span class="bracket"><span class="id">create_counter</span></span> creates a fresh counter. Its precondition is
+    empty. Its postcondition asserts that the function <span class="bracket"><span class="id">f</span></span> being returned
+    satisfies <span class="bracket"><span class="id">CounterSpec</span> <span class="id">f</span> <span class="id">p</span></span> and the output state contains a cell <span class="bracket"><span class="id">p</span> ~~&gt; 0</span>
+    for some existentially quantified location <span class="bracket"><span class="id">p</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_create_counter">triple_create_counter</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#create_counter">create_counter</a></span> ())<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">f</span> =&gt; \<span class="kwd">exists</span> <span class="id">p</span>, (<span class="id">p</span> ~~&gt; 0) \* \[<span class="id"><a href="SLF.Repr.html#CounterSpec">CounterSpec</a></span> <span class="id">f</span> <span class="id">p</span>]).<br/>
+<br/>
+<div class="doc">Observe how the postcondition that appears in the triple above refers to
+    <span class="bracket"><span class="id">CounterSpec</span></span>, which itself involves a triple. In other words, a triple
+    appears nested inside another triple. In technical terms, we are leveraging
+    the "impredicativity of triples", which holds as a consequence of the
+    "impredicativity of predicates" in the logic of Coq. </div>
+<br/>
+<div class="doc">The proof involves the use of a new tactic, called <span class="bracket"><span class="id">xfun</span></span>, for reasoning
+    about local function definitions. Here, <span class="bracket"><span class="id">xfun</span></span> gives us the hypothesis <span class="bracket"><span class="id">Hf</span></span>
+    that specifies the code of <span class="bracket"><span class="id">f</span></span>. This hypothesis is of the form:
+    <span class="bracket"><span class="kwd">forall</span> <span class="id">v</span> <span class="id">H'</span> <span class="id">Q'</span>, (<span class="id">PRE</span> <span class="id">H'</span> <span class="id">CODE</span> <span class="id">B</span> <span class="id">POST</span> <span class="id">Q'</span>) -&gt; <span class="id">triple</span> (<span class="id">f</span> <span class="id">v</span>) <span class="id">H'</span> <span class="id">Q'</span></span>, where <span class="bracket"><span class="id">B</span></span>
+    denotes the code of the body of the function <span class="bracket"><span class="id">f</span></span> instantiated on the
+    argument <span class="bracket"><span class="id">v</span></span>, and where <span class="bracket"><span class="id">H'</span></span> and <span class="bracket"><span class="id">Q'</span></span> denote arbitrary pre- and
+    postconditions. Exploiting this assumption enables the user to subsequently
+    derive triples about the local function <span class="bracket"><span class="id">f</span></span>, by reasoning about the code of
+    the <span class="bracket"><span class="id">f</span></span>, just in the same way as when the user invokes <span class="bracket"><span class="id">xwp</span></span> for reasoning
+    about a top-level function. </div>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>. <span class="id">xapp</span>. <span class="id">intros</span> <span class="id">p</span>.<br/>
+&nbsp;&nbsp;<span class="id">xfun</span>. <span class="id">intros</span> <span class="id">f</span> <span class="id">Hf</span>.<br/>
+&nbsp;&nbsp;<span class="id">xsimpl</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">m</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xapp</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">xsimpl</span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Let us move on to the presentation of more abstract specifications. Their
+    purpose is to hide from the client the existence of the reference cell used
+    to represent the internal state of the counter functions. To that end, we
+    introduce the heap predicate <span class="bracket"><span class="id">IsCounter</span> <span class="id">f</span> <span class="id">n</span></span>, which relates a function <span class="bracket"><span class="id">f</span></span>,
+    its current value <span class="bracket"><span class="id">n</span></span>, and the piece of memory state involved in the
+    implementation of this function. This piece of memory is of the form
+    <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">n</span></span>, for some location <span class="bracket"><span class="id">p</span></span>, such that <span class="bracket"><span class="id">CounterSpec</span> <span class="id">f</span> <span class="id">p</span></span> holds. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="IsCounter">IsCounter</a></span> (<span class="id">f</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">n</span>:<span class="id">int</span>) : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">p</span>, <span class="id">p</span> ~~&gt; <span class="id">n</span> \* \[<span class="id"><a href="SLF.Repr.html#CounterSpec">CounterSpec</a></span> <span class="id">f</span> <span class="id">p</span>].<br/>
+<br/>
+<div class="doc">Using <span class="bracket"><span class="id">IsCounter</span></span>, we can reformulate the specification of <span class="bracket"><span class="id">create_counter</span></span>
+    with a postcondition asserting that the output function <span class="bracket"><span class="id">f</span></span> is described by
+    the heap predicate <span class="bracket"><span class="id">IsCounter</span> <span class="id">f</span> 0</span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_create_counter_abstract">triple_create_counter_abstract</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#create_counter">create_counter</a></span> ())<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">f</span> =&gt; <span class="id"><a href="SLF.Repr.html#IsCounter">IsCounter</a></span> <span class="id">f</span> 0).<br/>
+<div class="doc">This lemma is the same as <span class="bracket"><span class="id">triple_create_counter</span></span>, except that the reference
+    cell <span class="bracket"><span class="id">p</span></span> is no longer explicitly mentioned in the postcondition. In other
+    words, the address of the reference cell <span class="bracket"><span class="id">p</span></span> used internally by the counter
+    becomes hidden from the user. </div>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Repr.html#IsCounter">IsCounter</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.Repr.html#triple_create_counter">triple_create_counter</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Next, we reformulate the specification of a call to a counter function. A
+    call to <span class="bracket"><span class="id">f</span>()</span>, in a state satisfying <span class="bracket"><span class="id">IsCounter</span> <span class="id">f</span> <span class="id">n</span></span>, produces a state
+    satisfying <span class="bracket"><span class="id">IsCounter</span> <span class="id">f</span> (<span class="id">n</span>+1)</span>, and returns <span class="bracket"><span class="id">n</span>+1</span>. </div>
+<br/>
+<h3> Exercise: 4 stars, standard, especially useful (triple_apply_counter_abstract)
+    Prove the abstract specification for a counter function. You will need to
+    begin the proof using the tactic <span class="bracket"><span class="id">xtriple</span></span>, for turning goal into a form on
+    which other x-tactics can be invoked. Then, use <span class="bracket"><span class="id">xpull</span></span> to extract facts
+    from the precondition. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_apply_counter_abstract">triple_apply_counter_abstract</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id">f</span> ())<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#IsCounter">IsCounter</a></span> <span class="id">f</span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">n</span>+1] \* (<span class="id"><a href="SLF.Repr.html#IsCounter">IsCounter</a></span> <span class="id">f</span> (<span class="id">n</span>+1))).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">Opaque</span> <span class="id"><a href="SLF.Repr.html#IsCounter">IsCounter</a></span>.<br/>
+<br/>
+<div class="doc">Finally, let us illustrate how a client might work with counter functions.
+OCaml:
+    let test_counter () =
+       let c1 = create_counter () in
+       let c2 = create_counter () in
+       let n1 = c1() in
+       let n2 = c2() in
+       let n3 = c1() in
+       n2 + n3
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="test_counter">test_counter</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">u</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">c1</span> = <span class="id"><a href="SLF.Repr.html#create_counter">create_counter</a></span> () <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">c2</span> = <span class="id"><a href="SLF.Repr.html#create_counter">create_counter</a></span> () <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n1</span> = '<span class="id">c1</span> () <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n2</span> = '<span class="id">c2</span> () <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n3</span> = '<span class="id">c1</span> () <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">n2</span> + '<span class="id">n3</span> }&gt;.<br/>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (triple_test_counter)
+    Prove the example function manipulating abstract counters. In the
+    specification below, the heap predicate <span class="bracket">\<span class="kwd">exists</span> <span class="id">H</span>, <span class="id">H</span></span> corresponds to the
+    two counters, which we currently have no way of deallocating. The necessary
+    mechanism for garbage collection will be introduced later in chapter
+    <span class="bracket"><span class="id">Affine</span></span>.
+    Hint: use <span class="bracket"><span class="id">xapp</span> <span class="id">triple_create_counter_abstract</span></span> and
+    <span class="bracket"><span class="id">xapp</span> <span class="id">triple_apply_counter_abstract</span></span> to invoke the specifications. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_test_counter">triple_test_counter</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#test_counter">test_counter</a></span> ())<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = 3] \* (\<span class="kwd">exists</span> <span class="id">H</span>, <span class="id">H</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h1> Optional Material </h1>
+<br/>
+<div class="doc">The verification of higher-order functions, and of their interaction with
+    mutable state, was a formidable challenge prior to the introduction of
+    Separation Logic. The rest of this chapter illustrates how to reason about
+    imperative, higher-order programs. </div>
+<br/>
+<h2> Specification of a Higher-Order Repeat Operator </h2>
+<br/>
+<div class="doc">Consider the higher-order iterator <span class="bracket"><span class="id">repeat</span></span>: a call to <span class="bracket"><span class="id">repeat</span> <span class="id">f</span> <span class="id">n</span></span> executes
+    <span class="bracket"><span class="id">n</span></span> times the call <span class="bracket"><span class="id">f</span>()</span>.
+OCaml:
+    let rec repeat f n =
+      if n &gt; 0 then (f(); repeat f (n-1))
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="repeat">repeat</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">g</span> '<span class="id">f</span> '<span class="id">n</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">n</span> &gt; 0) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span> <span class="kwd">then</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">f</span> ();<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n2</span> = '<span class="id">n</span> - 1 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">g</span> '<span class="id">f</span> '<span class="id">n2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span> }&gt;.<br/>
+<br/>
+<div class="doc">For simplicity, let us assume for now <span class="bracket"><span class="id">n</span> &gt;= 0</span>. The specification of
+    <span class="bracket"><span class="id">repeat</span> <span class="id">n</span> <span class="id">f</span></span> can be expressed in terms of an invariant, named <span class="bracket"><span class="id">I</span></span>,
+    describing the state in between every two calls to <span class="bracket"><span class="id">f</span></span>. We assume that the
+    initial state satisfies <span class="bracket"><span class="id">I</span> 0</span>. Moreover, we assume that, for every index <span class="bracket"><span class="id">i</span></span>
+    in the range from <span class="bracket">0</span> (inclusive) to <span class="bracket"><span class="id">n</span></span> (exclusive), a call <span class="bracket"><span class="id">f</span>()</span> can
+    execute in a state that satisfies <span class="bracket"><span class="id">I</span> <span class="id">i</span></span> and produce a state that satisfies
+    <span class="bracket"><span class="id">I</span> (<span class="id">i</span>+1)</span>. The specification below asserts that, under these two
+    assumptions, after the <span class="bracket"><span class="id">n</span></span> calls to <span class="bracket"><span class="id">f</span>()</span>, the final state satisfies <span class="bracket"><span class="id">I</span> <span class="id">n</span></span>.
+    The specification takes the form:
+      n &gt;= 0 -&gt;
+      Hypothesis_on_f -&gt;
+      triple (repeat f n)
+        (I 0)
+        (fun u =&gt; I n)
+    where <span class="bracket"><span class="id">Hypothesis_on_f</span></span> is a proposition that captures the following
+    specification:
+      forall i,
+      0 &lt;= i &lt; n -&gt;
+      triple (f ())
+        (I i)
+        (fun u =&gt; I (i+1))
+    The complete specification of <span class="bracket"><span class="id">repeat</span> <span class="id">n</span> <span class="id">f</span></span> is thus as shown below. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_repeat">triple_repeat</a></span> : <span class="kwd">forall</span> (<span class="id">I</span>:<span class="id">int</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) (<span class="id">f</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">n</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">i</span>, 0 &lt;= <span class="id">i</span> &lt; <span class="id">n</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id">f</span> ())<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">I</span> <span class="id">i</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">u</span> =&gt; <span class="id">I</span> (<span class="id">i</span>+1))) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#repeat">repeat</a></span> <span class="id">f</span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">I</span> 0)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">u</span> =&gt; <span class="id">I</span> <span class="id">n</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hn</span> <span class="id">Hf</span>.<br/>
+<br/>
+<div class="doc">To establish this specification, we carry out a proof by induction over a
+    generalized specification, covering the case where there remains <span class="bracket"><span class="id">m</span></span>
+    iterations to perform, for any value of <span class="bracket"><span class="id">m</span></span> between <span class="bracket">0</span> and <span class="bracket"><span class="id">n</span></span> inclusive.
+      forall m, 0 &lt;= m &lt;= n -&gt;
+      triple (repeat f m)
+        (I (n-m))
+        (fun u =&gt; I n))
+    We use the TLC tactics <span class="bracket"><span class="id">cuts</span></span>, a variant of <span class="bracket"><span class="id">cut</span></span>, to state show that the
+    generalized specification entails the statement of <span class="bracket"><span class="id">triple_repeat</span></span>. </div>
+&nbsp;&nbsp;<span class="id">cuts</span> <span class="id">G</span>: (<span class="kwd">forall</span> <span class="id">m</span>, 0 &lt;= <span class="id">m</span> &lt;= <span class="id">n</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#repeat">repeat</a></span> <span class="id">f</span> <span class="id">m</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">I</span> (<span class="id">n</span>-<span class="id">m</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">u</span> =&gt; <span class="id">I</span> <span class="id">n</span>)).<br/>
+&nbsp;&nbsp;{ <span class="id">replace</span> 0 <span class="kwd">with</span> (<span class="id">n</span> - <span class="id">n</span>). { <span class="id">eapply</span> <span class="id">G</span>. <span class="id">math</span>. } { <span class="id">math</span>. } }<br/>
+<div class="doc">We then carry a proof by induction: during the execution, the value of <span class="bracket"><span class="id">m</span></span>
+    decreases step by step down to <span class="bracket">0</span>. </div>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">m</span>. <span class="id">induction_wf</span> <span class="id">IH</span>: (<span class="id"><a href="SLF.LibWf.html#downto">downto</a></span> 0) <span class="id">m</span>. <span class="id">intros</span> <span class="id">Hm</span>.<br/>
+&nbsp;&nbsp;<span class="id">xwp</span>. <span class="id">xapp</span>. <span class="id">xif</span>; <span class="id">intros</span> <span class="id">C</span>.<br/>
+<div class="doc">We reason about the call to <span class="bracket"><span class="id">f</span></span> </div>
+&nbsp;&nbsp;{ <span class="id">xapp</span>. { <span class="id">math</span>. } <span class="id">xapp</span>.<br/>
+<div class="doc">We next reason about the recursive call. </div>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">xapp</span>. { <span class="id">math</span>. } { <span class="id">math</span>. }<br/>
+<div class="doc">We need to exploit an arithmetic equality. We do so using <span class="bracket"><span class="id">math_rewrite</span></span>,
+    which is a convenient TLC tactic to assert an equality proved by the <span class="bracket"><span class="id">math</span></span>
+    tactic, then immediately invoke <span class="bracket"><span class="id">rewrite</span></span> with this equality. </div>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">math_rewrite</span> ((<span class="id">n</span> - <span class="id">m</span>) + 1 = <span class="id">n</span> - (<span class="id">m</span> - 1)). <span class="id">xsimpl</span>. }<br/>
+<div class="doc">Finally, when <span class="bracket"><span class="id">m</span></span> reaches zero, we check that we obtain <span class="bracket"><span class="id">I</span> <span class="id">n</span></span>. </div>
+&nbsp;&nbsp;{ <span class="id">xval</span>. <span class="id">math_rewrite</span> (<span class="id">n</span> - <span class="id">m</span> = <span class="id">n</span>). <span class="id">xsimpl</span>. }<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<h2> Specification of an Iterator on Mutable Lists </h2>
+<br/>
+<div class="doc">The operation <span class="bracket"><span class="id">miter</span></span> takes as argument a function <span class="bracket"><span class="id">f</span></span> and a pointer <span class="bracket"><span class="id">p</span></span> on
+    a mutable list and invokes <span class="bracket"><span class="id">f</span></span> on each of the items stored in that list.
+OCaml:
+    let rec miter f p =
+      if p &lt;&gt; null then (f p.head; miter f p.tail)
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="miter">miter</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">g</span> '<span class="id">f</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">p</span> &lt;&gt; <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span> <span class="kwd">then</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">x</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#head">head</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">f</span> '<span class="id">x</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">q</span> = '<span class="id">p</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">g</span> '<span class="id">f</span> '<span class="id">q</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span> }&gt;.<br/>
+<br/>
+<div class="doc">The specification of <span class="bracket"><span class="id">miter</span></span> follows the same structure as that of the
+    function <span class="bracket"><span class="id">repeat</span></span> from the previous section, with two main differences. The
+    first difference is that the invariant is expressed not in terms of an index
+    <span class="bracket"><span class="id">i</span></span> ranging from <span class="bracket">0</span> to <span class="bracket"><span class="id">n</span></span>, but in terms of a prefix of the list <span class="bracket"><span class="id">L</span></span> being
+    traversed. This prefix ranges from <span class="bracket"><span class="id">nil</span></span> to the full list <span class="bracket"><span class="id">L</span></span>. The second
+    difference is that the operation <span class="bracket"><span class="id">miter</span> <span class="id">f</span> <span class="id">p</span></span> requires in its precondition,
+    in addition to <span class="bracket"><span class="id">I</span> <span class="id">nil</span></span>, the description of the mutable list <span class="bracket"><span class="id">MList</span> <span class="id">L</span> <span class="id">p</span></span>.
+    This predicate is returned in the postcondition, unchanged, reflecting the
+    fact that the iteration process does not alter the contents of the list. </div>
+<br/>
+<h3> Exercise: 5 stars, standard, especially useful (triple_miter)
+    Prove the correctness of <span class="bracket"><span class="id">triple_miter</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_miter">triple_miter</a></span> : <span class="kwd">forall</span> (<span class="id">I</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) <span class="id">L</span> (<span class="id">f</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) <span class="id">p</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span> <span class="id">L1</span> <span class="id">L2</span>, <span class="id">L</span> = <span class="id">L1</span>++<span class="id">x</span>::<span class="id">L2</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id">f</span> <span class="id">x</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">I</span> <span class="id">L1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">u</span> =&gt; <span class="id">I</span> (<span class="id">L1</span>++(<span class="id">x</span>::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>)))) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#miter">miter</a></span> <span class="id">f</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span> \* <span class="id">I</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">u</span> =&gt; <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span> \* <span class="id">I</span> <span class="id">L</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">For exploiting the specification <span class="bracket"><span class="id">triple_miter</span></span> to reason about a call to
+    <span class="bracket"><span class="id">miter</span></span>, it is necessary to provide an invariant <span class="bracket"><span class="id">I</span></span> of type
+    <span class="bracket"><span class="id">list</span> <span class="id">val</span> -&gt; <span class="id">hprop</span></span>, that is, of the form <span class="bracket"><span class="kwd">fun</span> (<span class="id">K</span>:<span class="id">list</span> <span class="id">val</span>) =&gt; ...</span>. This
+    invariant, which generally cannot be inferred automatically, should describe
+    the state at the point where the iteration has traversed a prefix <span class="bracket"><span class="id">K</span></span> of the
+    list <span class="bracket"><span class="id">L</span></span>. Concretely, for reasoning about a call to <span class="bracket"><span class="id">miter</span></span>, one should
+    exploit the tactic <span class="bracket"><span class="id">xapp</span> (<span class="id">triple_miter</span> (<span class="kwd">fun</span> <span class="id">K</span> =&gt; ...))</span>. An example appears
+    next. </div>
+<br/>
+<h2> Computing the Length of a Mutable List using an Iterator </h2>
+<br/>
+<div class="doc">The function <span class="bracket"><span class="id">mlength_using_miter</span></span> computes the length of a mutable list by
+    iterating over that list a function that increments a reference cell once
+    for every item.
+OCaml:
+    let mlength_using_miter p =
+      let c = ref 0 in
+      miter (fun x -&gt; incr c) p;
+      !c
+</div>
+<br/>
+<h3> Exercise: 4 stars, standard, especially useful (triple_mlength_using_miter)
+    Prove the correctness of <span class="bracket"><span class="id">mlength_using_iter</span></span>. Hint: as explained earlier,
+    use <span class="bracket"><span class="id">xfun</span>; <span class="id">intros</span> <span class="id">f</span> <span class="id">Hf</span></span> for reasoning about the function definition, then
+    use <span class="bracket"><span class="id">xapp</span></span> for reasoning about a call to <span class="bracket"><span class="id">f</span></span>. Use of <span class="bracket"><span class="id">xlet</span></span> is optional. </h3>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mlength_using_miter">mlength_using_miter</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">c</span> = <span class="id">ref</span> 0 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">f</span> = (<span class="id">fun_</span> '<span class="id">x</span> =&gt; <span class="id"><a href="SLF.Basic.html#incr">incr</a></span> '<span class="id">c</span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#miter">miter</a></span> '<span class="id">f</span> '<span class="id">p</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Basic.html#get_and_free">get_and_free</a></span> '<span class="id">c</span> }&gt;.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_mlength_using_miter">triple_mlength_using_miter</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">L</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#mlength_using_miter">mlength_using_miter</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>] \* <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L</span> <span class="id">p</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Factorial Function in Continuation-Passing Style</h2>
+<br/>
+<div class="doc">This section and the next one present examples of functions involving
+    "continuations". As a warm-up, we first consider consider a function that
+    does not involve any mutable state.
+    The function <span class="bracket"><span class="id">cps_facto_aux</span> <span class="id">n</span> <span class="id">k</span></span> performs a call to the function <span class="bracket"><span class="id">k</span></span> on the
+    value <span class="bracket"><span class="id">facto</span> <span class="id">n</span></span>. The function <span class="bracket"><span class="id">cps_facto</span> <span class="id">n</span></span> computes the value of <span class="bracket"><span class="id">facto</span> <span class="id">n</span></span>
+    by applying <span class="bracket"><span class="id">cps_facto_aux</span></span> to the identity function.
+OCaml:
+    let rec cps_facto_aux n k =
+      if n &lt;= 1
+        then k 1
+        else cps_facto_aux (n-1) (fun r -&gt; k (n * r))
+    let cps_facto n =
+      cps_facto_aux n (fun r -&gt; r)
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="cps_facto_aux">cps_facto_aux</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">n</span> '<span class="id">k</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = '<span class="id">n</span> &lt;= 1 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> '<span class="id">k</span> 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span> <span class="kwd">let</span> '<span class="id">k2</span> = (<span class="id">fun_</span> '<span class="id">r</span> =&gt; <span class="kwd">let</span> '<span class="id">r2</span> = '<span class="id">n</span> * '<span class="id">r</span> <span class="kwd">in</span> '<span class="id">k</span> '<span class="id">r2</span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n2</span> = '<span class="id">n</span> - 1 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">f</span> '<span class="id">n2</span> '<span class="id">k2</span> }&gt;.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="cps_facto">cps_facto</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">n</span>  =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">k</span> = (<span class="id">fun_</span> '<span class="id">r</span> =&gt; '<span class="id">r</span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#cps_facto_aux">cps_facto_aux</a></span> '<span class="id">n</span> '<span class="id">k</span> }&gt;.<br/>
+<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.Basic.html#Facto">Facto</a></span>.<br/>
+<br/>
+<h3> Exercise: 4 stars, standard, optional (triple_cps_facto_aux)
+    Verify <span class="bracket"><span class="id">cps_facto_aux</span></span>. Hints: To set up the induction, use the usual
+    pattern <span class="bracket"><span class="id">induction_wf</span> <span class="id">IH</span>: (<span class="id">downto</span> 0) <span class="id">n</span></span>. To reason about the function
+    definition, use <span class="bracket"><span class="id">xfun</span></span>. To reason about the recursive call, you'll need to
+    exploit the induction hypothesis, called <span class="bracket"><span class="id">IH</span></span>, which universally quantifies
+    over a function <span class="bracket"><span class="id">F</span></span> of type <span class="bracket"><span class="id">int</span>-&gt;<span class="id">int</span></span>. To do so, use the syntax
+    <span class="bracket"><span class="id">xapp</span> (&gt;&gt; <span class="id">IH</span> (<span class="kwd">fun</span> <span class="id">a</span> =&gt; ..))</span>. The function provided should describe the
+    behavior of the continuation <span class="bracket"><span class="id">k2</span></span> that appears in the code. For the
+    mathematical reasoning, use the same pattern as in the proof of <span class="bracket"><span class="id">factorec</span></span>,
+    applying the tactics <span class="bracket"><span class="id">rewrite</span> <span class="id">facto_init</span></span> and <span class="bracket"><span class="id">rewrite</span> (@<span class="id">facto_step</span> <span class="id">n</span>)</span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_cps_facto_aux">triple_cps_facto_aux</a></span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id">int</span>) (<span class="id">k</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">F</span>:<span class="id">int</span>-&gt;<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">n</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">a</span>:<span class="id">int</span>), <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id">k</span> <span class="id">a</span>) \[] (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">F</span> <span class="id">a</span>])) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#cps_facto_aux">cps_facto_aux</a></span> <span class="id">n</span> <span class="id">k</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">F</span> (<span class="id"><a href="SLF.Basic.html#Facto.facto">facto</a></span> <span class="id">n</span>)]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (triple_cps_facto)
+    Verify <span class="bracket"><span class="id">cps_facto</span></span>. Hint: use the syntax <span class="bracket"><span class="id">xapp</span> (&gt;&gt; <span class="id">triple_cps_append_aux</span> <span class="id">F</span>)</span>
+    to provide the function <span class="bracket"><span class="id">F</span></span> that describes the behavior of the identity
+    continuation. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_cps_facto">triple_cps_facto</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#cps_facto">cps_facto</a></span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.Basic.html#Facto.facto">facto</a></span> <span class="id">n</span>]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> In-Place Concatenation Function in Continuation-Passing Style </h2>
+<br/>
+<div class="doc">This section presents an example verification of a function involving
+    "continuations". The function <span class="bracket"><span class="id">cps_append</span></span> is similar to the function
+    <span class="bracket"><span class="id">append</span></span> presented previously: it also performs in-place concatenation of
+    two lists. The main difference is that it is implemented using an auxiliary
+    recursive function in "continuation-passing style" (CPS).
+    The presentation of <span class="bracket"><span class="id">cps_append</span> <span class="id">p1</span> <span class="id">p2</span></span> is also slightly different: this
+    operation returns a pointer <span class="bracket"><span class="id">p3</span></span> that describes the head of the result of
+    the concatenation. In the general case, <span class="bracket"><span class="id">p3</span></span> is equal to <span class="bracket"><span class="id">p1</span></span>, but if <span class="bracket"><span class="id">p1</span></span>
+    is the null pointer, meaning that the first list is empty, then <span class="bracket"><span class="id">p3</span></span> is
+    equal to <span class="bracket"><span class="id">p2</span></span>.
+    The code of <span class="bracket"><span class="id">cps_append</span></span> involves the auxiliary function
+    <span class="bracket"><span class="id">cps_append_aux</span> <span class="id">p1</span> <span class="id">p2</span> <span class="id">k</span></span>, which invokes the continuation function <span class="bracket"><span class="id">k</span></span> on the
+    result of concatenating the lists at locations <span class="bracket"><span class="id">p1</span></span> and <span class="bracket"><span class="id">p2</span></span>. Its code
+    appears at first quite puzzling, because the recursive call is performed
+    inside the continuation. It takes a good drawing and at least a couple
+    minutes to figure out how the function works.
+OCaml:
+    let rec cps_append_aux p1 p2 k =
+      if p1 == null
+        then k p2
+        else cps_append_aux p1.tail p2 (fun r =&gt; (p1.tail &lt;- r); k p1)
+    let cps_append p1 p2 =
+      cps_append_aux p1 p2 (fun r =&gt; r)
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="cps_append_aux">cps_append_aux</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">p1</span> '<span class="id">p2</span> '<span class="id">k</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">p1</span> = <span class="id"><a href="SLF.LibSepReference.html#null">null</a></span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> '<span class="id">k</span> '<span class="id">p2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">q1</span> = '<span class="id">p1</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">k2</span> = (<span class="id">fun_</span> '<span class="id">r</span> =&gt; ('<span class="id">p1</span>`.<span class="id"><a href="SLF.Repr.html#tail">tail</a></span> := '<span class="id">r</span>; '<span class="id">k</span> '<span class="id">p1</span>)) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">f</span> '<span class="id">q1</span> '<span class="id">p2</span> '<span class="id">k2</span> }&gt;.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="cps_append">cps_append</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">p1</span> '<span class="id">p2</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">f</span> = (<span class="id">fun_</span> '<span class="id">r</span> =&gt; '<span class="id">r</span>) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Repr.html#cps_append_aux">cps_append_aux</a></span> '<span class="id">p1</span> '<span class="id">p2</span> '<span class="id">f</span> }&gt;.<br/>
+<br/>
+<div class="doc">The goal is to establish the following specification for <span class="bracket"><span class="id">cps_append</span></span>.
+  Lemma triple_cps_append : forall (L1 L2:list val) (p1 p2:loc),
+    triple (cps_append p1 p2)
+      (MList L1 p1 \* MList L2 p2)
+      (funloc p3 =&gt; MList (L1++L2) p3).
+   If you are interested in the challenge of solving a 6-star exercise, then try
+   to prove the above specification without reading any further. If, however,
+   you are only looking for a 5-star exercise, keep reading. </div>
+<br/>
+<h3> Exercise: 5 stars, standard, optional (triple_cps_append_aux)
+    The specification of <span class="bracket"><span class="id">cps_append_aux</span></span> involves an hypothesis describing the
+    behavior of the continuation <span class="bracket"><span class="id">k</span></span>. For this function, and more generally for
+    code in CPS form, we cannot easily leverage the frame property, thus we need
+    to quantify explicitly over a heap predicate <span class="bracket"><span class="id">H</span></span> for describing the "rest of
+    the state". Prove that specification. Hint: you can use the syntax
+    <span class="bracket"><span class="id">xapp</span> (&gt;&gt; <span class="id">IH</span> <span class="id">H'</span>)</span> to instantiate the induction hypothesis <span class="bracket"><span class="id">IH</span></span> on a specific
+    heap predicate <span class="bracket"><span class="id">H'</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_cps_append_aux">triple_cps_append_aux</a></span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span> (<span class="id">L1</span> <span class="id">L2</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">p1</span> <span class="id">p2</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) (<span class="id">k</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">p3</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>), <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id">k</span> <span class="id">p3</span>) (<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> (<span class="id">L1</span> ++ <span class="id">L2</span>) <span class="id">p3</span> \* <span class="id">H</span>) <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#cps_append_aux">cps_append_aux</a></span> <span class="id">p1</span> <span class="id">p2</span> <span class="id">k</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L1</span> <span class="id">p1</span> \* <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L2</span> <span class="id">p2</span> \* <span class="id">H</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 3 stars, standard, optional (triple_cps_append)
+    Verify <span class="bracket"><span class="id">cps_append</span></span>. Hint: use the syntax <span class="bracket">@<span class="id">triple_cps_append_aux</span> <span class="id">H'</span> <span class="id">Q'</span></span> to
+    specialize the specification of the auxiliary function to specific pre- and
+    post-conditions. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_cps_append">triple_cps_append</a></span> : <span class="kwd">forall</span> (<span class="id">L1</span> <span class="id">L2</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) (<span class="id">p1</span> <span class="id">p2</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Repr.html#cps_append">cps_append</a></span> <span class="id">p1</span> <span class="id">p2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L1</span> <span class="id">p1</span> \* <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> <span class="id">L2</span> <span class="id">p2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p3</span> =&gt; <span class="id"><a href="SLF.Repr.html#MList">MList</a></span> (<span class="id">L1</span>++<span class="id">L2</span>) <span class="id">p3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Historical Notes </h2>
+<br/>
+<div class="doc">The representation predicate for lists appears in the seminal publications
+    on Separation Logic: the notes by Reynolds from the summer 1999, updated the
+    next summer <span class="bracket"><span class="id">Reynolds</span> 2000</span> (in Bib.v), and the paper by
+    <span class="bracket"><span class="id">O’Hearn</span>, <span class="id">Reynolds</span>, <span class="id">and</span> <span class="id">Yang</span> 2001</span> (in Bib.v). The function <span class="bracket"><span class="id">cps_append</span></span> was
+    proposed in Reynolds's article as an open challenge for verification.
+    Zhaozhong Ni and Zhong Shao presented the framework XCAP, which was the
+    first to support reasoning on embedded code pointers <span class="bracket"><span class="id">Ni</span>, <span class="id">Shao</span> 2006</span> (in Bib.v).
+    Their proof, carried on a 23-line assembly program, consists of 1500+ lines
+    of Coq. Subsequently, Charguéraud presented a concise proof for a high-level
+    implementation of the <span class="bracket"><span class="id">cps_append</span></span> function, essentially equivalent to the
+    formalization presented above <span class="bracket"><span class="id">Charguéraud</span> 2011</span> (in Bib.v).
+    The specification of higher-order iterators requires higher-order Separation
+    Logic. Being embedded in the higher-order logic of Coq, the Separation Logic
+    that we work with is inherently higher-order. Further information on the
+    history of higher-order Separation Logic for higher-order programs may be
+    found in the companion course notes, linked in the <span class="bracket"><span class="id">Preface</span></span>. </div>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

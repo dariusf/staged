@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibOption</title>
+<meta name="description" content="Documentation of Coq module LibOption" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibOption</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span>.<br/>
+<br/>
+<br/>
+<h1> Option type </h1>
+<br/>
+<h2> Definition </h2>
+<br/>
+<div class="doc">From the Prelude:
+  Inductive option A : Type :=
+    | Some : A -&gt; option A
+    | None : option A.
+</div>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> {<span class="id">A</span>}.<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> {<span class="id">A</span>}.<br/>
+<br/>
+<h2> Inhabited </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="Inhab_option">Inhab_option</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">A</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span>). Qed.</div></details>
+<br/>
+<h1> Operations </h1>
+<br/>
+<h2> <span class="bracket"><span class="id">is_some</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">is_some</span> <span class="id">o</span></span> holds when <span class="bracket"><span class="id">o</span></span> is of the form <span class="bracket"><span class="id">Some</span> <span class="id">x</span></span> </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="is_some">is_some</a></span> <span class="id">A</span> (<span class="id">o</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">o</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">unsome_default</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">unsome_default</span> <span class="id">d</span> <span class="id">o</span></span> returns the content of the option, and returns <span class="bracket"><span class="id">d</span></span>
+    in case the option in <span class="bracket"><span class="id">None</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unsome_default">unsome_default</a></span> <span class="id">A</span> <span class="id">d</span> (<span class="id">o</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">o</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> =&gt; <span class="id">d</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">x</span> =&gt; <span class="id">x</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">unsome</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">unsome</span> <span class="id">o</span></span> returns the content of the option, and returns an arbitrary
+    value in case the option in <span class="bracket"><span class="id">None</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unsome">unsome</a></span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOption.html#unsome_default">unsome_default</a></span> (<span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span> (<span class="id">A</span>:=<span class="id">A</span>)).<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">map</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">map</span> <span class="id">f</span> <span class="id">o</span></span> takes an option and returns an option, and maps the function
+    <span class="bracket"><span class="id">f</span></span> to the content of the option if it has one. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map">map</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A</span> -&gt; <span class="id">B</span>) (<span class="id">o</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">o</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">x</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> (<span class="id">f</span> <span class="id">x</span>)<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="map_eq_none_inv">map_eq_none_inv</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A</span>-&gt;<span class="id">B</span>) <span class="id">o</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOption.html#map">map</a></span> <span class="id">f</span> <span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span> <span class="id">o</span>; <span class="id">simpl</span>; <span class="id">inverts</span>* <span class="id">H</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="map_eq_some_inv">map_eq_some_inv</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A</span>-&gt;<span class="id">B</span>) <span class="id">o</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOption.html#map">map</a></span> <span class="id">f</span> <span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">z</span>, <span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">z</span> /\ <span class="id">x</span> = <span class="id">f</span> <span class="id">z</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span> <span class="id">o</span>; <span class="id">simpl</span>; <span class="id">inverts</span>* <span class="id">H</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOption.html#map_eq_none_inv">map_eq_none_inv</a></span> [<span class="id">A</span>] [<span class="id">B</span>] [<span class="id">f</span>] [<span class="id">o</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOption.html#map_eq_some_inv">map_eq_some_inv</a></span> [<span class="id">A</span>] [<span class="id">B</span>] [<span class="id">f</span>] [<span class="id">o</span>] [<span class="id">x</span>].<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">map_on</span></span> </h2>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_on">map_on</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">o</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">A</span>) (<span class="id">f</span> : <span class="id">A</span> -&gt; <span class="id">B</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOption.html#map">map</a></span> <span class="id">f</span> <span class="id">o</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="map_on_eq_none_inv">map_on_eq_none_inv</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A</span> -&gt; <span class="id">B</span>) <span class="id">o</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOption.html#map">map</a></span> <span class="id">f</span> <span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span>~ <span class="id">o</span>; <span class="id">tryfalse</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="map_on_eq_some_inv">map_on_eq_some_inv</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A</span> -&gt; <span class="id">B</span>) <span class="id">o</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOption.html#map_on">map_on</a></span> <span class="id">o</span> <span class="id">f</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">z</span>, <span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">z</span> /\ <span class="id">x</span> = <span class="id">f</span> <span class="id">z</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span> <span class="id">o</span>; <span class="id">simpl</span>; <span class="id">inverts</span>* <span class="id">H</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOption.html#map_eq_none_inv">map_eq_none_inv</a></span> [<span class="id">A</span>] [<span class="id">B</span>] [<span class="id">f</span>] [<span class="id">o</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOption.html#map_on_eq_some_inv">map_on_eq_some_inv</a></span> [<span class="id">A</span>] [<span class="id">B</span>] [<span class="id">f</span>] [<span class="id">o</span>] [<span class="id">x</span>].<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">apply</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">apply</span> <span class="id">f</span> <span class="id">o</span></span> optionnaly applies a function of type <span class="bracket"><span class="id">A</span> -&gt; <span class="id">option</span> <span class="id">B</span></span> </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="apply">apply</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">B</span>) (<span class="id">o</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">A</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">o</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">x</span> =&gt; <span class="id">f</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">apply_on</span></span> </h2>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="apply_on">apply_on</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">o</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">A</span>) (<span class="id">f</span> : <span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">B</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">B</span>:=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOption.html#apply">apply</a></span> <span class="id">f</span> <span class="id">o</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="apply_on_eq_none_inv">apply_on_eq_none_inv</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">B</span>) <span class="id">o</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOption.html#apply_on">apply_on</a></span> <span class="id">o</span> <span class="id">f</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span>)<br/>
+&nbsp;&nbsp;\/ (<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">x</span> /\ <span class="id">f</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span> <span class="id">o</span>; <span class="id">simpl</span>; <span class="id">inverts</span>* <span class="id">H</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="apply_on_eq_some_inv">apply_on_eq_some_inv</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">B</span>) <span class="id">o</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOption.html#apply_on">apply_on</a></span> <span class="id">o</span> <span class="id">f</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">z</span>, <span class="id">o</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">z</span> /\ <span class="id">f</span> <span class="id">z</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span> <span class="id">o</span>; <span class="id">simpl</span>; <span class="id">inverts</span>* <span class="id">H</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOption.html#apply_on_eq_none_inv">apply_on_eq_none_inv</a></span> [<span class="id">A</span>] [<span class="id">B</span>] [<span class="id">f</span>] [<span class="id">o</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOption.html#apply_on_eq_some_inv">apply_on_eq_some_inv</a></span> [<span class="id">A</span>] [<span class="id">B</span>] [<span class="id">f</span>] [<span class="id">o</span>] [<span class="id">x</span>].<br/>
+<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

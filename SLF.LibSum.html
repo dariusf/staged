@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibSum</title>
+<meta name="description" content="Documentation of Coq module LibSum" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibSum</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibBool.html">LibBool</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span>.<br/>
+<br/>
+<h1> Sum type </h1>
+<br/>
+<h2> Definition </h2>
+<br/>
+<div class="doc">From the Prelude:
+    Inductive sum A B : Type :=
+      | inl : A -&gt; sum A B
+      | inr : B -&gt; sum A B.
+    Hint Constructors sum : core.
+    Notation "x + y" := (sum x y) : type_scope.
+  Remark: ideally, constructors would be renamed to <span class="bracket"><span class="id">sum_l</span></span> and <span class="bracket"><span class="id">sum_r</span></span>;
+  to follow conventions.
+</div>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inl">inl</a></span> {<span class="id">A</span>} {<span class="id">B</span>}.<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inr">inr</a></span> {<span class="id">A</span>} {<span class="id">B</span>}.<br/>
+<br/>
+<h2> Inhabited </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="sum_inhab_l">sum_inhab_l</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} <span class="id">B</span>, <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> (<span class="id">A</span> + <span class="id">B</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inl">inl</a></span> <span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span>)). Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="sum_inhab_r">sum_inhab_r</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>} <span class="id">A</span>, <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> (<span class="id">A</span> + <span class="id">B</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inr">inr</a></span> <span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span>)). Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="Inhab_sum">Inhab_sum</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>, <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>}, <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> (<span class="id">A</span> + <span class="id">B</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">typeclass</span>. Qed.</div></details>
+<br/>
+<br/>
+<h1> Operations </h1>
+<br/>
+<h2> Testing the branch of the sum </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="is_inl">is_inl</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">x</span> : <span class="id">A</span> + <span class="id">B</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inl">inl</a></span> _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inr">inr</a></span> _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="is_inr">is_inr</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">x</span> : <span class="id">A</span> + <span class="id">B</span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inl">inl</a></span> _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inr">inr</a></span> _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="IsIn">IsIn</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="IsIn.A">A</a></span> <span class="id"><a name="IsIn.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="kwd">Type</span> <span class="id">x</span> : <span class="id"><a href="SLF.LibSum.html#IsIn.A">A</a></span> + <span class="id"><a href="SLF.LibSum.html#IsIn.B">B</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="is_inl_neg_is_inr">is_inl_neg_is_inr</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSum.html#is_inl">is_inl</a></span> <span class="id">x</span> = ! (<span class="id"><a href="SLF.LibSum.html#is_inr">is_inr</a></span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">destruct</span>~ <span class="id">x</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="is_inr_neg_is_inl">is_inr_neg_is_inl</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSum.html#is_inr">is_inr</a></span> <span class="id">x</span> = ! (<span class="id"><a href="SLF.LibSum.html#is_inl">is_inl</a></span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">destruct</span>~ <span class="id">x</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSum.html#IsIn">IsIn</a></span>.<br/>
+<br/>
+<h2> Stripping of the branch tag </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Get">Get</a></span>.<br/>
+<span class="kwd">Context</span> `{<span class="id">IA1</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A1</span>} `{<span class="id">IA2</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A2</span>}.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> : <span class="id"><a href="SLF.LibSum.html#Get.A1">A1</a></span>+<span class="id"><a href="SLF.LibSum.html#Get.A2">A2</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="get21">get21</a></span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inl">inl</a></span> <span class="id">x1</span> =&gt; <span class="id">x1</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inr">inr</a></span> <span class="id">x2</span> =&gt; <span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="get22">get22</a></span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inl">inl</a></span> <span class="id">x1</span> =&gt; <span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inr">inr</a></span> <span class="id">x2</span> =&gt; <span class="id">x2</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSum.html#Get">Get</a></span>.<br/>
+<br/>
+<h2> Lifting functions over sum types </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Fget">Fget</a></span>.<br/>
+<span class="kwd">Context</span> {<span class="id">A1</span>:<span class="kwd">Type</span>} {<span class="id">A2</span>:<span class="kwd">Type</span>} `{<span class="id">IB1</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B1</span>} `{<span class="id">IB2</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B2</span>}.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> : <span class="id"><a href="SLF.LibSum.html#Fget.A1">A1</a></span>+<span class="id"><a href="SLF.LibSum.html#Fget.A2">A2</a></span>-&gt;<span class="id"><a href="SLF.LibSum.html#Fget.B1">B1</a></span>+<span class="id"><a href="SLF.LibSum.html#Fget.B2">B2</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="fun_get21">fun_get21</a></span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id"><a href="SLF.LibSum.html#get21">get21</a></span> (<span class="id">f</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inl">inl</a></span> <span class="id">x</span>)).<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="fun_get22">fun_get22</a></span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id"><a href="SLF.LibSum.html#get22">get22</a></span> (<span class="id">f</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#inr">inr</a></span> <span class="id">x</span>)).<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSum.html#Fget">Fget</a></span>.<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

@@ -1,0 +1,1114 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibLogic</title>
+<meta name="description" content="Documentation of Coq module LibLogic" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibLogic</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibAxioms.html">LibAxioms</a></span> <span class="id"><a href="SLF.LibEqual.html">LibEqual</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span> <span class="id">P</span>.<br/>
+<br/>
+<h1> Strong existentials </h1>
+<br/>
+<div class="doc">Type <span class="bracket"><span class="id">sig</span></span> is defined in LibLogicCore </div>
+<br/>
+<div class="doc">Projections </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="sig_val">sig_val</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">e</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#sig">sig</a></span> <span class="id">P</span>) : <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">e</span> <span class="kwd">with</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#exist">exist</a></span> _ <span class="id">a</span> _ =&gt; <span class="id">a</span> <span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="sig_proof">sig_proof</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">e</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#sig">sig</a></span> <span class="id">P</span>) : <span class="id">P</span> (<span class="id"><a href="SLF.LibLogic.html#sig_val">sig_val</a></span> <span class="id">e</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">e</span> <span class="kwd">with</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#exist">exist</a></span> _ _ <span class="id">b</span> =&gt; <span class="id">b</span> <span class="kwd">end</span>.<br/>
+<br/>
+<h1> Inhabited types </h1>
+<br/>
+<h2> Typeclass for describing inhabited types </h2>
+<br/>
+<div class="doc">The proposition <span class="bracket"><span class="id">Inhab</span> <span class="id">A</span></span> captures the fact that the type <span class="bracket"><span class="id">A</span></span> is
+    inhabited (i.e., there exists at least one value of type <span class="bracket"><span class="id">A</span></span>). </div>
+<br/>
+<span class="kwd">Class</span> <span class="id"><a name="Inhab">Inhab</a></span> (<span class="id">A</span>:<span class="kwd">Type</span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id"><a name="Inhab_intro">Inhab_intro</a></span> : (<span class="kwd">exists</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>) }.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Mode</span> <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> + : <span class="id">typeclass_instances</span>.<br/>
+<br/>
+<h2> Tactics taking into account </h2>
+<br/>
+<div class="doc">Extension to LibTactics' fast introduction tactic <span class="bracket">=&gt;&gt;</span>
+    to handle specifically the case of the Inhabited typeclass. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">intro_nondeps_aux_special_intro</span> <span class="id">G</span> ::=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">G</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| (<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> _) =&gt; <span class="id">idtac</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h2> Arbitrary values for inhabited types </h2>
+<br/>
+<div class="doc">The value <span class="bracket"><span class="id">arbitrary</span></span> can be used as a dummy value at any place
+    where a value of an inhabited type is expected. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="arbitrary">arbitrary</a></span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} : <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#sig_val">sig_val</a></span> (@<span class="id"><a href="SLF.LibAxioms.html#indefinite_description">indefinite_description</a></span> <span class="id">A</span> _ <span class="id"><a href="SLF.LibLogic.html#Inhab_intro">Inhab_intro</a></span>).<br/>
+<br/>
+<div class="doc">Extraction of <span class="bracket"><span class="id">arbitrary</span></span> constants as a runtime error. </div>
+<br/>
+<br/>
+<h2> Lemmas about inhabited types </h2>
+<br/>
+<div class="doc">Proving a type to be inhabited </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Inhab_of_val">Inhab_of_val</a></span> : <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>),<br/>
+&nbsp;&nbsp;<span class="id">A</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> <span class="id">A</span> <span class="id">x</span>. <span class="id">constructor</span>. <span class="kwd">exists</span> <span class="id">x</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<div class="doc">Arrows are inhabited if their codomain is inhabited. </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="Inhab_impl">Inhab_impl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> {<span class="id">I</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>},<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> (<span class="id">A</span> -&gt; <span class="id">B</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> (<span class="kwd">fun</span> _ =&gt; <span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span>)). Qed.</div></details>
+<br/>
+<br/>
+<h1> Non-constructive conditionals </h1>
+<br/>
+<h2> Excluded middle </h2>
+<br/>
+<div class="doc">Every proposition is either <span class="bracket"><span class="id">True</span></span> or <span class="bracket"><span class="id">False</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="classic">classic</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> : <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">P</span> \/ ~ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">set</span> (<span class="id">B1</span> := <span class="kwd">fun</span> <span class="id">b</span> =&gt; <span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> \/ <span class="id">P</span>).<br/>
+&nbsp;&nbsp;<span class="id">set</span> (<span class="id">B2</span> := <span class="kwd">fun</span> <span class="id">b</span> =&gt; <span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> \/ <span class="id">P</span>).<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">H1</span>: (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> <span class="id">B1</span>). <span class="kwd">exists</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>. <span class="id">left</span>~.<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">H2</span>: (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> <span class="id">B2</span>). <span class="kwd">exists</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>. <span class="id">left</span>~.<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">i1</span>: (<span class="id"><a href="SLF.LibAxioms.html#indefinite_description">indefinite_description</a></span> <span class="id">H1</span>).<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">i2</span>: (<span class="id"><a href="SLF.LibAxioms.html#indefinite_description">indefinite_description</a></span> <span class="id">H2</span>).<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#sig_proof">sig_proof</a></span> <span class="id">i1</span>) <span class="kwd">as</span> [<span class="id">HA</span>|]; [|<span class="id">auto</span>].<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#sig_proof">sig_proof</a></span> <span class="id">i2</span>) <span class="kwd">as</span> [<span class="id">HB</span>|]; [|<span class="id">auto</span>].<br/>
+&nbsp;&nbsp;<span class="id">right</span>. <span class="id">intros</span> <span class="id">HP</span>. <span class="id">asserts</span> <span class="id">EB</span>: (<span class="id">B1</span> = <span class="id">B2</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. <span class="id">intros</span> <span class="id">b</span>. <span class="id">split</span>; <span class="id">intros</span> _; <span class="id">right</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span> <span class="id">i1</span> <span class="id">i2</span>. <span class="id">destruct</span> <span class="id">EB</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id"><a href="SLF.LibEqual.html#proof_irrelevance">proof_irrelevance</a></span> <span class="id">H2</span> <span class="id">H1</span>) <span class="kwd">in</span> <span class="id">HB</span>. <span class="id">congruence</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="prop_inv">prop_inv</a></span> := <span class="id"><a href="SLF.LibLogic.html#classic">classic</a></span>.<br/>
+<br/>
+<h2> Strong excluded middle </h2>
+<br/>
+<div class="doc">From classical logic and indefinite description, we can prove
+    the strong (or informative) excluded middle, which allows Coq
+    definitions to make a case analysis on the truth value of any
+    proposition. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="classicT">classicT</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> : <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;{<span class="id">P</span>} + {~ <span class="id">P</span>}.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">pose</span> (<span class="id">select</span> := <span class="kwd">fun</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) =&gt; <span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">P</span> <span class="kwd">else</span> ~<span class="id">P</span>).<br/>
+&nbsp;&nbsp;<span class="id">cuts</span> (<span class="id">M</span>,<span class="id">HP</span>): { <span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> | <span class="id">select</span> <span class="id">b</span> }.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">M</span>. <span class="id">left</span>~. <span class="id">right</span>~.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#indefinite_description">indefinite_description</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#prop_inv">prop_inv</a></span> <span class="id">P</span>). <span class="kwd">exists</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>. <span class="kwd">exists</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Simplification lemmas </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="classicT_l">classicT_l</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> : <span class="kwd">Prop</span>) (<span class="id">H</span>:<span class="id">P</span>),<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> <span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#left">left</a></span> _ <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> <span class="id">P</span>). <span class="id">fequals</span>. <span class="id">false</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="classicT_r">classicT_r</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> : <span class="kwd">Prop</span>) (<span class="id">H</span>:~<span class="id">P</span>),<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> <span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#right">right</a></span> _ <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> <span class="id">P</span>). <span class="id">false</span>~. <span class="id">fequals</span>. Qed.</div></details>
+<br/>
+<h2> If-then-else on propositions </h2>
+<br/>
+<div class="doc">The expression <span class="bracket"><span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id">v1</span> <span class="kwd">else</span> <span class="id">v2</span></span> can be used to build
+    a conditional that depends on a proposition <span class="bracket"><span class="id">P</span></span>. </div>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'If' P 'then' v1 'else' v2"</span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> (<span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> <span class="id">P</span>) <span class="kwd">then</span> <span class="id">v1</span> <span class="kwd">else</span> <span class="id">v2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 200, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">type_scope</span>.<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Ifthenelse">Ifthenelse</a></span>.<br/>
+<span class="kwd">Variables</span> <span class="id"><a name="Ifthenelse.A">A</a></span> : <span class="kwd">Type</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> <span class="id">y</span> : <span class="id"><a href="SLF.LibLogic.html#Ifthenelse.A">A</a></span>.<br/>
+<br/>
+<div class="doc">Lemmas to simplify If-then-else statement </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="If_l">If_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>) = <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="If_r">If_r</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;~ <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>) = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">case_if</span>*. Qed.</div></details>
+<br/>
+<div class="doc">A lemma to prove an equality between two If-then-else </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="If_eq">If_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">P'</span> <span class="id">x</span> <span class="id">x'</span> <span class="id">y</span> <span class="id">y'</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">P'</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">x</span> = <span class="id">x'</span>) -&gt;<br/>
+&nbsp;&nbsp;(~<span class="id">P</span> -&gt; <span class="id">y</span> = <span class="id">y'</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>) = (<span class="id">If</span> <span class="id">P'</span> <span class="kwd">then</span> <span class="id">x'</span> <span class="kwd">else</span> <span class="id">y'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">case_if</span>; <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<div class="doc">A simpler version of the above lemma </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="If_eq_simple">If_eq_simple</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">P'</span> <span class="id">x</span> <span class="id">x'</span> <span class="id">y</span> <span class="id">y'</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">P'</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">x</span> = <span class="id">x'</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">y</span> = <span class="id">y'</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">If</span> <span class="id">P</span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>) = (<span class="id">If</span> <span class="id">P'</span> <span class="kwd">then</span> <span class="id">x'</span> <span class="kwd">else</span> <span class="id">y'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>. <span class="id">asserts_rewrite</span> (<span class="id">P</span> = <span class="id">P'</span>). <span class="id">apply</span>~ <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#Ifthenelse">Ifthenelse</a></span>.<br/>
+<br/>
+<h2> Consequences </h2>
+<br/>
+<div class="doc">Propositional extensionality stated using itself </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_prop_eq_iff">eq_prop_eq_iff</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> = <span class="id">Q</span>) = (<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span>. <span class="id">subst</span>*. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Propositional completeness (degeneracy) </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_degeneracy">prop_degeneracy</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> : <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span> \/ <span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#prop_inv">prop_inv</a></span> <span class="id">P</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">left</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">right</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Independence of general premises </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="indep_general_premises">indep_general_premises</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>) (<span class="id">Q</span> : <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">Q</span> -&gt; <span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">Q</span> -&gt; <span class="id">P</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">I</span> <span class="id">M</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#prop_inv">prop_inv</a></span> <span class="id">Q</span>).<br/>
+&nbsp;&nbsp;<span class="id">destruct</span>* (<span class="id">M</span> <span class="id">H</span>).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span> (<span class="id">A</span>:=<span class="id">A</span>)). <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Small drinker's paradox </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="small_drinker_paradox">small_drinker_paradox</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">x</span>, (<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>) -&gt; <span class="id">P</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">A</span> <span class="id">I</span> <span class="id">P</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#prop_inv">prop_inv</a></span> (<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>)).<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>. <span class="kwd">exists</span> <span class="id">x</span>. <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span> (<span class="id">A</span>:=<span class="id">A</span>)). <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Tactic for proving tautologies by bruteforce case-analysis </h2>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">tautop</span> <span class="id">P1</span> .. <span class="id">PN</span></span> helps performing case analysis on
+    the propositions/booleans that are given to it as parameters. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tautop_case</span> <span class="id">P</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">P</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="kwd">Prop</span> =&gt; <span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#prop_degeneracy">prop_degeneracy</a></span> <span class="id">P</span>)<br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> =&gt; <span class="id">destruct</span> <span class="id">P</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tautop_pre</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="id">intros</span>;<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">rewrite</span> <span class="id"><a href="SLF.LibLogic.html#eq_prop_eq_iff">eq_prop_eq_iff</a></span> <span class="kwd">in</span> *.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tautop_post</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="id">subst</span>;<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="id">solve</span> [ <span class="id">intuition</span> <span class="id">auto_false</span> ].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tautop_core</span> <span class="id">args</span> :=<br/>
+&nbsp;&nbsp;<span class="id">tautop_pre</span> <span class="id">tt</span>;<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">rec</span> <span class="id">aux</span> <span class="id">Ps</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">Ps</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; <span class="id">idtac</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#cons">cons</a></span> (<span class="id"><a href="SLF.LibTactics.html#boxer">boxer</a></span> ?<span class="id">P</span>) ?<span class="id">Ps'</span> =&gt; <span class="id">tautop_case</span> <span class="id">P</span>; <span class="id">aux</span> <span class="id">Ps'</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="id">aux</span> <span class="id">args</span>;<br/>
+&nbsp;&nbsp;<span class="id">tautop_post</span> <span class="id">tt</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tautop_noargs</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">rec</span> <span class="id">aux</span> <span class="id">Ps</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| |- <span class="kwd">forall</span> (_:<span class="kwd">Prop</span>), _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">P</span> := <span class="id">fresh</span> <span class="string">"P"</span> <span class="kwd">in</span> <span class="id">intro</span> <span class="id">P</span>; <span class="id">aux</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#cons">cons</a></span> (<span class="id"><a href="SLF.LibTactics.html#boxer">boxer</a></span> <span class="id">P</span>) <span class="id">Ps</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| _ =&gt; <span class="id">tautop_core</span> <span class="id">Ps</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="id">aux</span> <span class="id">constr</span>:(@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id"><a href="SLF.LibTactics.html#Boxer">Boxer</a></span>).<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tautop"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">tautop_noargs</span> <span class="id">tt</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tautop"</span> <span class="id">constr</span>(<span class="id">P1</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tautop_core</span> (&gt;&gt; <span class="id">P1</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tautop"</span> <span class="id">constr</span>(<span class="id">P1</span>) <span class="id">constr</span>(<span class="id">P2</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tautop_core</span> (&gt;&gt; <span class="id">P1</span> <span class="id">P2</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tautop"</span> <span class="id">constr</span>(<span class="id">P1</span>) <span class="id">constr</span>(<span class="id">P2</span>) <span class="id">constr</span>(<span class="id">P3</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tautop_core</span> (&gt;&gt; <span class="id">P1</span> <span class="id">P2</span> <span class="id">P3</span>).<br/>
+<br/>
+<h1> Properties of logical combinators </h1>
+<br/>
+<h2> Simplification of conjunction and disjunction </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="SimplConjDisj">SimplConjDisj</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_True_l_eq">and_True_l_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span> /\ <span class="id">P</span>) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_True_r_eq">and_True_r_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> /\ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_False_l_eq">and_False_l_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> /\ <span class="id">P</span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_False_r_eq">and_False_r_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> /\ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_True_l_eq">or_True_l_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span> \/ <span class="id">P</span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_True_r_eq">or_True_r_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> \/ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_False_l_eq">or_False_l_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> \/ <span class="id">P</span>) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_False_r_eq">or_False_r_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> \/ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#SimplConjDisj">SimplConjDisj</a></span>.<br/>
+<br/>
+<h2> Distribution of negation on basic operators </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="SimplNot">SimplNot</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_True_eq">not_True_eq</a></span> :<br/>
+&nbsp;&nbsp;(~ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_False_eq">not_False_eq</a></span> :<br/>
+&nbsp;&nbsp;(~ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_not_eq">not_not_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(~ (~ <span class="id">P</span>)) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_and_eq">not_and_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ (<span class="id">P</span> /\ <span class="id">Q</span>)) = (~ <span class="id">P</span> \/ ~ <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_or_eq">not_or_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ (<span class="id">P</span> \/ <span class="id">Q</span>)) = (~ <span class="id">P</span> /\ ~ <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_impl_eq">not_impl_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ (<span class="id">P</span> -&gt; <span class="id">Q</span>)) = (<span class="id">P</span> /\ ~ <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_or_nots_eq">not_or_nots_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ (~ <span class="id">P</span> \/ ~ <span class="id">Q</span>)) = (<span class="id">P</span> /\ <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_and_nots_eq">not_and_nots_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ (~ <span class="id">P</span> /\ ~ <span class="id">Q</span>)) = (<span class="id">P</span> \/ <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#SimplNot">SimplNot</a></span>.<br/>
+<br/>
+<h2> Double negation and contrapose </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="DoubleNeg">DoubleNeg</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">Double negation </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_not_inv">not_not_inv</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;~ ~ <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_not">not_not</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;~ ~ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Contrapose </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="contrapose_eq">contrapose_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ <span class="id">P</span> -&gt; ~ <span class="id">Q</span>) = (<span class="id">Q</span> -&gt; <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="contrapose_inv">contrapose_inv</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ <span class="id">Q</span> -&gt; ~ <span class="id">P</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="contrapose">contrapose</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">Q</span> -&gt; <span class="id">P</span>) -&gt;<br/>
+&nbsp;&nbsp;(~ <span class="id">P</span> -&gt; ~ <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Negation is injective </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="injective_not">injective_not</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~<span class="id">P</span>) = (~<span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P</span> = <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#DoubleNeg">DoubleNeg</a></span>.<br/>
+<br/>
+<h2> Distribution of negation on quantifiers </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="SimplNotQuantifiers">SimplNotQuantifiers</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="SimplNotQuantifiers.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="id"><a href="SLF.LibLogic.html#SimplNotQuantifiers.A">A</a></span> -&gt; <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">Three auxiliary facts (private lemmas) </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="exists_of_not_forall">exists_of_not_forall</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;~ (<span class="kwd">forall</span> <span class="id">x</span>, ~ <span class="id">P</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibLogic.html#not_not_inv">not_not_inv</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_of_not_exists">forall_of_not_exists</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;~ (<span class="kwd">exists</span> <span class="id">x</span>, ~ <span class="id">P</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibLogic.html#not_not_inv">not_not_inv</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_not_pred_eq">not_not_pred_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">P</span> = (<span class="kwd">fun</span> <span class="id">x</span> =&gt; ~ ~ (<span class="id">P</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">extens</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibLogic.html#not_not_eq">not_not_eq</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Rewriting rules for quantifiers </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_forall_eq">not_forall_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(~ (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>)) = (<span class="kwd">exists</span> <span class="id">x</span>, ~ <span class="id">P</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">iff</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.LibLogic.html#exists_of_not_forall">exists_of_not_forall</a></span>. <span class="id">rewrite</span>~ (<span class="id"><a href="SLF.LibLogic.html#not_not_pred_eq">not_not_pred_eq</a></span> <span class="id">P</span>) <span class="kwd">in</span> <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">M</span>. <span class="id">destruct</span>~ <span class="id">H</span> <span class="kwd">as</span> [<span class="id">x</span> <span class="id">Cx</span>]. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_exists_eq">not_exists_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(~ (<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>)) = (<span class="kwd">forall</span> <span class="id">x</span>, ~ <span class="id">P</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibLogic.html#injective_not">injective_not</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibLogic.html#not_forall_eq">not_forall_eq</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibLogic.html#not_not_eq">not_not_eq</a></span>. <span class="id">set</span> (<span class="id">P'</span>:=<span class="id">P</span>) <span class="kwd">at</span> 1.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>~ (<span class="id"><a href="SLF.LibLogic.html#not_not_pred_eq">not_not_pred_eq</a></span> <span class="id">P'</span>).<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_forall_not_eq">not_forall_not_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(~ (<span class="kwd">forall</span> <span class="id">x</span>, ~ <span class="id">P</span> <span class="id">x</span>)) = (<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibLogic.html#not_forall_eq">not_forall_eq</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">set</span> (<span class="id">P'</span>:=<span class="id">P</span>) <span class="kwd">at</span> 2. <span class="id">rewrite</span>~ (<span class="id"><a href="SLF.LibLogic.html#not_not_pred_eq">not_not_pred_eq</a></span> <span class="id">P'</span>).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="not_exists_not_eq">not_exists_not_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(~ (<span class="kwd">exists</span> <span class="id">x</span>, ~ <span class="id">P</span> <span class="id">x</span>)) = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibLogic.html#not_exists_eq">not_exists_eq</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">set</span> (<span class="id">P'</span>:=<span class="id">P</span>) <span class="kwd">at</span> 2. <span class="id">rewrite</span>~ (<span class="id"><a href="SLF.LibLogic.html#not_not_pred_eq">not_not_pred_eq</a></span> <span class="id">P'</span>).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#SimplNotQuantifiers">SimplNotQuantifiers</a></span>.<br/>
+<br/>
+<h2> Propositions equal to <span class="bracket"><span class="id">True</span></span> or <span class="bracket"><span class="id">False</span></span> </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="EqTrueFalse">EqTrueFalse</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">Propositions equal to <span class="bracket"><span class="id">True</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_eq_True_eq">prop_eq_True_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_eq_True">prop_eq_True</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_eq_True_inv">prop_eq_True_inv</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Propositions equal to <span class="bracket"><span class="id">False</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_eq_False_eq">prop_eq_False_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) = ~ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_eq_False">prop_eq_False</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;~ <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_eq_False_inv">prop_eq_False_inv</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#EqTrueFalse">EqTrueFalse</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">prop_eq_True</span> <span class="id">prop_eq_False</span>.<br/>
+<br/>
+<h2> Disequal propositions </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="NeqProp">NeqProp</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">Propositions not <span class="bracket"><span class="id">True</span></span> or not <span class="bracket"><span class="id">False</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_neq_True_eq">prop_neq_True_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>) = ~ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_neq_False_eq">prop_neq_False_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) = <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Proving two propositions not equal </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_neq_of_iff_l">prop_neq_of_iff_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; ~ <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> &lt;&gt; <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_neq_of_iff_r">prop_neq_of_iff_r</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ <span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> &lt;&gt; <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_neq_inv_iff_l">prop_neq_inv_iff_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> &lt;&gt; <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; ~ <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="prop_neq_inv_iff_r">prop_neq_inv_iff_r</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> &lt;&gt; <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;(~ <span class="id">P</span> &lt;-&gt; <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">True is not False </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="True_neq_False">True_neq_False</a></span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span> &lt;&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#NeqProp">NeqProp</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">True_neq_False</span>.<br/>
+<br/>
+<h2> Peirce rule and similar </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="ClassicOr">ClassicOr</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">Peirce's result: proving a fact by assuming its negation </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="assume_not">assume_not</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;(~ <span class="id">P</span> -&gt; <span class="id">P</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Proving a disjunction, assuming the negation of the other branch </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_classic_l">or_classic_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ <span class="id">Q</span> -&gt; <span class="id">P</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> \/ <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_classic_r">or_classic_r</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(~ <span class="id">P</span> -&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> \/ <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Same, but in forward style </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_inv_classic_l">or_inv_classic_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> \/ <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P</span> \/ (~ <span class="id">P</span> /\ <span class="id">Q</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_inv_classic_r">or_inv_classic_r</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> \/ <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q</span> \/ (<span class="id">P</span> /\ ~ <span class="id">Q</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#ClassicOr">ClassicOr</a></span>.<br/>
+<br/>
+<h2> Properties of logical equivalence </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="IffProp">IffProp</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> <span class="id">Q</span> <span class="id">R</span> : <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">Introduction </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_eq_and">iff_eq_and</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) = ((<span class="id">P</span> -&gt; <span class="id">Q</span>) /\ (<span class="id">Q</span> -&gt; <span class="id">P</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_intro">iff_intro</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q</span> -&gt; <span class="id">P</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibLogic.html#iff_eq_and">iff_eq_and</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Reflexivity: <span class="bracket"><span class="id">refl</span> <span class="id">iff</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_refl">iff_refl</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> &lt;-&gt; <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Symmetry: <span class="bracket"><span class="id">sym</span> <span class="id">iff</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_sym">iff_sym</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q</span> &lt;-&gt; <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Transitivity: <span class="bracket"><span class="id">trans</span> <span class="id">iff</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_trans">iff_trans</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span> <span class="id">R</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q</span> &lt;-&gt; <span class="id">R</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">First projection </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_l">iff_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Second projection </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_r">iff_r</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Contrapose of the first projection </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_not_l">iff_not_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Contrapose of the second projection </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_not_r">iff_not_r</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Negation can change side of an equivalence </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_not_swap_eq">iff_not_swap_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;((~ <span class="id">P</span>) &lt;-&gt; <span class="id">Q</span>) = (<span class="id">P</span> &lt;-&gt; (~ <span class="id">Q</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<div class="doc">Negation can be cancelled on both sides </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="iff_not_not_eq">iff_not_not_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;((~ <span class="id">P</span>) &lt;-&gt; (~<span class="id">Q</span>)) = (<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautop</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#IffProp">IffProp</a></span>.<br/>
+<br/>
+<h1> Tactics </h1>
+<br/>
+<h2> Tactic for simplifying expressions </h2>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">rew_logic</span></span> can be used to automatically
+    simplify logical expressions. Syntax <span class="bracket"><span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">H</span></span>
+    and <span class="bracket"><span class="id">rew_logic</span> <span class="kwd">in</span> *</span> are also available. </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#not_not_eq">not_not_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#not_and_eq">not_and_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#not_or_eq">not_or_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#not_impl_eq">not_impl_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#not_True_eq">not_True_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#not_False_eq">not_False_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#not_forall_eq">not_forall_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#not_forall_not_eq">not_forall_not_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#not_exists_eq">not_exists_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#not_exists_not_eq">not_exists_not_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#not_impl_eq">not_impl_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#prop_eq_True_eq">prop_eq_True_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#prop_eq_False_eq">prop_eq_False_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#eq_prop_eq_iff">eq_prop_eq_iff</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#and_True_l_eq">and_True_l_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#and_True_r_eq">and_True_r_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#and_False_l_eq">and_False_l_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#and_False_r_eq">and_False_r_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#or_True_l_eq">or_True_l_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#or_True_r_eq">or_True_r_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#or_False_l_eq">or_False_l_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#or_False_r_eq">or_False_r_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#not_False_eq">not_False_eq</a></span> <span class="id"><a href="SLF.LibLogic.html#not_True_eq">not_True_eq</a></span><br/>
+&nbsp;&nbsp;: <span class="id">rew_logic</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_logic"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_logic</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_logic"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_logic"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_logic</span>).<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_logic"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_logic"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_logic"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_logic"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_logic"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_logic"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">tests</span>: <span class="id">P</span></span> for classical disjunction on <span class="bracket"><span class="id">P</span></span>. </h2>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">tests</span>: <span class="id">P</span></span> can be used to tests whether the proposition <span class="bracket"><span class="id">P</span></span>
+    is true or not. If <span class="bracket"><span class="id">P</span></span> is an equality, it is substituted. Use the
+    tactic <span class="bracket"><span class="id">tests_nosubst</span>: <span class="id">P</span></span> to disable the automated substitution.
+    Use the tactic <span class="bracket"><span class="id">tests_basic</span>: <span class="id">P</span></span> to moreover disable simplification
+    of logical expressions.
+    To name the resulting hypotheses use <span class="bracket"><span class="id">tests</span> <span class="id">I</span>: <span class="id">P</span></span>, or <span class="bracket"><span class="id">tests</span> <span class="id">I1</span> <span class="id">I2</span>: <span class="id">P</span></span>
+    to assign different names to both sides.
+    (In LibReflect, the tactic is extended so that <span class="bracket"><span class="id">P</span></span> can be a boolean.) </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tests_ssum_base</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span> :=<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">E</span> <span class="kwd">as</span> [<span class="id">H1</span>|<span class="id">H2</span>].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tests_prop_base</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span> :=<br/>
+&nbsp;&nbsp;<span class="id">tests_ssum_base</span> (<span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> <span class="id">E</span>) <span class="id">H1</span> <span class="id">H2</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tests_dispatch</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">E</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="kwd">Prop</span> =&gt; <span class="id">tests_prop_base</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span><br/>
+&nbsp;&nbsp;| {_}+{_} =&gt; <span class="id">tests_ssum_base</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tests_post</span> <span class="id">H</span> <span class="id">introstac</span> :=<br/>
+&nbsp;&nbsp;<span class="id">tryfalse</span>; <span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">revert</span> <span class="id">H</span>;<br/>
+&nbsp;&nbsp;<span class="id">introstac</span> <span class="id">tt</span>; <span class="id">tryfalse</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tests_post_subst</span> <span class="id">H</span> <span class="id">I</span> :=<br/>
+&nbsp;&nbsp;<span class="id">tests_post</span> <span class="id">H</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> _ =&gt; <span class="id">first</span> [ <span class="id">intro_subst_hyp</span> | <span class="id">intros</span> <span class="id">I</span> ]).<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tests_post_nosubst</span> <span class="id">H</span> <span class="id">I</span> :=<br/>
+&nbsp;&nbsp;<span class="id">tests_post</span> <span class="id">H</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> _ =&gt; <span class="id">intros</span> <span class="id">I</span>).<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tests_base</span> <span class="id">E</span> <span class="id">I1</span> <span class="id">I2</span> <span class="id">tests_post</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">H1</span> := <span class="id">fresh</span> <span class="string">"TEMP"</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">H2</span> := <span class="id">fresh</span> <span class="string">"TEMP"</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="id">tests_dispatch</span> <span class="id">E</span> <span class="id">H1</span> <span class="id">H2</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[ <span class="id">tests_post</span> <span class="id">H1</span> <span class="id">I1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">tests_post</span> <span class="id">H2</span> <span class="id">I2</span> ].<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests"</span> <span class="id">simple_intropattern</span>(<span class="id">I1</span>) <span class="id">simple_intropattern</span>(<span class="id">I2</span>) <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests_base</span> <span class="id">E</span> <span class="id">I1</span> <span class="id">I2</span> <span class="id">ltac</span>:(<span class="id">tests_post_subst</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests"</span> <span class="id">simple_intropattern</span>(<span class="id">I</span>) <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests</span> <span class="id">I</span> <span class="id">I</span>: <span class="id">E</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests"</span> <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">I</span> := <span class="id">fresh</span> <span class="string">"C"</span> <span class="kwd">in</span> <span class="id">tests</span> <span class="id">I</span>: <span class="id">E</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests"</span> <span class="string">"~"</span> <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests</span>: <span class="id">E</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests"</span> <span class="string">"*"</span> <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests</span>: <span class="id">E</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests_nosubst"</span> <span class="id">simple_intropattern</span>(<span class="id">I1</span>) <span class="id">simple_intropattern</span>(<span class="id">I2</span>) <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests_base</span> <span class="id">E</span> <span class="id">I1</span> <span class="id">I2</span> <span class="id">ltac</span>:(<span class="id">tests_post_nosubst</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests_nosubst"</span> <span class="id">simple_intropattern</span>(<span class="id">I</span>) <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests_nosubst</span> <span class="id">I</span> <span class="id">I</span>: <span class="id">E</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests_nosubst"</span> <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">I</span> := <span class="id">fresh</span> <span class="string">"C"</span> <span class="kwd">in</span> <span class="id">tests</span> <span class="id">I</span>: <span class="id">E</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests_nosubst"</span> <span class="string">"~"</span> <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests</span>: <span class="id">E</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests_nosubst"</span> <span class="string">"*"</span> <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests</span>: <span class="id">E</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests_basic"</span> <span class="id">simple_intropattern</span>(<span class="id">I1</span>) <span class="id">simple_intropattern</span>(<span class="id">I2</span>) <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests_dispatch</span> <span class="id">E</span> <span class="id">I1</span> <span class="id">I2</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests_basic"</span> <span class="id">simple_intropattern</span>(<span class="id">I1</span>) <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">tests_basic</span> <span class="id">I1</span> <span class="id">I1</span>: <span class="id">E</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tests_basic"</span> <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">C</span> := <span class="id">fresh</span> <span class="string">"C"</span> <span class="kwd">in</span> <span class="id">tests_basic</span> <span class="id">C</span>: <span class="id">E</span>.<br/>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">case_classic</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">case_classic</span></span> performs a case analysis on the first expression of the
+    form <span class="bracket"><span class="id">classicT</span> ?<span class="id">E</span></span> that appears in the goal. </div>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"case_classic"</span> <span class="string">"as"</span> <span class="id">simple_intropattern</span>(<span class="id">C</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">context</span> [ <span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> ?<span class="id">E</span> ] =&gt; <span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> <span class="id">E</span>) <span class="kwd">as</span> [<span class="id">C</span>|<span class="id">C</span>]<br/>
+&nbsp;&nbsp;| <span class="id">H</span>: <span class="id">context</span> [ <span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> ?<span class="id">E</span> ] |- _ =&gt; <span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> <span class="id">E</span>) <span class="kwd">as</span> [<span class="id">C</span>|<span class="id">C</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>; <span class="id">tryfalse</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"case_classic"</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">C</span> := <span class="id">fresh</span> <span class="string">"C"</span> <span class="kwd">in</span> <span class="id">case_classic</span> <span class="kwd">as</span> <span class="id">C</span>.<br/>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">absurds</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">absurds</span></span> applies to a goal <span class="bracket"><span class="id">G</span></span> and replaces it with <span class="bracket">(~ <span class="id">G</span>) -&gt; <span class="id">False</span></span>.
+    The expression <span class="bracket">~ <span class="id">G</span></span> is simplified using <span class="bracket"><span class="id">rew_logic</span></span>.
+    <span class="bracket"><span class="id">absurds</span> ;=&gt; <span class="id">H</span></span> introduces <span class="bracket"><span class="id">H</span></span> as the negation of the goal, and
+    leaves <span class="bracket"><span class="id">False</span></span> is the goal.
+    <span class="bracket"><span class="id">absurds_nosimpl</span></span> is similar, but it does not perform simplifications. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="absurds_lemma">absurds_lemma</a></span> : <span class="kwd">forall</span> (<span class="id">G</span>:<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;((~ <span class="id">G</span>) -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">G</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span>~ <span class="id"><a href="SLF.LibLogic.html#not_not_inv">not_not_inv</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">absurds_nosimpl_core</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibLogic.html#absurds_lemma">absurds_lemma</a></span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"absurds_nosimpl"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">absurds_nosimpl_core</span> <span class="id">tt</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">absurds_post</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">absurds_core</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibLogic.html#absurds_lemma">absurds_lemma</a></span>;<br/>
+&nbsp;&nbsp;<span class="id">absurds_post</span> <span class="id">tt</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"absurds"</span> :=<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">absurds_core</span> <span class="id">tt</span>.<br/>
+<br/>
+<h1> Predicate combinators, comparison and compatibility </h1>
+<br/>
+<h2> Definition of predicate combinators </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="pred_true">pred_true</a></span> {<span class="id">A</span> : <span class="kwd">Type</span>} :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (_:<span class="id">A</span>) =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="pred_false">pred_false</a></span> {<span class="id">A</span> : <span class="kwd">Type</span>} :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (_:<span class="id">A</span>) =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="pred_not">pred_not</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x</span> =&gt; ~ (<span class="id">P</span> <span class="id">x</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="pred_and">pred_and</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">P</span> <span class="id">x</span> /\ <span class="id">Q</span> <span class="id">x</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="pred_or">pred_or</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">P</span> <span class="id">x</span> \/ <span class="id">Q</span> <span class="id">x</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="pred_impl">pred_impl</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">Q</span> <span class="id">x</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Unfold</span> <span class="id"><a href="SLF.LibLogic.html#pred_true">pred_true</a></span> <span class="id"><a href="SLF.LibLogic.html#pred_false">pred_false</a></span>.<br/>
+<br/>
+<h2> Properties of combinators </h2>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_conj_forall_distrib">pred_conj_forall_distrib</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">P</span> <span class="id">Q</span>: <span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;((<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>) /\ (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">Q</span> <span class="id">x</span>)) = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> /\ <span class="id">Q</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. <span class="id">iff</span> <span class="id">H</span>. <span class="id">autos</span>*. <span class="id">split</span>; <span class="id">intros</span> <span class="id">x</span>; <span class="id">apply</span>* (<span class="id">H</span> <span class="id">x</span>). Qed.</div></details>
+<br/>
+<h2> Order on predicates </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="pred_incl">pred_incl</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">Q</span> <span class="id">x</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_eq_forall_impl">pred_eq_forall_impl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id">P</span> <span class="id">Q</span> = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">Q</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_incl_refl">pred_incl_refl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id">P</span> <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfolds</span>~ <span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_incl_trans">pred_incl_trans</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">Q</span> <span class="id">P</span> <span class="id">R</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id">P</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id">Q</span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id">P</span> <span class="id">R</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfolds</span>~ <span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_incl_antisym">pred_incl_antisym</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id">P</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id">Q</span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>*. Qed.</div></details>
+<br/>
+<div class="doc">See also <span class="bracket"><span class="id">LibRelation</span></span> and <span class="bracket"><span class="id">LibOrder</span></span> for higher-level statements
+    of these results </div>
+<br/>
+<br/>
+<h1> Existentials </h1>
+<br/>
+<h1> Properties of unique existentials </h1>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">unique_st</span> <span class="id">P</span> <span class="id">x</span></span> asserts that <span class="bracket"><span class="id">x</span></span> is the unique element for which
+    <span class="bracket"><span class="id">P</span> <span class="id">x</span></span> holds. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="unique_st">unique_st</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>) (<span class="id">x</span> : <span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id">x</span> /\ <span class="kwd">forall</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">y</span> -&gt; <span class="id">y</span> = <span class="id">x</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Unfold</span> <span class="id"><a href="SLF.LibLogic.html#unique_st">unique_st</a></span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">ex_unique</span> <span class="id">P</span></span> asserts that there exists a unique element for which
+    <span class="bracket"><span class="id">P</span> <span class="id">x</span></span> holds. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="ex_unique">ex_unique</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> (<span class="id"><a href="SLF.LibLogic.html#unique_st">unique_st</a></span> <span class="id">P</span>).<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="kwd">exists</span>! <span class="id">x</span>, <span class="id">P</span></span> is the notation for <span class="bracket"><span class="id">ex_unique</span> <span class="id">P</span></span>. </div>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'exists' ! x , P"</span> := (<span class="id"><a href="SLF.LibLogic.html#ex_unique">ex_unique</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">P</span>))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 200, <span class="id">x</span> <span class="id">name</span>, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' 'exists' !  '/  ' x ,  '/  ' P ']'"</span>) : <span class="id">type_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'exists' ! x : A , P"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibLogic.html#ex_unique">ex_unique</a></span> (<span class="kwd">fun</span> <span class="id">x</span>:<span class="id">A</span> =&gt; <span class="id">P</span>))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 200, <span class="id">x</span> <span class="id">name</span>, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' 'exists' !  '/  ' x  :  A ,  '/  ' P ']'"</span>) : <span class="id">type_scope</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">at_most_one</span> <span class="id">P</span></span> asserts that there exists at most one element for
+    which <span class="bracket"><span class="id">P</span> <span class="id">x</span></span> holds. In other words, <span class="bracket"><span class="id">P</span></span> has 0 or 1 inhabitant. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="at_most_one">at_most_one</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">P</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">P</span> <span class="id">y</span> -&gt; <span class="id">x</span> = <span class="id">y</span>.<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="UniqueProp">UniqueProp</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="UniqueProp.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span>  (<span class="id">P</span> : <span class="id"><a href="SLF.LibLogic.html#UniqueProp.A">A</a></span> -&gt; <span class="kwd">Prop</span>).<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="kwd">exists</span>! <span class="id">x</span>, <span class="id">P</span></span> entails <span class="bracket"><span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ex_of_ex_unique">ex_of_ex_unique</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#ex_unique">ex_unique</a></span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> (<span class="id">x</span>&amp;<span class="id">H</span>&amp;<span class="id">U</span>). <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="kwd">exists</span>! <span class="id">x</span>, <span class="id">P</span></span> entails <span class="bracket"><span class="id">at_most_one</span> <span class="id">P</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="at_most_one_of_ex_unique">at_most_one_of_ex_unique</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#ex_unique">ex_unique</a></span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#at_most_one">at_most_one</a></span> <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> (<span class="id">a</span>&amp;<span class="id">H</span>&amp;<span class="id">U</span>) <span class="id">Px</span> <span class="id">Py</span>. <span class="id">applys</span>~ <span class="id"><a href="SLF.LibEqual.html#eq_trans">eq_trans</a></span> <span class="id">a</span>. <span class="id">rewrite</span>~ &lt;- (<span class="id">U</span> <span class="id">y</span>).<br/>
+Qed.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span></span> and <span class="bracket"><span class="id">at_most_one</span> <span class="id">P</span></span> entail <span class="bracket"><span class="kwd">exists</span>! <span class="id">x</span>, <span class="id">P</span></span> </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ex_unique_of_ex_at_most_one">ex_unique_of_ex_at_most_one</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#at_most_one">at_most_one</a></span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#ex_unique">ex_unique</a></span> <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> [<span class="id">x</span> <span class="id">Px</span>] <span class="id">H</span>. <span class="kwd">exists</span> <span class="id">x</span>. <span class="id">split</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#UniqueProp">UniqueProp</a></span>.<br/>
+<br/>
+<h1> Conjunctions </h1>
+<br/>
+<h2> Changing the order of branches </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conj_swap">conj_swap</a></span>: <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span>: <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q</span> /\ <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conj_dup_r">conj_dup_r</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q</span> -&gt; <span class="id">P</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> /\ <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conj_dup_l">conj_dup_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span> : <span class="kwd">Prop</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> /\ <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<h2> Parallel strengthening of a conjunction </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conj_strengthen_2">conj_strengthen_2</a></span> : <span class="kwd">forall</span> (<span class="id">Q1</span> <span class="id">Q2</span> <span class="id">P1</span> <span class="id">P2</span> : <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> /\ <span class="id">Q2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> -&gt; <span class="id">P1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q2</span> -&gt; <span class="id">P2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P1</span> /\ <span class="id">P2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conj_strengthen_3">conj_strengthen_3</a></span> : <span class="kwd">forall</span> (<span class="id">Q1</span> <span class="id">Q2</span> <span class="id">Q3</span> <span class="id">P1</span> <span class="id">P2</span> <span class="id">P3</span> : <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> /\ <span class="id">Q2</span> /\ <span class="id">Q3</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> -&gt; <span class="id">P1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q2</span> -&gt; <span class="id">P2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q3</span> -&gt; <span class="id">P3</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P1</span> /\ <span class="id">P2</span> /\ <span class="id">P3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conj_strengthen_4">conj_strengthen_4</a></span> : <span class="kwd">forall</span> (<span class="id">Q1</span> <span class="id">Q2</span> <span class="id">Q3</span> <span class="id">Q4</span> <span class="id">P1</span> <span class="id">P2</span> <span class="id">P3</span> <span class="id">P4</span> : <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> /\ <span class="id">Q2</span> /\ <span class="id">Q3</span> /\ <span class="id">Q4</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> -&gt; <span class="id">P1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q2</span> -&gt; <span class="id">P2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q3</span> -&gt; <span class="id">P3</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q4</span> -&gt; <span class="id">P4</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P1</span> /\ <span class="id">P2</span> /\ <span class="id">P3</span> /\ <span class="id">P4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conj_strengthen_5">conj_strengthen_5</a></span> : <span class="kwd">forall</span> (<span class="id">Q1</span> <span class="id">Q2</span> <span class="id">Q3</span> <span class="id">Q4</span> <span class="id">Q5</span> <span class="id">P1</span> <span class="id">P2</span> <span class="id">P3</span> <span class="id">P4</span> <span class="id">P5</span> : <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> /\ <span class="id">Q2</span> /\ <span class="id">Q3</span> /\ <span class="id">Q4</span> /\ <span class="id">Q5</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> -&gt; <span class="id">P1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q2</span> -&gt; <span class="id">P2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q3</span> -&gt; <span class="id">P3</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q4</span> -&gt; <span class="id">P4</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q5</span> -&gt; <span class="id">P5</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P1</span> /\ <span class="id">P2</span> /\ <span class="id">P3</span> /\ <span class="id">P4</span> /\ <span class="id">P5</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<h2> Projections of lemmas concluding on a conjunction </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="ProjLemma">ProjLemma</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A1">A1</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A2">A2</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A3">A3</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A4">A4</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A5">A5</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A6">A6</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A7">A7</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A8">A8</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>) (<span class="id">x7</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A7">A7</a></span> <span class="id">x6</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A9">A9</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>) (<span class="id">x7</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A7">A7</a></span> <span class="id">x6</span>) (<span class="id">x8</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A8">A8</a></span> <span class="id">x7</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A10">A10</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>) (<span class="id">x7</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A7">A7</a></span> <span class="id">x6</span>) (<span class="id">x8</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A8">A8</a></span> <span class="id">x7</span>) (<span class="id">x9</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A9">A9</a></span> <span class="id">x8</span>), <span class="kwd">Type</span>).<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ProjLemma.A11">A11</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>) (<span class="id">x4</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>) (<span class="id">x7</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A7">A7</a></span> <span class="id">x6</span>) (<span class="id">x8</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A8">A8</a></span> <span class="id">x7</span>) (<span class="id">x9</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A9">A9</a></span> <span class="id">x8</span>) (<span class="id">x10</span> : <span class="id"><a href="SLF.LibLogic.html#ProjLemma.A10">A10</a></span> <span class="id">x9</span>), <span class="kwd">Type</span>).<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">prove_forall_conj_inv</span> :=<br/>
+&nbsp;&nbsp;<span class="id">intros</span>;<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> <span class="id">H</span>: <span class="id">context</span> [_ /\ _] |- _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>; <span class="id">intros</span>; <span class="id">apply</span> <span class="id">H</span> <span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_1">forall_conj_inv_1</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span>, <span class="id">P</span> <span class="id">x1</span> /\ <span class="id">Q</span> <span class="id">x1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span>, <span class="id">P</span> <span class="id">x1</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span>, <span class="id">Q</span> <span class="id">x1</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_2">forall_conj_inv_2</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_3">forall_conj_inv_3</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_4">forall_conj_inv_4</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_5">forall_conj_inv_5</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_6">forall_conj_inv_6</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_7">forall_conj_inv_7</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>) (<span class="id">x7</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A7">A7</a></span> <span class="id">x6</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_8">forall_conj_inv_8</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>) (<span class="id">x7</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A7">A7</a></span> <span class="id">x6</span>) (<span class="id">x8</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A8">A8</a></span> <span class="id">x7</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_9">forall_conj_inv_9</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>) (<span class="id">x7</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A7">A7</a></span> <span class="id">x6</span>) (<span class="id">x8</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A8">A8</a></span> <span class="id">x7</span>) (<span class="id">x9</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A9">A9</a></span> <span class="id">x8</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_10">forall_conj_inv_10</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>) (<span class="id">x7</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A7">A7</a></span> <span class="id">x6</span>) (<span class="id">x8</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A8">A8</a></span> <span class="id">x7</span>) (<span class="id">x9</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A9">A9</a></span> <span class="id">x8</span>) (<span class="id">x10</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A10">A10</a></span> <span class="id">x9</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="forall_conj_inv_11">forall_conj_inv_11</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="kwd">forall</span> (<span class="id">x1</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A1">A1</a></span>) (<span class="id">x2</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A2">A2</a></span> <span class="id">x1</span>) (<span class="id">x3</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A3">A3</a></span> <span class="id">x2</span>)<br/>
+&nbsp;(<span class="id">x4</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A4">A4</a></span> <span class="id">x3</span>) (<span class="id">x5</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A5">A5</a></span> <span class="id">x4</span>) (<span class="id">x6</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A6">A6</a></span> <span class="id">x5</span>) (<span class="id">x7</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A7">A7</a></span> <span class="id">x6</span>) (<span class="id">x8</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A8">A8</a></span> <span class="id">x7</span>) (<span class="id">x9</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A9">A9</a></span> <span class="id">x8</span>) (<span class="id">x10</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A10">A10</a></span> <span class="id">x9</span>) (<span class="id">x11</span>:<span class="id"><a href="SLF.LibLogic.html#ProjLemma.A11">A11</a></span> <span class="id">x10</span>), <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span> <span class="id">x11</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span> <span class="id">x11</span> /\ <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span> <span class="id">x11</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span> <span class="id">x11</span>, <span class="id">P</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span> <span class="id">x11</span>) /\<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span> <span class="id">x11</span>, <span class="id">Q</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span> <span class="id">x6</span> <span class="id">x7</span> <span class="id">x8</span> <span class="id">x9</span> <span class="id">x10</span> <span class="id">x11</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">prove_forall_conj_inv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibLogic.html#ProjLemma">ProjLemma</a></span>.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_1">forall_conj_inv_1</a></span> [<span class="id">A1</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_2">forall_conj_inv_2</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_3">forall_conj_inv_3</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">A3</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_4">forall_conj_inv_4</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">A3</span>] [<span class="id">A4</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_5">forall_conj_inv_5</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">A3</span>] [<span class="id">A4</span>] [<span class="id">A5</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_6">forall_conj_inv_6</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">A3</span>] [<span class="id">A4</span>] [<span class="id">A5</span>] [<span class="id">A6</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_7">forall_conj_inv_7</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">A3</span>] [<span class="id">A4</span>] [<span class="id">A5</span>] [<span class="id">A6</span>] [<span class="id">A7</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_8">forall_conj_inv_8</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">A3</span>] [<span class="id">A4</span>] [<span class="id">A5</span>] [<span class="id">A6</span>] [<span class="id">A7</span>] [<span class="id">A8</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_9">forall_conj_inv_9</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">A3</span>] [<span class="id">A4</span>] [<span class="id">A5</span>] [<span class="id">A6</span>] [<span class="id">A7</span>] [<span class="id">A8</span>] [<span class="id">A9</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_10">forall_conj_inv_10</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">A3</span>] [<span class="id">A4</span>] [<span class="id">A5</span>] [<span class="id">A6</span>] [<span class="id">A7</span>] [<span class="id">A8</span>] [<span class="id">A9</span>] [<span class="id">A10</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibLogic.html#forall_conj_inv_11">forall_conj_inv_11</a></span> [<span class="id">A1</span>] [<span class="id">A2</span>] [<span class="id">A3</span>] [<span class="id">A4</span>] [<span class="id">A5</span>] [<span class="id">A6</span>] [<span class="id">A7</span>] [<span class="id">A8</span>] [<span class="id">A9</span>] [<span class="id">A10</span>] [<span class="id">A11</span>] [<span class="id">P</span>] [<span class="id">Q</span>].<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

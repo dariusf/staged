@@ -1,0 +1,779 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibSepMinimal</title>
+<meta name="description" content="Documentation of Coq module LibSepMinimal" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibSepMinimal</h1>
+<div class="coq">
+<h1> LibSepMinimal: Appendix - Minimalistic Soundness Proof </h1>
+<br/>
+<div class="doc">This file contains a stand-alone, minimalistic formalization of the
+    soundness of Separation Logic reasoning rules with respect to an
+    omni-big-step semantics. For a development grounded with respect to a
+    small-step semantics, see the two approaches described in chapter
+    <span class="bracket"><span class="id">Triples</span></span>. </div>
+<br/>
+<h1> Source Language </h1>
+<br/>
+<h2> Syntax </h2>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibString.html">LibString</a></span> <span class="id"><a href="SLF.LibCore.html">LibCore</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibSepTLCbuffer.html">LibSepTLCbuffer</a></span> <span class="id"><a href="SLF.LibSepFmap.html">LibSepFmap</a></span>.<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Fmap">Fmap</a></span> := <span class="id"><a href="SLF.LibSepFmap.html">LibSepFmap</a></span>.<br/>
+<br/>
+<div class="doc">Variables are defined as strings, <span class="bracket"><span class="id">var_eq</span></span> denotes boolean comparison. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="var">var</a></span> : <span class="kwd">Type</span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.Strings.String.html#string">string</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="var_eq">var_eq</a></span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.Strings.String.html#string_dec">String.string_dec</a></span>.<br/>
+<br/>
+<div class="doc">Locations are defined as natural numbers. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="loc">loc</a></span> : <span class="kwd">Type</span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<br/>
+<div class="doc">Primitive operations include memory operations, as well as addition and
+    division to illustrate a total and a partial arithmetic operations. </div>
+<br/>
+<span class="kwd">Inductive</span> <span class="id"><a name="prim">prim</a></span> : <span class="kwd">Type</span> :=<br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_ref">val_ref</a></span> : <span class="id">prim</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_get">val_get</a></span> : <span class="id">prim</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_set">val_set</a></span> : <span class="id">prim</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_free">val_free</a></span> : <span class="id">prim</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_add">val_add</a></span> : <span class="id">prim</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_div">val_div</a></span> : <span class="id">prim</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_rand">val_rand</a></span> : <span class="id">prim</span>.<br/>
+<br/>
+<div class="doc">The grammar of closed values (assumed to contain no free variables)
+    includes values of ground types, primitive operations, and closures. </div>
+<br/>
+<span class="kwd">Inductive</span> <span class="id"><a name="val">val</a></span> : <span class="kwd">Type</span> :=<br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_unit">val_unit</a></span> : <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_bool">val_bool</a></span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_int">val_int</a></span> : <span class="id">int</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_loc">val_loc</a></span> : <span class="id"><a href="SLF.LibSepMinimal.html#loc">loc</a></span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_prim">val_prim</a></span> : <span class="id"><a href="SLF.LibSepMinimal.html#prim">prim</a></span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="val_fix">val_fix</a></span> : <span class="id"><a href="SLF.LibSepMinimal.html#var">var</a></span> -&gt; <span class="id"><a href="SLF.LibSepMinimal.html#var">var</a></span> -&gt; <span class="id">trm</span> -&gt; <span class="id">val</span><br/>
+<br/>
+<div class="doc">The grammar of terms includes closed values, variables, functions,
+    applications, let-binding and conditional. </div>
+<br/>
+<span class="kwd">with</span> <span class="id"><a name="trm">trm</a></span> : <span class="kwd">Type</span> :=<br/>
+&nbsp;&nbsp;| <span class="id"><a name="trm_val">trm_val</a></span> : <span class="id">val</span> -&gt; <span class="id">trm</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="trm_var">trm_var</a></span> : <span class="id"><a href="SLF.LibSepMinimal.html#var">var</a></span> -&gt; <span class="id">trm</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="trm_fix">trm_fix</a></span> : <span class="id"><a href="SLF.LibSepMinimal.html#var">var</a></span> -&gt; <span class="id"><a href="SLF.LibSepMinimal.html#var">var</a></span> -&gt; <span class="id">trm</span> -&gt; <span class="id">trm</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="trm_app">trm_app</a></span> : <span class="id">trm</span> -&gt; <span class="id">trm</span> -&gt; <span class="id">trm</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="trm_let">trm_let</a></span> : <span class="id"><a href="SLF.LibSepMinimal.html#var">var</a></span> -&gt; <span class="id">trm</span> -&gt; <span class="id">trm</span> -&gt; <span class="id">trm</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="trm_if">trm_if</a></span> : <span class="id">trm</span> -&gt; <span class="id">trm</span> -&gt; <span class="id">trm</span> -&gt; <span class="id">trm</span>.<br/>
+<br/>
+<div class="doc">Coercions are used to improve conciseness in the statment of evaluation
+    rules. </div>
+<br/>
+<span class="kwd">Coercion</span> <span class="id">val_bool</span> : <span class="id">bool</span> &gt;-&gt; <span class="id">val</span>.<br/>
+<span class="kwd">Coercion</span> <span class="id">val_int</span> : <span class="id">Z</span> &gt;-&gt; <span class="id">val</span>.<br/>
+<span class="kwd">Coercion</span> <span class="id">val_loc</span> : <span class="id">loc</span> &gt;-&gt; <span class="id">val</span>.<br/>
+<span class="kwd">Coercion</span> <span class="id">val_prim</span> : <span class="id">prim</span> &gt;-&gt; <span class="id">val</span>.<br/>
+<span class="kwd">Coercion</span> <span class="id">trm_val</span> : <span class="id">val</span> &gt;-&gt; <span class="id">trm</span>.<br/>
+<span class="kwd">Coercion</span> <span class="id">trm_var</span> : <span class="id">var</span> &gt;-&gt; <span class="id">trm</span>.<br/>
+<span class="kwd">Coercion</span> <span class="id">trm_app</span> : <span class="id">trm</span> &gt;-&gt; <span class="id">Funclass</span>.<br/>
+<br/>
+<div class="doc">The type of values is inhabited (useful for finite map operations). </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Inhab_val">Inhab_val</a></span> : <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#val_unit">val_unit</a></span>). Qed.</div></details>
+<br/>
+<div class="doc">A heap, a.k.a. heap, consists of a finite map from location to values.
+    Finite maps are formalized in the file <span class="bracket"><span class="id">LibSepFmap.v</span></span>. (We purposely do not
+    use TLC's finite map library to avoid complications with typeclasses.) </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="heap">heap</a></span> : <span class="kwd">Type</span> := <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#loc">loc</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span>.<br/>
+<br/>
+<div class="doc">Implicit types associate meta-variable with types. </div>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> : <span class="id"><a href="SLF.LibSepMinimal.html#var">var</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">b</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">p</span> : <span class="id"><a href="SLF.LibSepMinimal.html#loc">loc</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">n</span> : <span class="id">int</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">v</span> <span class="id">w</span> <span class="id">r</span> : <span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">t</span> : <span class="id"><a href="SLF.LibSepMinimal.html#trm">trm</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">s</span> <span class="id">h</span> : <span class="id"><a href="SLF.LibSepMinimal.html#heap">heap</a></span>.<br/>
+<br/>
+<h2> Semantics </h2>
+<br/>
+<div class="doc">The standard capture-avoiding substitution is written <span class="bracket"><span class="id">subst</span> <span class="id">y</span> <span class="id">w</span> <span class="id">t</span></span>. </div>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="subst">subst</a></span> (<span class="id">y</span>:<span class="id"><a href="SLF.LibSepMinimal.html#var">var</a></span>) (<span class="id">w</span>:<span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span>) (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepMinimal.html#trm">trm</a></span>) : <span class="id"><a href="SLF.LibSepMinimal.html#trm">trm</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">aux</span> <span class="id">t</span> := <span class="id">subst</span> <span class="id">y</span> <span class="id">w</span> <span class="id">t</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">if_y_eq</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> := <span class="kwd">if</span> <span class="id"><a href="SLF.LibSepMinimal.html#var_eq">var_eq</a></span> <span class="id">x</span> <span class="id">y</span> <span class="kwd">then</span> <span class="id">t1</span> <span class="kwd">else</span> <span class="id">t2</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">t</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.LibSepMinimal.html#trm_val">trm_val</a></span> <span class="id">v</span> =&gt; <span class="id"><a href="SLF.LibSepMinimal.html#trm_val">trm_val</a></span> <span class="id">v</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.LibSepMinimal.html#trm_var">trm_var</a></span> <span class="id">x</span> =&gt; <span class="id">if_y_eq</span> <span class="id">x</span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_val">trm_val</a></span> <span class="id">w</span>) <span class="id">t</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.LibSepMinimal.html#trm_fix">trm_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> =&gt; <span class="id"><a href="SLF.LibSepMinimal.html#trm_fix">trm_fix</a></span> <span class="id">f</span> <span class="id">x</span> (<span class="id">if_y_eq</span> <span class="id">f</span> <span class="id">t1</span> (<span class="id">if_y_eq</span> <span class="id">x</span> <span class="id">t1</span> (<span class="id">aux</span> <span class="id">t1</span>)))<br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> <span class="id">t1</span> <span class="id">t2</span> =&gt; <span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> (<span class="id">aux</span> <span class="id">t1</span>) (<span class="id">aux</span> <span class="id">t2</span>)<br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.LibSepMinimal.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> =&gt; <span class="id"><a href="SLF.LibSepMinimal.html#trm_let">trm_let</a></span> <span class="id">x</span> (<span class="id">aux</span> <span class="id">t1</span>) (<span class="id">if_y_eq</span> <span class="id">x</span> <span class="id">t2</span> (<span class="id">aux</span> <span class="id">t2</span>))<br/>
+&nbsp;&nbsp;| <span class="id"><a href="SLF.LibSepMinimal.html#trm_if">trm_if</a></span> <span class="id">t0</span> <span class="id">t1</span> <span class="id">t2</span> =&gt; <span class="id"><a href="SLF.LibSepMinimal.html#trm_if">trm_if</a></span> (<span class="id">aux</span> <span class="id">t0</span>) (<span class="id">aux</span> <span class="id">t1</span>) (<span class="id">aux</span> <span class="id">t2</span>)<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h2> Definition of Omni-Big-Step Semantics </h2>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">Q</span> : <span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#heap">heap</a></span>-&gt;<span class="kwd">Prop</span>.<br/>
+<br/>
+<span class="kwd">Inductive</span> <span class="id"><a name="eval">eval</a></span> : <span class="id"><a href="SLF.LibSepMinimal.html#heap">heap</a></span> -&gt; <span class="id"><a href="SLF.LibSepMinimal.html#trm">trm</a></span> -&gt; (<span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#heap">heap</a></span>-&gt;<span class="kwd">Prop</span>) -&gt; <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_val">eval_val</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">v</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span> <span class="id">v</span> <span class="id">s</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_val">trm_val</a></span> <span class="id">v</span>) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_fix">eval_fix</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span>) <span class="id">s</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_fix">trm_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span>) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_app_fix">eval_app_fix</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepMinimal.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> (<span class="id"><a href="SLF.LibSepMinimal.html#subst">subst</a></span> <span class="id">f</span> <span class="id">v1</span> <span class="id">t1</span>)) <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_let">eval_let</a></span> : <span class="kwd">forall</span> <span class="id">Q1</span> <span class="id">s</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> <span class="id">t1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v1</span> <span class="id">s2</span>, <span class="id">Q1</span> <span class="id">v1</span> <span class="id">s2</span> -&gt; <span class="id">eval</span> <span class="id">s2</span> (<span class="id"><a href="SLF.LibSepMinimal.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v1</span> <span class="id">t2</span>) <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_if">eval_if</a></span> : <span class="kwd">forall</span> <span class="id">s</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">t1</span> <span class="kwd">else</span> <span class="id">t2</span>) <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_if">trm_if</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_bool">val_bool</a></span> <span class="id">b</span>) <span class="id">t1</span> <span class="id">t2</span>) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_add">eval_add</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">n1</span> <span class="id">n2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> (<span class="id">n1</span> + <span class="id">n2</span>)) <span class="id">s</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_add">val_add</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> <span class="id">n1</span>) (<span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> <span class="id">n2</span>)) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_div">eval_div</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">n1</span> <span class="id">n2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">n2</span> &lt;&gt; 0 -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.quot">Z.quot</a></span> <span class="id">n1</span> <span class="id">n2</span>)) <span class="id">s</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_div">val_div</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> <span class="id">n1</span>) (<span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> <span class="id">n2</span>)) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_rand">eval_rand</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">n</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">n</span> &gt; 0 -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">n1</span>, 0 &lt;= <span class="id">n1</span> &lt; <span class="id">n</span> -&gt; <span class="id">Q</span> <span class="id">n1</span> <span class="id">s</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_rand">val_rand</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> <span class="id">n</span>)) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_ref">eval_ref</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">v</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">p</span>, ~ <span class="id"><a href="SLF.LibSepMinimal.html#indom">Fmap.indom</a></span> <span class="id">s</span> <span class="id">p</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_loc">val_loc</a></span> <span class="id">p</span>) (<span class="id"><a href="SLF.LibSepMinimal.html#update">Fmap.update</a></span> <span class="id">s</span> <span class="id">p</span> <span class="id">v</span>)) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_ref">val_ref</a></span> <span class="id">v</span>) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_get">eval_get</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">p</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#indom">Fmap.indom</a></span> <span class="id">s</span> <span class="id">p</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibSepMinimal.html#read">Fmap.read</a></span> <span class="id">s</span> <span class="id">p</span>) <span class="id">s</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_get">val_get</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_loc">val_loc</a></span> <span class="id">p</span>)) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_set">eval_set</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">p</span> <span class="id">v</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#indom">Fmap.indom</a></span> <span class="id">s</span> <span class="id">p</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span> <span class="id"><a href="SLF.LibSepMinimal.html#val_unit">val_unit</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#update">Fmap.update</a></span> <span class="id">s</span> <span class="id">p</span> <span class="id">v</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_set">val_set</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_loc">val_loc</a></span> <span class="id">p</span>) <span class="id">v</span>) <span class="id">Q</span><br/>
+&nbsp;&nbsp;| <span class="id"><a name="eval_free">eval_free</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">p</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#indom">Fmap.indom</a></span> <span class="id">s</span> <span class="id">p</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span> <span class="id"><a href="SLF.LibSepMinimal.html#val_unit">val_unit</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#remove">Fmap.remove</a></span> <span class="id">s</span> <span class="id">p</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eval</span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_free">val_free</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_loc">val_loc</a></span> <span class="id">p</span>)) <span class="id">Q</span>.<br/>
+<br/>
+<h2> Automation for Heap Equality and Heap Disjointness </h2>
+<br/>
+<div class="doc">For goals asserting equalities between heaps, i.e., of the form <span class="bracket"><span class="id">h1</span> = <span class="id">h2</span></span>,
+    we set up automation so that it performs some tidying: substitution,
+    removal of empty heaps, normalization with respect to associativity. </div>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span> <span class="id"><a href="SLF.LibSepFmap.html#union_empty_l">union_empty_l</a></span> <span class="id"><a href="SLF.LibSepFmap.html#union_empty_r">union_empty_r</a></span> : <span class="id">fmap</span>.<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Extern</span> 1 (_ = _ :&gt; <span class="id"><a href="SLF.LibSepMinimal.html#heap">heap</a></span>) =&gt; <span class="id">subst</span>; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">fmap</span>.<br/>
+<br/>
+<div class="doc">For goals asserting disjointness between heaps, i.e., of the form
+    <span class="bracket"><span class="id">Fmap.disjoint</span> <span class="id">h1</span> <span class="id">h2</span></span>, we set up automation to perform simplifications:
+    substitution, exploit distributivity of the disjointness predicate over
+    unions of heaps, and exploit disjointness with empty heaps. The tactic
+    <span class="bracket"><span class="id">jauto_set</span></span> used here comes from the TLC library; essentially, it destructs
+    conjunctions and existentials. </div>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">Fmap.disjoint_empty_l</span> <span class="id">Fmap.disjoint_empty_r</span>.<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_union_eq_l">disjoint_union_eq_l</a></span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_union_eq_r">disjoint_union_eq_r</a></span> : <span class="id">disjoint</span>.<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Extern</span> 1 (<span class="id"><a href="SLF.LibSepMinimal.html#disjoint">Fmap.disjoint</a></span> _ _) =&gt;<br/>
+&nbsp;&nbsp;<span class="id">subst</span>; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_disjoint</span> <span class="kwd">in</span> *; <span class="id">jauto_set</span>.<br/>
+<br/>
+<h1> Heap Predicates and Entailment </h1>
+<br/>
+<h2> Extensionality Axioms </h2>
+<br/>
+<div class="doc">Extensionality axioms are essential to assert equalities between heap
+    predicates of type <span class="bracket"><span class="id">hprop</span></span>, and between postconditions, of type
+    <span class="bracket"><span class="id">val</span>-&gt;<span class="id">hprop</span></span>. </div>
+<br/>
+<span class="kwd">Axiom</span> <span class="id"><a name="functional_extensionality">functional_extensionality</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> <span class="id">g</span>:<span class="id">A</span>-&gt;<span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">f</span> <span class="id">x</span> = <span class="id">g</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<br/>
+<span class="kwd">Axiom</span> <span class="id"><a name="propositional_extensionality">propositional_extensionality</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span>:<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<br/>
+<h2> Core Heap Predicates </h2>
+<br/>
+<div class="doc">The type of heap predicates is named <span class="bracket"><span class="id">hprop</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hprop">hprop</a></span> := <span class="id"><a href="SLF.LibSepMinimal.html#heap">heap</a></span> -&gt; <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">We bind a few more meta-variables. </div>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">H</span> : <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>.<br/>
+<br/>
+<div class="doc">Core heap predicates, and their associated notations:
+    - <span class="bracket">\[]</span> denotes the empty heap predicate
+    - <span class="bracket">\[<span class="id">P</span>]</span> denotes a pure fact
+    - <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span> denotes a singleton heap
+    - <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span> denotes the separating conjunction
+    - <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H2</span></span> denotes the separating conjunction extending a postcondition
+    - <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">H</span></span> denotes an existential
+    - <span class="bracket">\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">H</span></span> denotes a universal. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hempty">hempty</a></span> : <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; (<span class="id">h</span> = <span class="id"><a href="SLF.LibSepMinimal.html#empty">Fmap.empty</a></span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hsingle">hsingle</a></span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepMinimal.html#loc">loc</a></span>) (<span class="id">v</span>:<span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span>) : <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; (<span class="id">h</span> = <span class="id"><a href="SLF.LibSepMinimal.html#single">Fmap.single</a></span> <span class="id">p</span> <span class="id">v</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hstar">hstar</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">exists</span> <span class="id">h1</span> <span class="id">h2</span>, <span class="id">H1</span> <span class="id">h1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id">H2</span> <span class="id">h2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id"><a href="SLF.LibSepMinimal.html#disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id">h</span> = <span class="id"><a href="SLF.LibSepMinimal.html#union">Fmap.union</a></span> <span class="id">h1</span> <span class="id">h2</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hexists">hexists</a></span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hforall">hforall</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">J</span> : <span class="id">A</span> -&gt; <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) : <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hpure">hpure</a></span> (<span class="id">P</span>:<span class="kwd">Prop</span>) : <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span> := <br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> (<span class="kwd">fun</span> (<span class="id">p</span>:<span class="id">P</span>) =&gt; <span class="id"><a href="SLF.LibSepMinimal.html#hempty">hempty</a></span>).<br/>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\[]"</span> := (<span class="id"><a href="SLF.LibSepMinimal.html#hempty">hempty</a></span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\[ P ]"</span> := (<span class="id"><a href="SLF.LibSepMinimal.html#hpure">hpure</a></span> <span class="id">P</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">format</span> <span class="string">"\[ P ]"</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"p '~~&gt;' v"</span> := (<span class="id"><a href="SLF.LibSepMinimal.html#hsingle">hsingle</a></span> <span class="id">p</span> <span class="id">v</span>) (<span class="kwd">at</span> <span class="id">level</span> 32) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"H1 '\*' H2"</span> := (<span class="id"><a href="SLF.LibSepMinimal.html#hstar">hstar</a></span> <span class="id">H1</span> <span class="id">H2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 41, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"Q \*+ H"</span> := (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id"><a href="SLF.LibSepMinimal.html#hstar">hstar</a></span> (<span class="id">Q</span> <span class="id">x</span>) <span class="id">H</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 40) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'\exists' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '\exists' '/ '  x1  ..  xn , '/ '  H ']'"</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'\forall' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibSepMinimal.html#hforall">hforall</a></span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id"><a href="SLF.LibSepMinimal.html#hforall">hforall</a></span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '\forall' '/ '  x1  ..  xn , '/ '  H ']'"</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<h2> Entailment </h2>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">hprop_scope</span>.<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">hprop_scope</span>.<br/>
+<br/>
+<div class="doc">Entailment for heap predicates, written <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H2</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="himpl">himpl</a></span> (<span class="id">H1</span> <span class="id">H2</span>:<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">h</span>, <span class="id">H1</span> <span class="id">h</span> -&gt; <span class="id">H2</span> <span class="id">h</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"H1 ==&gt; H2"</span> := (<span class="id"><a href="SLF.LibSepMinimal.html#himpl">himpl</a></span> <span class="id">H1</span> <span class="id">H2</span>) (<span class="kwd">at</span> <span class="id">level</span> 55) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<div class="doc">Entailment between postconditions, written <span class="bracket"><span class="id">Q1</span> ===&gt; <span class="id">Q2</span></span> </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="qimpl">qimpl</a></span> <span class="id">A</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">v</span>:<span class="id">A</span>), <span class="id">Q1</span> <span class="id">v</span> ==&gt; <span class="id">Q2</span> <span class="id">v</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"Q1 ===&gt; Q2"</span> := (<span class="id"><a href="SLF.LibSepMinimal.html#qimpl">qimpl</a></span> <span class="id">Q1</span> <span class="id">Q2</span>) (<span class="kwd">at</span> <span class="id">level</span> 55) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<div class="doc">Entailment defines an order on heap predicates </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_refl">himpl_refl</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">M</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_trans">himpl_trans</a></span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> ==&gt; <span class="id">H2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H2</span> ==&gt; <span class="id">H3</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> ==&gt; <span class="id">H3</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">unfolds</span>* <span class="id"><a href="SLF.LibSepMinimal.html#himpl">himpl</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_antisym">himpl_antisym</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> ==&gt; <span class="id">H2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H2</span> ==&gt; <span class="id">H1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> = <span class="id">H2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#pred_ext_1">pred_ext_1</a></span>. <span class="id">intros</span> <span class="id">h</span>. <span class="id">iff</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="qimpl_refl">qimpl_refl</a></span> : <span class="kwd">forall</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q</span> ===&gt; <span class="id">Q</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">intros</span> <span class="id">Q</span> <span class="id">v</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_refl">himpl_refl</a></span>. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">himpl_refl</span> <span class="id">qimpl_refl</span>.<br/>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">hstar</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_intro">hstar_intro</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> <span class="id">h1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) (<span class="id"><a href="SLF.LibSepMinimal.html#union">Fmap.union</a></span> <span class="id">h1</span> <span class="id">h2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">intros</span>. <span class="kwd">exists</span>* <span class="id">h1</span> <span class="id">h2</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_comm">hstar_comm</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> = <span class="id">H2</span> \* <span class="id">H1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>, <span class="id"><a href="SLF.LibSepMinimal.html#hstar">hstar</a></span>. <span class="id">intros</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">h</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#union_comm_of_disjoint">Fmap.union_comm_of_disjoint</a></span> <span class="kwd">in</span> <span class="id">U</span>. <span class="kwd">exists</span>* <span class="id">h2</span> <span class="id">h1</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">h</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#union_comm_of_disjoint">Fmap.union_comm_of_disjoint</a></span> <span class="kwd">in</span> <span class="id">U</span>. <span class="kwd">exists</span>* <span class="id">h2</span> <span class="id">h1</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_assoc">hstar_assoc</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) \* <span class="id">H3</span> = <span class="id">H1</span> \* (<span class="id">H2</span> \* <span class="id">H3</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_antisym">himpl_antisym</a></span>; <span class="id">intros</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h'</span>&amp;<span class="id">h3</span>&amp;(<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M3</span>&amp;<span class="id">M4</span>&amp;<span class="id">D'</span>&amp;<span class="id">U'</span>)&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">subst</span> <span class="id">h'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">h1</span> (<span class="id">h2</span> \+ <span class="id">h3</span>). <span class="id">splits</span>*. { <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#hstar_intro">hstar_intro</a></span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h1</span>&amp;<span class="id">h'</span>&amp;<span class="id">M1</span>&amp;(<span class="id">h2</span>&amp;<span class="id">h3</span>&amp;<span class="id">M3</span>&amp;<span class="id">M4</span>&amp;<span class="id">D'</span>&amp;<span class="id">U'</span>)&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">subst</span> <span class="id">h'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">h1</span> \+ <span class="id">h2</span>) <span class="id">h3</span>. <span class="id">splits</span>*. { <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#hstar_intro">hstar_intro</a></span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_hempty_l">hstar_hempty_l</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;\[] \* <span class="id">H</span> = <span class="id">H</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_antisym">himpl_antisym</a></span>; <span class="id">intros</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">hnf</span> <span class="kwd">in</span> <span class="id">M1</span>. <span class="id">subst</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#union_empty_l">Fmap.union_empty_l</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">M</span>. <span class="kwd">exists</span> (@<span class="id"><a href="SLF.LibSepMinimal.html#empty">Fmap.empty</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#loc">loc</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span>) <span class="id">h</span>. <span class="id">splits</span>*. { <span class="id">hnfs</span>*. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_hexists">hstar_hexists</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> <span class="id">J</span>) \* <span class="id">H</span> = <span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; (<span class="id">J</span> <span class="id">x</span>) \* <span class="id">H</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_antisym">himpl_antisym</a></span>; <span class="id">intros</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;(<span class="id">x</span>&amp;<span class="id">M1</span>)&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="kwd">exists</span>* <span class="id">x</span> <span class="id">h1</span> <span class="id">h2</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">x</span>&amp;(<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>)). <span class="kwd">exists</span> <span class="id">h1</span> <span class="id">h2</span>. <span class="id">splits</span>*. { <span class="kwd">exists</span>* <span class="id">x</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_hforall">hstar_hforall</a></span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibSepMinimal.html#hforall">hforall</a></span> <span class="id">J</span>) \* <span class="id">H</span> ==&gt; <span class="id"><a href="SLF.LibSepMinimal.html#hforall">hforall</a></span> (<span class="id">J</span> \*+ <span class="id">H</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">M</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">intros</span> <span class="id">x</span>. <span class="kwd">exists</span>* <span class="id">h1</span> <span class="id">h2</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_frame_l">himpl_frame_l</a></span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">H1'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H1'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1'</span> \* <span class="id">H2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">W</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;?). <span class="kwd">exists</span>* <span class="id">h1</span> <span class="id">h2</span>. Qed.</div></details>
+<br/>
+<div class="doc">Additional, symmetric results, useful for tactics </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_hempty_r">hstar_hempty_r</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> \* \[] = <span class="id">H</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibOperation.html#neutral_r_of_comm_neutral_l">neutral_r_of_comm_neutral_l</a></span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#hstar_comm">hstar_comm</a></span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#hstar_hempty_l">hstar_hempty_l</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_frame_r">himpl_frame_r</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H2'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H2'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1</span> \* <span class="id">H2'</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> (@<span class="id"><a href="SLF.LibSepMinimal.html#hstar_comm">hstar_comm</a></span> <span class="id">H1</span>). <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#himpl_frame_l">himpl_frame_l</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">hpure</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_hpure_l">hstar_hpure_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">h</span> = (<span class="id">P</span> /\ <span class="id">H</span> <span class="id">h</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepMinimal.html#hpure">hpure</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_hexists">hstar_hexists</a></span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#hstar_hempty_l">hstar_hempty_l</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">iff</span> (<span class="id">p</span>&amp;<span class="id">M</span>) (<span class="id">p</span>&amp;<span class="id">M</span>). { <span class="id">split</span>*. } { <span class="kwd">exists</span>* <span class="id">p</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hstar_hpure_r">himpl_hstar_hpure_r</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span> <span class="id">H'</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id">H'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (\[<span class="id">P</span>] \* <span class="id">H'</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">HP</span> <span class="id">W</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#hstar_hpure_l">hstar_hpure_l</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hstar_hpure_l">himpl_hstar_hpure_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span> <span class="id">H'</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">H</span> ==&gt; <span class="id">H'</span>) -&gt;<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \* <span class="id">H</span>) ==&gt; <span class="id">H'</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">W</span> <span class="id">Hh</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_hpure_l">hstar_hpure_l</a></span> <span class="kwd">in</span> <span class="id">Hh</span>. <span class="id">applys</span>* <span class="id">W</span>. Qed.</div></details>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">hexists</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hexists_l">himpl_hexists_l</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">H</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> ==&gt; <span class="id">H</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> <span class="id">J</span>) ==&gt; <span class="id">H</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">W</span>. <span class="id">intros</span> <span class="id">h</span> (<span class="id">x</span>&amp;<span class="id">Hh</span>). <span class="id">applys</span>* <span class="id">W</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hexists_r">himpl_hexists_r</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">x</span>:<span class="id">A</span>) <span class="id">H</span> <span class="id">J</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id">J</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (<span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> <span class="id">J</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">W</span>. <span class="id">intros</span> <span class="id">h</span>. <span class="kwd">exists</span> <span class="id">x</span>. <span class="id">apply</span>* <span class="id">W</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hexists">himpl_hexists</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J1</span> <span class="id">J2</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">J1</span> ===&gt; <span class="id">J2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> <span class="id">J1</span> ==&gt; <span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> <span class="id">J2</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_hexists_l">himpl_hexists_l</a></span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_hexists_r">himpl_hexists_r</a></span> <span class="id">W</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">hforall</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hforall_r">himpl_hforall_r</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">H</span> ==&gt; <span class="id">J</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (<span class="id"><a href="SLF.LibSepMinimal.html#hforall">hforall</a></span> <span class="id">J</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">Hh</span> <span class="id">x</span>. <span class="id">apply</span>* <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hforall_l">himpl_hforall_l</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">x</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="id">J</span> <span class="id">x</span> ==&gt; <span class="id">H</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibSepMinimal.html#hforall">hforall</a></span> <span class="id">J</span>) ==&gt; <span class="id">H</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">Hh</span>. <span class="id">apply</span>* <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hforall">himpl_hforall</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J1</span> <span class="id">J2</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">J1</span> ===&gt; <span class="id">J2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#hforall">hforall</a></span> <span class="id">J1</span> ==&gt; <span class="id"><a href="SLF.LibSepMinimal.html#hforall">hforall</a></span> <span class="id">J2</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_hforall_r">himpl_hforall_r</a></span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_hforall_l">himpl_hforall_l</a></span> <span class="id">W</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">hsingle</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_hsingle_same_loc">hstar_hsingle_same_loc</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v1</span>) \* (<span class="id">p</span> ~~&gt; <span class="id">v2</span>) ==&gt; \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>].<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepMinimal.html#hsingle">hsingle</a></span>. <span class="id">intros</span> <span class="id">h</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">E1</span>&amp;<span class="id">E2</span>&amp;<span class="id">D</span>&amp;<span class="id">E</span>). <span class="id">false</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#disjoint_single_single_same_inv">Fmap.disjoint_single_single_same_inv</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Basic Tactics for Simplifying Entailments </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xsimpl</span></span> performs immediate simplifications on entailment relations. </div>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_assoc">hstar_assoc</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_hempty_l">hstar_hempty_l</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_hempty_r">hstar_hempty_r</a></span> : <span class="id">hstar</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"xsimpl"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="id">solve</span> [ <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#qimpl_refl">qimpl_refl</a></span> ];<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> |- _ ===&gt; _ =&gt; <span class="id">intros</span> ? <span class="kwd">end</span>;<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">hstar</span>; <span class="id">repeat</span> <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- ?<span class="id">H</span> \* _ ==&gt; ?<span class="id">H</span> \* _ =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_frame_r">himpl_frame_r</a></span><br/>
+&nbsp;&nbsp;| |- _ \* ?<span class="id">H</span> ==&gt; _ \* ?<span class="id">H</span> =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_frame_l">himpl_frame_l</a></span><br/>
+&nbsp;&nbsp;| |- _ \* ?<span class="id">H</span> ==&gt; ?<span class="id">H</span> \* _ =&gt; <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_comm">hstar_comm</a></span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_frame_r">himpl_frame_r</a></span><br/>
+&nbsp;&nbsp;| |- ?<span class="id">H</span> \* _ ==&gt; _ \* ?<span class="id">H</span> =&gt; <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_comm">hstar_comm</a></span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_frame_l">himpl_frame_l</a></span><br/>
+&nbsp;&nbsp;| |- ?<span class="id">H</span> ==&gt; ?<span class="id">H</span> =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_refl">himpl_refl</a></span><br/>
+&nbsp;&nbsp;| |- ?<span class="id">H</span> ==&gt; ?<span class="id">H'</span> =&gt; <span class="id">is_evar</span> <span class="id">H'</span>; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_refl">himpl_refl</a></span> <span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"xsimpl"</span> <span class="string">"*"</span> := <span class="id">xsimpl</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xchange</span></span> helps rewriting in entailments. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="xchange_lemma">xchange_lemma</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H1'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H1'</span> -&gt; <span class="kwd">forall</span> <span class="id">H</span> <span class="id">H'</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1'</span> \* <span class="id">H2</span> ==&gt; <span class="id">H'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H'</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span> <span class="id">M3</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_trans">himpl_trans</a></span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_trans">himpl_trans</a></span> <span class="id">M3</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#himpl_frame_l">himpl_frame_l</a></span>. <span class="id">applys</span> <span class="id">M1</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"xchange"</span> <span class="id">constr</span>(<span class="id">M</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">forwards_nounfold_then</span> <span class="id">M</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">K</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id"><a href="SLF.LibSepMinimal.html#xchange_lemma">xchange_lemma</a></span>; [ <span class="id">eapply</span> <span class="id">K</span> | <span class="id">xsimpl</span> | ]).<br/>
+<br/>
+<h1> Separation Logic </h1>
+<br/>
+<h2> Definition of Separation Logic triples </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="triple">triple</a></span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepMinimal.html#trm">trm</a></span>) (<span class="id">H</span>:<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) (<span class="id">Q</span>:<span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">s</span>, <span class="id">H</span> <span class="id">s</span> -&gt; <span class="id"><a href="SLF.LibSepMinimal.html#eval">eval</a></span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q</span>.<br/>
+<br/>
+<h2> Key Properties of Omni-Big-Step Semantics </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eval_conseq">eval_conseq</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#eval">eval</a></span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> ===&gt; <span class="id">Q2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#eval">eval</a></span> <span class="id">s</span> <span class="id">t</span> <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span> <span class="id">W</span>.<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">W'</span>: (<span class="kwd">forall</span> <span class="id">v</span> <span class="id">h</span>, <span class="id">Q1</span> <span class="id">v</span> <span class="id">h</span> -&gt; <span class="id">Q2</span> <span class="id">v</span> <span class="id">h</span>). { <span class="id">auto</span>. } <span class="id">clear</span> <span class="id">W</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">M</span>; <span class="id">try</span> <span class="id">solve</span> [ <span class="id">constructors</span>* ].<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eval_frame">eval_frame</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">t</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#eval">eval</a></span> <span class="id">h1</span> <span class="id">t</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#eval">eval</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#union">Fmap.union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">t</span> (<span class="id">Q</span> \*+ (= <span class="id">h2</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span> <span class="id">HD</span>. <span class="id">gen</span> <span class="id">h2</span>. <span class="id">induction</span> <span class="id">M</span>; <span class="id">intros</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">try</span> <span class="id">solve</span> [ <span class="id">hint</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_intro">hstar_intro</a></span>; <span class="id">constructors</span>* ].<br/>
+&nbsp;&nbsp;{ <span class="id">rename</span> <span class="id">M</span> <span class="id">into</span> <span class="id">M1</span>, <span class="id">H</span> <span class="id">into</span> <span class="id">M2</span>, <span class="id">IHM</span> <span class="id">into</span> <span class="id">IH1</span>, <span class="id">H0</span> <span class="id">into</span> <span class="id">IH2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">IH1</span> <span class="id">HD</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_let">eval_let</a></span> <span class="id">IH1</span>. <span class="id">introv</span> <span class="id">HK</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">h1'</span>&amp;<span class="id">h2'</span>&amp;<span class="id">K1'</span>&amp;<span class="id">K2'</span>&amp;<span class="id">KD</span>&amp;<span class="id">KU</span>): <span class="id">HK</span>. <span class="id">subst</span>. <span class="id">applys</span>* <span class="id">IH2</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rename</span> <span class="id">H</span> <span class="id">into</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_ref">eval_ref</a></span>. <span class="id">intros</span> <span class="id">p</span> <span class="id">Hp</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#indom_union_eq">Fmap.indom_union_eq</a></span> <span class="kwd">in</span> <span class="id">Hp</span>. <span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">Hp</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">Hp</span> <span class="kwd">as</span> [<span class="id">Hp1</span> <span class="id">Hp2</span>].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#update_union_not_r">Fmap.update_union_not_r</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_intro">hstar_intro</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">M</span>. } { <span class="id">auto</span>. } { <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#disjoint_update_not_r">Fmap.disjoint_update_not_r</a></span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_get">eval_get</a></span>. { <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#indom_union_eq">Fmap.indom_union_eq</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#read_union_l">Fmap.read_union_l</a></span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#hstar_intro">hstar_intro</a></span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_set">eval_set</a></span>. { <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#indom_union_eq">Fmap.indom_union_eq</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#update_union_l">Fmap.update_union_l</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_intro">hstar_intro</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">auto</span>. } { <span class="id">auto</span>. } { <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#disjoint_update_l">Fmap.disjoint_update_l</a></span>. } } }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_free">eval_free</a></span>. { <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#indom_union_eq">Fmap.indom_union_eq</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#remove_disjoint_union_l">Fmap.remove_disjoint_union_l</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_intro">hstar_intro</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">auto</span>. } { <span class="id">auto</span>. } { <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#disjoint_remove_l">Fmap.disjoint_remove_l</a></span>. } } }<br/>
+Qed.</div></details>
+<br/>
+<h2> Structural Rules </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_conseq">triple_conseq</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H'</span> <span class="id">Q'</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H'</span> <span class="id">Q'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q'</span> ===&gt; <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">MH</span> <span class="id">MQ</span> <span class="id">HF</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#eval_conseq">eval_conseq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_frame">triple_frame</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">H'</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> <span class="id">t</span> (<span class="id">H</span> \* <span class="id">H'</span>) (<span class="id">Q</span> \*+ <span class="id">H'</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">HF</span>. <span class="id">lets</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">MD</span>&amp;<span class="id">MU</span>): (<span class="id"><a href="SLF.LibTactics.html#rm">rm</a></span> <span class="id">HF</span>).<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">M1</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_conseq">eval_conseq</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_frame">eval_frame</a></span> <span class="id">M</span> <span class="id">MD</span>. } { <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">h'</span> -&gt;. <span class="id">applys</span> <span class="id">M2</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_hexists">triple_hexists</a></span> : <span class="kwd">forall</span> <span class="id">t</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.LibSepMinimal.html#hprop">hprop</a></span>) <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> <span class="id">t</span> (<span class="id">J</span> <span class="id">x</span>) <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> <span class="id">t</span> (<span class="id"><a href="SLF.LibSepMinimal.html#hexists">hexists</a></span> <span class="id">J</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> (<span class="id">x</span>&amp;<span class="id">Hh</span>). <span class="id">applys</span> <span class="id">M</span> <span class="id">Hh</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_hpure">triple_hpure</a></span> : <span class="kwd">forall</span> <span class="id">t</span> (<span class="id">P</span>:<span class="kwd">Prop</span>) <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> <span class="id">t</span> (\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">destruct</span> <span class="id">M1</span> <span class="kwd">as</span> (<span class="id">M1</span>&amp;<span class="id">HP</span>).<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">HP</span>. <span class="id">subst</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#union_empty_l">Fmap.union_empty_l</a></span>. <span class="id">applys</span>~ <span class="id">M</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Reasoning Rules for Terms </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_val">triple_val</a></span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_val">trm_val</a></span> <span class="id">v</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#eval_val">eval_val</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_fix">triple_fix</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_fix">trm_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#eval_fix">eval_fix</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_if">triple_if</a></span> : <span class="kwd">forall</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) <span class="id">t1</span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">t1</span> <span class="kwd">else</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_if">trm_if</a></span> <span class="id">b</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#eval_if">eval_if</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_app_fix">triple_app_fix</a></span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepMinimal.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> (<span class="id"><a href="SLF.LibSepMinimal.html#subst">subst</a></span> <span class="id">f</span> <span class="id">v1</span> <span class="id">t1</span>)) <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#eval_app_fix">eval_app_fix</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_let">triple_let</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v1</span>, <span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v1</span> <span class="id">t2</span>) (<span class="id">Q1</span> <span class="id">v1</span>) <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#eval_let">eval_let</a></span>. Qed.</div></details>
+<br/>
+<h2> Specification of Primitive Operations </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_add">triple_add</a></span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_add">val_add</a></span> <span class="id">n1</span> <span class="id">n2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> (<span class="id">n1</span> + <span class="id">n2</span>)]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#eval_add">eval_add</a></span>. <span class="id">inverts</span> <span class="id">Hs</span>. <span class="kwd">exists</span>*. <span class="id">hnfs</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_div">triple_div</a></span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id">n2</span> &lt;&gt; 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_div">val_div</a></span> <span class="id">n1</span> <span class="id">n2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.quot">Z.quot</a></span> <span class="id">n1</span> <span class="id">n2</span>)]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hn2</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#eval_div">eval_div</a></span>. <span class="id">inverts</span> <span class="id">Hs</span>. <span class="kwd">exists</span>*. <span class="id">hnfs</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_rand">triple_rand</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> &gt; 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_rand">val_rand</a></span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="kwd">exists</span> <span class="id">n1</span>, <span class="id">r</span> = <span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> <span class="id">n1</span> /\ 0 &lt;= <span class="id">n1</span> &lt; <span class="id">n</span>]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hn2</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#eval_rand">eval_rand</a></span>. <span class="id">inverts</span> <span class="id">Hs</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n1</span> <span class="id">Hn1</span>. <span class="id">hnfs</span>. <span class="kwd">exists</span>*. <span class="id">hnfs</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_ref">triple_ref</a></span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_ref">val_ref</a></span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \<span class="kwd">exists</span> <span class="id">p</span>, \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepMinimal.html#val_loc">val_loc</a></span> <span class="id">p</span>] \* <span class="id">p</span> ~~&gt; <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">intros</span> <span class="id">s1</span> <span class="id">K</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_ref">eval_ref</a></span>. <span class="id">intros</span> <span class="id">p</span> <span class="id">D</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">K</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#update_empty">Fmap.update_empty</a></span>. <span class="kwd">exists</span> <span class="id">p</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_hpure_l">hstar_hpure_l</a></span>. <span class="id">split</span>*. <span class="id">hnfs</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_get">triple_get</a></span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_get">val_get</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">v</span>] \* (<span class="id">p</span> ~~&gt; <span class="id">v</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">intros</span> <span class="id">s</span> <span class="id">K</span>. <span class="id">inverts</span> <span class="id">K</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_get">eval_get</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#indom_single">Fmap.indom_single</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#hstar_hpure_l">hstar_hpure_l</a></span>. <span class="id">split</span>*. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#read_single">Fmap.read_single</a></span>. <span class="id">hnfs</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_set">triple_set</a></span> : <span class="kwd">forall</span> <span class="id">w</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_set">val_set</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_loc">val_loc</a></span> <span class="id">p</span>) <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">w</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; (<span class="id">p</span> ~~&gt; <span class="id">v</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">intros</span> <span class="id">s1</span> <span class="id">K</span>. <span class="id">inverts</span> <span class="id">K</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_set">eval_set</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#indom_single">Fmap.indom_single</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepMinimal.html#update_single">Fmap.update_single</a></span>. <span class="id">hnfs</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_free">triple_free</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_free">val_free</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#val_loc">val_loc</a></span> <span class="id">p</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">intros</span> <span class="id">s1</span> <span class="id">K</span>. <span class="id">inverts</span> <span class="id">K</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#eval_free">eval_free</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepMinimal.html#indom_single">Fmap.indom_single</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepMinimal.html#remove_single">Fmap.remove_single</a></span>. <span class="id">hnfs</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<h1> Bonus: Example Proof </h1>
+<br/>
+<div class="doc">See chapter <span class="bracket"><span class="id">Rules</span></span> for comments on this proof.
+OCaml:
+   let incr p =
+      let n = !p in
+      let m = n+1 in
+      p := m
+</div>
+<br/>
+<div class="doc">Definition of the function <span class="bracket"><span class="id">incr</span></span>, using low-level syntax. </div>
+<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">string_scope</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="incr">incr</a></span> : <span class="id"><a href="SLF.LibSepMinimal.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#val_fix">val_fix</a></span> <span class="string">"f"</span> <span class="string">"p"</span> (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#trm_let">trm_let</a></span> <span class="string">"n"</span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#val_get">val_get</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_var">trm_var</a></span> <span class="string">"p"</span>)) (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#trm_let">trm_let</a></span> <span class="string">"m"</span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#val_add">val_add</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.LibSepMinimal.html#trm_var">trm_var</a></span> <span class="string">"n"</span>)) (<span class="id"><a href="SLF.LibSepMinimal.html#val_int">val_int</a></span> 1)) (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#val_set">val_set</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_var">trm_var</a></span> <span class="string">"p"</span>)) (<span class="id"><a href="SLF.LibSepMinimal.html#trm_var">trm_var</a></span> <span class="string">"m"</span>)))).<br/>
+<br/>
+<div class="doc">Specification of the function <span class="bracket"><span class="id">incr</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_incr">triple_incr</a></span> : <span class="kwd">forall</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepMinimal.html#loc">loc</a></span>) (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepMinimal.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepMinimal.html#trm_app">trm_app</a></span> <span class="id"><a href="SLF.LibSepMinimal.html#incr">incr</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> _ =&gt; <span class="id">p</span> ~~&gt; (<span class="id">n</span>+1)).<br/>
+<br/>
+<div class="doc">Verification of <span class="bracket"><span class="id">incr</span></span>, applying the reasoning rules by hand. </div>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_app_fix">triple_app_fix</a></span>. { <span class="id">reflexivity</span>. } <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_let">triple_let</a></span>. { <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_get">triple_get</a></span>. }<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n'</span>. <span class="id">simpl</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_hpure">triple_hpure</a></span>. <span class="id">intros</span> -&gt;.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_let">triple_let</a></span>. { <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_conseq">triple_conseq</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_frame">triple_frame</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_add">triple_add</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span>. } }<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">m'</span>. <span class="id">simpl</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_hpure">triple_hpure</a></span>. <span class="id">intros</span> -&gt;.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.LibSepMinimal.html#triple_set">triple_set</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

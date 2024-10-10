@@ -1,0 +1,575 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module WPsound</title>
+<meta name="description" content="Documentation of Coq module WPsound" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module WPsound</h1>
+<div class="coq">
+<h1> WPsound: Soundness of the Weakest Precondition Generator </h1>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.WPsem.html">WPsem</a></span> <span class="id"><a href="SLF.WPgen.html">WPgen</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.WPgen.html#WPgenRec">WPgenRec</a></span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> : <span class="id"><a href="SLF.LibSepVar.html#var">var</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">b</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">v</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">h</span> : <span class="id"><a href="SLF.LibSepReference.html#heap">heap</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">H</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">Q</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<br/>
+<h1> More Details </h1>
+<br/>
+<div class="doc">This chapter develops the soundness proof for <span class="bracket"><span class="id">wpgen</span></span>. The key theorem
+    asserts that, for any term and and postcondition, <span class="bracket"><span class="id">wpgen</span></span> (on an empty
+    substitution context) yields a formula that entails <span class="bracket"><span class="id">wp</span></span>. Formally:
+    <span class="bracket"><span class="id">wpgen</span> <span class="id">nil</span> <span class="id">t</span> <span class="id">Q</span> ==&gt; <span class="id">wp</span> <span class="id">t</span> <span class="id">Q</span></span>. The present "more details" section contains the
+    proof of this theorem. The "optional material" section details the proofs of
+    two technical lemmas related to permutation of substitutions. This chapter
+    may be safely skipped. </div>
+<br/>
+<h2> Definition of the Predicate <span class="bracket"><span class="id">formula_sound</span></span> </h2>
+<br/>
+<div class="doc">The soundness theorem that we aim to establish for <span class="bracket"><span class="id">wpgen</span></span> is:
+    Parameter wpgen_sound : forall E t Q,
+      wpgen E t Q ==&gt; wp (isubst E t) Q.
+</div>
+<br/>
+<div class="doc">Before entering into the details of the proof, let us reformulate the
+    statement of the soundness theorem to make proof obligations and induction
+    hypotheses easier to read. To that end, we introduce the predicate
+    <span class="bracket"><span class="id">formula_sound</span> <span class="id">t</span> <span class="id">F</span></span>, read "F is a formula sound for t". It asserts that <span class="bracket"><span class="id">F</span></span>
+    is a weakest-precondition style formula that entails <span class="bracket"><span class="id">wp</span> <span class="id">t</span></span>. Formally: </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="formula_sound">formula_sound</a></span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">F</span>:<span class="id"><a href="SLF.WPgen.html#formula">formula</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">Q</span>, <span class="id">F</span> <span class="id">Q</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Using <span class="bracket"><span class="id">formula_sound</span></span>, the soundness theorem for <span class="bracket"><span class="id">wpgen</span></span> is reformulated as
+    follows.
+    Parameter wpgen_sound : forall E t,
+      formula_sound (isubst E t) (wpgen E t).
+</div>
+<br/>
+<div class="doc">The soundness theorem <span class="bracket"><span class="id">wpgen_sound</span></span> is proved by induction on <span class="bracket"><span class="id">t</span></span>. Each case
+    of this inductive proof corresponds to a term construct. For each term
+    construct, we need to exploit two lemmas. The first lemma, common to all
+    term constructs, is called <span class="bracket"><span class="id">mkstruct_sound</span></span>, and is used to argue that the
+    presence of <span class="bracket"><span class="id">mkstruct</span></span> in the definition of <span class="bracket"><span class="id">wpgen</span></span> is sound. The second
+    lemma is specific to the term construct. For example, <span class="bracket"><span class="id">wpgen_sound_seq</span></span> is
+    of the form <span class="bracket"><span class="id">formula_sound</span> (<span class="id">trm_seq</span> <span class="id">t1</span> <span class="id">t2</span>) (<span class="id">wpgen_seq</span> <span class="id">F1</span> <span class="id">F2</span>)</span>. We next
+    explain the details of how to state and prove <span class="bracket"><span class="id">wpgen_sound_seq</span></span>, then
+    present the other auxiliary lemmas useful for completing the proof by
+    induction of <span class="bracket"><span class="id">wpgen_sound</span></span>. </div>
+<br/>
+<h2> Soundness for the Case of Sequences </h2>
+<br/>
+<div class="doc">Consider the soundness theorem <span class="bracket"><span class="id">wpgen_sound</span></span> and let us specialize it to the
+    particular case where <span class="bracket"><span class="id">t</span></span> is of the form <span class="bracket"><span class="id">trm_seq</span> <span class="id">t1</span> <span class="id">t2</span></span>. The corresponding
+    statement is: </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="wpgen_sound_seq_1">wpgen_sound_seq_1</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">t1</span> <span class="id">t2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E</span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t1</span> <span class="id">t2</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id">E</span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t1</span> <span class="id">t2</span>)).<br/>
+<br/>
+<div class="doc">Let us ignore <span class="bracket"><span class="id">mkstruct</span></span> for a minute -- that is, pretend that <span class="bracket"><span class="id">wpgen</span></span> is
+    defined without <span class="bracket"><span class="id">mkstruct</span></span>. Under this assumption, <span class="bracket"><span class="id">wpgen</span> <span class="id">E</span> (<span class="id">trm_seq</span> <span class="id">t1</span> <span class="id">t2</span>)</span>
+    evaluates to <span class="bracket"><span class="id">wpgen_seq</span> (<span class="id">wpgen</span> <span class="id">E</span> <span class="id">t1</span>) (<span class="id">wpgen</span> <span class="id">E</span> <span class="id">t2</span>)</span>. Besides, the expression
+    <span class="bracket"><span class="id">isubst</span> <span class="id">E</span> (<span class="id">trm_seq</span> <span class="id">t1</span> <span class="id">t2</span>)</span> evaluates to
+    <span class="bracket"><span class="id">trm_seq</span> (<span class="id">isubst</span> <span class="id">E</span> <span class="id">t1</span>) (<span class="id">isubst</span> <span class="id">E</span> <span class="id">t2</span>)</span>. Therefore, the soundness statement to
+    establish can be reformulated as: </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="wpgen_sound_seq_2">wpgen_sound_seq_2</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">t1</span> <span class="id">t2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E</span> <span class="id">t1</span>) (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E</span> <span class="id">t2</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.WPgen.html#wpgen_seq">wpgen_seq</a></span> (<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id">E</span> <span class="id">t1</span>) (<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id">E</span> <span class="id">t2</span>)).<br/>
+<br/>
+<div class="doc">By induction hypothesis, we can assume that <span class="bracket"><span class="id">wpgen</span> <span class="id">E</span> <span class="id">t1</span></span> is a sound formula
+    for <span class="bracket"><span class="id">isubst</span> <span class="id">E</span> <span class="id">t1</span></span>, and likewise <span class="bracket"><span class="id">wpgen</span> <span class="id">E</span> <span class="id">t2</span></span> is a sound formula for
+    <span class="bracket"><span class="id">isubst</span> <span class="id">E</span> <span class="id">t2</span></span>. Thus, what we actually will need to prove as part of the
+    induction is: </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="wpgen_sound_seq_3">wpgen_sound_seq_3</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">t1</span> <span class="id">t2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E</span> <span class="id">t1</span>) (<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id">E</span> <span class="id">t1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E</span> <span class="id">t2</span>) (<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id">E</span> <span class="id">t2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E</span> <span class="id">t1</span>) (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E</span> <span class="id">t2</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.WPgen.html#wpgen_seq">wpgen_seq</a></span> (<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id">E</span> <span class="id">t1</span>) (<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id">E</span> <span class="id">t2</span>)).<br/>
+<br/>
+<div class="doc">In the above statement, let us abstract <span class="bracket"><span class="id">isubst</span> <span class="id">E</span> <span class="id">t1</span></span> as <span class="bracket"><span class="id">t1'</span></span> and
+    <span class="bracket"><span class="id">wpgen</span> <span class="id">t1</span></span> as <span class="bracket"><span class="id">F1</span></span>, and similarly <span class="bracket"><span class="id">isubst</span> <span class="id">E</span> <span class="id">t2</span></span> as <span class="bracket"><span class="id">t2'</span></span> and <span class="bracket"><span class="id">wpgen</span> <span class="id">t2</span></span> as
+    <span class="bracket"><span class="id">F2</span></span>. The statement reformulates as: </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_seq_sound">wpgen_seq_sound</a></span> : <span class="kwd">forall</span> <span class="id">t1'</span> <span class="id">t2'</span> <span class="id">F1</span> <span class="id">F2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t1'</span> <span class="id">F1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t2'</span> <span class="id">F2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t1'</span> <span class="id">t2'</span>) (<span class="id"><a href="SLF.WPgen.html#wpgen_seq">wpgen_seq</a></span> <span class="id">F1</span> <span class="id">F2</span>).<br/>
+<br/>
+<div class="doc">This statement captures the essence of the correctness of the definition of
+    <span class="bracket"><span class="id">wpgen_seq</span></span>. Now let's prove it. </div>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">S1</span> <span class="id">S2</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">Q</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.WPgen.html#wpgen_seq">wpgen_seq</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span>.<br/>
+&nbsp;&nbsp;2:{ <span class="id">applys</span> <span class="id"><a href="SLF.WPgen.html#wp_seq">wp_seq</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">S1</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_conseq">wp_conseq</a></span>. <span class="id">intros</span> <span class="id">v</span>. <span class="id">applys</span> <span class="id">S2</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<h2> Soundness for the Other Term Constructs </h2>
+<br/>
+<div class="doc">Similarly, for every other language construct, we state and prove a lemma
+    about <span class="bracket"><span class="id">formula_sound</span></span>. The reader may skip over the proof details. What is
+    most interesting here is the pattern followed by the statements. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_val_sound">wpgen_val_sound</a></span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_val">trm_val</a></span> <span class="id">v</span>) (<span class="id"><a href="SLF.WPgen.html#wpgen_val">wpgen_val</a></span> <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.WPgen.html#wpgen_val">wpgen_val</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPgen.html#wp_val">wp_val</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_let_sound">wpgen_let_sound</a></span> : <span class="kwd">forall</span> <span class="id">F1</span> <span class="id">F2of</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t1</span> <span class="id">F1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v</span> <span class="id">t2</span>) (<span class="id">F2of</span> <span class="id">v</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span>) (<span class="id"><a href="SLF.WPgen.html#wpgen_let">wpgen_let</a></span> <span class="id">F1</span> <span class="id">F2of</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">S1</span> <span class="id">S2</span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.WPgen.html#wpgen_let">wpgen_let</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id"><a href="SLF.WPgen.html#wp_let">wp_let</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id">S1</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_conseq">wp_conseq</a></span>. <span class="id">intros</span> <span class="id">v</span>. <span class="id">applys</span> <span class="id">S2</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_if_sound">wpgen_if_sound</a></span> : <span class="kwd">forall</span> <span class="id">F1</span> <span class="id">F2</span> <span class="id">t0</span> <span class="id">t1</span> <span class="id">t2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t1</span> <span class="id">F1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t2</span> <span class="id">F2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_if">trm_if</a></span> <span class="id">t0</span> <span class="id">t1</span> <span class="id">t2</span>) (<span class="id"><a href="SLF.WPgen.html#wpgen_if">wpgen_if</a></span> <span class="id">t0</span> <span class="id">F1</span> <span class="id">F2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">S1</span> <span class="id">S2</span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPgen.html#wpgen_if">wpgen_if</a></span>. <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">b</span> -&gt;.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans">himpl_trans</a></span> <span class="id"><a href="SLF.WPgen.html#wp_if">wp_if</a></span>. <span class="id">case_if</span>. { <span class="id">applys</span> <span class="id">S1</span>. } { <span class="id">applys</span> <span class="id">S2</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_app_sound">wpgen_app_sound</a></span> : <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t</span> (<span class="id"><a href="SLF.WPgen.html#wpgen_app">wpgen_app</a></span> <span class="id">t</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">t</span> <span class="id">Q</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPgen.html#wpgen_app">wpgen_app</a></span>. <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">H</span> <span class="id">M</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">apply</span> <span class="id">M</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_fail_sound">wpgen_fail_sound</a></span> : <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t</span> <span class="id"><a href="SLF.WPgen.html#wpgen_fail">wpgen_fail</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPgen.html#wpgen_fail">wpgen_fail</a></span>. <span class="id">xpull</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_fun_sound">wpgen_fun_sound</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">Fof</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">vx</span>, <span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">vx</span> <span class="id">t1</span>) (<span class="id">Fof</span> <span class="id">vx</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_fun">trm_fun</a></span> <span class="id">x</span> <span class="id">t1</span>) (<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen_fun">wpgen_fun</a></span> <span class="id">Fof</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen_fun">wpgen_fun</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_hforall_l">himpl_hforall_l</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span>).<br/>
+&nbsp;&nbsp;<span class="id">xchange</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hwand_hpure_l">hwand_hpure_l</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans_r">himpl_trans_r</a></span>. { <span class="id">applys</span>* <span class="id"><a href="SLF.WPsem.html#wp_app_fun">wp_app_fun</a></span>. } { <span class="id">applys</span>* <span class="id">M</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPgen.html#wp_fun">wp_fun</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_fix_sound">wpgen_fix_sound</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">Fof</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">vf</span> <span class="id">vx</span>, <span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">vx</span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">f</span> <span class="id">vf</span> <span class="id">t1</span>)) (<span class="id">Fof</span> <span class="id">vf</span> <span class="id">vx</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_fix">trm_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span>) (<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen_fix">wpgen_fix</a></span> <span class="id">Fof</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen_fix">wpgen_fix</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_hforall_l">himpl_hforall_l</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span>). <span class="id">xchange</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hwand_hpure_l">hwand_hpure_l</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_trans_r">himpl_trans_r</a></span>. { <span class="id">applys</span>* <span class="id"><a href="SLF.WPsem.html#wp_app_fix">wp_app_fix</a></span>. } { <span class="id">applys</span>* <span class="id">M</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_fix">wp_fix</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Additional lemmas establishing the soundness of a version of <span class="bracket"><span class="id">wpgen</span></span> that
+    does not recurse inside local function definitions. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_fun_val_sound">wpgen_fun_val_sound</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_fun">trm_fun</a></span> <span class="id">x</span> <span class="id">t</span>) (<span class="id"><a href="SLF.WPgen.html#wpgen_val">wpgen_val</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.WPgen.html#wpgen_val">wpgen_val</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPgen.html#wp_fun">wp_fun</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_fix_val_sound">wpgen_fix_val_sound</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_fix">trm_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t</span>) (<span class="id"><a href="SLF.WPgen.html#wpgen_val">wpgen_val</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.WPgen.html#wpgen_val">wpgen_val</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_fix">wp_fix</a></span>. Qed.</div></details>
+<br/>
+<h2> Soundness of the Predicate Transformer <span class="bracket"><span class="id">mkstruct</span></span> </h2>
+<br/>
+<div class="doc">Above, we have ignored the existence of <span class="bracket"><span class="id">mkstruct</span></span> at the head of
+    formulae produced by <span class="bracket"><span class="id">wpgen</span></span>. We next show that the insertion of <span class="bracket"><span class="id">mkstruct</span></span>
+    in formulae preserves their soundness. In other words, if the formula <span class="bracket"><span class="id">F</span></span> is
+    a valid weakest precondition for <span class="bracket"><span class="id">t</span></span>, then so is <span class="bracket"><span class="id">mkstruct</span> <span class="id">F</span></span>.
+    Lemma mkstruct_sound : forall t F,
+      formula_sound t F -&gt;
+      formula_sound t (mkstruct F).
+    In order to prove this result, we first need to show that <span class="bracket"><span class="id">mkstruct</span></span> is a
+    predicate transformer that does not affect the meaning of any formula of the
+    form <span class="bracket"><span class="id">wp</span> <span class="id">t</span></span>. Intuitively, <span class="bracket"><span class="id">mkstruct</span></span> adds support for applying structural
+    rules of Separation Logic; but a formula <span class="bracket"><span class="id">wp</span> <span class="id">t</span></span> _inherently_ satisfies all
+    the structural rules; hence wrapping <span class="bracket"><span class="id">wp</span> <span class="id">t</span></span> inside a call to <span class="bracket"><span class="id">mkstruct</span></span> does
+    not increase (nor decrease) its expressive power. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mkstruct_wp">mkstruct_wp</a></span> : <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#mkstruct">mkstruct</a></span> (<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span>) = (<span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_1">fun_ext_1</a></span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id"><a href="SLF.WPgen.html#mkstruct">mkstruct</a></span>. <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">H</span> <span class="id">Q'</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_conseq_frame">wp_conseq_frame</a></span> <span class="id">M</span>. <span class="id">xsimpl</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPgen.html#mkstruct_erase">mkstruct_erase</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">We are now ready to prove the desired result <span class="bracket"><span class="id">mkstruct_sound</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mkstruct_sound">mkstruct_sound</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t</span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t</span> (<span class="id"><a href="SLF.WPgen.html#mkstruct">mkstruct</a></span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span>. <span class="id">intros</span> <span class="id">Q</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsound.html#mkstruct_wp">mkstruct_wp</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPgen.html#mkstruct_monotone">mkstruct_monotone</a></span>. <span class="id">applys</span> <span class="id">M</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Another, lower-level proof for the same result reveals the definition of
+    <span class="bracket"><span class="id">mkstruct</span></span> and exploits the consequence-frame rule for <span class="bracket"><span class="id">wp</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">mkstruct_sound'</span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t</span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> <span class="id">t</span> (<span class="id"><a href="SLF.WPgen.html#mkstruct">mkstruct</a></span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">Q</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.WPgen.html#mkstruct">mkstruct</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">Q'</span>.<br/>
+&nbsp;&nbsp;<span class="id">xchange</span> (<span class="id">M</span> <span class="id">Q'</span>).<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#wp_ramified">wp_ramified</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Another interesting property of <span class="bracket"><span class="id">mkstruct</span></span> is its idempotence property, that
+    is, it is such that <span class="bracket"><span class="id">mkstruct</span> (<span class="id">mkstruct</span> <span class="id">F</span>) = <span class="id">mkstruct</span> <span class="id">F</span></span>. Idempotence
+    asserts that applying the predicate <span class="bracket"><span class="id">mkstruct</span></span> more than once does not
+    provide more expressiveness than applying it just once.
+    Intuitively, idempotence reflects in particular the fact that two nested
+    applications of the rule of consequence can always be combined into a single
+    application of that rule (due to the transitivity of entailment); and that,
+    similarly, two nested applications of the frame rule can always be combined
+    into a single application of that rule (framing on <span class="bracket"><span class="id">H1</span></span> then framing on <span class="bracket"><span class="id">H2</span></span>
+    is equivalent to framing on <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span>). </div>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (mkstruct_idempotent)
+    Complete the proof of the idempotence of <span class="bracket"><span class="id">mkstruct</span></span>. Hint: leverage <span class="bracket"><span class="id">xpull</span></span>
+    and <span class="bracket"><span class="id">xsimpl</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mkstruct_idempotent">mkstruct_idempotent</a></span> : <span class="kwd">forall</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#mkstruct">mkstruct</a></span> (<span class="id"><a href="SLF.WPgen.html#mkstruct">mkstruct</a></span> <span class="id">F</span>) = <span class="id"><a href="SLF.WPgen.html#mkstruct">mkstruct</a></span> <span class="id">F</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_1">fun_ext_1</a></span>. <span class="id">intros</span> <span class="id">Q</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.himpl_antisym">himpl_antisym</a></span>.<br/>
+ Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Lemmas Capturing Properties of Iterated Substitutions </h2>
+<br/>
+<div class="doc">In the soundness proof for <span class="bracket"><span class="id">wpgen</span></span>, we need to exploit two basic properties
+    of the iterated substitution function <span class="bracket"><span class="id">isubst</span></span>. The first property asserts
+    that the substitution for the empty context is the identity. This result is
+    useful to beautify the final statement of the soundness theorem. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="isubst_nil">isubst_nil</a></span> : <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">t</span> = <span class="id">t</span>.<br/>
+<br/>
+<div class="doc">The second property asserts that the substitution for a context <span class="bracket">(<span class="id">x</span>,<span class="id">v</span>)::<span class="id">E</span></span>
+    is the same as the substitution for the context <span class="bracket"><span class="id">rem</span> <span class="id">x</span> <span class="id">E</span></span> followed with the
+    substitution of <span class="bracket"><span class="id">subst</span> <span class="id">x</span> <span class="id">v</span></span>. This second property is needed to handle the
+    case of let-bindings. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="isubst_rem">isubst_rem</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v</span> <span class="id">E</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> ((<span class="id">x</span>,<span class="id">v</span>)::<span class="id">E</span>) <span class="id">t</span> = <span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v</span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> (<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> <span class="id">E</span>) <span class="id">t</span>).<br/>
+<br/>
+<div class="doc">The proofs for these two lemmas is fairly technical and of limited interest
+    for the course. They can be found in the "optional material" near the end of
+    this chapter. </div>
+<br/>
+<h2> Main Induction for the Soundness Proof of <span class="bracket"><span class="id">wpgen</span></span> </h2>
+<br/>
+<div class="doc">At last, we are ready to establish the soundness of <span class="bracket"><span class="id">wpgen</span> <span class="id">E</span> <span class="id">t</span></span>. As
+    previously announced, the proof is by structural induction on <span class="bracket"><span class="id">t</span></span>. For each
+    term construct, the proof has two steps:
+    - first, invoke the lemma <span class="bracket"><span class="id">mkstruct_sound</span></span> to justify soundness
+      of the leading <span class="bracket"><span class="id">mkstruct</span></span> produced by <span class="bracket"><span class="id">wpgen</span></span>,
+    - second, invoke the the soundness lemma specific to that term
+      construct, e.g. <span class="bracket"><span class="id">wpgen_seq_sound</span></span> for sequences. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_sound_induct">wpgen_sound_induct</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#formula_sound">formula_sound</a></span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E</span> <span class="id">t</span>) (<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id">E</span> <span class="id">t</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">gen</span> <span class="id">E</span>. <span class="id">induction</span> <span class="id">t</span>; <span class="id">intros</span>; <span class="id">simpl</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#mkstruct_sound">mkstruct_sound</a></span>. <br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_val_sound">wpgen_val_sound</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rename</span> <span class="id">v</span> <span class="id">into</span> <span class="id">x</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.WPgen.html#wpgen_var">wpgen_var</a></span>. <span class="id">case_eq</span> (<span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">v</span> <span class="id">EQ</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_val_sound">wpgen_val_sound</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">N</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_fail_sound">wpgen_fail_sound</a></span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_fun_sound">wpgen_fun_sound</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">vx</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsound.html#isubst_rem">isubst_rem</a></span>. <span class="id">applys</span> <span class="id">IHt</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">IH</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_fix_sound">wpgen_fix_sound</a></span> <span class="id">IH</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">vf</span> <span class="id">vx</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibSepReference.html#isubst_rem_2">isubst_rem_2</a></span>. <span class="id">applys</span> <span class="id">IHt</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_app_sound">wpgen_app_sound</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_seq_sound">wpgen_seq_sound</a></span>. { <span class="id">applys</span> <span class="id">IHt1</span>. } { <span class="id">applys</span> <span class="id">IHt2</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">rename</span> <span class="id">v</span> <span class="id">into</span> <span class="id">x</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_let_sound">wpgen_let_sound</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">IHt1</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">v</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsound.html#isubst_rem">isubst_rem</a></span>. <span class="id">applys</span> <span class="id">IHt2</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_if_sound">wpgen_if_sound</a></span>. { <span class="id">applys</span> <span class="id">IHt2</span>. } { <span class="id">applys</span> <span class="id">IHt3</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<h2> Statement of Soundness of <span class="bracket"><span class="id">wpgen</span></span> for Closed Terms </h2>
+<br/>
+<div class="doc">For a closed term <span class="bracket"><span class="id">t</span></span>, the context <span class="bracket"><span class="id">E</span></span> is instantiated as <span class="bracket"><span class="id">nil</span></span>, and
+    <span class="bracket"><span class="id">isubst</span> <span class="id">nil</span> <span class="id">t</span></span> simplifies to <span class="bracket"><span class="id">t</span></span>. We derive the main soundness statement for
+    <span class="bracket"><span class="id">wpgen</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wpgen_sound">wpgen_sound</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">t</span> <span class="id">Q</span> ==&gt; <span class="id"><a href="SLF.WPsem.html#wp">wp</a></span> <span class="id">t</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">lets</span> <span class="id">N</span>: (<span class="id"><a href="SLF.LibSepReference.html#wpgen_sound">wpgen_sound</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">t</span>). <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#isubst_nil">isubst_nil</a></span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">applys</span>* <span class="id">N</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The lemma <span class="bracket"><span class="id">triple_of_wpgen</span></span> triggers the initial evaluation of <span class="bracket"><span class="id">wpgen</span></span> for a
+    given program <span class="bracket"><span class="id">t</span></span> that appears in a triple. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_of_wpgen">triple_of_wpgen</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">t</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">xchange</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_sound">wpgen_sound</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The lemma <span class="bracket"><span class="id">triple_app_fun_from_wpgen</span></span> is at the core of the implementation
+    of the tactic <span class="bracket"><span class="id">xwp</span></span>. It is a specialized version of triple_of_wpgen]
+    specialized for establishing a triple for a function application. In
+    essence, this lemma is a reformulation of the rule <span class="bracket"><span class="id">triple_app_fun</span></span>, but
+    triggering an evaluation of <span class="bracket"><span class="id">wpgen</span></span> for the body of the function. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_app_fun_from_wpgen">triple_app_fun_from_wpgen</a></span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> ((<span class="id">x</span>,<span class="id">v2</span>)::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>) <span class="id">t1</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsem.html#triple_app_fun">triple_app_fun</a></span> <span class="id">M1</span>.<br/>
+&nbsp;&nbsp;<span class="id">asserts_rewrite</span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> <span class="id">t1</span> = <span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> ((<span class="id">x</span>,<span class="id">v2</span>)::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>) <span class="id">t1</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#isubst_rem">isubst_rem</a></span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.WPsound.html#isubst_nil">isubst_nil</a></span>. }<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">xchange</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_sound_induct">wpgen_sound_induct</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The lemma <span class="bracket"><span class="id">triple_app_fix_from_wpgen</span></span> is similar but handles recursive
+    functions. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_app_fix_from_wpgen">triple_app_fix_from_wpgen</a></span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id"><a href="SLF.WPgen.html#WPgenRec.wpgen">wpgen</a></span> ((<span class="id">f</span>,<span class="id">v1</span>)::(<span class="id">x</span>,<span class="id">v2</span>)::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>) <span class="id">t1</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_app_fix">triple_app_fix</a></span> <span class="id">M1</span>.<br/>
+&nbsp;&nbsp;<span class="id">asserts_rewrite</span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">f</span> <span class="id">v1</span> <span class="id">t1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= <span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> ((<span class="id">f</span>,<span class="id">v1</span>)::(<span class="id">x</span>,<span class="id">v2</span>)::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>) <span class="id">t1</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#isubst_rem_2">isubst_rem_2</a></span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.WPsound.html#isubst_nil">isubst_nil</a></span>. }<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsem.html#wp_equiv">wp_equiv</a></span>. <span class="id">xchange</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#wpgen_sound_induct">wpgen_sound_induct</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<h1> Optional Material </h1>
+<br/>
+<h2> Proofs of Properties of Iterated Substitution </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="IsubstProp">IsubstProp</a></span>.<br/>
+<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">liblist_scope</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">E</span> : <span class="id"><a href="SLF.WPgen.html#ctx">ctx</a></span>.<br/>
+<br/>
+<div class="doc">Recall that <span class="bracket"><span class="id">isubst</span> <span class="id">E</span> <span class="id">t</span></span> denotes the multi-substitution in the term <span class="bracket"><span class="id">t</span></span> of
+    all bindings form the association list <span class="bracket"><span class="id">E</span></span>. The soundness proof for <span class="bracket"><span class="id">wpgen</span></span>
+    and the proof of its corollary <span class="bracket"><span class="id">triple_app_fun_from_wpgen</span></span> rely on two key
+    properties of iterated substitutions, captured by the lemmas called
+    <span class="bracket"><span class="id">isubst_nil</span></span> and <span class="bracket"><span class="id">isubst_rem</span></span>, which we state and prove next.
+    isubst nil t = t
+    subst x v (isubst (rem x E) t) = isubst ((x,v)::E) t
+</div>
+<br/>
+<div class="doc">The first lemma is straightforward by induction. The TLC tactic <span class="bracket"><span class="id">fequals</span></span> is
+    an enhanced variant of Coq's tactic <span class="bracket"><span class="id">f_equal</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.isubst_nil">isubst_nil</a></span> : <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">t</span> = <span class="id">t</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">t</span>. <span class="id">induction</span> <span class="id">t</span>; <span class="id">simpl</span>; <span class="id">fequals</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The second lemma is much more involved to prove. We introduce the notion of
+    "two equivalent contexts" <span class="bracket"><span class="id">E1</span></span> and <span class="bracket"><span class="id">E2</span></span>, and argue that substitution for two
+    equivalent contexts yields the same result. We then introduce the notion of
+    "contexts with disjoint domains", and argue that if <span class="bracket"><span class="id">E1</span></span> and <span class="bracket"><span class="id">E2</span></span> are
+    disjoint then <span class="bracket"><span class="id">isubst</span> (<span class="id">E1</span> ++ <span class="id">E2</span>) <span class="id">t</span> = <span class="id">isubst</span> <span class="id">E1</span> (<span class="id">isubst</span> <span class="id">E2</span> <span class="id">t</span>)</span>.
+Before we start, we describe the tactic <span class="bracket"><span class="id">case_var</span></span>, which helps with the
+case_analyses on variable equalities, and we prove an auxiliary lemma that
+describes the result of a lookup on a context from which a binding has been
+removed. It is defined in the file <span class="bracket"><span class="id">LibSepVar.v</span></span> as:
+    Tactic Notation "case_var" :=
+      repeat rewrite var_eq_spec in *; repeat case_if.
+    The tactic <span class="bracket"><span class="id">case_var</span>*</span> is a shorthand for <span class="bracket"><span class="id">case_var</span></span> followed with
+    automation (essentially, <span class="bracket"><span class="id">eauto</span></span>). </div>
+<br/>
+<div class="doc">A key auxiliary lemma relates <span class="bracket"><span class="id">subst</span></span> and <span class="bracket"><span class="id">isubst</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.subst_eq_isubst_one">subst_eq_isubst_one</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v</span> <span class="id">t</span> = <span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> ((<span class="id">x</span>,<span class="id">v</span>)::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>) <span class="id">t</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">induction</span> <span class="id">t</span>; <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">case_var</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>. <span class="id">case_var</span>*. { <span class="id">rewrite</span>* <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_nil">isubst_nil</a></span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>. <span class="id">case_var</span>; <span class="id">try</span> <span class="id">case_var</span>; <span class="id">simpl</span>; <span class="id">try</span> <span class="id">case_var</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">try</span> <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_nil">isubst_nil</a></span>; <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>*. <span class="id">case_var</span>*. { <span class="id">rewrite</span>* <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_nil">isubst_nil</a></span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">A lemma about the lookup in a removal. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.lookup_rem">lookup_rem</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">E</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> (<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">y</span> <span class="id">E</span>) = <span class="kwd">if</span> <span class="id"><a href="SLF.LibSepVar.html#var_eq">var_eq</a></span> <span class="id">x</span> <span class="id">y</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> <span class="kwd">else</span> <span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">induction</span> <span class="id">E</span> <span class="kwd">as</span> [|(<span class="id">z</span>,<span class="id">v</span>) <span class="id">E'</span>].<br/>
+&nbsp;&nbsp;{ <span class="id">simpl</span>. <span class="id">case_var</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">simpl</span>. <span class="id">case_var</span>*; <span class="id">simpl</span>; <span class="id">case_var</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">A lemma about the removal over an append. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.rem_app">rem_app</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E1</span> <span class="id">E2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> (<span class="id">E1</span> ++ <span class="id">E2</span>) = <span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> <span class="id">E1</span> ++ <span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> <span class="id">E2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">induction</span> <span class="id">E1</span> <span class="kwd">as</span> [|(<span class="id">y</span>,<span class="id">w</span>) <span class="id">E1'</span>]; <span class="id">rew_list</span>; <span class="id">simpl</span>. { <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">case_var</span>*. { <span class="id">rew_list</span>. <span class="id">fequals</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The definition of equivalent contexts. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="IsubstProp.ctx_equiv">ctx_equiv</a></span> <span class="id">E1</span> <span class="id">E2</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E1</span> = <span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E2</span>.<br/>
+<br/>
+<div class="doc">The fact that removal preserves equivalence. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.ctx_equiv_rem">ctx_equiv_rem</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E1</span> <span class="id">E2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#IsubstProp.ctx_equiv">ctx_equiv</a></span> <span class="id">E1</span> <span class="id">E2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#IsubstProp.ctx_equiv">ctx_equiv</a></span> (<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> <span class="id">E1</span>) (<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> <span class="id">E2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.ctx_equiv">ctx_equiv</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.lookup_rem">lookup_rem</a></span>. <span class="id">case_var</span>*.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The fact that substitution for equivalent contexts yields equal results. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.isubst_ctx_equiv">isubst_ctx_equiv</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">E1</span> <span class="id">E2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#IsubstProp.ctx_equiv">ctx_equiv</a></span> <span class="id">E1</span> <span class="id">E2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E1</span> <span class="id">t</span> = <span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E2</span> <span class="id">t</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.ctx_equiv_rem">ctx_equiv_rem</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">t</span>. <span class="id">induction</span> <span class="id">t</span>; <span class="id">introv</span> <span class="id">EQ</span>; <span class="id">simpl</span>; <span class="id">fequals</span>*.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id">EQ</span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The definition of disjoint contexts. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="IsubstProp.ctx_disjoint">ctx_disjoint</a></span> <span class="id">E1</span> <span class="id">E2</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span>, <span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E1</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">v1</span> -&gt; <span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E2</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">v2</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<br/>
+<div class="doc">Removal preserves disjointness. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.ctx_disjoint_rem">ctx_disjoint_rem</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E1</span> <span class="id">E2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#IsubstProp.ctx_disjoint">ctx_disjoint</a></span> <span class="id">E1</span> <span class="id">E2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#IsubstProp.ctx_disjoint">ctx_disjoint</a></span> (<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> <span class="id">E1</span>) (<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> <span class="id">E2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">D</span>. <span class="id">intros</span> <span class="id">y</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">K1</span> <span class="id">K2</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.lookup_rem">lookup_rem</a></span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;<span class="id">case_var</span>. <span class="id">applys</span>* <span class="id">D</span> <span class="id">K1</span> <span class="id">K2</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Lookup in the concatenation of two disjoint contexts <span class="bracket"><span class="id">E1</span></span> and <span class="bracket"><span class="id">E2</span></span> is
+    equivalent to a lookup in <span class="bracket"><span class="id">E1</span></span> if it succeeds, or a lookup in <span class="bracket"><span class="id">E2</span></span>
+    otherwise. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.lookup_app">lookup_app</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E1</span> <span class="id">E2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> (<span class="id">E1</span> ++ <span class="id">E2</span>) = <span class="kwd">match</span> <span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E1</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> =&gt; <span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">v</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">v</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span>. <span class="id">induction</span> <span class="id">E1</span> <span class="kwd">as</span> [|(<span class="id">y</span>,<span class="id">w</span>) <span class="id">E1'</span>]; <span class="id">rew_list</span>; <span class="id">simpl</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">case_var</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The key induction shows that <span class="bracket"><span class="id">isubst</span></span> distributes over context
+    concatenation. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.isubst_app">isubst_app</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">E1</span> <span class="id">E2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> (<span class="id">E1</span> ++ <span class="id">E2</span>) <span class="id">t</span> = <span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E2</span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> <span class="id">E1</span> <span class="id">t</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.ctx_disjoint_rem">ctx_disjoint_rem</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">t</span>. <span class="id">induction</span> <span class="id">t</span>; <span class="id">simpl</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rename</span> <span class="id">v</span> <span class="id">into</span> <span class="id">x</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.WPsound.html#IsubstProp.lookup_app">lookup_app</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">case_eq</span> (<span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E1</span>); <span class="id">introv</span> <span class="id">K1</span>; <span class="id">case_eq</span> (<span class="id"><a href="SLF.WPgen.html#lookup">lookup</a></span> <span class="id">x</span> <span class="id">E2</span>); <span class="id">introv</span> <span class="id">K2</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">simpl</span>. <span class="id">rewrite</span>* <span class="id">K2</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">simpl</span>. <span class="id">rewrite</span>* <span class="id">K2</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.WPsound.html#IsubstProp.rem_app">rem_app</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>. <span class="id">do</span> 2 <span class="id">rewrite</span>* <span class="id"><a href="SLF.WPsound.html#IsubstProp.rem_app">rem_app</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>*. { <span class="id">rewrite</span>* <span class="id"><a href="SLF.WPsound.html#IsubstProp.rem_app">rem_app</a></span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">fequals</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The next lemma asserts that the concatenation order is irrelevant in a
+    substitution if the contexts have disjoint domains. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.isubst_app_swap">isubst_app_swap</a></span> : <span class="kwd">forall</span> <span class="id">t</span> <span class="id">E1</span> <span class="id">E2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPsound.html#IsubstProp.ctx_disjoint">ctx_disjoint</a></span> <span class="id">E1</span> <span class="id">E2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> (<span class="id">E1</span> ++ <span class="id">E2</span>) <span class="id">t</span> = <span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> (<span class="id">E2</span> ++ <span class="id">E1</span>) <span class="id">t</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">D</span>. <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_ctx_equiv">isubst_ctx_equiv</a></span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#ctx_disjoint_equiv_app">ctx_disjoint_equiv_app</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">At last, we derive the desired property of <span class="bracket"><span class="id">isubst</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.isubst_rem">isubst_rem</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v</span> <span class="id">E</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> ((<span class="id">x</span>, <span class="id">v</span>)::<span class="id">E</span>) <span class="id">t</span> = <span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v</span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> (<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> <span class="id">E</span>) <span class="id">t</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.subst_eq_isubst_one">subst_eq_isubst_one</a></span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_app">isubst_app</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_app_swap">isubst_app_swap</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_ctx_equiv">isubst_ctx_equiv</a></span>. <span class="id">intros</span> <span class="id">y</span>. <span class="id">rew_list</span>. <span class="id">simpl</span>. <span class="id">case_var</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.lookup_rem">lookup_rem</a></span>. <span class="id">case_var</span>*. } }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">y</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">K1</span> <span class="id">K2</span>. <span class="id">simpls</span>. <span class="id">case_var</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.lookup_rem">lookup_rem</a></span> <span class="kwd">in</span> <span class="id">K1</span>. <span class="id">case_var</span>*. } }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">We also prove the variant lemma which is useful for handling recursive
+    functions in the soundness proof for <span class="bracket"><span class="id">wpgen</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="IsubstProp.isubst_rem_2">isubst_rem_2</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">x</span> <span class="id">vf</span> <span class="id">vx</span> <span class="id">E</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> ((<span class="id">f</span>,<span class="id">vf</span>)::(<span class="id">x</span>,<span class="id">vx</span>)::<span class="id">E</span>) <span class="id">t</span><br/>
+&nbsp;&nbsp;= <span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">vx</span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">f</span> <span class="id">vf</span> (<span class="id"><a href="SLF.WPgen.html#isubst">isubst</a></span> (<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">x</span> (<span class="id"><a href="SLF.WPgen.html#rem">rem</a></span> <span class="id">f</span> <span class="id">E</span>)) <span class="id">t</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.subst_eq_isubst_one">subst_eq_isubst_one</a></span>. <span class="id">do</span> 2 <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_app">isubst_app</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_app_swap">isubst_app_swap</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.isubst_ctx_equiv">isubst_ctx_equiv</a></span>. <span class="id">intros</span> <span class="id">y</span>. <span class="id">rew_list</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.lookup_rem">lookup_rem</a></span>. <span class="id">case_var</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">y</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">K1</span> <span class="id">K2</span>. <span class="id">rew_listx</span> <span class="kwd">in</span> *. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp.lookup_rem">lookup_rem</a></span> <span class="kwd">in</span> <span class="id">K1</span>. <span class="id">case_var</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.WPsound.html#IsubstProp">IsubstProp</a></span>.<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

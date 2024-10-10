@@ -1,0 +1,943 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Rules</title>
+<meta name="description" content="Documentation of Coq module Rules" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Rules</h1>
+<div class="coq">
+<h1> Rules: Reasoning Rules for Term Constructs </h1>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibSepReference.html">LibSepReference</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="id"><a href="SLF.Basic.html">Basic</a></span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">n</span> : <span class="id">int</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">t</span> : <span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">r</span> <span class="id">v</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">p</span> : <span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">H</span> : <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">Q</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>.<br/>
+<br/>
+<h1> First Pass </h1>
+<br/>
+<div class="doc">This chapter establishes the remaining reasoning rules of Separation Logic:
+    rules for reasoning about each language construct, and rules for reasoning
+    about primitive operations. All these reasoning rules are expressed using
+    the predicate <span class="bracket"><span class="id">triple</span></span>, and are proved with respect to the formal semantics
+    captured by the predicate <span class="bracket"><span class="id">eval</span></span> introduced in the previous chapter
+    (<span class="bracket"><span class="id">Triples</span></span>). Throughout the chapter, one needs to have in mind the
+    definition of <span class="bracket"><span class="id">triple</span></span>:
+    Definition triple (t:trm) (H:hprop) (Q:val-&gt;hprop) : Prop :=
+      forall s, H s -&gt; eval s t Q.
+    After establishing the reasoning rules, we present an example proof of a
+    concrete program, using directly these reasoning rules, as opposed to using
+    high-level "x-tactics" as in the first two chapters. This example proof
+    reveals the proof patterns employed by the x-tactics. It also motivates the
+    introduction of the x-tactics to avoid the tedious, repetitive proof
+    patterns. </div>
+<br/>
+<h2> Rules for Term Constructors </h2>
+<br/>
+<h3> Sequences </h3>
+<br/>
+<div class="doc">The Separation Logic reasoning rule for a sequence <span class="bracket"><span class="id">t1</span>;<span class="id">t2</span></span> is essentially
+    the same as that from Hoare logic. In the rule shown below, the underscore
+    symbol indicates that the output value produced by <span class="bracket"><span class="id">t1</span></span> is irrelevant to the
+    semantics, as captured by the rule <span class="bracket"><span class="id">eval_seq</span></span>.
+      {H} t1 {fun _ =&gt; H1}     {H1} t2 {Q}
+      ------------------------------------
+              {H} (t1;t2) {Q}
+    The Coq statement corresponding to the above rule is: </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_seq">triple_seq</a></span> : <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">H1</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t1</span> <span class="id">H</span> (<span class="kwd">fun</span> _ =&gt; <span class="id">H1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t2</span> <span class="id">H1</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (triple_seq)
+    Prove <span class="bracket"><span class="id">triple_seq</span></span> by unfolding <span class="bracket"><span class="id">triple</span></span> and using <span class="bracket"><span class="id">eval_seq</span></span>. </h3>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Let-Bindings </h3>
+<br/>
+<div class="doc">Next, we present the reasoning rule for let-bindings. Here again, there is
+    nothing specific to Separation Logic: the rule is exactly the same as in
+    Hoare Logic. The rule for a <span class="bracket"><span class="kwd">let</span></span>-binding <span class="bracket"><span class="kwd">let</span> <span class="id">x</span> = <span class="id">t1</span> <span class="kwd">in</span> <span class="id">t2</span></span> could be
+    stated, informally, in the form:
+      {H} t1 {Q1}     (forall x, {Q1 x} t2 {Q})
+      -----------------------------------------
+            {H} (let x = t1 in t2) {Q}
+   However, this presentation confuses the <span class="bracket"><span class="id">x</span></span> that denotes a program variable
+   in <span class="bracket"><span class="kwd">let</span> <span class="id">x</span> = <span class="id">t1</span> <span class="kwd">in</span> <span class="id">t2</span></span>, and the <span class="bracket"><span class="id">x</span></span> that denotes a universally quantified Coq
+   value. The correct statement involves a substitution from the variable <span class="bracket"><span class="id">x</span></span> to
+   a value quantified as <span class="bracket"><span class="kwd">forall</span> (<span class="id">v</span>:<span class="id">val</span>)</span>.
+      {H} t1 {Q1}     (forall v, {Q1 v} (subst x v t2) {Q})
+      -----------------------------------------------------
+                {H} (let x = t1 in t2) {Q}
+   The corresponding Coq statement is thus. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_let">triple_let</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v1</span>, <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v1</span> <span class="id">t2</span>) (<span class="id">Q1</span> <span class="id">v1</span>) <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_let">eval_let</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">When we carry out proofs in practice, the application of the rule
+    <span class="bracket"><span class="id">triple_let</span></span> produces a second sub-goal of the form, e.g.:
+    <span class="bracket"><span class="kwd">forall</span> <span class="id">v1</span>, <span class="id">triple</span> (<span class="id">subst</span> <span class="string">"a"</span> <span class="id">v1</span> <span class="id">rest_of_the_program</span>) (<span class="id">post1</span> <span class="id">v1</span>) <span class="id">post2</span>],<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">where</span> <span class="string">"a"</span> <span class="id">denotes</span> <span class="id">the</span> <span class="id">name</span> <span class="id">of</span> <span class="id">the</span> <span class="id">program</span> <span class="id">variable</span> <span class="id">that</span> <span class="id">was</span> <span class="id">bound</span> <span class="kwd">by</span> <span class="id">the</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span>-<span class="id">binding</span> <span class="kwd">in</span> <span class="id">the</span> <span class="id">original</span> <span class="id">source</span> <span class="id">code</span>. <span class="id">At</span> <span class="id">this</span> <span class="id">point</span>, <span class="id">the</span> <span class="id">user</span> <span class="id">would</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">typically</span> <span class="id">type</span> [<span class="id">intros</span> <span class="id">a</span>], <span class="id">to</span> <span class="id">introduce</span> <span class="id">the</span> <span class="id">Coq</span> <span class="id">variable</span> [<span class="id">v1</span>] <span class="id">under</span> <span class="id">the</span> <span class="id">same</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">name</span> <span class="id">that</span> <span class="id">it</span> <span class="id">had</span> <span class="kwd">in</span> <span class="id">the</span> <span class="id">source</span> <span class="id">code</span>. <span class="id">This</span> <span class="id">operations</span> <span class="id">produces</span>:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id">triple</span> (<span class="id">subst</span> <span class="string">"a"</span> <span class="id">a</span> <span class="id">rest_of_the_program</span>) (<span class="id">post1</span> <span class="id">a</span>) <span class="id">post2</span>]. <span class="id">At</span> <span class="id">that</span> <span class="id">point</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">the</span> <span class="id">user</span> <span class="id">may</span> <span class="id">call</span> [<span class="id">simpl</span>] <span class="id">to</span> <span class="id">effectively</span> <span class="id">replace</span> <span class="id">all</span> <span class="id">occurences</span> <span class="id">of</span> <span class="id">the</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">program</span> <span class="id">variable</span> [<span class="string">"a"</span>] <span class="kwd">with</span> <span class="id">the</span> <span class="id">Coq</span> <span class="id">variable</span> [<span class="id">a</span>] <span class="id">of</span> <span class="id">type</span> [<span class="id">val</span>]. <span class="id">Doing</span> <span class="id">so</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">produces</span>: [<span class="id">triple</span> <span class="id">rest_of_the_program_updated</span> (<span class="id">post1</span> <span class="id">a</span>) <span class="id">post2</span>], <span class="kwd">where</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[<span class="id">rest_of_the_program_updated</span>] <span class="id">refers</span> <span class="id">to</span> <span class="id">the</span> <span class="id">Coq</span> <span class="id">variable</span> [<span class="id">a</span>]. <span class="id">This</span> <span class="id">process</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">will</span> <span class="id">be</span> <span class="id">illustrated</span> <span class="kwd">in</span> <span class="id">the</span> <span class="id">proof</span> <span class="id">of</span> [<span class="id">triple_incr</span>] <span class="id">further</span> <span class="id">on</span>. *)<br/>
+<br/>
+<h3> Conditionals </h3>
+<br/>
+<div class="doc">The rule for a conditional is, again, exactly like in Hoare logic.
+      b = true -&gt; {H} t1 {Q}     b = false -&gt; {H} t2 {Q}
+      --------------------------------------------------
+               {H} (if b then t1 in t2) {Q}
+  The corresponding Coq statement is: </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_if_case">triple_if_case</a></span> : <span class="kwd">forall</span> <span class="id">b</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> -&gt; <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">b</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> -&gt; <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_if">trm_if</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_bool">val_bool</a></span> <span class="id">b</span>) <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (triple_if_case)
+    Prove <span class="bracket"><span class="id">triple_if_case</span></span> by unfolding <span class="bracket"><span class="id">triple</span></span> and using <span class="bracket"><span class="id">eval_if</span></span>. Hint: use
+    the tactic <span class="bracket"><span class="id">case_if</span></span> to perform a case analysis. </h3>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The two premises of the rule for if-statements may be factorized into a
+    single one using Coq's conditional construct, as in <span class="bracket"><span class="id">eval_if</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_if">triple_if</a></span> : <span class="kwd">forall</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) <span class="id">t1</span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="kwd">if</span> <span class="id">b</span> <span class="kwd">then</span> <span class="id">t1</span> <span class="kwd">else</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_if">trm_if</a></span> <span class="id">b</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_if">eval_if</a></span>. Qed.</div></details>
+<br/>
+<h3> Values </h3>
+<br/>
+<div class="doc">The triple specifying the behavior of a value <span class="bracket"><span class="id">v</span></span> can be written as a triple
+    with an empty precondition and a postcondition asserting that the result
+    value <span class="bracket"><span class="id">r</span></span> is equal to <span class="bracket"><span class="id">v</span></span>, in the empty heap. Formally:
+     ----------------------------
+      {\<span class="bracket"></span>} v {fun r =&gt; \<span class="bracket"><span class="id">r</span> = <span class="id">v</span></span>}
+    In practice, however, it is more convenient to work with a judgment whose
+    conclusion has the form <span class="bracket">{<span class="id">H</span>} <span class="id">v</span> {<span class="id">Q</span>}</span>, for an arbitrary precondition <span class="bracket"><span class="id">H</span></span> and
+    postcondition <span class="bracket"><span class="id">Q</span></span>.
+      H ==&gt; Q v
+      ---------
+      {H} v {Q}
+    The Coq statement of the rule for values is thus as follows. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_val">triple_val</a></span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_val">trm_val</a></span> <span class="id">v</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_val">eval_val</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">It may not be obvious at first sight why <span class="bracket"><span class="id">triple_val</span></span> is equivalent to the
+    "minimalistic" rule <span class="bracket">{\[]} <span class="id">v</span> {<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">v</span>]}</span>. Let us prove the
+    equivalence. </div>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (triple_val_minimal)
+    Prove that the first rule for values is derivable from <span class="bracket"><span class="id">triple_val</span></span>. Hint:
+    use the tactic <span class="bracket"><span class="id">xsimpl</span></span> to conclude the proof. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_val_minimal">triple_val_minimal</a></span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_val">trm_val</a></span> <span class="id">v</span>) \[] (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">v</span>]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (triple_val')
+    More interestingly, prove that <span class="bracket"><span class="id">triple_val</span></span> is derivable from
+    <span class="bracket"><span class="id">triple_val_minimal</span></span>. Concretely, your goal is to prove <span class="bracket"><span class="id">triple_val'</span></span>
+    without unfolding the definition of <span class="bracket"><span class="id">triple</span></span>. Use <span class="bracket"><span class="id">triple_conseq_frame</span></span>,
+    <span class="bracket"><span class="id">triple_val_minimal</span></span>, and <span class="bracket"><span class="id">xsimpl</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_val'</span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_val">trm_val</a></span> <span class="id">v</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 4 stars, standard, especially useful (triple_let_val)
+    Consider a term of the form <span class="bracket"><span class="kwd">let</span> <span class="id">x</span> = <span class="id">v1</span> <span class="kwd">in</span> <span class="id">t2</span></span>, that is, where the argument
+    of the let-binding is already a value. State and prove a reasoning rule of
+    the form:
+      Lemma triple_let_val : forall x v1 t2 H Q,
+        ... -&gt;
+        triple (trm_let x v1 t2) H Q.
+</h3>
+<br/>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Function Definitions </h3>
+<br/>
+<div class="doc">Recall from the previous chapter the distinction between <span class="bracket"><span class="id">val_fun</span> <span class="id">x</span> <span class="id">t1</span></span>,
+    which denotes a closed value, and <span class="bracket"><span class="id">trm_fun</span> <span class="id">x</span> <span class="id">t1</span></span>, which corresponds to a
+    term that may contain free variables. By the time the evaluation of a
+    program reaches a <span class="bracket"><span class="id">trm_fun</span></span>, all its free variables should have been
+    substituted by values. At this point, the rule <span class="bracket"><span class="id">eval_fun</span></span> reduces the
+    <span class="bracket"><span class="id">trm_fun</span></span> into a <span class="bracket"><span class="id">val_fun</span></span>.
+    We need a rule in the program logic to mimic this transition from <span class="bracket"><span class="id">trm_fun</span></span>
+    to <span class="bracket"><span class="id">val_fun</span></span>. We have two ways to state this rule, similar to the two ways
+    of stating the rule for reasoning about values. The first possibility is to
+    consider a rule with an empty precondition.
+     ------------------------------------------------------
+      {\<span class="bracket"></span>} (trm_fun x t1) {fun r =&gt; \<span class="bracket"><span class="id">r</span> = <span class="id">val_fun</span> <span class="id">x</span> <span class="id">t1</span></span>}
+  The second possibility, which leads to a more practical rule, features a
+  conclusion of the form <span class="bracket">{<span class="id">H</span>} (<span class="id">trm_fun</span> <span class="id">x</span> <span class="id">t1</span>) {<span class="id">Q</span>}</span>, with <span class="bracket"><span class="id">H</span></span> and <span class="bracket"><span class="id">Q</span></span>
+  unconstrained. The resulting rule, <span class="bracket"><span class="id">triple_fun</span></span> is structured similarly to
+  <span class="bracket"><span class="id">triple_val</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_fun">triple_fun</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_fun">trm_fun</a></span> <span class="id">x</span> <span class="id">t1</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_fun">eval_fun</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">This reasoning rules for functions generalizes to recursive functions. A
+    term describing a recursive function is written <span class="bracket"><span class="id">trm_fix</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span></span>, and the
+    corresponding value is written <span class="bracket"><span class="id">val_fix</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_fix">triple_fix</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_fix">trm_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_fix">eval_fix</a></span>. Qed.</div></details>
+<br/>
+<h3> Function Calls </h3>
+<br/>
+<div class="doc">Last but not least, we need a reasoning rule to reason about function
+    applications. Consider an application <span class="bracket"><span class="id">trm_app</span> <span class="id">v1</span> <span class="id">v2</span></span>. Assume <span class="bracket"><span class="id">v1</span></span> to be a
+    function, that is, to be of the form <span class="bracket"><span class="id">val_fun</span> <span class="id">x</span> <span class="id">t1</span></span>. Then, according to the
+    beta-reduction rule, the semantics of <span class="bracket"><span class="id">trm_app</span> <span class="id">v1</span> <span class="id">v2</span></span> is the same as that of
+    <span class="bracket"><span class="id">subst</span> <span class="id">x</span> <span class="id">v2</span> <span class="id">t1</span></span>. This reasoning rule is thus:
+     v1 = val_fun x t1     {H} (subst x v2 t1) {Q}
+     ---------------------------------------------
+      {H} (trm_app v1 v2) {Q}
+   Observe that this reasoning rule requires <span class="bracket"><span class="id">v1</span></span> to be a known value. In
+   particular, <span class="bracket"><span class="id">v1</span></span> cannot be a program variable or an unspecified program
+   value. More precisely:
+   - If <span class="bracket"><span class="id">v1</span></span> was a program variable (that is, a <span class="bracket"><span class="id">trm_var</span></span>) in the original
+     source code, then this program variable should have been substituted by
+     a Coq value or variable of type <span class="bracket"><span class="id">val</span></span> by the time we reach this function
+     call. Otherwise, the variable would correspond to a dangling free variable.
+   - If <span class="bracket"><span class="id">v1</span></span> is a Coq variable of type <span class="bracket"><span class="id">val</span></span> but with no assumption of the form
+     <span class="bracket"><span class="id">v1</span> = <span class="id">val_fun</span> <span class="id">x</span> <span class="id">t1</span></span>, it is probably the case that we already have
+     established a specification lemma for the function <span class="bracket"><span class="id">v1</span></span> earlier in the
+     reasoning. It this case, the rule above generally cannot be applied.
+     Instead, one should apply the specification lemma for <span class="bracket"><span class="id">v1</span></span>, which
+     is expected to have a conclusion of the form <span class="bracket">{..} (<span class="id">trm_app</span> <span class="id">v1</span> ..) {..}</span>,
+     matching the proof obligation at hand.
+   Let's come back to the case where we are interested in establishing a triple
+   for a concrete function, whose code is known. The reasoning rule stated above
+   translates in Coq as shown below. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_app_fun">triple_app_fun</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> <span class="id">t1</span>) <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_app_fun">eval_app_fun</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">The reasoning rule that corresponds to beta-reduction for a recursive
+    function involves _two_ substitutions: a first substitution for recursive
+    occurrences of the function, followed with a second substitution for the
+    argument provided to the call. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_app_fix">triple_app_fix</a></span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fix">val_fix</a></span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">f</span> <span class="id">v1</span> <span class="id">t1</span>)) <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span> <span class="id">M</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#eval_app_fix">eval_app_fix</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">This concludes the presentation of the reasoning rules for term constructs.
+    Before we can tackle the verification of actual programs, there remains to
+    present the specifications for the primitive operations. We start with
+    arithmetic operations, then consider heap-manipulating operations. </div>
+<br/>
+<h2> Primitive Arithmetic Operations </h2>
+<br/>
+<h3> Addition </h3>
+<br/>
+<div class="doc">Consider a term of the form <span class="bracket"><span class="id">val_add</span> <span class="id">n1</span> <span class="id">n2</span></span>, which is short for
+    <span class="bracket"><span class="id">trm_app</span> (<span class="id">trm_app</span> (<span class="id">trm_val</span> <span class="id">val_add</span>) (<span class="id">val_int</span> <span class="id">n1</span>)) (<span class="id">val_int</span> <span class="id">n2</span>)</span>, if we
+    unfold the coercion <span class="bracket"><span class="id">val_int</span></span>.
+    The addition operation may execute in an empty state. It does not modify the
+    state, and returns the value <span class="bracket"><span class="id">val_int</span> (<span class="id">n1</span>+<span class="id">n2</span>)</span>. Recall the statement of the
+    evaluation rule, in omni-big-step style. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="eval_add">eval_add</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">n1</span> <span class="id">n2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id">n1</span> + <span class="id">n2</span>)) <span class="id">s</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#eval">eval</a></span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepReference.html#val_add">val_add</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> <span class="id">n1</span>) (<span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> <span class="id">n2</span>)) <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">In the specification shown below, the precondition is written <span class="bracket">\[]</span> and the
+    postcondition binds a return value <span class="bracket"><span class="id">r</span></span> of type <span class="bracket"><span class="id">val</span></span> specified to be equal
+    to <span class="bracket"><span class="id">val_int</span> (<span class="id">n1</span>+<span class="id">n2</span>)</span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_add">triple_add</a></span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_add">val_add</a></span> <span class="id">n1</span> <span class="id">n2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id">n1</span> + <span class="id">n2</span>)]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.Rules.html#eval_add">eval_add</a></span>. <span class="id">lets</span> -&gt;: <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty_inv">hempty_inv</a></span> <span class="id">Hs</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hpure_intro">hpure_intro</a></span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Technically, for a simple function such as addition, we could state a
+    specification in a similar form as <span class="bracket"><span class="id">triple_val</span></span>, with an entailment of the
+    form <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">Q</span> <span class="id">v</span></span>, as shown below. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_add'</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id">n1</span> + <span class="id">n2</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_add">val_add</a></span> <span class="id">n1</span> <span class="id">n2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#triple_conseq_frame">triple_conseq_frame</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_add">triple_add</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xsimpl</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">xpull</span>. <span class="id">intros</span> ? -&gt;. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Yet, this pattern does not generalize well to more complex functions with
+    nonempty preconditions. Instead, for specifying functions, we follow by
+    convention the pattern of "minimal footprint specifications", where the
+    precondition of the function covers no more than what the function needs to
+    access. For example:
+    - the <span class="bracket"><span class="id">add</span></span> operation does not access the memory state, so it should be
+      specified with <span class="bracket">\[]</span> as precondition;
+    - the <span class="bracket"><span class="id">get</span></span> operation on a reference accesses exactly one cell, so it
+      should be specified using a precondition of the form <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span>;
+    - the <span class="bracket"><span class="id">mlist_length</span></span> operation traverses one mutable linked list, so it
+      should be specified using a precondition of the form <span class="bracket"><span class="id">MList</span> <span class="id">p</span> <span class="id">L</span></span>.
+    There are a few situations where the precondition of a function may be an
+    over-approximation, to avoid complications. For example, a function that
+    gives the index of the first occurrence of a value <span class="bracket"><span class="id">v</span></span> in a mutable list at
+    address <span class="bracket"><span class="id">p</span></span> would typically be specified with a precondition of the form
+    <span class="bracket"><span class="id">MList</span> <span class="id">p</span> <span class="id">L</span></span> describing the full linked list, rather than a precondition
+    describing the the smallest prefix of the list that reaches a cell with
+    value <span class="bracket"><span class="id">v</span></span>. </div>
+<br/>
+<h3> Division </h3>
+<br/>
+<div class="doc">The specification of the division operation <span class="bracket"><span class="id">val_div</span> <span class="id">n1</span> <span class="id">n2</span></span> is similar, yet
+    with the extra requirement that the argument <span class="bracket"><span class="id">n2</span></span> must be nonzero. This
+    requirement <span class="bracket"><span class="id">n2</span> &lt;&gt; 0</span> appears in the evaluation rule as well as in the
+    reasoning rule. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="eval_div">eval_div</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">n1</span> <span class="id">n2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">n2</span> &lt;&gt; 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.quot">Z.quot</a></span> <span class="id">n1</span> <span class="id">n2</span>)) <span class="id">s</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#eval">eval</a></span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepReference.html#val_div">val_div</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> <span class="id">n1</span>) (<span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> <span class="id">n2</span>)) <span class="id">Q</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_div">triple_div</a></span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id">n2</span> &lt;&gt; 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_div">val_div</a></span> <span class="id">n1</span> <span class="id">n2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.quot">Z.quot</a></span> <span class="id">n1</span> <span class="id">n2</span>)]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hn2</span> <span class="id">Hs</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.Rules.html#eval_div">eval_div</a></span>. <span class="id">lets</span> -&gt;: <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty_inv">hempty_inv</a></span> <span class="id">Hs</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hpure_intro">hpure_intro</a></span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> Random-Number Generation </h3>
+<br/>
+<div class="doc">The evaluation of <span class="bracket"><span class="id">val_rand</span> <span class="id">n</span></span> is particularly interesting because it
+    involves nondeterminism. Assume <span class="bracket"><span class="id">n</span> &gt; 0</span>. The output value may be any <span class="bracket"><span class="id">n1</span></span> in
+    the range <span class="bracket">0 &lt;= <span class="id">n1</span> &lt; <span class="id">n</span></span>. The statement <span class="bracket"><span class="id">eval</span> <span class="id">s</span> (<span class="id">val_rand</span> <span class="id">n</span>) <span class="id">Q</span></span> should
+    capture the fact that <span class="bracket"><span class="id">Q</span> <span class="id">s</span> <span class="id">n1</span></span> holds, for any possible output integer <span class="bracket"><span class="id">n1</span></span>.
+    This condition is captured by <span class="bracket"><span class="kwd">forall</span> <span class="id">n1</span>, 0 &lt;= <span class="id">n1</span> &lt; <span class="id">n</span> -&gt; <span class="id">Q</span> <span class="id">n1</span> <span class="id">s</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="eval_rand">eval_rand</a></span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">n</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> &gt; 0 -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">n1</span>, 0 &lt;= <span class="id">n1</span> &lt; <span class="id">n</span> -&gt; <span class="id">Q</span> <span class="id">n1</span> <span class="id">s</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#eval">eval</a></span> <span class="id">s</span> (<span class="id"><a href="SLF.LibSepReference.html#val_rand">val_rand</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> <span class="id">n</span>)) <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">The postcondition of the triple for <span class="bracket"><span class="id">val_rand</span> <span class="id">n</span></span> asserts that the output
+    value <span class="bracket"><span class="id">r</span></span> corresponds to an integer <span class="bracket"><span class="id">n1</span></span> in the range <span class="bracket">0 &lt;= <span class="id">n1</span> &lt; <span class="id">n</span></span>. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (triple_rand)
+    Prove the reasoning rule for calls to the random number generator. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_rand">triple_rand</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> &gt; 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_rand">val_rand</a></span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="kwd">exists</span> <span class="id">n1</span>, <span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> <span class="id">n1</span> /\ 0 &lt;= <span class="id">n1</span> &lt; <span class="id">n</span>]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Primitive Heap-Manipulating Operations </h2>
+<br/>
+<div class="doc">Establishing triples for the operations <span class="bracket"><span class="id">ref</span></span>, <span class="bracket"><span class="id">get</span></span>, <span class="bracket"><span class="id">set</span></span> and <span class="bracket"><span class="id">free</span></span>
+    requires reasoning about the definitions of certain primitive heap
+    predicates. This reasoning is carried out using the introduction and
+    elimination lemmas introduced in chapter <span class="bracket"><span class="id">Hprop</span></span>. For example,
+    <span class="bracket"><span class="id">hsingle_intro</span></span> proves <span class="bracket">(<span class="id">p</span> ~~&gt; <span class="id">v</span>) (<span class="id">Fmap.single</span> <span class="id">p</span> <span class="id">v</span>)</span>. Also, the lemma
+    <span class="bracket"><span class="id">hstar_hpure_l</span></span> establishing <span class="bracket">(\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">h</span> = (<span class="id">P</span> /\ <span class="id">H</span> <span class="id">h</span>)</span> will be used
+    pervasively. </div>
+<br/>
+<h3> Allocation </h3>
+<br/>
+<div class="doc">Recall that <span class="bracket"><span class="id">val_ref</span> <span class="id">v</span></span> allocates a cell with contents <span class="bracket"><span class="id">v</span></span>. A call to
+    <span class="bracket"><span class="id">val_ref</span> <span class="id">v</span></span> does not depend on the current contents of the state. The
+    operation extends the state with a fresh singleton cell, at some location
+    <span class="bracket"><span class="id">p</span></span>, assigning it <span class="bracket"><span class="id">v</span></span> as contents. This fresh cell is described by the heap
+    predicate <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span>. The evaluation of <span class="bracket"><span class="id">val_ref</span> <span class="id">v</span></span> produces the value
+    <span class="bracket"><span class="id">val_loc</span> <span class="id">p</span></span>. Thus, if <span class="bracket"><span class="id">r</span></span> denotes the result value, we have <span class="bracket"><span class="id">r</span> = <span class="id">val_loc</span> <span class="id">p</span></span>
+    for some <span class="bracket"><span class="id">p</span></span>. In the corresponding specification shown below, observe how
+    the location <span class="bracket"><span class="id">p</span></span> is existentially quantified in the postcondition. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_ref">triple_ref</a></span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \<span class="kwd">exists</span> <span class="id">p</span>, \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_loc">val_loc</a></span> <span class="id">p</span>] \* <span class="id">p</span> ~~&gt; <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">intros</span> <span class="id">s1</span> <span class="id">K</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_ref">eval_ref</a></span>. <span class="id">intros</span> <span class="id">p</span> <span class="id">D</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> -&gt;: <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hempty_inv">hempty_inv</a></span> <span class="id">K</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.update_empty">Fmap.update_empty</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hexists_intro">hexists_intro</a></span> <span class="id">p</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_hpure_l">hstar_hpure_l</a></span>. <span class="id">split</span>*.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hsingle_intro">hsingle_intro</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Using the notation <span class="bracket"><span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">H</span></span> as a shorthand for
+    <span class="bracket"><span class="kwd">fun</span> (<span class="id">r</span>:<span class="id">val</span>) =&gt; \<span class="kwd">exists</span> (<span class="id">p</span>:<span class="id">loc</span>), \[<span class="id">r</span> = <span class="id">val_loc</span> <span class="id">p</span>] \* <span class="id">H</span></span>, the specification
+    for <span class="bracket"><span class="id">val_ref</span></span> becomes more concise. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_ref'</span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">funloc</span> <span class="id">p</span> =&gt; <span class="id">p</span> ~~&gt; <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Rules.html#triple_ref">triple_ref</a></span>. Qed.</div></details>
+<br/>
+<h3> Deallocation </h3>
+<br/>
+<div class="doc">Recall that <span class="bracket"><span class="id">val_free</span></span> denotes the operation for deallocating a cell at a
+    given address. A call of the form <span class="bracket"><span class="id">val_free</span> <span class="id">p</span></span> executes safely in a state
+    described by <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span>. The operation leaves an empty state, and asserts
+    that the return value, named <span class="bracket"><span class="id">r</span></span>, is equal to unit. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (triple_free')
+    Prove the reasoning rule for deallocation of a single cell. Hint: use
+    <span class="bracket"><span class="id">Fmap.indom_single</span></span> and <span class="bracket"><span class="id">Fmap.remove_single</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_free'</span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_free">val_free</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_loc">val_loc</a></span> <span class="id">p</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_unit">val_unit</a></span>]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">In practice, the information <span class="bracket"><span class="id">r</span> = <span class="id">val_unit</span></span> is generally useless. Thus, we
+    state <span class="bracket"><span class="id">triple_free</span></span> with an empty postcondition. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_free">triple_free</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_free">val_free</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_loc">val_loc</a></span> <span class="id">p</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> _ =&gt; \[]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#triple_conseq">triple_conseq</a></span> <span class="id">triple_free'</span>; <span class="id">xsimpl</span>*. Qed.</div></details>
+<br/>
+<h3> Read </h3>
+<br/>
+<div class="doc">Recall that <span class="bracket"><span class="id">val_get</span></span> denotes the operation for reading a memory cell. A
+    call of the form <span class="bracket"><span class="id">val_get</span> <span class="id">v'</span></span> executes safely if its argument <span class="bracket"><span class="id">v'</span></span> is a
+    value of the form <span class="bracket"><span class="id">val_loc</span> <span class="id">p</span></span> for some location <span class="bracket"><span class="id">p</span></span>, in a state that
+    features a memory cell at location <span class="bracket"><span class="id">p</span></span>, storing some contents <span class="bracket"><span class="id">v</span></span>. Such a
+    state is described as <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span>. The read operation returns a value <span class="bracket"><span class="id">r</span></span> such
+    that <span class="bracket"><span class="id">r</span> = <span class="id">v</span></span>, and the memory state of the operation remains unchanged. The
+    specification of <span class="bracket"><span class="id">val_get</span></span> is thus expressed as follows. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_get">triple_get</a></span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_get">val_get</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">v</span>] \* (<span class="id">p</span> ~~&gt; <span class="id">v</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">intros</span> <span class="id">s</span> <span class="id">K</span>. <span class="id">lets</span> -&gt;: <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hsingle_inv">hsingle_inv</a></span> <span class="id">K</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_get">eval_get</a></span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepReference.html#Fmap.indom_single">Fmap.indom_single</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_hpure_l">hstar_hpure_l</a></span>. <span class="id">split</span>*. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepReference.html#Fmap.read_single">Fmap.read_single</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<h3> Write </h3>
+<br/>
+<div class="doc">Recall that <span class="bracket"><span class="id">val_set</span></span> denotes the operation for writing a memory cell. A
+    call of the form <span class="bracket"><span class="id">val_set</span> <span class="id">v'</span> <span class="id">w</span></span> executes safely if <span class="bracket"><span class="id">v'</span></span> is of the form
+    <span class="bracket"><span class="id">val_loc</span> <span class="id">p</span></span> for some location <span class="bracket"><span class="id">p</span></span>, in a state <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span>. The write operation
+    updates this state to <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">w</span></span>, and returns the unit value, which can be
+    ignored. Hence, <span class="bracket"><span class="id">val_set</span></span> is specified as follows. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (triple_set)
+    Prove the reasoning rule for a write operation. Hint: use
+    <span class="bracket"><span class="id">Fmap.update_single</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="triple_set">triple_set</a></span> : <span class="kwd">forall</span> <span class="id">w</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_set">val_set</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_loc">val_loc</a></span> <span class="id">p</span>) <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">w</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_unit">val_unit</a></span>] \* (<span class="id">p</span> ~~&gt; <span class="id">v</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Program Verification using the Reasoning Rules </h2>
+<br/>
+<div class="doc">We now have at hand all the necessary rules for carrying out actual
+    verification proofs in Separation Logic. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="ExamplePrograms">ExamplePrograms</a></span>.<br/>
+<span class="kwd">Export</span> <span class="id"><a href="SLF.LibSepReference.html#ProgramSyntax">ProgramSyntax</a></span>.<br/>
+<br/>
+<h3> Proof of <span class="bracket"><span class="id">incr</span></span> </h3>
+<br/>
+<div class="doc">First, we consider the verification of the increment function, which is
+    written in OCaml syntax as:
+OCaml:
+   let incr p =
+      p := !p + 1
+    and in "A-normal form" as:
+OCaml:
+   let incr p =
+      let n = !p in
+      let m = n+1 in
+      p := m
+    Using the construct from our embedded programming language, the definition
+    of <span class="bracket"><span class="id">incr</span></span> is formalized as shown below. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="ExamplePrograms.incr">incr</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="string">"p"</span> (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="string">"n"</span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id"><a href="SLF.LibSepReference.html#val_get">val_get</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_var">trm_var</a></span> <span class="string">"p"</span>)) (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="string">"m"</span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id"><a href="SLF.LibSepReference.html#val_add">val_add</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.LibSepReference.html#trm_var">trm_var</a></span> <span class="string">"n"</span>)) (<span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> 1)) (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id"><a href="SLF.LibSepReference.html#val_set">val_set</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_var">trm_var</a></span> <span class="string">"p"</span>)) (<span class="id"><a href="SLF.LibSepReference.html#trm_var">trm_var</a></span> <span class="string">"m"</span>)))).<br/>
+<br/>
+<div class="doc">Alternatively, using notation and coercions, the same program can be written
+    more concisely. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">incr'</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">p</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">n</span> = ! '<span class="id">p</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">m</span> = '<span class="id">n</span> + 1 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">p</span> := '<span class="id">m</span> }&gt;.<br/>
+<br/>
+<div class="doc">Let us check that the two definitions are indeed the same. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">incr_eq_incr'</span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Rules.html#ExamplePrograms.incr">incr</a></span> = <span class="id">incr'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<div class="doc">Recall from the first chapter the specification of the increment function.
+    Its precondition requires a singleton state of the form <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">n</span></span>. Its
+    postcondition describes a state of the form <span class="bracket"><span class="id">p</span> ~~&gt; (<span class="id">n</span>+1)</span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ExamplePrograms.triple_incr">triple_incr</a></span> : <span class="kwd">forall</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id"><a href="SLF.Rules.html#ExamplePrograms.incr">incr</a></span> <span class="id">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> _ =&gt; <span class="id">p</span> ~~&gt; (<span class="id">n</span>+1)).<br/>
+<br/>
+<div class="doc">In chapter <span class="bracket"><span class="id">Basic</span></span>, we have seen that the proof of this lemma can be
+    completed by the short script <span class="bracket"><span class="id">xwp</span>. <span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">xapp</span>. <span class="id">xsimpl</span>.</span>. The purpose
+    of the detailed proof that follows is to explain how the x-tactics operate.
+    It shows how, under the hood, the proof exploits:
+    - the structural reasoning rules,
+    - the reasoning rules for terms,
+    - the specification of the primitive functions,
+    - the <span class="bracket"><span class="id">xsimpl</span></span> tactic for simplifying entailments.
+    Executing the proof script step by step leads to the display of intermediate
+    proof obligations that involve Coq existential variables, a.k.a. "evars",
+    whose name is prefixed by a question mark, e.g., "?x". These placeholders
+    are typically introduced by <span class="bracket"><span class="id">applys</span></span> (which calls <span class="bracket"><span class="id">eapply</span></span>), and are
+    typically instantiated when solving subgoals. </div>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+<div class="doc">Initialize the proof </div>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_app_fun">triple_app_fun</a></span>.<br/>
+<div class="doc">Provide the argument name and body for <span class="bracket"><span class="id">incr</span></span>. </div>
+&nbsp;&nbsp;{ <span class="id">reflexivity</span>. }<br/>
+<div class="doc">Compute the substitution from program variable <span class="bracket"><span class="string">"p"</span>] <span class="id">to</span> <span class="id">Coq</span> <span class="id">variable</span> [<span class="id">p</span>] *)<br/>
+&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+<div class="doc">Reason about <span class="bracket"><span class="kwd">let</span> <span class="id">n</span> = ..</span>. Observe that this introduces an evar <span class="bracket">?<span class="id">Q1</span></span>, which
+    denotes the postcondition of <span class="bracket">!<span class="id">p</span></span>. </div>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_let">triple_let</a></span>.<br/>
+<div class="doc">In the body of the let-binding, reason about <span class="bracket">!<span class="id">p</span></span>. Here we are in a
+    favorable situation, where there is no need to apply a consequence or frame
+    rule. </div>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.Rules.html#triple_get">triple_get</a></span>. }<br/>
+<div class="doc">Observe how <span class="bracket">?<span class="id">Q1</span></span> has been instantiated as <span class="bracket"><span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">n</span>] \* <span class="id">p</span> ~~&gt; <span class="id">n</span></span>.
+    We next introduce a name <span class="bracket"><span class="id">n'</span></span> for the result of <span class="bracket">!<span class="id">p</span></span> </div>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n'</span>.<br/>
+<div class="doc">Once again, we compute the substitution of a program variable. </div>
+&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+<div class="doc">We substitute away the equality <span class="bracket"><span class="id">n'</span> = <span class="id">n</span></span>. </div>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibSepReference.html#triple_hpure">triple_hpure</a></span>. <span class="id">intros</span> -&gt;.<br/>
+<div class="doc">Reason about <span class="bracket"><span class="kwd">let</span> <span class="id">m</span> = ..</span>. Observe the introduction of another evar <span class="bracket">?<span class="id">Q1</span></span>.
+    </div>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_let">triple_let</a></span>.<br/>
+<div class="doc">Apply the frame rule to put aside <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">n</span></span>. </div>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#triple_conseq_frame">triple_conseq_frame</a></span>.<br/>
+<div class="doc">We reason about <span class="bracket"><span class="id">n</span>+1</span> in the empty state. Doing so instantiates <span class="bracket">?<span class="id">Q1</span></span>. </div>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_add">triple_add</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span>. } }<br/>
+<div class="doc">We name <span class="bracket"><span class="id">m'</span></span> the result of <span class="bracket"><span class="id">n</span>+1</span>. </div>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">m'</span>. <span class="id">simpl</span>.<br/>
+<div class="doc">We can extract the equality <span class="bracket"><span class="id">m'</span> = <span class="id">n</span> + 1</span> and substitute it away. </div>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibSepReference.html#triple_hpure">triple_hpure</a></span>. <span class="id">intros</span> -&gt;.<br/>
+<div class="doc">Finally, we reason about <span class="bracket"><span class="id">p</span> := <span class="id">m</span></span>. </div>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#triple_conseq_frame">triple_conseq_frame</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#triple_set">triple_set</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">xsimpl</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h3> Proof of <span class="bracket"><span class="id">succ_using_incr</span></span> </h3>
+<br/>
+<div class="doc">Recall from <span class="bracket"><span class="id">Basic</span></span> the function <span class="bracket"><span class="id">succ_using_incr</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="ExamplePrograms.succ_using_incr">succ_using_incr</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fun</span> '<span class="id">n</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> '<span class="id">n</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.Rules.html#ExamplePrograms.incr">incr</a></span> '<span class="id">r</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">x</span> = ! '<span class="id">r</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#val_free">val_free</a></span> '<span class="id">r</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">x</span> }&gt;.<br/>
+<br/>
+<div class="doc">Recall the specification of <span class="bracket"><span class="id">succ_using_incr</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ExamplePrograms.triple_succ_using_incr">triple_succ_using_incr</a></span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id"><a href="SLF.Rules.html#ExamplePrograms.succ_using_incr">succ_using_incr</a></span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">v</span> =&gt; \[<span class="id">v</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id">n</span>+1)]).<br/>
+<br/>
+<h3> Exercise: 4 stars, standard, especially useful (triple_succ_using_incr)
+    Verify the function <span class="bracket"><span class="id">triple_succ_using_incr</span></span>. Hint: follow the pattern of
+    <span class="bracket"><span class="id">triple_incr</span></span>. Use <span class="bracket"><span class="id">applys</span> <span class="id">triple_seq</span></span> for reasoning about a sequence. Use
+    <span class="bracket"><span class="id">applys</span> <span class="id">triple_val</span></span> for reasoning about the final return value, namely <span class="bracket"><span class="id">x</span></span>.
+    </h3>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Rules.html#ExamplePrograms">ExamplePrograms</a></span>.<br/>
+<br/>
+<div class="doc">The job of the following chapters is to introduce additional technology to
+    streamline the proof process, notably by:
+    - automating the application of the frame rule, and
+    - eliminating the need to manipulate program variables
+      and substitutions during verification. </div>
+<br/>
+<h1> More Details </h1>
+<br/>
+<div class="doc">This "More Details" section presents several additional reasoning rules. </div>
+<br/>
+<h2> Triple for Terms with Same Semantics </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="ProofsSameSemantics">ProofsSameSemantics</a></span>.<br/>
+<br/>
+<div class="doc">A general principle is that if, according to the semantics, the terms <span class="bracket"><span class="id">t1</span></span>
+    and <span class="bracket"><span class="id">t2</span></span> admit the same behaviors, then <span class="bracket"><span class="id">t1</span></span> and <span class="bracket"><span class="id">t2</span></span> satisfy the same
+    triples. The statement can also be reformulated in an asymmetric fashion: if
+    <span class="bracket"><span class="id">t2</span></span> admits no more behaviors than <span class="bracket"><span class="id">t1</span></span>, then <span class="bracket"><span class="id">t2</span></span> satisfies all the triples
+    that <span class="bracket"><span class="id">t1</span></span> satisfies. This section explains how to formalize this asymmetric
+    statement, which is more general and more useful in practice.
+    The judgment <span class="bracket"><span class="id">eval_like</span> <span class="id">t1</span> <span class="id">t2</span></span> asserts that if <span class="bracket"><span class="id">t1</span></span> terminates and produces
+    results in <span class="bracket"><span class="id">Q</span></span>, then so does <span class="bracket"><span class="id">t2</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="ProofsSameSemantics.eval_like">eval_like</a></span> (<span class="id">t1</span> <span class="id">t2</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">s</span> <span class="id">Q</span>, <span class="id"><a href="SLF.LibSepReference.html#eval">eval</a></span> <span class="id">s</span> <span class="id">t1</span> <span class="id">Q</span> -&gt; <span class="id"><a href="SLF.LibSepReference.html#eval">eval</a></span> <span class="id">s</span> <span class="id">t2</span> <span class="id">Q</span>.<br/>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (eval_like_eta_expansion)
+    Prove that when the relation <span class="bracket"><span class="id">eval_like</span> <span class="id">t1</span> <span class="id">t2</span></span> holds, any triple that <span class="bracket"><span class="id">t2</span></span>
+    satisfies any triple that <span class="bracket"><span class="id">t1</span></span> satisfies. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ProofsSameSemantics.triple_eval_like">triple_eval_like</a></span> : <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Rules.html#ProofsSameSemantics.eval_like">eval_like</a></span> <span class="id">t1</span> <span class="id">t2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t2</span> <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The remaining of this section presents 4 examples applications of this
+    reasoning principle. To begin with, consider the term <span class="bracket"><span class="kwd">let</span> <span class="id">x</span> = <span class="id">t</span> <span class="kwd">in</span> <span class="id">x</span></span>,
+    represented as <span class="bracket"><span class="id">trm_let</span> <span class="id">x</span> <span class="id">t</span> <span class="id">x</span></span> for a variable named <span class="bracket"><span class="id">x</span></span>. This term reduces
+    to <span class="bracket"><span class="id">t</span></span>, hence the relation <span class="bracket"><span class="id">eval_like</span> <span class="id">t</span> (<span class="id">trm_let</span> <span class="id">x</span> <span class="id">t</span> <span class="id">x</span>)</span> holds. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ProofsSameSemantics.eval_like_eta_reduction">eval_like_eta_reduction</a></span> : <span class="kwd">forall</span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">x</span>:<span class="id"><a href="SLF.LibSepVar.html#var">var</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Rules.html#ProofsSameSemantics.eval_like">eval_like</a></span> <span class="id">t</span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">R</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_let">eval_let</a></span> <span class="id">R</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepVar.html#var_eq_spec">var_eq_spec</a></span>. <span class="id">case_if</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hv</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_val">eval_val</a></span> <span class="id">Hv</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> Exercise: 4 stars, standard, optional (eval_like_eta_expansion)
+    Prove that the symmetric relation <span class="bracket"><span class="id">eval_like</span> (<span class="id">trm_let</span> <span class="id">x</span> <span class="id">t</span> <span class="id">x</span>) <span class="id">t</span></span> also holds.
+    </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ProofsSameSemantics.eval_like_eta_expansion">eval_like_eta_expansion</a></span> : <span class="kwd">forall</span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">x</span>:<span class="id"><a href="SLF.LibSepVar.html#var">var</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.Rules.html#ProofsSameSemantics.eval_like">eval_like</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t</span> <span class="id">x</span>) <span class="id">t</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (eta_same_triples)
+    Conclude that <span class="bracket"><span class="id">t</span></span> and <span class="bracket"><span class="id">trm_let</span> <span class="id">x</span> <span class="id">t</span> <span class="id">x</span></span> satisfy exactly the same set of
+    triples. (This result will be exploited in chapter <span class="bracket"><span class="id">Affine</span></span>, for
+    proving the equivalence of two versions of the garbage collection rule.) </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ProofsSameSemantics.eta_same_triples">eta_same_triples</a></span> : <span class="kwd">forall</span> (<span class="id">t</span>:<span class="id"><a href="SLF.LibSepReference.html#trm">trm</a></span>) (<span class="id">x</span>:<span class="id"><a href="SLF.LibSepVar.html#var">var</a></span>) <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span> &lt;-&gt; <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t</span> <span class="id">x</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Another application of the reasoning rule <span class="bracket"><span class="id">triple_eval_like</span></span> is to revisit
+    the proof of <span class="bracket"><span class="id">triple_app_fun</span></span> by arguing that <span class="bracket"><span class="id">trm_app</span> (<span class="id">val_fun</span> <span class="id">x</span> <span class="id">t1</span>) <span class="id">v2</span></span>
+    reduces to <span class="bracket"><span class="id">subst</span> <span class="id">x</span> <span class="id">v2</span> <span class="id">t1</span></span>, hence they admit the same behavior. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ProofsSameSemantics.triple_app_fun">triple_app_fun</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id"><a href="SLF.LibSepReference.html#val_fun">val_fun</a></span> <span class="id">x</span> <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v2</span> <span class="id">t1</span>) <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_app">trm_app</a></span> <span class="id">v1</span> <span class="id">v2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span> <span class="id">M1</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#ProofsSameSemantics.triple_eval_like">triple_eval_like</a></span> <span class="id">M1</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">R</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepReference.html#eval_app_fun">eval_app_fun</a></span> <span class="id">E</span> <span class="id">R</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">A even more interesting application is a rule that allows to modify the
+    parenthesis structure of a sequence, from <span class="bracket"><span class="id">t1</span>; (<span class="id">t2</span>; <span class="id">t3</span>)</span> to <span class="bracket">(<span class="id">t1</span>;<span class="id">t2</span>); <span class="id">t3</span></span>.
+    Such a change in the parenthesis structure of a sequence might be helfpul to
+    apply the frame rule around <span class="bracket"><span class="id">t1</span>;<span class="id">t2</span></span>, for example. </div>
+<br/>
+<h3> Exercise: 3 stars, standard, optional (triple_trm_seq_assoc)
+    Prove that the term <span class="bracket"><span class="id">t1</span>; (<span class="id">t2</span>; <span class="id">t3</span>)</span>, which corresponds to the natural parsing
+    of <span class="bracket"><span class="id">t1</span>; <span class="id">t2</span>; <span class="id">t3</span></span>, satisfies any triple that the term <span class="bracket">(<span class="id">t1</span>;<span class="id">t2</span>); <span class="id">t3</span></span> satisfies.
+    </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ProofsSameSemantics.triple_trm_seq_assoc">triple_trm_seq_assoc</a></span> : <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">t3</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">t3</span>) <span class="id">H</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t1</span> (<span class="id"><a href="SLF.LibSepReference.html#trm_seq">trm_seq</a></span> <span class="id">t2</span> <span class="id">t3</span>)) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Rules.html#ProofsSameSemantics">ProofsSameSemantics</a></span>.<br/>
+<br/>
+<h2> The Combined Let-Frame Rule </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="LetFrame">LetFrame</a></span>.<br/>
+<br/>
+<div class="doc">Recall the Separation Logic let rule. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="LetFrame.triple_let">triple_let</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q1</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t1</span> <span class="id">H</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v1</span>, <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v1</span> <span class="id">t2</span>) (<span class="id">Q1</span> <span class="id">v1</span>) <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">At first sight, it seems that, to reason about <span class="bracket"><span class="kwd">let</span> <span class="id">x</span> = <span class="id">t1</span> <span class="kwd">in</span> <span class="id">t2</span></span> in a state
+    described by precondition <span class="bracket"><span class="id">H</span></span>, we need to first reason about <span class="bracket"><span class="id">t1</span></span> in that
+    same state. But <span class="bracket"><span class="id">t1</span></span> may well require only a subset of the state <span class="bracket"><span class="id">H</span></span> to
+    evaluate.
+    The "let-frame" rule combines the rule for let-bindings with the frame rule
+    to make it more explicit that the precondition <span class="bracket"><span class="id">H</span></span> may be decomposed in the
+    form <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span>, where <span class="bracket"><span class="id">H1</span></span> is the part needed by <span class="bracket"><span class="id">t1</span></span>, and <span class="bracket"><span class="id">H2</span></span> denotes the
+    rest of the state. The part of the state covered by <span class="bracket"><span class="id">H2</span></span> remains unmodified
+    during the evaluation of <span class="bracket"><span class="id">t1</span></span>, and appears as part of the precondition of
+    <span class="bracket"><span class="id">t2</span></span>. The corresponding statement is as follows. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="LetFrame.triple_let_frame">triple_let_frame</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">Q1</span> <span class="id">H</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t1</span> <span class="id">H1</span> <span class="id">Q1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v1</span>, <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#subst">subst</a></span> <span class="id">x</span> <span class="id">v1</span> <span class="id">t2</span>) (<span class="id">Q1</span> <span class="id">v1</span> \* <span class="id">H2</span>) <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#trm_let">trm_let</a></span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">H</span> <span class="id">Q</span>.<br/>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (triple_let_frame)
+    Prove the let-frame rule. </h3>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Rules.html#LetFrame">LetFrame</a></span>.<br/>
+<br/>
+<h1> Optional Material </h1>
+<br/>
+<h2> Alternative Specification Style for Pure Preconditions </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="DivSpec">DivSpec</a></span>.<br/>
+<br/>
+<div class="doc">Recall the specification for division. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="DivSpec.triple_div">triple_div</a></span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id">n2</span> &lt;&gt; 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_div">val_div</a></span> <span class="id">n1</span> <span class="id">n2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.quot">Z.quot</a></span> <span class="id">n1</span> <span class="id">n2</span>)]).<br/>
+<br/>
+<div class="doc">Equivalently, we could place the requirement <span class="bracket"><span class="id">n2</span> &lt;&gt; 0</span> in the precondition:
+    </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id">triple_div'</span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_div">val_div</a></span> <span class="id">n1</span> <span class="id">n2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[<span class="id">n2</span> &lt;&gt; 0]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.quot">Z.quot</a></span> <span class="id">n1</span> <span class="id">n2</span>)]).<br/>
+<br/>
+<div class="doc">The two presentations are equivalent. First, let us prove <span class="bracket"><span class="id">triple_div'</span></span>
+    using <span class="bracket"><span class="id">triple_div</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_div'_from_triple_div</span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_div">val_div</a></span> <span class="id">n1</span> <span class="id">n2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[<span class="id">n2</span> &lt;&gt; 0]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.quot">Z.quot</a></span> <span class="id">n1</span> <span class="id">n2</span>)]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">triple_hpure'</span>. <span class="id">applys</span> <span class="id"><a href="SLF.Rules.html#DivSpec.triple_div">triple_div</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (triple_div_from_triple_div')
+    Prove <span class="bracket"><span class="id">triple_div</span></span> using <span class="bracket"><span class="id">triple_div'</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_div_from_triple_div'</span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id">n2</span> &lt;&gt; 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_div">val_div</a></span> <span class="id">n1</span> <span class="id">n2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_int">val_int</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.quot">Z.quot</a></span> <span class="id">n1</span> <span class="id">n2</span>)]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Placing pure preconditions outside of the triples makes it slightly more
+    convenient to exploit specifications. For this reason, we adopt the style
+    that precondition only contain the description of heap-allocated data
+    structures. </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Rules.html#DivSpec">DivSpec</a></span>.<br/>
+<br/>
+<h2> Alternative Specification Style for Result Values </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="MatchStyle">MatchStyle</a></span>.<br/>
+<br/>
+<div class="doc">Recall the specification for the function <span class="bracket"><span class="id">ref</span></span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="MatchStyle.triple_ref">triple_ref</a></span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \<span class="kwd">exists</span> <span class="id">p</span>, \[<span class="id">r</span> = <span class="id"><a href="SLF.LibSepReference.html#val_loc">val_loc</a></span> <span class="id">p</span>] \* <span class="id">p</span> ~~&gt; <span class="id">v</span>).<br/>
+<br/>
+<div class="doc">Its postcondition could be equivalently stated by using, instead of an
+    existential quantifier, a pattern matching construct. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id">triple_ref'</span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.LibSepReference.html#val_ref">val_ref</a></span> <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="kwd">match</span> <span class="id">r</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="SLF.LibSepReference.html#val_loc">val_loc</a></span> <span class="id">p</span> =&gt; (<span class="id">p</span> ~~&gt; <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| _ =&gt; \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span>).<br/>
+<br/>
+<div class="doc">However, the pattern-matching presentation is less readable and would be
+    fairly cumbersome to work with in practice. </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Rules.html#MatchStyle">MatchStyle</a></span>.<br/>
+<br/>
+<h3> Proof of <span class="bracket"><span class="id">factorec</span></span> </h3>
+<br/>
+<div class="doc">This section presents a manual proof for a recursive function. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="ExamplePrograms2">ExamplePrograms2</a></span>.<br/>
+<span class="kwd">Export</span> <span class="id"><a href="SLF.LibSepReference.html#ProgramSyntax">ProgramSyntax</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.Basic.html#Facto">Basic.Facto</a></span>.<br/>
+<br/>
+<div class="doc">In this section, the corollary <span class="bracket"><span class="id">triple_hpure'</span></span> established in the previous
+    chapter, can be useful. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id">triple_hpure'</span> : <span class="kwd">forall</span> <span class="id">t</span> (<span class="id">P</span>:<span class="kwd">Prop</span>) <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> \[] <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> <span class="id">t</span> \[<span class="id">P</span>] <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">Recall the function <span class="bracket"><span class="id">repeat_incr</span></span> from chapter <span class="bracket"><span class="id">Basic</span></span>.
+OCaml:
+    let rec factorec n =
+      if n &lt;= 1 then 1 else n * factorec (n-1)
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="ExamplePrograms2.factorec">factorec</a></span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> :=<br/>
+&nbsp;&nbsp;&lt;{ <span class="kwd">fix</span> '<span class="id">f</span> '<span class="id">n</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">b</span> = ('<span class="id">n</span> &lt;= 1) <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">if</span> '<span class="id">b</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">then</span> 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">else</span> <span class="kwd">let</span> '<span class="id">x</span> = '<span class="id">n</span> - 1 <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> '<span class="id">y</span> = '<span class="id">f</span> '<span class="id">x</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id">n</span> * '<span class="id">y</span> }&gt;.<br/>
+<br/>
+<h3> Exercise: 4 stars, standard, especially useful (triple_factorec)
+    Verify the function <span class="bracket"><span class="id">factorec</span></span>. Hint: exploit <span class="bracket"><span class="id">triple_app_fix</span></span> for reasoning
+    about the recursive function. Use <span class="bracket"><span class="id">triple_hpure'</span></span>, the corollary of
+    <span class="bracket"><span class="id">triple_hpure</span></span>. Exploit <span class="bracket"><span class="id">triple_le</span></span> and <span class="bracket"><span class="id">triple_sub</span></span> and <span class="bracket"><span class="id">triple_mul</span></span> to
+    reason about the behavior of the primitive operations involved. Exploit
+    <span class="bracket"><span class="id">applys</span> <span class="id">triple_if</span>. <span class="id">case_if</span> <span class="kwd">as</span> <span class="id">C</span>.</span> to reason about the conditional;
+    alternatively, if using <span class="bracket"><span class="id">triple_if_case</span></span>, you'll need to use the tactic
+    <span class="bracket"><span class="id">rew_bool_eq</span> <span class="kwd">in</span> *</span> to simplify, e.g., the expression
+    <span class="bracket"><span class="id">isTrue</span> (<span class="id">m</span> &lt;= 1)) = <span class="id">true</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ExamplePrograms2.triple_factorec">triple_factorec</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#triple">triple</a></span> (<span class="id"><a href="SLF.Rules.html#ExamplePrograms2.factorec">factorec</a></span> <span class="id">n</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;\[]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id"><a href="SLF.Basic.html#Facto.facto">facto</a></span> <span class="id">n</span>]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Rules.html#ExamplePrograms2">ExamplePrograms2</a></span>.<br/>
+<br/>
+<h2> Historical Notes </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">Gordon</span> 1989</span> (in Bib.v) gave the first mechanization of Hoare logic in a proof
+    assistant, using the HOL tool. Gordon's pioneering work was followed by
+    numerous formalizations of Hoare logic, targeting various programming
+    languages.
+    The original presentation of Separation Logic (1999-2001) consists of a set
+    of rules written down on paper. These rules were not formally described in a
+    proof assistant. Nevertheless, mechanized presentation of Separation Logic
+    emerged a few years later.
+    <span class="bracket"><span class="id">Yu</span>, <span class="id">Hamid</span>, <span class="id">and</span> <span class="id">Shao</span> 2003</span> (in Bib.v) present the CAP framework for the
+    verification in Coq of assembly-level code. This framework exploits
+    separation logic style specifications, with predicate for lists and list
+    segments involving the separating conjunction operator.
+    In parallel, <span class="bracket"><span class="id">Weber</span> 2004</span> (in Bib.v), advised by Nipkow, developed the first
+    mechanization of the rules of Separation Logic for a while language, using
+    the Isabelle/HOL tool. His presentation is quite close from the original,
+    paper presentation.
+    Numerous mechanized presentations of Separation Logic, targeting various
+    languages (assembly, C, core-Java, ML, etc.) and using various tools
+    (Isabelle/HOL, Coq, PVS, HOL4, HOL). For a detailed list, see the last
+    chapter of the companion notes, linked from the <span class="bracket"><span class="id">Preface</span></span>. </div>
+<br/>
+</span></div>
+</span></div>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

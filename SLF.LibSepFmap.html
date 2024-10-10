@@ -1,0 +1,1206 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibSepFmap</title>
+<meta name="description" content="Documentation of Coq module LibSepFmap" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibSepFmap</h1>
+<div class="coq">
+<h1> LibSepFmap: Appendix - Finite Maps </h1>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibCore.html">LibCore</a></span>.<br/>
+<br/>
+<h1> Representation of Finite Maps </h1>
+<br/>
+<div class="doc">This file provides a representation of finite maps, which may be used
+    to represent the memory state of a program.
+    - It implements basic operations such as creation of a singleton map,
+       union of maps, read and update operations.
+    - It includes predicates to assert disjointness of two maps (predicate
+      <span class="bracket"><span class="id">disjoint</span></span>), and coherence of two maps on the intersection of their
+      domain (predicate <span class="bracket"><span class="id">agree</span></span>).
+    - It comes with a tactic for <span class="bracket"><span class="id">fmap_eq</span></span> proving equalities modulo
+      commutativity and associativity of map union.
+    The definition of the type <span class="bracket"><span class="id">fmap</span></span> is slightly technical in that it
+    involves a dependent pair to pack the partial function of type
+    <span class="bracket"><span class="id">A</span> -&gt; <span class="id">option</span> <span class="id">B</span></span> that represents the map, together with a proof of
+    finiteness of the domain of this map. One useful lemma established
+    in this file is the existence of fresh keys: for any finite map whose
+    keys are natural numbers, there exists a natural number that does not
+    already belong to the domain of that map. </div>
+<br/>
+<h2> Representation of Potentially-Infinite Maps as Partial Functions </h2>
+<br/>
+<h3> Representation </h3>
+<br/>
+<div class="doc">Type of partial functions from A to B </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map">map</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) : <span class="kwd">Type</span> :=<br/>
+&nbsp;&nbsp;<span class="id">A</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#option">option</a></span> <span class="id">B</span>.<br/>
+<br/>
+<h3> Operations </h3>
+<br/>
+<div class="doc">Disjoint union of two partial functions </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_union">map_union</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">f1</span> <span class="id">f2</span> : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span>) : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">x</span>:<span class="id">A</span>) =&gt; <span class="kwd">match</span> <span class="id">f1</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">y</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">y</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> =&gt; <span class="id">f2</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Removal from a partial functions </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_remove">map_remove</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">f</span> : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">k</span>:<span class="id">A</span>) : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">x</span>:<span class="id">A</span>) =&gt; <span class="id">If</span> <span class="id">x</span> = <span class="id">k</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> <span class="kwd">else</span> <span class="id">f</span> <span class="id">x</span>.<br/>
+<br/>
+<div class="doc">Finite domain of a partial function </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_finite">map_finite</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">f</span> : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">L</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>), <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">f</span> <span class="id">x</span> &lt;&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> -&gt; <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">x</span> <span class="id">L</span>.<br/>
+<br/>
+<div class="doc">Disjointness of domain of two partial functions </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_disjoint">map_disjoint</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">f1</span> <span class="id">f2</span> : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">f1</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> \/ <span class="id">f2</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span>.<br/>
+<br/>
+<div class="doc">Compatibility of two partial functions on the intersection
+    of their domains (only for Separation Logic with RO-permissions) </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_agree">map_agree</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">f1</span> <span class="id">f2</span> : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;<span class="id">f1</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">v1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f2</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">v2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">v1</span> = <span class="id">v2</span>.<br/>
+<br/>
+<div class="doc">Domain of a map (as a predicate) </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_indom">map_indom</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">f1</span> : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span>) : (<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">x</span>:<span class="id">A</span>) =&gt; <span class="id">f1</span> <span class="id">x</span> &lt;&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span>.<br/>
+<br/>
+<div class="doc">Filter the bindings of a map </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_filter">map_filter</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">F</span>:<span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">f</span>:<span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span>) : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">x</span>:<span class="id">A</span>) =&gt; <span class="kwd">match</span> <span class="id">f</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">y</span> =&gt; <span class="id">If</span> <span class="id">F</span> <span class="id">x</span> <span class="id">y</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">y</span> <span class="kwd">else</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Map a function on the values of a map </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_map">map_map</a></span> <span class="id">A</span> <span class="id">B1</span> <span class="id">B2</span> (<span class="id">F</span>:<span class="id">A</span>-&gt;<span class="id">B1</span>-&gt;<span class="id">B2</span>) (<span class="id">f</span>:<span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B1</span>) : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B2</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">x</span>:<span class="id">A</span>) =&gt; <span class="kwd">match</span> <span class="id">f</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">y</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> (<span class="id">F</span> <span class="id">x</span> <span class="id">y</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h3> Properties </h3>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="MapOps">MapOps</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="MapOps.A">A</a></span> <span class="id"><a name="MapOps.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> : <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id"><a href="SLF.LibSepFmap.html#MapOps.A">A</a></span> <span class="id"><a href="SLF.LibSepFmap.html#MapOps.B">B</a></span>.<br/>
+<br/>
+<div class="doc">Disjointness and domains </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="map_disjoint_eq">map_disjoint_eq</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span> <span class="id">f1</span> <span class="id">f2</span> = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span> <span class="id">f1</span> <span class="id">x</span> -&gt; <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span> <span class="id">f2</span> <span class="id">x</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">x</span>. <span class="id">gen</span> <span class="id">M</span>. <span class="id">case_eq</span> (<span class="id">f1</span> <span class="id">x</span>); <span class="id">case_eq</span> (<span class="id">f2</span> <span class="id">x</span>); <span class="id">auto_false</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">x</span>. <span class="id">gen</span> <span class="id">M</span>. <span class="id">case_eq</span> (<span class="id">f1</span> <span class="id">x</span>); <span class="id">case_eq</span> (<span class="id">f2</span> <span class="id">x</span>); <span class="id">auto_false</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">false</span>. <span class="id">applys</span> <span class="id">M</span>; <span class="id">auto_false</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Symmetry of disjointness </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="map_disjoint_sym">map_disjoint_sym</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#sym">sym</a></span> (@<span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span> <span class="id"><a href="SLF.LibSepFmap.html#MapOps.A">A</a></span> <span class="id"><a href="SLF.LibSepFmap.html#MapOps.B">B</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span>. <span class="id">intros</span> <span class="id">z</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">z</span>. <span class="id">intuition</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Commutativity of disjoint union </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="map_union_comm">map_union_comm</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span> <span class="id">f1</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span> <span class="id">f1</span> <span class="id">f2</span> = <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span> <span class="id">f2</span> <span class="id">f1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">x</span>. <span class="id">cases</span> (<span class="id">f1</span> <span class="id">x</span>); <span class="id">cases</span> (<span class="id">f2</span> <span class="id">x</span>); <span class="id">auto</span>. <span class="id">destruct</span> <span class="id">H</span>; <span class="id">false</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Finiteness of union </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="map_union_finite">map_union_finite</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span> <span class="id">f1</span> <span class="id">f2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">L1</span> <span class="id">F1</span>] [<span class="id">L2</span> <span class="id">F2</span>]. <span class="kwd">exists</span> (<span class="id">L1</span> ++ <span class="id">L2</span>). <span class="id">intros</span> <span class="id">x</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">F1</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">F2</span> <span class="id">x</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span> <span class="kwd">in</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibList.html#mem_app">mem_app</a></span>. <span class="id">destruct</span>~ (<span class="id">f1</span> <span class="id">x</span>).<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Finiteness of removal </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_remove_finite">map_remove_finite</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#map_remove">map_remove</a></span> <span class="id">f</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">L</span> <span class="id">F</span>]. <span class="kwd">exists</span> <span class="id">L</span>. <span class="id">intros</span> <span class="id">x'</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">F</span> <span class="id">x'</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_remove">map_remove</a></span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">case_if</span>~.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Finiteness of filter </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_filter_finite">map_filter_finite</a></span> : <span class="kwd">forall</span> (<span class="id">F</span>:<span class="id"><a href="SLF.LibSepFmap.html#MapOps.A">A</a></span>-&gt;<span class="id"><a href="SLF.LibSepFmap.html#MapOps.B">B</a></span>-&gt;<span class="kwd">Prop</span>) <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#map_filter">map_filter</a></span> <span class="id">F</span> <span class="id">f</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">L</span> <span class="id">N</span>]. <span class="kwd">exists</span> <span class="id">L</span>. <span class="id">intros</span> <span class="id">x'</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">N</span> <span class="id">x'</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_filter">map_filter</a></span> <span class="kwd">in</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">f</span> <span class="id">x'</span>); <span class="id">tryfalse</span>. <span class="id">case_if</span>. <span class="id">applys</span> <span class="id">N</span>; <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Finiteness of map </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="map_map_finite">map_map_finite</a></span> : <span class="kwd">forall</span> <span class="id">C</span> (<span class="id">F</span>:<span class="id"><a href="SLF.LibSepFmap.html#MapOps.A">A</a></span>-&gt;<span class="id"><a href="SLF.LibSepFmap.html#MapOps.B">B</a></span>-&gt;<span class="id">C</span>) <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#map_map">map_map</a></span> <span class="id">F</span> <span class="id">f</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> [<span class="id">L</span> <span class="id">N</span>]. <span class="kwd">exists</span> <span class="id">L</span>. <span class="id">intros</span> <span class="id">x'</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">N</span> <span class="id">x'</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_map">map_map</a></span> <span class="kwd">in</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">f</span> <span class="id">x'</span>); <span class="id">tryfalse</span>. <span class="id">applys</span> <span class="id">N</span>; <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSepFmap.html#MapOps">MapOps</a></span>.<br/>
+<br/>
+<h2> Representation of Finite Maps as Dependent Pairs </h2>
+<br/>
+<h3> Representation </h3>
+<br/>
+<span class="kwd">Inductive</span> <span class="id"><a name="fmap">fmap</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) : <span class="kwd">Type</span> := <span class="id">make</span> {<br/>
+&nbsp;&nbsp;<span class="id"><a name="fmap_data">fmap_data</a></span> :&gt; <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id">A</span> <span class="id">B</span>;<br/>
+&nbsp;&nbsp;<span class="id"><a name="fmap_finite">fmap_finite</a></span> : <span class="id"><a href="SLF.LibSepFmap.html#map_finite">map_finite</a></span> <span class="id">fmap_data</span> }.<br/>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibSepFmap.html#make">make</a></span> [<span class="id">A</span>] [<span class="id">B</span>].<br/>
+<br/>
+<h3> Operations </h3>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">fmap_scope</span>.<br/>
+<br/>
+<div class="doc">Domain of a fmap (as a predicate) </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="indom">indom</a></span> (<span class="id">A</span> <span class="id">B</span>: <span class="kwd">Type</span>) (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>) : (<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span> <span class="id">h</span>.<br/>
+<br/>
+<div class="doc">Empty fmap </div>
+<br/>
+<span class="id">Program</span> <span class="kwd">Definition</span> <span class="id"><a name="empty">empty</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#make">make</a></span> (<span class="kwd">fun</span> <span class="id">l</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span>) _.<br/>
+<details>
+<summary class="toggleproof">Next Obligation.</summary>
+<div class="proofscript">
+ <span class="kwd">exists</span> (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">A</span>). <span class="id">auto_false</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span> {<span class="id">A</span>} {<span class="id">B</span>}.<br/>
+<br/>
+<div class="doc">Singleton fmap </div>
+<br/>
+<span class="id">Program</span> <span class="kwd">Definition</span> <span class="id"><a name="single">single</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">v</span>:<span class="id">B</span>) : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#make">make</a></span> (<span class="kwd">fun</span> <span class="id">x'</span> =&gt; <span class="id">If</span> <span class="id">x</span> = <span class="id">x'</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">v</span> <span class="kwd">else</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span>) _.<br/>
+<details>
+<summary class="toggleproof">Next Obligation.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">x</span>::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>). <span class="id">intros</span>. <span class="id">case_if</span>. <span class="id">subst</span>~.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Union of fmaps </div>
+<br/>
+<span class="id">Program</span> <span class="kwd">Definition</span> <span class="id"><a name="union">union</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">h1</span> <span class="id">h2</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>) : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#make">make</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span> <span class="id">h1</span> <span class="id">h2</span>) _.<br/>
+<details>
+<summary class="toggleproof">Next Obligation.</summary>
+<div class="proofscript">
+ <span class="id">destruct</span> <span class="id">h1</span>. <span class="id">destruct</span> <span class="id">h2</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibSepFmap.html#map_union_finite">map_union_finite</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"h1 \+ h2"</span> := (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>)<br/>
+&nbsp;&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 51, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">fmap_scope</span>.<br/>
+<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">fmap_scope</span>.<br/>
+<br/>
+<div class="doc">Update of a fmap </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="update">update</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">v</span>:<span class="id">B</span>) : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>) <span class="id">h</span>.<br/>
+<br/>
+<div class="doc">Read in a fmap </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="read">read</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) {<span class="id">IB</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>} (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">x</span>:<span class="id">A</span>) : <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#Some">Some</a></span> <span class="id">y</span> =&gt; <span class="id">y</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#None">None</a></span> =&gt; <span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Removal from a fmap </div>
+<br/>
+<span class="id">Program</span> <span class="kwd">Definition</span> <span class="id"><a name="remove">remove</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">x</span>:<span class="id">A</span>) : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#make">make</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#map_remove">map_remove</a></span> <span class="id">h</span> <span class="id">x</span>) _.<br/>
+<details>
+<summary class="toggleproof">Next Obligation.</summary>
+<div class="proofscript">
+ <span class="id">destruct</span> <span class="id">h</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibSepFmap.html#map_remove_finite">map_remove_finite</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Filter from a fmap </div>
+<br/>
+<span class="id">Program</span> <span class="kwd">Definition</span> <span class="id"><a name="filter">filter</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">F</span>:<span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>) : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#make">make</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#map_filter">map_filter</a></span> <span class="id">F</span> <span class="id">h</span>) _.<br/>
+<details>
+<summary class="toggleproof">Next Obligation.</summary>
+<div class="proofscript">
+ <span class="id">destruct</span> <span class="id">h</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibSepFmap.html#map_filter_finite">map_filter_finite</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Map a function onto the keys of a fmap </div>
+<br/>
+<span class="id">Program</span> <span class="kwd">Definition</span> <span class="id"><a name="map_">map_</a></span> <span class="id">A</span> <span class="id">B1</span> <span class="id">B2</span> (<span class="id">F</span>:<span class="id">A</span>-&gt;<span class="id">B1</span>-&gt;<span class="id">B2</span>) (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B1</span>) : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B2</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#make">make</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#map_map">map_map</a></span> <span class="id">F</span> <span class="id">h</span>) _.<br/>
+<details>
+<summary class="toggleproof">Next Obligation.</summary>
+<div class="proofscript">
+ <span class="id">destruct</span> <span class="id">h</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibSepFmap.html#map_map_finite">map_map_finite</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">Inhabited type <span class="bracket"><span class="id">fmap</span></span> </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="Inhab_fmap">Inhab_fmap</a></span> <span class="id">A</span> <span class="id">B</span> : <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> (@<span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span> <span class="id">A</span> <span class="id">B</span>). Qed.</div></details>
+<br/>
+<h2> Predicates on Finite Maps </h2>
+<br/>
+<div class="doc">Compatible fmaps (only for Separation Logic with RO-permissions) </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="agree">agree</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">h1</span> <span class="id">h2</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_agree">map_agree</a></span> <span class="id">h1</span> <span class="id">h2</span>.<br/>
+<br/>
+<div class="doc">Disjoint fmaps </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="disjoint">disjoint</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">h1</span> <span class="id">h2</span> : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span>.<br/>
+<br/>
+<div class="doc">Three disjoint fmaps (not needed for basic separation logic) </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="disjoint_3">disjoint_3</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span> : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span><br/>
+&nbsp;&nbsp;/\ <span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h2</span> <span class="id">h3</span><br/>
+&nbsp;&nbsp;/\ <span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h3</span>.<br/>
+<br/>
+<div class="doc">Notation for disjointness </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="NotationForFmapDisjoint">NotationForFmapDisjoint</a></span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\# h1 h2"</span> := (<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 40, <span class="id">h1</span> <span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">h2</span> <span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">no</span> <span class="id">associativity</span>) : <span class="id">fmap_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\# h1 h2 h3"</span> := (<span class="id"><a href="SLF.LibSepFmap.html#disjoint_3">disjoint_3</a></span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 40, <span class="id">h1</span> <span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">h2</span> <span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">h3</span> <span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">no</span> <span class="id">associativity</span>)<br/>
+&nbsp;&nbsp;: <span class="id">fmap_scope</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSepFmap.html#NotationForFmapDisjoint">NotationForFmapDisjoint</a></span>.<br/>
+<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.LibSepFmap.html#NotationForFmapDisjoint">NotationForFmapDisjoint</a></span>.<br/>
+<br/>
+<h1> Poperties of Operations on Finite Maps </h1>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="FmapProp">FmapProp</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FmapProp.A">A</a></span> <span class="id"><a name="FmapProp.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> <span class="id">g</span> <span class="id">h</span> : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.A">A</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> : <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.A">A</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">v</span> : <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>.<br/>
+<br/>
+<h2> Equality </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="make_eq">make_eq</a></span> : <span class="kwd">forall</span> (<span class="id">f1</span> <span class="id">f2</span>:<span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.A">A</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>) <span class="id">F1</span> <span class="id">F2</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">f1</span> <span class="id">x</span> = <span class="id">f2</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#make">make</a></span> <span class="id">f1</span> <span class="id">F1</span> = <span class="id"><a href="SLF.LibSepFmap.html#make">make</a></span> <span class="id">f2</span> <span class="id">F2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">asserts</span>: (<span class="id">f1</span> = <span class="id">f2</span>). { <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map">map</a></span>. <span class="id">extens</span>~. }<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">fequals</span>. <br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_inv_fmap_data_eq">eq_inv_fmap_data_eq</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id">h1</span> = <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h1</span> <span class="id">x</span> = <span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h2</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">fequals</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fmap_extens">fmap_extens</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h1</span> <span class="id">x</span> = <span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h2</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> = <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> [<span class="id">f1</span> <span class="id">F1</span>] [<span class="id">f2</span> <span class="id">F2</span>] <span class="id">M</span>. <span class="id">simpls</span>. <span class="id">applys</span>~ <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. Qed.</div></details>
+<br/>
+<br/>
+<h2> Domain </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="indom_single_eq">indom_single_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>) <span class="id">y</span> = (<span class="id">x</span> = <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>. <span class="id">simpl</span>. <span class="id">extens</span>. <span class="id">case_if</span>; <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="indom_single">indom_single</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>) <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepFmap.html#indom_single_eq">indom_single_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="indom_union_eq">indom_union_eq</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span> = (<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> \/ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h2</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">case_eq</span> (<span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h1</span> <span class="id">x</span>); <span class="id">case_eq</span> (<span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h2</span> <span class="id">x</span>); <span class="id">auto_false</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="indom_union_l">indom_union_l</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepFmap.html#indom_union_eq">indom_union_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="indom_union_r">indom_union_r</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h2</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepFmap.html#indom_union_eq">indom_union_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="indom_update_eq">indom_update_eq</a></span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">v</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> <span class="id">h</span> <span class="id">x</span> <span class="id">v</span>) <span class="id">y</span> = (<span class="id">x</span> = <span class="id">y</span> \/ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h</span> <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#indom_union_eq">indom_union_eq</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#indom_single_eq">indom_single_eq</a></span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="indom_remove_eq">indom_remove_eq</a></span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span> <span class="id">h</span> <span class="id">x</span>) <span class="id">y</span> = (<span class="id">x</span> &lt;&gt; <span class="id">y</span> /\ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h</span> <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_remove">map_remove</a></span>. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">case_if</span>; <span class="id">auto_false</span>*.<br/>
+Qed.</div></details>
+<br/>
+<h2> Disjoint and Domain </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_eq">disjoint_eq</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt; <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h2</span> <span class="id">x</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> [<span class="id">f1</span> <span class="id">F1</span>] [<span class="id">f2</span> <span class="id">F2</span>]. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#map_disjoint_eq">map_disjoint_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">disjoint_eq'</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt; <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h2</span> <span class="id">x</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">iff</span> <span class="id">D</span> <span class="id">E</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">destruct</span> (<span class="id">D</span> <span class="id">x</span>); <span class="id">false</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">E</span> <span class="id">x</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibLogic.html#not_not_inv">not_not_inv</a></span>. <span class="id">intros</span> <span class="id">N</span>. <span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">false</span>*. }<br/>
+Qed.</div></details>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_of_not_indom_both">disjoint_of_not_indom_both</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt; <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h2</span> <span class="id">x</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibSepFmap.html#disjoint_eq">disjoint_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_inv_not_indom_both">disjoint_inv_not_indom_both</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h2</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepFmap.html#disjoint_eq">disjoint_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_single_of_not_indom">disjoint_single_of_not_indom</a></span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>) <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span>. <span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">intros</span> <span class="id">l'</span>. <span class="id">case_if</span>; <span class="id">subst</span>; <span class="id">autos</span>*.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Note that the reciprocal of the above lemma is a special instance of
+   <span class="bracket"><span class="id">disjoint_inv_not_indom_both</span></span> </div>
+<br/>
+<h2> Disjointness </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_sym">disjoint_sym</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;\# <span class="id">h2</span> <span class="id">h1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> [<span class="id">f1</span> <span class="id">F1</span>] [<span class="id">f2</span> <span class="id">F2</span>]. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#map_disjoint_sym">map_disjoint_sym</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_comm">disjoint_comm</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> <span class="id">h2</span> = \# <span class="id">h2</span> <span class="id">h1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">lets</span>: <span class="id"><a href="SLF.LibSepFmap.html#disjoint_sym">disjoint_sym</a></span>. <span class="id">extens</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_empty_l">disjoint_empty_l</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\# <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> [<span class="id">f</span> <span class="id">F</span>] <span class="id">x</span>. <span class="id">simple</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_empty_r">disjoint_empty_r</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h</span> <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> [<span class="id">f</span> <span class="id">F</span>] <span class="id">x</span>. <span class="id">simple</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Hint</span> <span class="id">Immediate</span> <span class="id">disjoint_sym</span>.<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">disjoint_empty_l</span> <span class="id">disjoint_empty_r</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_union_eq_r">disjoint_union_eq_r</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> (<span class="id">h2</span> \+ <span class="id">h3</span>) =<br/>
+&nbsp;&nbsp;(\# <span class="id">h1</span> <span class="id">h2</span> /\ \# <span class="id">h1</span> <span class="id">h3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> [<span class="id">f1</span> <span class="id">F1</span>] [<span class="id">f2</span> <span class="id">F2</span>] [<span class="id">f3</span> <span class="id">F3</span>].<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">M</span> [<span class="id">M1</span> <span class="id">M2</span>].<br/>
+&nbsp;&nbsp;<span class="id">split</span>; <span class="id">intros</span> <span class="id">x</span>; <span class="id">specializes</span> <span class="id">M</span> <span class="id">x</span>;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">f2</span> <span class="id">x</span>); <span class="id">intuition</span>; <span class="id">tryfalse</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">M1</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">M2</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">f2</span> <span class="id">x</span>); <span class="id">intuition</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_union_eq_l">disjoint_union_eq_l</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span>,<br/>
+&nbsp;&nbsp;\# (<span class="id">h2</span> \+ <span class="id">h3</span>) <span class="id">h1</span> =<br/>
+&nbsp;&nbsp;(\# <span class="id">h1</span> <span class="id">h2</span> /\ \# <span class="id">h1</span> <span class="id">h3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_comm">disjoint_comm</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_union_eq_r">disjoint_union_eq_r</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_single_single">disjoint_single_single</a></span> : <span class="kwd">forall</span> (<span class="id">x1</span> <span class="id">x2</span>:<span class="id"><a href="SLF.LibSepFmap.html#FmapProp.A">A</a></span>) (<span class="id">v1</span> <span class="id">v2</span>:<span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">x1</span> &lt;&gt; <span class="id">x2</span> -&gt;<br/>
+&nbsp;&nbsp;\# (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x1</span> <span class="id">v1</span>) (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x2</span> <span class="id">v2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">simpls</span>. <span class="id">do</span> 2 <span class="id">case_if</span>; <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_single_single_same_inv">disjoint_single_single_same_inv</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id"><a href="SLF.LibSepFmap.html#FmapProp.A">A</a></span>) (<span class="id">v1</span> <span class="id">v2</span>:<span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>),<br/>
+&nbsp;&nbsp;\# (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v1</span>) (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">D</span>. <span class="id">specializes</span> <span class="id">D</span> <span class="id">x</span>. <span class="id">simpls</span>. <span class="id">case_if</span>. <span class="id">destruct</span> <span class="id">D</span>; <span class="id">tryfalse</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_3_unfold">disjoint_3_unfold</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span> = (\# <span class="id">h1</span> <span class="id">h2</span> /\ \# <span class="id">h2</span> <span class="id">h3</span> /\ \# <span class="id">h1</span> <span class="id">h3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_single_set">disjoint_single_set</a></span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">l</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;\# (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">l</span> <span class="id">v1</span>) <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;\# (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">l</span> <span class="id">v2</span>) <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span>; <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">l'</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">l'</span>. <span class="id">case_if</span>~. <span class="id">destruct</span> <span class="id">M</span>; <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_update_l">disjoint_update_l</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> <span class="id">h1</span> <span class="id">x</span> <span class="id">v</span>) <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HD</span> <span class="id">Hx</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_eq">disjoint_eq</a></span> <span class="kwd">in</span> *. <span class="id">intros</span> <span class="id">y</span> <span class="id">Hy1</span> <span class="id">Hy2</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#indom_update_eq">indom_update_eq</a></span> <span class="kwd">in</span> <span class="id">Hy1</span>. <span class="id">destruct</span> <span class="id">Hy1</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">false</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">HD</span> <span class="id">y</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_update_not_r">disjoint_update_not_r</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h2</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> <span class="id">h1</span> <span class="id">x</span> <span class="id">v</span>) <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HD</span> <span class="id">Hx</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_eq">disjoint_eq</a></span> <span class="kwd">in</span> *. <span class="id">intros</span> <span class="id">y</span> <span class="id">Hy1</span> <span class="id">Hy2</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#indom_update_eq">indom_update_eq</a></span> <span class="kwd">in</span> <span class="id">Hy1</span>. <span class="id">destruct</span> <span class="id">Hy1</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">false</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">HD</span> <span class="id">y</span>. }<br/>
+Qed.</div></details>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_remove_l">disjoint_remove_l</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span> <span class="id">h1</span> <span class="id">x</span>) <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_eq">disjoint_eq</a></span> <span class="kwd">in</span> *. <span class="id">intros</span> <span class="id">y</span> <span class="id">Hy1</span> <span class="id">Hy2</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepFmap.html#indom_remove_eq">indom_remove_eq</a></span> <span class="kwd">in</span> <span class="id">Hy1</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Union </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_self">union_self</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id">h</span> \+ <span class="id">h</span> = <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> [<span class="id">f</span> <span class="id">F</span>]. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">simpl</span>. <span class="id">intros</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">cases</span>~ (<span class="id">f</span> <span class="id">x</span>).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_empty_l">union_empty_l</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span> \+ <span class="id">h</span> = <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> [<span class="id">f</span> <span class="id">F</span>]. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_empty_r">union_empty_r</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id">h</span> \+ <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span> = <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> [<span class="id">f</span> <span class="id">F</span>]. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">destruct</span>~ (<span class="id">f</span> <span class="id">x</span>).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_eq_empty_inv_l">union_eq_empty_inv_l</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> = <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> (<span class="id">f1</span>&amp;<span class="id">F1</span>) (<span class="id">f2</span>&amp;<span class="id">F2</span>) <span class="id">M</span>. <span class="id">inverts</span> <span class="id">M</span> <span class="kwd">as</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">l</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span>: <span class="id"><a href="SLF.LibEqual.html#fun_eq_1">fun_eq_1</a></span> <span class="id">l</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">cases</span> (<span class="id">f1</span> <span class="id">l</span>); <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_eq_empty_inv_r">union_eq_empty_inv_r</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h2</span> = <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> (<span class="id">f1</span>&amp;<span class="id">F1</span>) (<span class="id">f2</span>&amp;<span class="id">F2</span>) <span class="id">M</span>. <span class="id">inverts</span> <span class="id">M</span> <span class="kwd">as</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">l</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span>: <span class="id"><a href="SLF.LibEqual.html#fun_eq_1">fun_eq_1</a></span> <span class="id">l</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">cases</span> (<span class="id">f1</span> <span class="id">l</span>); <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_comm_of_disjoint">union_comm_of_disjoint</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h2</span> \+ <span class="id">h1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> [<span class="id">f1</span> <span class="id">F1</span>] [<span class="id">f2</span> <span class="id">F2</span>] <span class="id">H</span>. <span class="id">simpls</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibSepFmap.html#map_union_comm">map_union_comm</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_comm_of_agree">union_comm_of_agree</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h2</span> \+ <span class="id">h1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> [<span class="id">f1</span> <span class="id">F1</span>] [<span class="id">f2</span> <span class="id">F2</span>] <span class="id">H</span>. <span class="id">simpls</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">l</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">l</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">cases</span> (<span class="id">f1</span> <span class="id">l</span>); <span class="id">cases</span> (<span class="id">f2</span> <span class="id">l</span>); <span class="id">auto</span>. <span class="id">fequals</span>. <span class="id">applys</span>* <span class="id">H</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_assoc">union_assoc</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">h1</span> \+ <span class="id">h2</span>) \+ <span class="id">h3</span> = <span class="id">h1</span> \+ (<span class="id">h2</span> \+ <span class="id">h3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> [<span class="id">f1</span> <span class="id">F1</span>] [<span class="id">f2</span> <span class="id">F2</span>] [<span class="id">f3</span> <span class="id">F3</span>]. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">destruct</span>~ (<span class="id">f1</span> <span class="id">x</span>).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_eq_inv_of_disjoint">union_eq_inv_of_disjoint</a></span> : <span class="kwd">forall</span> <span class="id">h2</span> <span class="id">h1</span> <span class="id">h1'</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;\# <span class="id">h1'</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> = <span class="id">h1'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> [<span class="id">f2</span> <span class="id">F2</span>] [<span class="id">f1'</span> <span class="id">F1'</span>] [<span class="id">f1</span> <span class="id">F1</span>] <span class="id">D</span> <span class="id">D'</span> <span class="id">E</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">D</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">D'</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> <span class="id">E'</span>: <span class="id"><a href="SLF.LibSepFmap.html#eq_inv_fmap_data_eq">eq_inv_fmap_data_eq</a></span> (<span class="id"><a href="SLF.LibTactics.html#rm">rm</a></span> <span class="id">E</span>) <span class="id">x</span>. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">cases</span> (<span class="id">f1'</span> <span class="id">x</span>); <span class="id">cases</span> (<span class="id">f1</span> <span class="id">x</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">D</span>; <span class="id">try</span> <span class="id">congruence</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">D'</span>; <span class="id">try</span> <span class="id">congruence</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Compatibility </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_refl">agree_refl</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">h</span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">h</span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">congruence</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_sym">agree_sym</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f2</span> <span class="id">f1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">l</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">E1</span> <span class="id">E2</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">M</span> <span class="id">l</span> <span class="id">E1</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_of_disjoint">agree_of_disjoint</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">h1</span> <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HD</span>. <span class="id">intros</span> <span class="id">l</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">destruct</span> (<span class="id">HD</span> <span class="id">l</span>); <span class="id">false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_empty_l">agree_empty_l</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">l</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">E1</span> <span class="id">E2</span>. <span class="id">simpls</span>. <span class="id">false</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_empty_r">agree_empty_r</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">h</span> <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibSepFmap.html#agree_sym">agree_sym</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#agree_empty_l">agree_empty_l</a></span>. <span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_union_l">agree_union_l</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f2</span> <span class="id">f3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> (<span class="id">f1</span> \+ <span class="id">f2</span>) <span class="id">f3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">intros</span> <span class="id">l</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">E1</span> <span class="id">E2</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">M1</span> <span class="id">l</span>. <span class="id">specializes</span> <span class="id">M2</span> <span class="id">l</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpls</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">cases</span> (<span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">f1</span> <span class="id">l</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">E1</span>. <span class="id">applys</span>* <span class="id">M1</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">M2</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_union_r">agree_union_r</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> (<span class="id">f2</span> \+ <span class="id">f3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibSepFmap.html#agree_sym">agree_sym</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#agree_union_l">agree_union_l</a></span>. <span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_union_lr">agree_union_lr</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">g1</span> <span class="id">f2</span> <span class="id">g2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">g1</span> <span class="id">g2</span> -&gt;<br/>
+&nbsp;&nbsp;\# <span class="id">f1</span> <span class="id">f2</span> (<span class="id">g1</span> \+ <span class="id">g2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> (<span class="id">f1</span> \+ <span class="id">g1</span>) (<span class="id">f2</span> \+ <span class="id">g2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> (<span class="id">M2a</span>&amp;<span class="id">M2b</span>&amp;<span class="id">M2c</span>).<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_union_eq_r">disjoint_union_eq_r</a></span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#agree_union_l">agree_union_l</a></span>; <span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#agree_union_r">agree_union_r</a></span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">try</span> <span class="id">solve</span> [ <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepFmap.html#agree_of_disjoint">agree_of_disjoint</a></span> ].<br/>
+&nbsp;&nbsp;<span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_union_ll_inv">agree_union_ll_inv</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> (<span class="id">f1</span> \+ <span class="id">f2</span>) <span class="id">f3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">l</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">E1</span> <span class="id">E2</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">M</span> <span class="id">l</span>. <span class="id">simpls</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">E1</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">applys</span>* <span class="id">M</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_union_rl_inv">agree_union_rl_inv</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> (<span class="id">f2</span> \+ <span class="id">f3</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibSepFmap.html#agree_union_ll_inv">agree_union_ll_inv</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#agree_sym">agree_sym</a></span>. <span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_union_lr_inv_agree_agree">agree_union_lr_inv_agree_agree</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> (<span class="id">f1</span> \+ <span class="id">f2</span>) <span class="id">f3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f2</span> <span class="id">f3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span> <span class="id">D</span>. <span class="id">rewrite</span>~ (@<span class="id"><a href="SLF.LibSepFmap.html#union_comm_of_agree">union_comm_of_agree</a></span> <span class="id">f1</span> <span class="id">f2</span>) <span class="kwd">in</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id"><a href="SLF.LibSepFmap.html#agree_union_ll_inv">agree_union_ll_inv</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_union_rr_inv_agree">agree_union_rr_inv_agree</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> (<span class="id">f2</span> \+ <span class="id">f3</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f2</span> <span class="id">f3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibSepFmap.html#agree_union_lr_inv_agree_agree">agree_union_lr_inv_agree_agree</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#agree_sym">agree_sym</a></span>. <span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_union_l_inv">agree_union_l_inv</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> (<span class="id">f1</span> \+ <span class="id">f2</span>) <span class="id">f3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f3</span><br/>
+&nbsp;&nbsp;/\ <span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f2</span> <span class="id">f3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepFmap.html#agree_union_ll_inv">agree_union_ll_inv</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepFmap.html#agree_union_lr_inv_agree_agree">agree_union_lr_inv_agree_agree</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="agree_union_r_inv">agree_union_r_inv</a></span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> (<span class="id">f2</span> \+ <span class="id">f3</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f2</span> <span class="id">f3</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f2</span><br/>
+&nbsp;&nbsp;/\ <span class="id"><a href="SLF.LibSepFmap.html#agree">agree</a></span> <span class="id">f1</span> <span class="id">f3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibSepFmap.html#agree_sym">agree_sym</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">forwards</span>~ (<span class="id">M1</span>&amp;<span class="id">M2</span>): <span class="id"><a href="SLF.LibSepFmap.html#agree_union_l_inv">agree_union_l_inv</a></span> <span class="id">f2</span> <span class="id">f3</span> <span class="id">f1</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Read </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="read_single">read_single</a></span> : <span class="kwd">forall</span> {<span class="id">IB</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>} <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#read">read</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>) <span class="id">x</span> = <span class="id">v</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#read">read</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span>. <span class="id">simpl</span>. <span class="id">case_if</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="read_union_l">read_union_l</a></span> : <span class="kwd">forall</span> {<span class="id">IB</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>} <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#read">read</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span> = <span class="id"><a href="SLF.LibSepFmap.html#read">read</a></span> <span class="id">h1</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#read">read</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">case_eq</span> (<span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h1</span> <span class="id">x</span>); <span class="id">auto_false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="read_union_r">read_union_r</a></span> : <span class="kwd">forall</span> {<span class="id">IB</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>} <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#read">read</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span> = <span class="id"><a href="SLF.LibSepFmap.html#read">read</a></span> <span class="id">h2</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#read">read</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">case_eq</span> (<span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h1</span> <span class="id">x</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">v</span> <span class="id">Hv</span>. <span class="id">false</span> <span class="id">H</span>. <span class="id">auto_false</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">auto_false</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h2> Update </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="update_eq_union_single">update_eq_union_single</a></span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> <span class="id">h</span> <span class="id">x</span> <span class="id">v</span> = <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>) <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="update_empty">update_empty</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span> <span class="id">x</span> <span class="id">v</span> = <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#update_eq_union_single">update_eq_union_single</a></span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSepFmap.html#union_empty_r">union_empty_r</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="update_single">update_single</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v</span> <span class="id">w</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>) <span class="id">x</span> <span class="id">w</span> = <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">w</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#update_eq_union_single">update_eq_union_single</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span>. <span class="id">simpl</span>. <span class="id">case_if</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="update_union_l">update_union_l</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span> <span class="id">v</span> = <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> <span class="id">h1</span> <span class="id">x</span> <span class="id">v</span>) <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#update_eq_union_single">update_eq_union_single</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">simpl</span>. <span class="id">case_if</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="update_union_r">update_union_r</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span> <span class="id">v</span> = <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> (<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> <span class="id">h2</span> <span class="id">x</span> <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">asserts</span> <span class="id">IB</span>: (<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>). { <span class="id">applys</span> <span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> <span class="id">v</span>. }<br/>
+&nbsp;&nbsp;<span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#update_eq_union_single">update_eq_union_single</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">simpl</span>. <span class="id">case_if</span>~.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">case_eq</span> (<span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h1</span> <span class="id">y</span>); <span class="id">auto_false</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">w</span> <span class="id">Hw</span>. <span class="id">false</span> <span class="id">M</span>. <span class="id">auto_false</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="update_union_not_r">update_union_not_r</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h2</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span> <span class="id">v</span> = <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> <span class="id">h1</span> <span class="id">x</span> <span class="id">v</span>) <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#update_eq_union_single">update_eq_union_single</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">simpl</span>. <span class="id">case_if</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="update_union_not_l">update_union_not_l</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span> <span class="id">v</span> = <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> (<span class="id"><a href="SLF.LibSepFmap.html#update">update</a></span> <span class="id">h2</span> <span class="id">x</span> <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">asserts</span> <span class="id">IB</span>: (<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp.B">B</a></span>). { <span class="id">applys</span> <span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> <span class="id">v</span>. }<br/>
+&nbsp;&nbsp;<span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#update_eq_union_single">update_eq_union_single</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#make_eq">make_eq</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">simpl</span>. <span class="id">case_if</span>~.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">case_eq</span> (<span class="id"><a href="SLF.LibSepFmap.html#fmap_data">fmap_data</a></span> <span class="id">h1</span> <span class="id">y</span>); <span class="id">auto_false</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">w</span> <span class="id">Hw</span>. <span class="id">false</span> <span class="id">M</span>. <span class="id">auto_false</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<h2> Removal </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="remove_single">remove_single</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>) <span class="id">x</span> = <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#fmap_extens">fmap_extens</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_remove">map_remove</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">case_if</span>*. <span class="id">case_if</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="remove_disjoint_union_l">remove_disjoint_union_l</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> <span class="id">h1</span> <span class="id">h2</span>) <span class="id">x</span> = <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span> <span class="id">h1</span> <span class="id">x</span>) <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span> <span class="id">D</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#fmap_extens">fmap_extens</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_eq">disjoint_eq</a></span> <span class="kwd">in</span> <span class="id">D</span>. <span class="id">specializes</span> <span class="id">D</span> <span class="id">M</span>. <span class="id">asserts</span>* <span class="id">D'</span>: (~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h2</span> <span class="id">x</span>).<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_remove">map_remove</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span>. <span class="id">simpls</span>. <span class="id">case_if</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">h1</span> <span class="kwd">as</span> [<span class="id">f1</span> <span class="id">F1</span>]. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>. <span class="id">simpls</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rew_logic</span>~ <span class="kwd">in</span> <span class="id">D'</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="remove_union_single_l">remove_union_single_l</a></span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span> (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">x</span> <span class="id">v</span>) <span class="id">h</span>) <span class="id">x</span> = <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#fmap_extens">fmap_extens</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#remove">remove</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_remove">map_remove</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#union">union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span>. <span class="id">simpls</span>. <span class="id">case_if</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">h</span> <span class="kwd">as</span> [<span class="id">f</span> <span class="id">F</span>]. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>. <span class="id">simpls</span>. <span class="id">subst</span>. <span class="id">rew_logic</span>~ <span class="kwd">in</span> <span class="id">M</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">case_if</span>~. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSepFmap.html#FmapProp">FmapProp</a></span>.<br/>
+<br/>
+<div class="doc">Fixing arguments </div>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span> [<span class="id">A</span>] [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibSepFmap.html#union_comm_of_disjoint">union_comm_of_disjoint</a></span> [<span class="id">A</span>] [<span class="id">B</span>].<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibSepFmap.html#union_comm_of_agree">union_comm_of_agree</a></span> [<span class="id">A</span>] [<span class="id">B</span>].<br/>
+<br/>
+<h1> Tactics for Finite Maps </h1>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">disjoint</span></span> for proving disjointness results </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">disjoint</span></span> proves goals of the form <span class="bracket">\# <span class="id">h1</span> <span class="id">h2</span></span> and
+    <span class="bracket">\# <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span></span> by expanding all hypotheses into binary forms
+    <span class="bracket">\# <span class="id">h1</span> <span class="id">h2</span></span> and then exploiting symmetry and disjointness
+    with <span class="bracket"><span class="id">empty</span></span>. </div>
+<br/>
+<span class="kwd">Module</span> <span class="kwd">Export</span> <span class="id"><a name="DisjointHints">DisjointHints</a></span>.<br/>
+#[<span class="id">export</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">disjoint_sym</span> <span class="id">disjoint_empty_l</span> <span class="id">disjoint_empty_r</span>.<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSepFmap.html#DisjointHints">DisjointHints</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint_union_eq_l">disjoint_union_eq_l</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint_union_eq_r">disjoint_union_eq_r</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#disjoint_3_unfold">disjoint_3_unfold</a></span> : <span class="id">rew_disjoint</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_disjoint"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_disjoint</span> <span class="kwd">in</span> *.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_disjoint"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_disjoint</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fmap_disjoint_pre</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="id">subst</span>; <span class="id">rew_disjoint</span>; <span class="id">jauto_set</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"fmap_disjoint"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">solve</span> [ <span class="id">fmap_disjoint_pre</span> <span class="id">tt</span>; <span class="id">auto</span> ].<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_demo">disjoint_demo</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span> <span class="id">h4</span> <span class="id">h5</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id">h1</span> = <span class="id">h2</span> \+ <span class="id">h3</span> -&gt;<br/>
+&nbsp;&nbsp;\# <span class="id">h2</span> <span class="id">h3</span> -&gt;<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> <span class="id">h4</span> <span class="id">h5</span> -&gt;<br/>
+&nbsp;&nbsp;\# <span class="id">h3</span> <span class="id">h2</span> <span class="id">h5</span> /\ \# <span class="id">h4</span> <span class="id">h5</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">dup</span> 2.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">rew_disjoint</span>. <span class="id">jauto_set</span>. <span class="id">auto</span>. <span class="id">auto</span>. <span class="id">auto</span>. <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">fmap_disjoint</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">rew_map</span></span> for Normalizing Expressions </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#union_empty_l">union_empty_l</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#union_empty_r">union_empty_r</a></span> : <span class="id">rew_fmap</span> <span class="id">rew_fmap_for_fmap_eq</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_fmap"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_fmap</span> <span class="kwd">in</span> *.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_fmap"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_fmap</span>; <span class="id">auto_tilde</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_fmap"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_fmap</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">fmap_eq</span></span> for Proving Equalities </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="StateEq">StateEq</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="StateEq.A">A</a></span> <span class="id"><a name="StateEq.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">h</span> : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="SLF.LibSepFmap.html#StateEq.A">A</a></span> <span class="id"><a href="SLF.LibSepFmap.html#StateEq.B">B</a></span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">eq</span></span> proves equalities between unions of fmaps, of the form
+    <span class="bracket"><span class="id">h1</span> \+ <span class="id">h2</span> \+ <span class="id">h3</span> \+ <span class="id">h4</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> \+ <span class="id">h3'</span> \+ <span class="id">h4'</span></span>
+    It attempts to discharge the disjointness side-conditions.
+    Disclaimer: it cancels heaps at depth up to 4, but no more. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_eq_cancel_1">union_eq_cancel_1</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">h2'</span>,<br/>
+&nbsp;&nbsp;<span class="id">h2</span> = <span class="id">h2'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h1</span> \+ <span class="id">h2'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">union_eq_cancel_1'</span> : <span class="kwd">forall</span> <span class="id">h1</span>,<br/>
+&nbsp;&nbsp;<span class="id">h1</span> = <span class="id">h1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_eq_cancel_2">union_eq_cancel_2</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h1'</span> <span class="id">h2</span> <span class="id">h2'</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> <span class="id">h1'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h1</span> \+ <span class="id">h2'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id"><a href="SLF.LibSepFmap.html#union_comm_of_disjoint">union_comm_of_disjoint</a></span> <span class="id">h1</span> <span class="id">h1'</span>).<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">union_eq_cancel_2'</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h1'</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> <span class="id">h1'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h2</span> = <span class="id">h1'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibSepFmap.html#union_comm_of_disjoint">union_comm_of_disjoint</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_eq_cancel_3">union_eq_cancel_3</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h1'</span> <span class="id">h2</span> <span class="id">h2'</span> <span class="id">h3'</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> (<span class="id">h1'</span> \+ <span class="id">h2'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> \+ <span class="id">h3'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> \+ <span class="id">h1</span> \+ <span class="id">h3'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span> <span class="id">h1'</span> <span class="id">h2'</span> <span class="id">h3'</span>).<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span> <span class="id">h1'</span> <span class="id">h2'</span> (<span class="id">h1</span> \+ <span class="id">h3'</span>)).<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibSepFmap.html#union_eq_cancel_2">union_eq_cancel_2</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">union_eq_cancel_3'</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h1'</span> <span class="id">h2</span> <span class="id">h2'</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> (<span class="id">h1'</span> \+ <span class="id">h2'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> \+ <span class="id">h1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span> <span class="id">h1'</span> <span class="id">h2'</span> <span class="id">h1</span>).<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id">union_eq_cancel_2'</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="union_eq_cancel_4">union_eq_cancel_4</a></span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h1'</span> <span class="id">h2</span> <span class="id">h2'</span> <span class="id">h3'</span> <span class="id">h4'</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> ((<span class="id">h1'</span> \+ <span class="id">h2'</span>) \+ <span class="id">h3'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> \+ <span class="id">h3'</span> \+ <span class="id">h4'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> \+ <span class="id">h3'</span> \+ <span class="id">h1</span> \+ <span class="id">h4'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span> <span class="id">h1'</span> <span class="id">h2'</span> (<span class="id">h3'</span> \+ <span class="id">h4'</span>)).<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span> <span class="id">h1'</span> <span class="id">h2'</span> (<span class="id">h3'</span> \+ <span class="id">h1</span> \+ <span class="id">h4'</span>)).<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibSepFmap.html#union_eq_cancel_3">union_eq_cancel_3</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">union_eq_cancel_4'</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h1'</span> <span class="id">h2</span> <span class="id">h2'</span> <span class="id">h3'</span>,<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> (<span class="id">h1'</span> \+ <span class="id">h2'</span> \+ <span class="id">h3'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> \+ <span class="id">h3'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> \+ <span class="id">h2</span> = <span class="id">h1'</span> \+ <span class="id">h2'</span> \+ <span class="id">h3'</span> \+ <span class="id">h1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id"><a href="SLF.LibSepFmap.html#union_assoc">union_assoc</a></span> <span class="id">h2'</span> <span class="id">h3'</span> <span class="id">h1</span>).<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id">union_eq_cancel_3'</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSepFmap.html#StateEq">StateEq</a></span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fmap_eq_step</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> | |- ?<span class="id">G</span> =&gt; <span class="kwd">match</span> <span class="id">G</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| ?<span class="id">h1</span> = ?<span class="id">h1</span> =&gt; <span class="id">apply</span> <span class="id">union_eq_cancel_1'</span><br/>
+&nbsp;&nbsp;| ?<span class="id">h1</span> \+ ?<span class="id">h2</span> = ?<span class="id">h1</span> \+ ?<span class="id">h2'</span> =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#union_eq_cancel_1">union_eq_cancel_1</a></span><br/>
+&nbsp;&nbsp;| ?<span class="id">h1</span> \+ ?<span class="id">h2</span> = ?<span class="id">h1'</span> \+ ?<span class="id">h1</span> =&gt; <span class="id">apply</span> <span class="id">union_eq_cancel_2'</span><br/>
+&nbsp;&nbsp;| ?<span class="id">h1</span> \+ ?<span class="id">h2</span> = ?<span class="id">h1'</span> \+ ?<span class="id">h1</span> \+ ?<span class="id">h2'</span> =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#union_eq_cancel_2">union_eq_cancel_2</a></span><br/>
+&nbsp;&nbsp;| ?<span class="id">h1</span> \+ ?<span class="id">h2</span> = ?<span class="id">h1'</span> \+ ?<span class="id">h2'</span> \+ ?<span class="id">h1</span> =&gt; <span class="id">apply</span> <span class="id">union_eq_cancel_3'</span><br/>
+&nbsp;&nbsp;| ?<span class="id">h1</span> \+ ?<span class="id">h2</span> = ?<span class="id">h1'</span> \+ ?<span class="id">h2'</span> \+ ?<span class="id">h1</span> \+ ?<span class="id">h3'</span> =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#union_eq_cancel_3">union_eq_cancel_3</a></span><br/>
+&nbsp;&nbsp;| ?<span class="id">h1</span> \+ ?<span class="id">h2</span> = ?<span class="id">h1'</span> \+ ?<span class="id">h2'</span> \+ ?<span class="id">h3'</span> \+ ?<span class="id">h1</span> =&gt; <span class="id">apply</span> <span class="id">union_eq_cancel_4'</span><br/>
+&nbsp;&nbsp;| ?<span class="id">h1</span> \+ ?<span class="id">h2</span> = ?<span class="id">h1'</span> \+ ?<span class="id">h2'</span> \+ ?<span class="id">h3'</span> \+ ?<span class="id">h1</span> \+ ?<span class="id">h4'</span> =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibSepFmap.html#union_eq_cancel_4">union_eq_cancel_4</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span> <span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"fmap_eq"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">subst</span>;<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_fmap_for_fmap_eq</span>;<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> (<span class="id">fmap_eq_step</span> <span class="id">tt</span>);<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- \# _ _ =&gt; <span class="id">fmap_disjoint</span><br/>
+&nbsp;&nbsp;| |- \# _ _ _ =&gt; <span class="id">fmap_disjoint</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"fmap_eq"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">fmap_eq</span>; <span class="id">auto_tilde</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"fmap_eq"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">fmap_eq</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fmap_eq_demo">fmap_eq_demo</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span> <span class="id">h4</span> <span class="id">h5</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id">A</span> <span class="id">B</span>),<br/>
+&nbsp;&nbsp;\# <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span> -&gt;<br/>
+&nbsp;&nbsp;\# (<span class="id">h1</span> \+ <span class="id">h2</span> \+ <span class="id">h3</span>) <span class="id">h4</span> <span class="id">h5</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h1</span> = <span class="id">h2</span> \+ <span class="id">h3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h4</span> \+ <span class="id">h1</span> \+ <span class="id">h5</span> = <span class="id">h2</span> \+ <span class="id">h5</span> \+ <span class="id">h4</span> \+ <span class="id">h3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">dup</span> 2.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">rew_fmap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fmap_eq_step</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#tt">tt</a></span>. <span class="id">fmap_disjoint</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fmap_eq_step</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#tt">tt</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fmap_eq_step</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#tt">tt</a></span>. <span class="id">fmap_disjoint</span>. <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">fmap_eq</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h1> Existence of Fresh Locations </h1>
+<br/>
+<h2> Consecutive Locations </h2>
+<br/>
+<div class="doc">The notion of "consecutive locations" is useful for reasoning about
+    records and arrays. </div>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="conseq">conseq</a></span> (<span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">vs</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">B</span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">vs</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> =&gt; <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span><br/>
+&nbsp;&nbsp;| <span class="id">v</span>::<span class="id">vs'</span> =&gt; (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">l</span> <span class="id">v</span>) \+ (<span class="id">conseq</span> <span class="id">vs'</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">l</span>))<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conseq_nil">conseq_nil</a></span> : <span class="kwd">forall</span> <span class="id">B</span> (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#conseq">conseq</a></span> (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id">B</span>) <span class="id">l</span> = <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conseq_cons">conseq_cons</a></span> : <span class="kwd">forall</span> <span class="id">B</span> (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) (<span class="id">v</span>:<span class="id">B</span>) (<span class="id">vs</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#conseq">conseq</a></span> (<span class="id">v</span>::<span class="id">vs</span>) <span class="id">l</span> = (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">l</span> <span class="id">v</span>) \+ (<span class="id"><a href="SLF.LibSepFmap.html#conseq">conseq</a></span> <span class="id">vs</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">l</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">conseq_cons'</span> : <span class="kwd">forall</span> <span class="id">B</span> (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) (<span class="id">v</span>:<span class="id">B</span>) (<span class="id">vs</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#conseq">conseq</a></span> (<span class="id">v</span>::<span class="id">vs</span>) <span class="id">l</span> = (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">l</span> <span class="id">v</span>) \+ (<span class="id"><a href="SLF.LibSepFmap.html#conseq">conseq</a></span> <span class="id">vs</span> (<span class="id">l</span>+1)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">math_rewrite</span> (<span class="id">l</span>+1 = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">l</span>)%<span class="id">nat</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#conseq_cons">conseq_cons</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibSepFmap.html#conseq">conseq</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#conseq_nil">conseq_nil</a></span> <span class="id"><a href="SLF.LibSepFmap.html#conseq_cons">conseq_cons</a></span> : <span class="id">rew_listx</span>.<br/>
+<br/>
+<h2> Existence of Fresh Locations </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="loc_fresh_gen">loc_fresh_gen</a></span> (<span class="id">L</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) :=<br/>
+&nbsp;&nbsp;(1 + <span class="id"><a href="SLF.LibList.html#fold_right">fold_right</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Peano.html#plus">plus</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#O">O</a></span> <span class="id">L</span>)%<span class="id">nat</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="loc_fresh_ind">loc_fresh_ind</a></span> : <span class="kwd">forall</span> <span class="id">l</span> <span class="id">L</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">l</span> <span class="id">L</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">l</span> &lt; <span class="id"><a href="SLF.LibSepFmap.html#loc_fresh_gen">loc_fresh_gen</a></span> <span class="id">L</span>)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">l</span> <span class="id">L</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#loc_fresh_gen">loc_fresh_gen</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">L</span>; <span class="id">introv</span> <span class="id">M</span>; <span class="id">inverts</span> <span class="id">M</span>; <span class="id">rew_listx</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">math</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">forwards</span>~: <span class="id">IHL</span>. <span class="id">math</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="loc_fresh_nat_ge">loc_fresh_nat_ge</a></span> : <span class="kwd">forall</span> (<span class="id">L</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>), <span class="kwd">forall</span> (<span class="id">i</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>), ~ <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> (<span class="id">l</span>+<span class="id">i</span>)%<span class="id">nat</span> <span class="id">L</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">L</span>. <span class="kwd">exists</span> (<span class="id"><a href="SLF.LibSepFmap.html#loc_fresh_gen">loc_fresh_gen</a></span> <span class="id">L</span>). <span class="id">intros</span> <span class="id">i</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span>: <span class="id"><a href="SLF.LibSepFmap.html#loc_fresh_ind">loc_fresh_ind</a></span> <span class="id">M</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">For any finite list of locations (implemented as <span class="bracket"><span class="id">nat</span></span>), there exists
+    one location not in that list. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="loc_fresh_nat">loc_fresh_nat</a></span> : <span class="kwd">forall</span> (<span class="id">L</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>), ~ <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">l</span> <span class="id">L</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">L</span>. <span class="id">forwards</span> (<span class="id">l</span>&amp;<span class="id">P</span>): <span class="id"><a href="SLF.LibSepFmap.html#loc_fresh_nat_ge">loc_fresh_nat_ge</a></span> <span class="id">L</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">l</span>. <span class="id">intros</span> <span class="id">M</span>. <span class="id">applys</span> (<span class="id">P</span> 0%<span class="id">nat</span>). <span class="id">applys_eq</span> <span class="id">M</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="FmapFresh">FmapFresh</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="FmapFresh.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">h</span> : <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapFresh.B">B</a></span>.<br/>
+<br/>
+<div class="doc">For any heap, there exists one (non-null) location not already in the
+    domain of that heap. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="exists_fresh">exists_fresh</a></span> : <span class="kwd">forall</span> <span class="id">null</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">l</span>, ~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h</span> <span class="id">l</span> /\ <span class="id">l</span> &lt;&gt; <span class="id">null</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">null</span> (<span class="id">m</span>&amp;(<span class="id">L</span>&amp;<span class="id">M</span>)). <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">l</span>&amp;<span class="id">F</span>): (<span class="id"><a href="SLF.LibSepFmap.html#loc_fresh_nat">loc_fresh_nat</a></span> (<span class="id">null</span>::<span class="id">L</span>)).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">l</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">simpl</span>. <span class="id">intros</span> <span class="id">l'</span>. <span class="id">forwards</span>~ <span class="id">E</span>: <span class="id">M</span> <span class="id">l</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intro_subst</span>. <span class="id">applys</span>~ <span class="id">F</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">For any heap <span class="bracket"><span class="id">h</span></span>, there exists one (non-null) location <span class="bracket"><span class="id">l</span></span> such that
+    the singleton map that binds <span class="bracket"><span class="id">l</span></span> to a value <span class="bracket"><span class="id">v</span></span> is disjoint from <span class="bracket"><span class="id">h</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="single_fresh">single_fresh</a></span> : <span class="kwd">forall</span> <span class="id">null</span> <span class="id">h</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">l</span>, \# (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">l</span> <span class="id">v</span>) <span class="id">h</span> /\ <span class="id">l</span> &lt;&gt; <span class="id">null</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">forwards</span> (<span class="id">l</span>&amp;<span class="id">F</span>&amp;<span class="id">N</span>): <span class="id"><a href="SLF.LibSepFmap.html#exists_fresh">exists_fresh</a></span> <span class="id">null</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">l</span>. <span class="id">split</span>~. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSepFmap.html#disjoint_single_of_not_indom">disjoint_single_of_not_indom</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="conseq_fresh">conseq_fresh</a></span> : <span class="kwd">forall</span> <span class="id">null</span> <span class="id">h</span> <span class="id">vs</span>,<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">l</span>, \# (<span class="id"><a href="SLF.LibSepFmap.html#conseq">conseq</a></span> <span class="id">vs</span> <span class="id">l</span>) <span class="id">h</span> /\ <span class="id">l</span> &lt;&gt; <span class="id">null</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">null</span> (<span class="id">m</span>&amp;(<span class="id">L</span>&amp;<span class="id">M</span>)) <span class="id">vs</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint">disjoint</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_disjoint">map_disjoint</a></span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">l</span>&amp;<span class="id">F</span>): (<span class="id"><a href="SLF.LibSepFmap.html#loc_fresh_nat_ge">loc_fresh_nat_ge</a></span> (<span class="id">null</span>::<span class="id">L</span>)).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">l</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">l'</span>. <span class="id">gen</span> <span class="id">l</span>. <span class="id">induction</span> <span class="id">vs</span> <span class="kwd">as</span> [|<span class="id">v</span> <span class="id">vs'</span>]; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">simple</span>~. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#conseq_cons">conseq_cons</a></span>. <span class="id">destruct</span> (<span class="id">IHvs'</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">l</span>)%<span class="id">nat</span>) <span class="kwd">as</span> [<span class="id">E</span>|?].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">i</span> <span class="id">N</span>. <span class="id">applys</span> <span class="id">F</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">i</span>). <span class="id">applys_eq</span> <span class="id">N</span>. <span class="id">math</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">simpl</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSepFmap.html#map_union">map_union</a></span>. <span class="id">case_if</span>~.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">right</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibLogic.html#not_not_inv">not_not_inv</a></span>. <span class="id">intros</span> <span class="id">H</span>. <span class="id">applys</span> <span class="id">F</span> 0%<span class="id">nat</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">math_rewrite</span> (<span class="id">l'</span>+0 = <span class="id">l'</span>)%<span class="id">nat</span>. <span class="id">applys</span>~ <span class="id">M</span>. } }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">auto</span>. } } }<br/>
+&nbsp;&nbsp;{ <span class="id">intro_subst</span>. <span class="id">applys</span>~ <span class="id">F</span> 0%<span class="id">nat</span>. <span class="id">rew_nat</span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_single_conseq">disjoint_single_conseq</a></span> : <span class="kwd">forall</span> <span class="id">B</span> <span class="id">l</span> <span class="id">l'</span> <span class="id">L</span> (<span class="id">v</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="id">l</span> &lt; <span class="id">l'</span>)%<span class="id">nat</span> \/ (<span class="id">l</span> &gt;= <span class="id">l'</span>+<span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>)%<span class="id">nat</span> -&gt;<br/>
+&nbsp;&nbsp;\# (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">l</span> <span class="id">v</span>) (<span class="id"><a href="SLF.LibSepFmap.html#conseq">conseq</a></span> <span class="id">L</span> <span class="id">l'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>. <span class="id">gen</span> <span class="id">l'</span>. <span class="id">induction</span> <span class="id">L</span> <span class="kwd">as</span> [|<span class="id">L'</span>]; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibSepFmap.html#conseq_nil">conseq_nil</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rew_list</span> <span class="kwd">in</span> <span class="id">N</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepFmap.html#conseq_cons">conseq_cons</a></span>. <span class="id">rew_disjoint</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#disjoint_single_single">disjoint_single_single</a></span>. <span class="id">destruct</span> <span class="id">N</span>; <span class="id">math</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">IHL</span>. <span class="id">destruct</span> <span class="id">N</span>. { <span class="id">left</span>. <span class="id">math</span>. } { <span class="id">right</span>. <span class="id">math</span>. } } }<br/>
+Qed.</div></details>
+<br/>
+<h2> Existence of a Smallest Fresh Locations </h2>
+<br/>
+<div class="doc">The notion of smallest fresh location is useful for setting up
+    deterministic semantics. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="fresh">fresh</a></span> (<span class="id">null</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapFresh.B">B</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h</span> <span class="id">l</span> /\ <span class="id">l</span> &lt;&gt; <span class="id">null</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="smallest_fresh">smallest_fresh</a></span> (<span class="id">null</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapFresh.B">B</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepFmap.html#fresh">fresh</a></span> <span class="id">null</span> <span class="id">h</span> <span class="id">l</span> /\ (<span class="kwd">forall</span> <span class="id">l'</span>, <span class="id">l'</span> &lt; <span class="id">l</span> -&gt; ~ <span class="id"><a href="SLF.LibSepFmap.html#fresh">fresh</a></span> <span class="id">null</span> <span class="id">h</span> <span class="id">l'</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="exists_smallest_fresh">exists_smallest_fresh</a></span> : <span class="kwd">forall</span> <span class="id">null</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">l</span>, <span class="id"><a href="SLF.LibSepFmap.html#smallest_fresh">smallest_fresh</a></span> <span class="id">null</span> <span class="id">h</span> <span class="id">l</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">cuts</span> <span class="id">M</span>: (<span class="kwd">forall</span> <span class="id">l0</span>, <span class="id"><a href="SLF.LibSepFmap.html#fresh">fresh</a></span> <span class="id">null</span> <span class="id">h</span> <span class="id">l0</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">l</span>, <span class="id"><a href="SLF.LibSepFmap.html#fresh">fresh</a></span> <span class="id">null</span> <span class="id">h</span> <span class="id">l</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ (<span class="kwd">forall</span> <span class="id">l'</span>, <span class="id">l'</span> &lt; <span class="id">l</span> -&gt; ~ <span class="id"><a href="SLF.LibSepFmap.html#fresh">fresh</a></span> <span class="id">null</span> <span class="id">h</span> <span class="id">l'</span>)).<br/>
+&nbsp;&nbsp;{ <span class="id">lets</span> (<span class="id">l0</span>&amp;<span class="id">F</span>&amp;<span class="id">N</span>): <span class="id"><a href="SLF.LibSepFmap.html#exists_fresh">exists_fresh</a></span> <span class="id">null</span> <span class="id">h</span>. <span class="id">applys</span> <span class="id">M</span> <span class="id">l0</span>. <span class="id">split</span>*. }<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">l0</span>. <span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id"><a href="SLF.LibWf.html#wf_lt">wf_lt</a></span> <span class="id">l0</span>. <span class="id">intros</span> <span class="id">F</span>.<br/>
+&nbsp;&nbsp;<span class="id">tests</span> <span class="id">C</span>: (<span class="kwd">forall</span> <span class="id">l'</span>, <span class="id">l'</span> &lt; <span class="id">l0</span> -&gt; ~ <span class="id"><a href="SLF.LibSepFmap.html#fresh">fresh</a></span> <span class="id">null</span> <span class="id">h</span> <span class="id">l'</span>).<br/>
+&nbsp;&nbsp;{ <span class="kwd">exists</span>* <span class="id">l0</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">C</span> <span class="kwd">as</span> (<span class="id">l0'</span>&amp;<span class="id">K</span>). <span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">K</span>. <span class="id">destruct</span> <span class="id">K</span> <span class="kwd">as</span> (<span class="id">L</span>&amp;<span class="id">F'</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">IH</span> <span class="id">l0'</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h2> Existence of Nonempty Heaps </h2>
+<br/>
+<div class="doc">The existence of nonempty (nat-indexed) finite maps is useful
+    for constructing counterexamples. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="exists_not_empty">exists_not_empty</a></span> : <span class="kwd">forall</span> `{<span class="id">IB</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapFresh.B">B</a></span>},<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">h</span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapFresh.B">B</a></span>), <span class="id">h</span> &lt;&gt; <span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">sets</span> <span class="id">l</span>: 0%<span class="id">nat</span>. <span class="id">sets</span> <span class="id">h</span>: (<span class="id"><a href="SLF.LibSepFmap.html#single">single</a></span> <span class="id">l</span> (<span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibSepFmap.html#FmapFresh.B">B</a></span>))).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">h</span>. <span class="id">intros</span> <span class="id">N</span>.<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">h'</span>: (<span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>:<span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> <span class="id"><a href="SLF.LibSepFmap.html#FmapFresh.B">B</a></span>).<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">M1</span>: (<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h</span> <span class="id">l</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibSepFmap.html#indom_single">indom_single</a></span>. }<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">M2</span>: (~ <span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span> <span class="id">h'</span> <span class="id">l</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">unfolds</span> @<span class="id"><a href="SLF.LibSepFmap.html#indom">indom</a></span>, <span class="id"><a href="SLF.LibSepFmap.html#map_indom">map_indom</a></span>, @<span class="id"><a href="SLF.LibSepFmap.html#empty">empty</a></span>. <span class="id">simpls</span>. <span class="id">auto_false</span>. }<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">N</span> <span class="kwd">in</span> <span class="id">M1</span>. <span class="id">false</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSepFmap.html#FmapFresh">FmapFresh</a></span>.<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

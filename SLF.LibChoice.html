@@ -1,0 +1,198 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibChoice</title>
+<meta name="description" content="Documentation of Coq module LibChoice" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibChoice</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibEpsilon.html">LibEpsilon</a></span> <span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span>.<br/>
+<br/>
+<div class="doc">This files includes several versions of the axiom of choice.
+    This "axiom" is actually proved in terms of indefinite description.
+    Remark: the choice results contained in this file are not very
+    useful in practice since it is usually more convenient to use
+    the epsilon operator directly. </div>
+<br/>
+<h1> Functional choice </h1>
+<br/>
+<h2> Functional choice </h2>
+<br/>
+<div class="doc">This result can be used to build a function from a relation that maps
+    every input to at least one output. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="functional_choice">functional_choice</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">R</span>:<span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="kwd">exists</span> <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">f</span>, <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">R</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="kwd">exists</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id"><a href="SLF.LibLogic.html#sig_val">sig_val</a></span> (<span class="id"><a href="SLF.LibAxioms.html#indefinite_description">indefinite_description</a></span> (<span class="id">H</span> <span class="id">x</span>))).<br/>
+&nbsp;&nbsp;<span class="id">intro</span> <span class="id">x</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#sig_proof">sig_proof</a></span> (<span class="id"><a href="SLF.LibAxioms.html#indefinite_description">indefinite_description</a></span> (<span class="id">H</span> <span class="id">x</span>))).<br/>
+Qed.</div></details>
+<br/>
+<h2> Dependent functional choice </h2>
+<br/>
+<div class="doc">It is a generalization of functional choice to dependent functions. </div>
+<br/>
+<span class="kwd">Scheme</span> <span class="id"><a name="and_indd">and_indd</a></span> := <span class="id">Induction</span> <span class="kwd">for</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#and">and</a></span> <span class="id">Sort</span> <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Scheme</span> <span class="id"><a name="eq_indd">eq_indd</a></span> := <span class="id">Induction</span> <span class="kwd">for</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq">eq</a></span> <span class="id">Sort</span> <span class="kwd">Prop</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="dependent_functional_choice">dependent_functional_choice</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A</span> (<span class="id">B</span>:<span class="id">A</span>-&gt;<span class="kwd">Type</span>) (<span class="id">R</span>:<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">B</span> <span class="id">x</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="kwd">exists</span> <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">f</span>, <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">R</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">pose</span> (<span class="id">B'</span> := { <span class="id">x</span>:<span class="id">A</span> &amp; <span class="id">B</span> <span class="id">x</span> }).<br/>
+&nbsp;&nbsp;<span class="id">pose</span> (<span class="id">R'</span> := <span class="kwd">fun</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">y</span>:<span class="id">B'</span>) =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#projT1">projT1</a></span> <span class="id">y</span> = <span class="id">x</span> /\ <span class="id">R</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#projT1">projT1</a></span> <span class="id">y</span>) (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#projT2">projT2</a></span> <span class="id">y</span>)).<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id"><a href="SLF.LibChoice.html#functional_choice">functional_choice</a></span> <span class="id">R'</span>) <span class="kwd">as</span> (<span class="id">f</span>,<span class="id">Hf</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">destruct</span> (<span class="id">H</span> <span class="id">x</span>) <span class="kwd">as</span> (<span class="id">y</span>,<span class="id">Hy</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#existT">existT</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">B</span> <span class="id">x</span>) <span class="id">x</span> <span class="id">y</span>). <span class="id">split</span>~.<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">proj1_transparent</span>: (<span class="kwd">fun</span> <span class="id">P</span> <span class="id">Q</span> (<span class="id">p</span>:<span class="id">P</span>/\<span class="id">Q</span>) =&gt; <span class="kwd">let</span> (<span class="id">a</span>,<span class="id">b</span>) := <span class="id">p</span> <span class="kwd">in</span> <span class="id">a</span>).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq_rect">eq_rect</a></span> _ _ (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#projT2">projT2</a></span> (<span class="id">f</span> <span class="id">x</span>)) _ (<span class="id">proj1_transparent</span> _ _ (<span class="id">Hf</span> <span class="id">x</span>))).<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">destruct</span> (<span class="id">Hf</span> <span class="id">x</span>) <span class="kwd">as</span> (<span class="id">Heq</span>,<span class="id">HR</span>) <span class="kwd">using</span> <span class="id"><a href="SLF.LibChoice.html#and_indd">and_indd</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">f</span> <span class="id">x</span>). <span class="id">simpls</span>. <span class="id">destruct</span> <span class="id">Heq</span> <span class="kwd">using</span> <span class="id"><a href="SLF.LibChoice.html#eq_indd">eq_indd</a></span>. <span class="id">apply</span> <span class="id">HR</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibChoice.html#dependent_functional_choice">dependent_functional_choice</a></span> [<span class="id">A</span>] [<span class="id">B</span>].<br/>
+<br/>
+<h2> Guarded functional choice </h2>
+<br/>
+<div class="doc">Similar to functional choice, except that it targets partial functions </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="guarded_functional_choice">guarded_functional_choice</a></span> : <span class="kwd">forall</span> <span class="id">A</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>} (<span class="id">P</span> : <span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">R</span> : <span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="kwd">exists</span> <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">f</span>, <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">R</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibChoice.html#functional_choice">functional_choice</a></span> (<span class="kwd">fun</span> <span class="id">x</span> <span class="id">y</span> =&gt; <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>)).<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibLogic.html#indep_general_premises">indep_general_premises</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Omniscient functional choice </h2>
+<br/>
+<div class="doc">Similar to functional choice except that the proof of functionality
+    of the relation is given after the fact, for each argument. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="omniscient_functional_choice">omniscient_functional_choice</a></span> : <span class="kwd">forall</span> <span class="id">A</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>} (<span class="id">R</span> : <span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">f</span>, <span class="kwd">forall</span> <span class="id">x</span>, (<span class="kwd">exists</span> <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt; <span class="id">R</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibChoice.html#guarded_functional_choice">guarded_functional_choice</a></span>. Qed.</div></details>
+<br/>
+<h1> Functional unique choice </h1>
+<br/>
+<div class="doc">This section provides a similar set of results excepts that it is
+    specialized for the case where each argument has a unique image. </div>
+<br/>
+<h2> Functional unique choice </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="functional_unique_choice">functional_unique_choice</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">R</span>:<span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span> , <span class="kwd">exists</span>! <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span>! <span class="id">f</span>, <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">R</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibChoice.html#functional_choice">functional_choice</a></span> <span class="id">R</span>) <span class="kwd">as</span> [<span class="id">f</span> <span class="id">Hf</span>].<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#ex_of_ex_unique">ex_of_ex_unique</a></span> (<span class="id">H</span> <span class="id">x</span>)).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">f</span>. <span class="id">split</span>. <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">g</span> <span class="id">Hg</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibEqual.html#fun_ext_1">fun_ext_1</a></span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">apply</span>~ (<span class="id"><a href="SLF.LibLogic.html#at_most_one_of_ex_unique">at_most_one_of_ex_unique</a></span> (<span class="id">H</span> <span class="id">y</span>)).<br/>
+Qed.</div></details>
+<br/>
+<h2> Dependent functional unique choice </h2>
+<br/>
+<span class="kwd">Theorem</span> <span class="id"><a name="dependent_functional_unique_choice">dependent_functional_unique_choice</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">B</span>:<span class="id">A</span>-&gt;<span class="kwd">Type</span>) (<span class="id">R</span>:<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">B</span> <span class="id">x</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="kwd">exists</span>! <span class="id">y</span> : <span class="id">B</span> <span class="id">x</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span>! <span class="id">f</span> : (<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">B</span> <span class="id">x</span>), <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">R</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibChoice.html#dependent_functional_choice">dependent_functional_choice</a></span> <span class="id">R</span>) <span class="kwd">as</span> [<span class="id">f</span> <span class="id">Hf</span>].<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#ex_of_ex_unique">ex_of_ex_unique</a></span> (<span class="id">H</span> <span class="id">x</span>)).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">f</span>. <span class="id">split</span>. <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">g</span> <span class="id">Hg</span>. <span class="id">extens</span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">apply</span>~ (<span class="id"><a href="SLF.LibLogic.html#at_most_one_of_ex_unique">at_most_one_of_ex_unique</a></span> (<span class="id">H</span> <span class="id">y</span>)).<br/>
+&nbsp;Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibChoice.html#dependent_functional_unique_choice">dependent_functional_unique_choice</a></span> [<span class="id">A</span>] [<span class="id">B</span>].<br/>
+<br/>
+<h2> Guarded functional unique choice </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="guarded_functional_unique_choice">guarded_functional_unique_choice</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>} (<span class="id">P</span> : <span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">R</span> : <span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="kwd">exists</span>! <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">f</span>, <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">R</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">x</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">I</span> <span class="id">M</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibChoice.html#functional_choice">functional_choice</a></span> (<span class="kwd">fun</span> <span class="id">x</span> <span class="id">y</span> =&gt; <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>)).<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibLogic.html#indep_general_premises">indep_general_premises</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span>* (<span class="id">M</span> _ <span class="id">H</span>) <span class="kwd">as</span> (<span class="id">y</span>&amp;<span class="id">Hy</span>&amp;_).<br/>
+Qed.</div></details>
+<br/>
+<h2> Omniscient functional unique choice </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="omniscient_functional_unique_choice">omniscient_functional_unique_choice</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>} (<span class="id">R</span> : <span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">f</span>, <span class="kwd">forall</span> <span class="id">x</span>, (<span class="kwd">exists</span>! <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt; <span class="id">R</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibChoice.html#omniscient_functional_choice">omniscient_functional_choice</a></span> <span class="id">R</span>) <span class="kwd">as</span> [<span class="id">f</span> <span class="id">F</span>].<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">f</span>. <span class="id">introv</span> (<span class="id">y</span>&amp;<span class="id">Hy</span>&amp;<span class="id">Uy</span>). <span class="id">autos</span>*.<br/>
+Qed.</div></details>
+<br/>
+<h1> Relational choice </h1>
+<br/>
+<div class="doc">Relational choice can be used to extract from a relation a subrelation
+    that describes a function, by mapping every argument to a unique image. </div>
+<br/>
+<h2> Relational choice </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="rel_choice">rel_choice</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">R</span>:<span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="kwd">exists</span> <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">R'</span>, <span class="id"><a href="SLF.LibRelation.html#rel_incl">rel_incl</a></span> <span class="id">R'</span> <span class="id">R</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="kwd">forall</span> <span class="id">x</span>, <span class="kwd">exists</span>! <span class="id">y</span>, <span class="id">R'</span> <span class="id">x</span> <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">destruct</span>~ (<span class="id"><a href="SLF.LibChoice.html#functional_choice">functional_choice</a></span> <span class="id">R</span>) <span class="kwd">as</span> [<span class="id">f</span> <span class="id">Hf</span>].<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="kwd">fun</span> <span class="id">x</span> <span class="id">y</span> =&gt; <span class="id">f</span> <span class="id">x</span> = <span class="id">y</span>). <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span>. <span class="id">simpls</span>. <span class="id">subst</span>~.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="kwd">exists</span>~ (<span class="id">f</span> <span class="id">x</span>).<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<h2> Guarded relational choice </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="guarded_rel_choice">guarded_rel_choice</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">P</span> : <span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">R</span> : <span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="kwd">exists</span> <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">R'</span>, <span class="id"><a href="SLF.LibRelation.html#rel_incl">rel_incl</a></span> <span class="id">R'</span> <span class="id">R</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="kwd">exists</span>! <span class="id">y</span>, <span class="id">R'</span> <span class="id">x</span> <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibChoice.html#rel_choice">rel_choice</a></span> (<span class="kwd">fun</span> (<span class="id">x</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#sig">sig</a></span> <span class="id">P</span>) (<span class="id">y</span>:<span class="id">B</span>) =&gt; <span class="id">R</span> (<span class="id"><a href="SLF.LibLogic.html#sig_val">sig_val</a></span> <span class="id">x</span>) <span class="id">y</span>))<br/>
+&nbsp;&nbsp;&nbsp;<span class="kwd">as</span> (<span class="id">R'</span>,(<span class="id">HR'R</span>,<span class="id">M</span>)).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> (<span class="id">x</span>,<span class="id">HPx</span>). <span class="id">destruct</span> (<span class="id">H</span> _ <span class="id">HPx</span>) <span class="kwd">as</span> (<span class="id">y</span>,<span class="id">HRxy</span>). <span class="kwd">exists</span>~ <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">set</span> (<span class="id">R''</span> := <span class="kwd">fun</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">y</span>:<span class="id">B</span>) =&gt; <span class="kwd">exists</span> (<span class="id">H</span> : <span class="id">P</span> <span class="id">x</span>), <span class="id">R'</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#exist">exist</a></span> <span class="id">P</span> <span class="id">x</span> <span class="id">H</span>) <span class="id">y</span>).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">R''</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">y</span> (<span class="id">HPx</span>,<span class="id">HR'xy</span>). <span class="id">apply</span> (<span class="id">HR'R</span> _ _ <span class="id">HR'xy</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">HPx</span>. <span class="id">destruct</span> (<span class="id">M</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#exist">exist</a></span> <span class="id">P</span> <span class="id">x</span> <span class="id">HPx</span>)) <span class="kwd">as</span> (<span class="id">y</span>,(<span class="id">HR'xy</span>,<span class="id">Uniq</span>)).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">y</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span>~ <span class="id">HPx</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">y'</span> (<span class="id">H'Px</span>,<span class="id">HR'xy'</span>). <span class="id">apply</span> <span class="id">Uniq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>~ (<span class="id"><a href="SLF.LibEqual.html#proof_irrelevance">proof_irrelevance</a></span> <span class="id">HPx</span> <span class="id">H'Px</span>).<br/>
+Qed.</div></details>
+<br/>
+<h2> Omniscient relation choice </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="omniscient_rel_choice">omniscient_rel_choice</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">R</span> : <span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">R'</span>, <span class="id"><a href="SLF.LibRelation.html#rel_incl">rel_incl</a></span> <span class="id">R'</span> <span class="id">R</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="kwd">forall</span> <span class="id">x</span>, (<span class="kwd">exists</span> <span class="id">y</span>, <span class="id">R</span> <span class="id">x</span> <span class="id">y</span>) -&gt; (<span class="kwd">exists</span>! <span class="id">y</span>, <span class="id">R'</span> <span class="id">x</span> <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibChoice.html#guarded_rel_choice">guarded_rel_choice</a></span>. Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

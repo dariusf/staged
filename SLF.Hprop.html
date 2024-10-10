@@ -1,0 +1,643 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Hprop</title>
+<meta name="description" content="Documentation of Coq module Hprop" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Hprop</h1>
+<div class="coq">
+<h1> Hprop: Heap Predicates </h1>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibSepReference.html">LibSepReference</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.LibSepReference.html#ProgramSyntax">ProgramSyntax</a></span>.<br/>
+<br/>
+<h1> First Pass </h1>
+<br/>
+<div class="doc">The first two chapters have illustrated how to specify and verify programs
+    using Separation Logic. The purpose of the coming chapters is to explain how
+    to formally assign meaning to the tokens used in the statement of
+    specifications (e.g., the star operator), formally define the notion of
+    Separation Triples, and prove the reasoning rules of Separation Logic. These
+    rules are exploited by the "x-tactics" used in the first two chapters. </div>
+<br/>
+<div class="doc">This chapter presents the formal definitions of the key heap predicate
+    operators from Separation Logic:
+    - <span class="bracket">\[]</span> denotes the empty heap predicate,
+    - <span class="bracket">\[<span class="id">P</span>]</span> denotes a pure fact,
+    - <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span> denotes a predicate that characterizes a singleton heap,
+    - <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span> denotes the separating conjunction,
+    - <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H2</span></span> denotes the separating conjunction between a
+                  postcondition and a heap predicate,
+    - <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">H</span></span> denotes an existential quantifier. </div>
+<br/>
+<div class="doc">To begin with, we define the types <span class="bracket"><span class="id">heap</span></span>, used to represent a memory state,
+    or a piece of a memory state.
+    In Separation Logic, specifications are expressed using "heap predicates",
+    predicates over heaps, of type <span class="bracket"><span class="id">heap</span>-&gt;<span class="kwd">Prop</span></span>. We define <span class="bracket"><span class="id">hprop</span></span> to be a
+    shorthand for that type.
+    By convention, throughout the course:
+    - <span class="bracket"><span class="id">H</span></span> denotes a heap predicate of type <span class="bracket"><span class="id">hprop</span></span>; it describes a
+      piece of state,
+    - <span class="bracket"><span class="id">Q</span></span> denotes a postcondition, of type <span class="bracket"><span class="id">val</span>-&gt;<span class="id">hprop</span></span>; it describes
+      both a result value and a piece of state. </div>
+<br/>
+<h2> Description of Memory States </h2>
+<br/>
+<div class="doc">To reason about imperative programs, Separation Logic relies on heap
+    predicates for describing memory states. As the name suggests, a "heap
+    predicate" is a predicate over heaps, i.e., over memory states. Heap
+    predicates such as <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">n</span></span>, or <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span> admit the type <span class="bracket"><span class="id">heap</span> -&gt; <span class="kwd">Prop</span></span>,
+    where the type <span class="bracket"><span class="id">heap</span></span> corresponds to a finite map used to describe the
+    contents of a piece of the memory. In what follows, we give the formal
+    definition of <span class="bracket"><span class="id">heap</span></span> and of the type of heap predicates. </div>
+<br/>
+<div class="doc">In the previous chapters, we have assumed a type <span class="bracket"><span class="id">val</span></span> to range over program
+    values and a type <span class="bracket"><span class="id">loc</span></span> to denote memory locations. Concrete definitions
+    will be provided later on, in chapter <span class="bracket"><span class="id">Rules</span></span>. At this point, we are
+    interested in the definition of the type <span class="bracket"><span class="id">heap</span></span>, used to describe the
+    contents of the memory during the execution of a program. </div>
+<br/>
+<div class="doc">A <span class="bracket"><span class="id">heap</span></span> is a finite map from locations to values. The file <span class="bracket"><span class="id">LibSepFmap.v</span></span>
+    provides a self-contained formalization of finite maps. An object of type
+    <span class="bracket"><span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span></span> represents a finite map binding keys of type <span class="bracket"><span class="id">A</span></span> to values of
+    type <span class="bracket"><span class="id">B</span></span>. We define the type <span class="bracket"><span class="id">heap</span></span> as a map from locations, of type <span class="bracket"><span class="id">loc</span></span>,
+    to program values, of type <span class="bracket"><span class="id">val</span></span>. Internally, <span class="bracket"><span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span></span> is implemented as a
+    function of type <span class="bracket"><span class="id">A</span> -&gt; <span class="id">option</span> <span class="id">B</span></span>, like in <span class="bracket"><span class="id">Maps.v</span></span> from the LF volume. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="heap">heap</a></span> : <span class="kwd">Type</span> := <span class="id"><a href="SLF.LibSepFmap.html#fmap">fmap</a></span> <span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span> <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>.<br/>
+<br/>
+<div class="doc">The file <span class="bracket"><span class="id">LibSepReference</span></span> introduces the module name <span class="bracket"><span class="id">Fmap</span></span> as a shorthand
+    for <span class="bracket"><span class="id">LibSepFmap</span></span>. The key operations associated with finite maps are:
+    - <span class="bracket"><span class="id">Fmap.empty</span></span> denotes the empty state,
+    - <span class="bracket"><span class="id">Fmap.single</span> <span class="id">p</span> <span class="id">v</span></span> denotes a singleton state, that is, a unique cell
+      at location <span class="bracket"><span class="id">p</span></span> with contents <span class="bracket"><span class="id">v</span></span>,
+    - <span class="bracket"><span class="id">Fmap.union</span> <span class="id">h1</span> <span class="id">h2</span></span> denotes the union of the two states <span class="bracket"><span class="id">h1</span></span> and <span class="bracket"><span class="id">h2</span></span>.
+    - <span class="bracket"><span class="id">Fmap.disjoint</span> <span class="id">h1</span> <span class="id">h2</span></span> asserts that <span class="bracket"><span class="id">h1</span></span> and <span class="bracket"><span class="id">h2</span></span> have disjoint domains.
+    Note that the union operation is commutative only when its arguments have
+    disjoint domains. Throughout the course, we only consider disjoint unions,
+    for which commutativity holds.
+    Hereafter, to improve readability of statements in proofs, we introduce the
+    notation <span class="bracket"><span class="id">h1</span> \<span class="id">u</span> <span class="id">h2</span></span> for heap union. </div>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"h1 \u h2"</span> := (<span class="id"><a href="SLF.LibSepReference.html#Fmap.union">Fmap.union</a></span> <span class="id">h1</span> <span class="id">h2</span>) (<span class="kwd">at</span> <span class="id">level</span> 37, <span class="id">right</span> <span class="id">associativity</span>).<br/>
+<br/>
+<h2> Heap Predicates </h2>
+<br/>
+<div class="doc">In Separation Logic, the state is described using "heap predicates", of type
+    <span class="bracket"><span class="id">hprop</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hprop">hprop</a></span> := <span class="id"><a href="SLF.Hprop.html#heap">heap</a></span> -&gt; <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">H</span></span> ranges over heap predicates. </div>
+<br/>
+<span class="kwd">Implicit</span> <span class="kwd">Type</span> <span class="id">H</span> : <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>.<br/>
+<br/>
+<div class="doc">An essential aspect of Separation Logic is that all heap predicates defined
+    and used in practice are built using a few basic combinators. In other
+    words, except for the definition of the combinators themselves, we will
+    never define a custom heap predicate directly as a function of the state. </div>
+<br/>
+<div class="doc">We next describe the most important combinators, which were used pervasively
+    throughout the first two chapters. </div>
+<br/>
+<div class="doc">The <span class="bracket"><span class="id">hempty</span></span> predicate, usually written <span class="bracket">\[]</span>, characterizes an empty heap.
+    </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hempty">hempty</a></span> : <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">h</span>:<span class="id"><a href="SLF.Hprop.html#heap">heap</a></span>) =&gt; (<span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\[]"</span> := (<span class="id"><a href="SLF.Hprop.html#hempty">hempty</a></span>) (<span class="kwd">at</span> <span class="id">level</span> 0).<br/>
+<br/>
+<div class="doc">The pure fact predicate, written <span class="bracket">\[<span class="id">P</span>]</span>, characterizes an empty state and
+    moreover asserts that the proposition <span class="bracket"><span class="id">P</span></span> is true. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hpure">hpure</a></span> (<span class="id">P</span>:<span class="kwd">Prop</span>) : <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">h</span>:<span class="id"><a href="SLF.Hprop.html#heap">heap</a></span>) =&gt; (<span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>) /\ <span class="id">P</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\[ P ]"</span> := (<span class="id"><a href="SLF.Hprop.html#hpure">hpure</a></span> <span class="id">P</span>) (<span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">format</span> <span class="string">"\[ P ]"</span>).<br/>
+<br/>
+<div class="doc">The singleton heap predicate, written <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span>, characterizes a state with
+    a single allocated cell, at location <span class="bracket"><span class="id">p</span></span>, storing the value <span class="bracket"><span class="id">v</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hsingle">hsingle</a></span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) (<span class="id">v</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>) : <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">h</span>:<span class="id"><a href="SLF.Hprop.html#heap">heap</a></span>) =&gt; (<span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.single">Fmap.single</a></span> <span class="id">p</span> <span class="id">v</span>).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"p '~~&gt;' v"</span> := (<span class="id"><a href="SLF.Hprop.html#hsingle">hsingle</a></span> <span class="id">p</span> <span class="id">v</span>) (<span class="kwd">at</span> <span class="id">level</span> 32).<br/>
+<br/>
+<div class="doc">The "separating conjunction", written <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span>, characterizes a state that
+    can be decomposed in two disjoint parts, one that satisfies <span class="bracket"><span class="id">H1</span></span> and another
+    that satisfies <span class="bracket"><span class="id">H2</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hstar">hstar</a></span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>) : <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">h</span>:<span class="id"><a href="SLF.Hprop.html#heap">heap</a></span>) =&gt; <span class="kwd">exists</span> <span class="id">h1</span> <span class="id">h2</span>, <span class="id">H1</span> <span class="id">h1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id">H2</span> <span class="id">h2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id">h</span> = <span class="id">h1</span> \<span class="id">u</span> <span class="id">h2</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"H1 '\*' H2"</span> := (<span class="id"><a href="SLF.Hprop.html#hstar">hstar</a></span> <span class="id">H1</span> <span class="id">H2</span>) (<span class="kwd">at</span> <span class="id">level</span> 41, <span class="id">right</span> <span class="id">associativity</span>).<br/>
+<br/>
+<div class="doc">The existential quantifier for heap predicates, written <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">H</span></span>
+    characterizes a heap that satisfies <span class="bracket"><span class="id">H</span></span> for some <span class="bracket"><span class="id">x</span></span>. The variable <span class="bracket"><span class="id">x</span></span> has
+    type <span class="bracket"><span class="id">A</span></span>, for some arbitrary <span class="bracket"><span class="id">A</span></span>. </div>
+<br/>
+<div class="doc">The notation <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">H</span></span> stands for <span class="bracket"><span class="id">hexists</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">H</span>)</span>. The
+    generalized notation <span class="bracket">\<span class="kwd">exists</span> <span class="id">x1</span> ... <span class="id">xn</span>, <span class="id">H</span></span> is also available.
+    The definition of <span class="bracket"><span class="id">hexists</span></span> is a bit technical, and it is not essential to
+    master it at this point. Additional explanations are provided near the end
+    of this chapter. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="hexists">hexists</a></span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>) : <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">h</span>:<span class="id"><a href="SLF.Hprop.html#heap">heap</a></span>) =&gt; <span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'\exists' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.Hprop.html#hexists">hexists</a></span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id"><a href="SLF.Hprop.html#hexists">hexists</a></span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '\exists' '/ '  x1  ..  xn , '/ '  H ']'"</span>).<br/>
+<br/>
+<div class="doc">Universal quantification in <span class="bracket"><span class="id">hprop</span></span> is also possible, but it is only useful
+    for more advanced features of Separation Logic. We postpone its introduction
+    to chapter <span class="bracket"><span class="id">Wand</span></span>. </div>
+<br/>
+<div class="doc">All the definitions above will eventually be made <span class="bracket"><span class="kwd">Opaque</span></span>, after the
+    appropriate introduction and elimination lemmas have been established,
+    making it no longer possible to execute, say, <span class="bracket"><span class="id">unfold</span> <span class="id">hstar</span></span>. Opacity is
+    essential to ensure that proofs do not depend on the details of the
+    definitions. </div>
+<br/>
+<h2> Extensionality for Heap Predicates </h2>
+<br/>
+<div class="doc">To work in Separation Logic, it is extremely convenient to be able to state
+    equalities between heap predicates. For example, we wish to establish the
+    associativity property for the star operator in the form of an equality: </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="hstar_assoc_statement">hstar_assoc_statement</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;((<span class="id">H1</span> \* <span class="id">H2</span>) \* <span class="id">H3</span>) = (<span class="id">H1</span> \* (<span class="id">H2</span> \* <span class="id">H3</span>)).<br/>
+<br/>
+<div class="doc">How can we prove a goal of the form <span class="bracket"><span class="id">H1</span> = <span class="id">H2</span></span> when <span class="bracket"><span class="id">H1</span></span> and <span class="bracket"><span class="id">H2</span></span> have type
+    <span class="bracket"><span class="id">hprop</span></span>, that is, <span class="bracket"><span class="id">heap</span>-&gt;<span class="kwd">Prop</span></span>? Intuitively, <span class="bracket"><span class="id">H</span></span> and <span class="bracket"><span class="id">H'</span></span> are equal if and
+    only if they characterize exactly the same set of heaps, that is, if
+    <span class="bracket"><span class="kwd">forall</span> (<span class="id">h</span>:<span class="id">heap</span>), <span class="id">H1</span> <span class="id">h</span> &lt;-&gt; <span class="id">H2</span> <span class="id">h</span></span>.
+    This reasoning principle, a specific form of extensionality property, is not
+    available by default in Coq. But we can safely assume it if we extend the
+    logic of Coq with a standard axiom called "predicate extensionality". </div>
+<br/>
+<span class="kwd">Axiom</span> <span class="id"><a name="predicate_extensionality">predicate_extensionality</a></span> : <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">P</span> <span class="id">Q</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">By specializing <span class="bracket"><span class="id">P</span></span> and <span class="bracket"><span class="id">Q</span></span> above to the type <span class="bracket"><span class="id">hprop</span></span>, we obtain exactly the
+    desired extensionality principle. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hprop_eq">hprop_eq</a></span> : <span class="kwd">forall</span> (<span class="id">H1</span> <span class="id">H2</span>:<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">h</span>:<span class="id"><a href="SLF.Hprop.html#heap">heap</a></span>), <span class="id">H1</span> <span class="id">h</span> &lt;-&gt; <span class="id">H2</span> <span class="id">h</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> = <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Hprop.html#predicate_extensionality">predicate_extensionality</a></span>. Qed.</div></details>
+<br/>
+<div class="doc">More information about extensionality axioms may be found near the end of
+    this chapter. </div>
+<br/>
+<h2> Fundamental Properties of Operators </h2>
+<br/>
+<div class="doc">By exploiting extensionality, the following properties of Separation Logic
+    operators can be established (they are proved further on in the chapter). </div>
+<br/>
+<div class="doc">(1) The star operator is associative. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="hstar_assoc">hstar_assoc</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) \* <span class="id">H3</span> = <span class="id">H1</span> \* (<span class="id">H2</span> \* <span class="id">H3</span>).<br/>
+<br/>
+<div class="doc">(2) The star operator is commutative. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="hstar_comm">hstar_comm</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> = <span class="id">H2</span> \* <span class="id">H1</span>.<br/>
+<br/>
+<div class="doc">(3) The empty heap predicate is a neutral element for the star.
+    Because star is commutative, it is equivalent to state that <span class="bracket"><span class="id">hempty</span></span> is a
+    left or a right neutral element for <span class="bracket"><span class="id">hstar</span></span>. We choose, arbitrarily, to
+    state the left-neutrality property. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="hstar_hempty_l">hstar_hempty_l</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;\[] \* <span class="id">H</span> = <span class="id">H</span>.<br/>
+<br/>
+<div class="doc">(4) Existentials can be "extruded" out of stars, that is:
+    <span class="bracket">(\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) \* <span class="id">H</span></span> is equivalent to <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, (<span class="id">J</span> <span class="id">x</span> \* <span class="id">H</span>)</span>. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="hstar_hexists">hstar_hexists</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) \* <span class="id">H</span> = \<span class="kwd">exists</span> <span class="id">x</span>, (<span class="id">J</span> <span class="id">x</span> \* <span class="id">H</span>).<br/>
+<br/>
+<div class="doc">(5) Pure facts can be extruded out of stars. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="hstar_hpure_l">hstar_hpure_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">h</span> = (<span class="id">P</span> /\ <span class="id">H</span> <span class="id">h</span>).<br/>
+<br/>
+<h2> Postconditions: Type, Syntax, and Extensionality </h2>
+<br/>
+<div class="doc">A specification takes the form <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span>, where <span class="bracket"><span class="id">t</span></span> is a term, <span class="bracket"><span class="id">H</span></span> is a
+    precondition of type <span class="bracket"><span class="id">hprop</span></span>, and <span class="bracket"><span class="id">Q</span></span> is a postcondition.
+    For example, a read at location <span class="bracket"><span class="id">p</span></span>, written <span class="bracket">!<span class="id">p</span></span> in OCaml, is specified as:
+    <span class="bracket"><span class="id">triple</span> &lt;{ !<span class="id">p</span> }&gt; (<span class="id">p</span> ~~&gt; <span class="id">v</span>) (<span class="kwd">fun</span> <span class="id">r</span> =&gt; (<span class="id">p</span> ~~&gt; <span class="id">v</span>) \* \[<span class="id">r</span> = <span class="id">v</span>])</span>.
+    In general, a postcondition has type <span class="bracket"><span class="id">val</span> -&gt; <span class="id">hprop</span></span>, which is equivalent to
+    <span class="bracket"><span class="id">val</span> -&gt; <span class="id">heap</span> -&gt; <span class="kwd">Prop</span></span>. The postcondition thereby capture the properties of
+    both the output value and the output state. </div>
+<br/>
+<span class="kwd">Implicit</span> <span class="kwd">Type</span> <span class="id">Q</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span> -&gt; <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>.<br/>
+<br/>
+<div class="doc">One common operation is augmenting a postcondition with a description of
+    another piece of state. This operation is written as <span class="bracket"><span class="id">Q</span> \*+ <span class="id">H</span></span>, which is
+    just a convenient notation for <span class="bracket"><span class="kwd">fun</span> <span class="id">x</span> =&gt; (<span class="id">Q</span> <span class="id">x</span> \* <span class="id">H</span>)</span>. We will use this
+    operator in particular in the statement of the frame rule in the next
+    chapter. </div>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"Q \*+ H"</span> := (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id"><a href="SLF.Hprop.html#hstar">hstar</a></span> (<span class="id">Q</span> <span class="id">x</span>) <span class="id">H</span>) (<span class="kwd">at</span> <span class="id">level</span> 40).<br/>
+<br/>
+<div class="doc">Intuitively, in order to prove that two postconditions <span class="bracket"><span class="id">Q1</span></span> and <span class="bracket"><span class="id">Q2</span></span> are
+    equal, it suffices to show that the heap predicates <span class="bracket"><span class="id">Q1</span> <span class="id">v</span></span> and <span class="bracket"><span class="id">Q2</span> <span class="id">v</span></span> are
+    equal for any value <span class="bracket"><span class="id">v</span></span>.
+    Again, the extensionality property that we need is not built into Coq. We
+    need another axiom called "functional extensionality". </div>
+<br/>
+<span class="kwd">Axiom</span> <span class="id"><a name="functional_extensionality">functional_extensionality</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> <span class="id">g</span>:<span class="id">A</span>-&gt;<span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">f</span> <span class="id">x</span> = <span class="id">g</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<br/>
+<div class="doc">The desired equality property for postconditions follows directly from this
+    axiom. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="qprop_eq">qprop_eq</a></span> : <span class="kwd">forall</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">v</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>), <span class="id">Q1</span> <span class="id">v</span> = <span class="id">Q2</span> <span class="id">v</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> = <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Hprop.html#functional_extensionality">functional_extensionality</a></span>. Qed.</div></details>
+<br/>
+<h2> Introduction and Inversion Lemmas for Basic Operators </h2>
+<br/>
+<div class="doc">This section presents a collection of lemmas capturing the properties of the
+    definitions of heap predicates. They include "introduction lemmas" for
+    proving goals of the form <span class="bracket"><span class="id">H</span> <span class="id">h</span></span>, and "inversion lemmas" for extracting
+    information from hypotheses of the form <span class="bracket"><span class="id">H</span> <span class="id">h</span></span>. These lemmas will be
+    exploited pervasively in the next chapters for establishing reasoning rules.
+    </div>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">v</span> : <span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>.<br/>
+<br/>
+<div class="doc">The introduction lemmas show how to prove goals of the form <span class="bracket"><span class="id">H</span> <span class="id">h</span></span>, for
+    various forms of the heap predicate <span class="bracket"><span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hempty_intro">hempty_intro</a></span> :<br/>
+&nbsp;&nbsp;\[] <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">hnf</span></span>, for "head normal form", unfolds the head constants. </div>
+&nbsp;&nbsp;<span class="id">hnf</span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hpure_intro">hpure_intro</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;\[<span class="id">P</span>] <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">hnf</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hsingle_intro">hsingle_intro</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>) (<span class="id"><a href="SLF.LibSepReference.html#Fmap.single">Fmap.single</a></span> <span class="id">p</span> <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">hnf</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_intro">hstar_intro</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> <span class="id">h1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) (<span class="id">h1</span> \<span class="id">u</span> <span class="id">h2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="kwd">exists</span>* <span class="id">h1</span> <span class="id">h2</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hexists_intro">hexists_intro</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>) <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id">J</span> <span class="id">x</span> <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;(\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">hnf</span>. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<div class="doc">The inversion lemmas show how to extract information from hypotheses of the
+    form <span class="bracket"><span class="id">H</span> <span class="id">h</span></span>, for various forms of the heap predicate <span class="bracket"><span class="id">H</span></span>.</div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hempty_inv">hempty_inv</a></span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\[] <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">hnf</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hpure_inv">hpure_inv</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\[<span class="id">P</span>] <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> /\ <span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.empty">Fmap.empty</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">hnf</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hsingle_inv">hsingle_inv</a></span>: <span class="kwd">forall</span> <span class="id">p</span> <span class="id">v</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>) <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h</span> = <span class="id"><a href="SLF.LibSepReference.html#Fmap.single">Fmap.single</a></span> <span class="id">p</span> <span class="id">v</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">hnf</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_inv">hstar_inv</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">h1</span> <span class="id">h2</span>, <span class="id">H1</span> <span class="id">h1</span> /\ <span class="id">H2</span> <span class="id">h2</span> /\ <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint">Fmap.disjoint</a></span> <span class="id">h1</span> <span class="id">h2</span> /\ <span class="id">h</span> = <span class="id">h1</span> \<span class="id">u</span> <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">hnf</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hexists_inv">hexists_inv</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>) <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">hnf</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<h2> Proofs of Fundamental Properties </h2>
+<br/>
+<div class="doc">The fundamental properties of Separation Logic operators were stated earlier
+    in this chapter. This section presents their proofs. To avoid name
+    conflicts, we wrap the new statements in a module. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="HpropProofs">HpropProofs</a></span>.<br/>
+<br/>
+<h3> Extraction of Existential Quantifiers </h3>
+<br/>
+<div class="doc">Let us prove that <span class="bracket">(\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) \* <span class="id">H</span></span> is equivalent to
+    <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, (<span class="id">J</span> <span class="id">x</span> \* <span class="id">H</span>)</span>.
+    Note that, somewhat confusingly, Coq displays none of the parentheses. You
+    may want to use <span class="bracket"><span class="kwd">Set</span> <span class="id">Printing</span> <span class="id">Parentheses</span></span> to more easily follow through the
+    proof. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HpropProofs.hstar_hexists">hstar_hexists</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) \* <span class="id">H</span> = \<span class="kwd">exists</span> <span class="id">x</span>, (<span class="id">J</span> <span class="id">x</span> \* <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+<div class="doc">First, we exploit extensionality, using <span class="bracket"><span class="id">hprop_eq</span></span> or <span class="bracket"><span class="id">himpl_antisym</span></span>. </div>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Hprop.html#hprop_eq">hprop_eq</a></span>. <span class="id">split</span>.<br/>
+<div class="doc">Then we reveal the definitions of <span class="bracket">==&gt;</span>, <span class="bracket"><span class="id">hexists</span></span> and <span class="bracket"><span class="id">hstar</span></span>. </div>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">destruct</span> <span class="id">M1</span> <span class="kwd">as</span> (<span class="id">x</span>&amp;<span class="id">M1</span>). <span class="kwd">exists</span>* <span class="id">x</span> <span class="id">h1</span> <span class="id">h2</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">x</span>&amp;<span class="id">M</span>). <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="kwd">exists</span> <span class="id">h1</span> <span class="id">h2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>~. <span class="kwd">exists</span>* <span class="id">x</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h3> Neutral of Separating Conjunction </h3>
+<br/>
+<h3> Exercise: 3 stars, standard, especially useful (hstar_hempty_l)
+    Prove that the empty heap predicate is a neutral element for the star. You
+    will need to exploit the fact that the union with an empty map is the
+    identity, as captured by lemma <span class="bracket"><span class="id">Fmap.union_empty_l</span></span>.
+  Check Fmap.union_empty_l : forall h,
+    Fmap.empty \u h = h.
+</h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HpropProofs.hstar_hempty_l">hstar_hempty_l</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;\[] \* <span class="id">H</span> = <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Commutativity of Separating Conjunction </h3>
+<br/>
+<div class="doc">We next aim to prove the commutativity of the star operator, i.e., that
+    <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span> is equivalent to <span class="bracket"><span class="id">H2</span> \* <span class="id">H1</span></span>. By symmetry, it suffices to prove
+    the entailment in one direction, e.g., <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span> ==&gt; <span class="id">H2</span> \* <span class="id">H1</span></span>. The
+    symmetry argument for any binary operator on heap predicates is captured by
+    the lemma <span class="bracket"><span class="id">hprop_op_comm</span></span> shown below. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HpropProofs.hprop_op_comm">hprop_op_comm</a></span> : <span class="kwd">forall</span> (<span class="id">op</span>:<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">h</span>, <span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">h</span> -&gt; <span class="id">op</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">h</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>, <span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span> = <span class="id">op</span> <span class="id">H2</span> <span class="id">H1</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Hprop.html#hprop_eq">hprop_eq</a></span>. <span class="id">split</span>; <span class="id">apply</span> <span class="id">M</span>. Qed.</div></details>
+<br/>
+<div class="doc">To prove commutativity of star, we need to exploit the fact that the union
+    of two finite maps with disjoint domains commutes. This fact is captured by
+    a lemma coming from the finite map library.
+    Check Fmap.union_comm_of_disjoint : forall h1 h2,
+      Fmap.disjoint h1 h2 -&gt;
+      h1 \u h2 = h2 \u h1.
+    The commutativity result is then proved as follows. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HpropProofs.hstar_comm">hstar_comm</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> = <span class="id">H2</span> \* <span class="id">H1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.Hprop.html#HpropProofs.hprop_op_comm">hprop_op_comm</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">h2</span> <span class="id">h1</span>. <span class="id">subst</span>. <span class="id">splits</span>~.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.union_comm_of_disjoint">Fmap.union_comm_of_disjoint</a></span>; <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h3> Associativity of Separating Conjunction </h3>
+<br/>
+<div class="doc">Associativity of star is slightly more tedious to derive. We need to exploit
+    the associativity of union on finite maps, as well as lemmas about the
+    disjointness of a map with the result of the union of two maps.
+  Check Fmap.union_assoc : forall h1 h2 h3,
+    (h1 \u h2) \u h3 = h1 \u (h2 \u h3).
+  Check Fmap.disjoint_union_eq_l : forall h1 h2 h3,
+      Fmap.disjoint (h2 \u h3) h1
+    = (Fmap.disjoint h1 h2 /\ Fmap.disjoint h1 h3).
+  Check Fmap.disjoint_union_eq_r : forall h1 h2 h3,
+     Fmap.disjoint h1 (h2 \u h3)
+   = (Fmap.disjoint h1 h2 /\ Fmap.disjoint h1 h3).
+</div>
+<br/>
+<h3> Exercise: 1 star, standard, optional (hstar_assoc)
+    Complete the right-to-left part of the proof of associativity of the star
+    operator. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HpropProofs.hstar_assoc">hstar_assoc</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) \* <span class="id">H3</span> = <span class="id">H1</span> \* (<span class="id">H2</span> \* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Hprop.html#hprop_eq">hprop_eq</a></span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h'</span>&amp;<span class="id">h3</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">destruct</span> <span class="id">M1</span> <span class="kwd">as</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M3</span>&amp;<span class="id">M4</span>&amp;<span class="id">D'</span>&amp;<span class="id">U'</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span> <span class="id">h'</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint_union_eq_l">Fmap.disjoint_union_eq_l</a></span> <span class="kwd">in</span> <span class="id">D</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">h1</span> (<span class="id">h2</span> \<span class="id">u</span> <span class="id">h3</span>). <span class="id">splits</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">M3</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="kwd">exists</span>* <span class="id">h2</span> <span class="id">h3</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">rewrite</span>* @<span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint_union_eq_r">Fmap.disjoint_union_eq_r</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">rewrite</span>* @<span class="id"><a href="SLF.LibSepReference.html#Fmap.union_assoc">Fmap.union_assoc</a></span> <span class="kwd">in</span> <span class="id">U</span>. } }<br/>
+ Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The lemma showing that <span class="bracket"><span class="id">hempty</span></span> is a right neutral can be derived from the
+    fact that <span class="bracket"><span class="id">hempty</span></span> is a left neutral, plus commutativity. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HpropProofs.hstar_hempty_r">hstar_hempty_r</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> \* \[] = <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.Hprop.html#HpropProofs.hstar_comm">hstar_comm</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.Hprop.html#HpropProofs.hstar_hempty_l">hstar_hempty_l</a></span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (hstar_comm_assoc)
+    The commutativity and associativity results combine into one result that is
+    sometimes convenient to exploit in proofs. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HpropProofs.hstar_comm_assoc">hstar_comm_assoc</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span> = <span class="id">H2</span> \* <span class="id">H1</span> \* <span class="id">H3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Extracting Pure Facts from Separating Conjunctions </h3>
+<br/>
+<div class="doc">The lemma <span class="bracket"><span class="id">hstar_hpure_l</span></span> stated below explains how to extract a pure fact
+    from an assertion. It asserts that the proposition <span class="bracket">(\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">h</span></span> is
+    equivalent to <span class="bracket"><span class="id">P</span> /\ <span class="id">H</span> <span class="id">h</span></span>. This lemma will also be used pervasively in proofs
+    in subsequent chapters. </div>
+<br/>
+<h3> Exercise: 4 stars, standard, especially useful (hstar_hpure_l) </h3>
+<br/>
+<div class="doc">Prove that a heap <span class="bracket"><span class="id">h</span></span> satisfies <span class="bracket">\[<span class="id">P</span>] \* <span class="id">H</span></span> if and only if <span class="bracket"><span class="id">P</span></span> is true and
+    <span class="bracket"><span class="id">h</span></span> satisfies <span class="bracket"><span class="id">H</span></span>. The proof requires two lemmas on finite maps from
+    <span class="bracket"><span class="id">LibSepFmap.v</span></span>:
+    Check Fmap.union_empty_l : forall h,
+      Fmap.empty \u h = h.
+    Check Fmap.disjoint_empty_l : forall h,
+      Fmap.disjoint Fmap.empty h.
+    Note that <span class="bracket"><span class="id">auto</span></span> can apply <span class="bracket"><span class="id">Fmap.disjoint_empty_l</span></span> automatically.
+    Hint: begin the proof by appyling <span class="bracket"><span class="id">propositional_extensionality</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="HpropProofs.hstar_hpure_l">hstar_hpure_l</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">h</span> = (<span class="id">P</span> /\ <span class="id">H</span> <span class="id">h</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Hprop.html#HpropProofs">HpropProofs</a></span>.<br/>
+<br/>
+<h1> More Details </h1>
+<br/>
+<h2> Alternative Definitions for Heap Predicates </h2>
+<br/>
+<div class="doc">We pause here to discuss some alternative, equivalent definitions for the
+    fundamental heap predicates. We write these equivalences using equalities of
+    the form <span class="bracket"><span class="id">H1</span> = <span class="id">H2</span></span>. Recall that the lemma <span class="bracket"><span class="id">hprop_eq</span></span> enables deriving such
+    equalities by invoking predicate extensionality. </div>
+<br/>
+<div class="doc">The empty heap predicate <span class="bracket">\[]</span> is equivalent to the pure fact predicate
+    <span class="bracket">\[<span class="id">True</span>]</span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hempty_eq_hpure_true">hempty_eq_hpure_true</a></span> :<br/>
+&nbsp;&nbsp;\[] = \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Hprop.html#hempty">hempty</a></span>, <span class="id"><a href="SLF.Hprop.html#hpure">hpure</a></span>. <span class="id">apply</span> <span class="id"><a href="SLF.Hprop.html#hprop_eq">hprop_eq</a></span>. <span class="id">intros</span> <span class="id">h</span>. <span class="id">iff</span> <span class="id">Hh</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">Hh</span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Thus, <span class="bracket"><span class="id">hempty</span></span> could be defined in terms of <span class="bracket"><span class="id">hpure</span></span>, as <span class="bracket"><span class="id">hpure</span> <span class="id">True</span></span>,
+    written <span class="bracket">\[<span class="id">True</span>]</span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hempty'</span> : <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>].<br/>
+<br/>
+<div class="doc">The pure fact predicate <span class="bracket">[\<span class="id">P</span>]</span> is equivalent to the existential
+    quantification over a proof of <span class="bracket"><span class="id">P</span></span> in the empty heap, that is, to the heap
+    predicate <span class="bracket">\<span class="kwd">exists</span> (<span class="id">p</span>:<span class="id">P</span>), \[]</span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hpure_eq_hexists_proof">hpure_eq_hexists_proof</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;\[<span class="id">P</span>] = (\<span class="kwd">exists</span> (<span class="id">p</span>:<span class="id">P</span>), \[]).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.Hprop.html#hempty">hempty</a></span>, <span class="id"><a href="SLF.Hprop.html#hpure">hpure</a></span>, <span class="id"><a href="SLF.Hprop.html#hexists">hexists</a></span>. <span class="id">intros</span> <span class="id">P</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.Hprop.html#hprop_eq">hprop_eq</a></span>. <span class="id">intros</span> <span class="id">h</span>. <span class="id">iff</span> <span class="id">Hh</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">Hh</span> <span class="kwd">as</span> (<span class="id">E</span>&amp;<span class="id">p</span>). <span class="kwd">exists</span> <span class="id">p</span>. <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">Hh</span> <span class="kwd">as</span> (<span class="id">p</span>&amp;<span class="id">E</span>). <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Thus, <span class="bracket"><span class="id">hpure</span></span> could be defined in terms of <span class="bracket"><span class="id">hexists</span></span> and <span class="bracket"><span class="id">hempty</span></span>, as
+    <span class="bracket"><span class="id">hexists</span> (<span class="kwd">fun</span> (<span class="id">p</span>:<span class="id">P</span>) =&gt; <span class="id">hempty</span>)</span>, also written <span class="bracket">\<span class="kwd">exists</span> (<span class="id">p</span>:<span class="id">P</span>), \[]</span>. In fact,
+    this is how <span class="bracket"><span class="id">hpure</span></span> is defined in the rest of the course. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hpure'</span> (<span class="id">P</span>:<span class="kwd">Prop</span>) : <span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">p</span>:<span class="id">P</span>), \[].<br/>
+<br/>
+<div class="doc">It is useful to minimize the number of combinators, both for elegance and to
+    reduce proof effort. We cannot do without <span class="bracket"><span class="id">hexists</span></span>, thus there remains a
+    choice between considering either <span class="bracket"><span class="id">hpure</span></span> or <span class="bracket"><span class="id">hempty</span></span> as primitive, and the
+    other one as derived. The predicate <span class="bracket"><span class="id">hempty</span></span> is simpler and appears as more
+    fundamental. Hence, in the subsequent chapters, we define <span class="bracket"><span class="id">hpure</span></span> in terms
+    of <span class="bracket"><span class="id">hexists</span></span> and <span class="bracket"><span class="id">hempty</span></span>, as in the definition of <span class="bracket"><span class="id">hpure'</span></span> shown above. In
+    other words, we assume the definition:
+  Definition hpure (P:Prop) : hprop :=
+    \exists (p:P), \<span class="bracket"></span>.
+</div>
+<br/>
+<h1> Optional Material </h1>
+<br/>
+<h2> More on the Definition of the Existential Quantifier </h2>
+<br/>
+<div class="doc">The heap predicate <span class="bracket">\<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), <span class="id">p</span> ~~&gt; (<span class="id">val_int</span> <span class="id">n</span>)</span> characterizes a
+    state that contains a single memory cell, at address <span class="bracket"><span class="id">p</span></span>, storing the
+    integer value <span class="bracket"><span class="id">n</span></span>, for "some" (unspecified) integer <span class="bracket"><span class="id">n</span></span>.
+    Parameter (p:loc).
+    Check (\exists (n:int), p ~~&gt; (val_int n)) : hprop.
+    The type of <span class="bracket">\<span class="kwd">exists</span></span>, which operates on <span class="bracket"><span class="id">hprop</span></span>,is very similar to that of
+    <span class="bracket"><span class="kwd">exists</span></span>, which operates on <span class="bracket"><span class="kwd">Prop</span></span>. The key difference is that a witness for
+    a <span class="bracket">\<span class="kwd">exists</span></span> can depend on the current heap, whereas a witness for a <span class="bracket"><span class="kwd">exists</span></span>
+    cannot.
+    The notation <span class="bracket"><span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span></span> stands for <span class="bracket"><span class="id">ex</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">P</span>)</span>, where <span class="bracket"><span class="id">ex</span></span> has the
+    following type:
+    Check ex : forall A : Type, (A -&gt; Prop) -&gt; Prop.
+    Likewise, <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">H</span></span> stands for <span class="bracket"><span class="id">hexists</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">H</span>)</span>, where <span class="bracket"><span class="id">hexists</span></span>
+    has the following type:
+    Check hexists : forall A : Type, (A -&gt; hprop) -&gt; hprop.
+</div>
+<br/>
+<div class="doc">The notation for <span class="bracket">\<span class="kwd">exists</span></span> is directly adapted from that of <span class="bracket"><span class="kwd">exists</span></span>, which
+    supports the quantification an arbitrary number of variables, and is defined
+    in <span class="bracket"><span class="id">Coq.Init.Logic</span></span> as follows.
+    Notation "'exists' x1 .. xn , p" := (ex (fun x1 =&gt; .. (ex (fun xn =&gt; p)) ..))
+      (at level 200, x1 binder, right associativity,
+       format "'<span class="bracket">' '<span class="id">exists'</span> '/ ' <span class="id">x1</span> .. <span class="id">xn</span> , '/ ' <span class="id">p</span> '</span>'").
+    Notation "'\exists' x1 .. xn , H" :=
+      (hexists (fun x1 =&gt; .. (hexists (fun xn =&gt; H)) ..))
+      (at level 39, x1 binder, right associativity, H at level 50,
+      format "'<span class="bracket">' '\<span class="id">exists'</span> '/ '  <span class="id">x1</span>  ..  <span class="id">xn</span> , '/ '  <span class="id">H</span> '</span>'").
+</div>
+<br/>
+<h2> Formulation of the Extensionality Axioms </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="Extensionality">Extensionality</a></span>.<br/>
+<br/>
+<div class="doc">To establish extensionality of entailment, we have used the predicate
+    extensionality axiom. In fact, this axiom can be derived by combining the
+    axiom of "functional extensionality" with another one called "propositional
+    extensionality". The axiom of "propositional extensionality" asserts that
+    two propositions that are logically equivalent, in the sense that they imply
+    each other, can be considered equal. </div>
+<br/>
+<span class="kwd">Axiom</span> <span class="id"><a name="Extensionality.propositional_extensionality">propositional_extensionality</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> <span class="id">Q</span>:<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">P</span> &lt;-&gt; <span class="id">Q</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<br/>
+<div class="doc">The axiom of "functional extensionality", as we saw above, asserts that two
+    functions are equal if they provide equal result for every argument. </div>
+<br/>
+<span class="kwd">Axiom</span> <span class="id"><a name="Extensionality.functional_extensionality">functional_extensionality</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> <span class="id">g</span>:<span class="id">A</span>-&gt;<span class="id">B</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">f</span> <span class="id">x</span> = <span class="id">g</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">f</span> = <span class="id">g</span>.<br/>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (predicate_extensionality_derived)
+    Use <span class="bracket"><span class="id">propositional_extensionality</span></span> and <span class="bracket"><span class="id">functional_extensionality</span></span> to derive
+    <span class="bracket"><span class="id">predicate_extensionality</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Extensionality.predicate_extensionality_derived">predicate_extensionality_derived</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">P</span> <span class="id">Q</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> = <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Hprop.html#Extensionality">Extensionality</a></span>.<br/>
+<br/>
+<h2> Historical Notes </h2>
+<br/>
+<div class="doc">In this chapter, we have defined the Separation Logic operators, in
+    particular the "separating conjunction" operator, as a Coq predicate. This
+    formalization style is called "shallow embedding". It has been employed in
+    the first mechanized formalizations of Separation Logic, in Coq by
+    <span class="bracket"><span class="id">Yu</span>, <span class="id">Hamid</span>, <span class="id">and</span> <span class="id">Shao</span> 2003</span> (in Bib.v), and in Isabelle/HOL by <span class="bracket"><span class="id">Weber</span> 2004</span> (in Bib.v).
+    These two formalizations were carried out soon after the invention of
+    Separation Logic, by researchers who were used to mechanizing Hoare logic and
+    had spotted the potential benefit of working with the separating
+    conjunction. </div>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

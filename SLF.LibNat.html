@@ -1,0 +1,266 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibNat</title>
+<meta name="description" content="Documentation of Coq module LibNat" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibNat</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Arith.Arith.html">Coq.Arith.Arith</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.micromega.Lia.html">Coq.micromega.Lia</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span> <span class="id"><a href="SLF.LibBool.html">LibBool</a></span> <span class="id"><a href="SLF.LibOperation.html">LibOperation</a></span> <span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span> <span class="id"><a href="SLF.LibOrder.html">LibOrder</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibOrder.html">LibOrder</a></span>.<br/>
+<span class="id">Global</span> <span class="kwd">Close</span> <span class="kwd">Scope</span> <span class="id">positive_scope</span>.<br/>
+<br/>
+<h1> Nat type </h1>
+<br/>
+<h2> Definition </h2>
+<br/>
+<div class="doc">From the Prelude:
+  Inductive nat : Set :=
+    | O : nat
+    | S : nat -&gt; nat.
+  Remark: ideally, constructors would be renamed to <span class="bracket"><span class="id">zero</span></span> and <span class="bracket"><span class="id">succ</span></span>,
+  or <span class="bracket"><span class="id">nat_zero</span></span> and <span class="bracket"><span class="id">nat_succ</span></span>, with the notations
+  <span class="bracket"><span class="id">O</span></span> or <span class="bracket">0%<span class="id">nat</span></span>, and <span class="bracket"><span class="id">S</span> <span class="id">n</span></span> or <span class="bracket"><span class="id">succ</span> <span class="id">n</span></span>.
+  It is indeed proablematic to prevent the use of single letter
+  variables in pattern matching to the user who does not care about <span class="bracket"><span class="id">nat</span></span>.
+</div>
+<br/>
+<h2> Inhabited </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="Inhab_nat">Inhab_nat</a></span> : <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> 0). Qed.</div></details>
+<br/>
+<br/>
+<h1> Order on natural numbers </h1>
+<br/>
+<h2> Definition </h2>
+<br/>
+<div class="doc">The typeclass instance of <span class="bracket"><span class="id">le</span></span> on <span class="bracket"><span class="id">nat</span></span> is defined to be the <span class="bracket"><span class="id">le</span></span>
+    relation on Peano numbers from Coq's standard library. </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="le_nat_inst">le_nat_inst</a></span> : <span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> := <span class="id"><a href="SLF.LibOrder.html#Build_Le">Build_Le</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Peano.html#le">Peano.le</a></span>.<br/>
+<br/>
+<h2> Translating typeclass instances to Peano relations </h2>
+<br/>
+<div class="doc">These lemmas and tactics are useful to transform arithmetic goals
+    into a form on which the <span class="bracket"><span class="id">lia</span></span> decision procedure may apply. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="le_peano">le_peano</a></span> : <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Peano.html#le">Peano.le</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>*. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibNat.html#le_nat_inst">le_nat_inst</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="lt_peano">lt_peano</a></span> : <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Peano.html#lt">Peano.lt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">rew_to_le</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibNat.html#le_peano">le_peano</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>. <span class="id">intros</span>. <span class="id">lia</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ge_peano">ge_peano</a></span> : <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Peano.html#ge">Peano.ge</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">rew_to_le</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibNat.html#le_peano">le_peano</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>. <span class="id">intros</span>. <span class="id">lia</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="gt_peano">gt_peano</a></span> : <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Peano.html#gt">Peano.gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">rew_to_le</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibNat.html#le_peano">le_peano</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>, <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>. <span class="id">intros</span>. <span class="id">lia</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibNat.html#le_peano">le_peano</a></span> <span class="id"><a href="SLF.LibNat.html#lt_peano">lt_peano</a></span> <span class="id"><a href="SLF.LibNat.html#ge_peano">ge_peano</a></span> <span class="id"><a href="SLF.LibNat.html#gt_peano">gt_peano</a></span> : <span class="id">rew_nat_comp</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">nat_comp_to_peano</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_nat_comp</span> <span class="kwd">in</span> *.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">nat_math</span></span> calls <span class="bracket"><span class="id">lia</span></span> after basic pre-processing
+    (<span class="bracket"><span class="id">intros</span></span> and <span class="bracket"><span class="id">split</span></span>) and after replacing comparison
+    operators with the ones defined in <span class="bracket"><span class="id">Peano</span></span> library. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">nat_math_setup</span> :=<br/>
+&nbsp;&nbsp;<span class="id">intros</span>;<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> |- _ /\ _ =&gt; <span class="id">split</span> <span class="kwd">end</span>;<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> |- _ = _ :&gt; <span class="kwd">Prop</span> =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>; <span class="id">iff</span> <span class="kwd">end</span>;<br/>
+&nbsp;&nbsp;<span class="id">nat_comp_to_peano</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">nat_math</span> :=<br/>
+&nbsp;&nbsp;<span class="id">nat_math_setup</span>; <span class="id">lia</span>.<br/>
+<br/>
+<h2> The <span class="bracket"><span class="id">nat_maths</span></span> database is used for registering automation
+       on mathematical goals. </h2>
+<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">nat_math_hint</span> := <span class="id">nat_math</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (_ = _ :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (_ &lt;&gt; _ :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (_ = _ :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>))) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (_ &lt;&gt; _ :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>))) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &lt;= _)%<span class="id">nat</span>) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &gt;= _)%<span class="id">nat</span>) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &lt; _)%<span class="id">nat</span>) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &gt; _)%<span class="id">nat</span>) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">nat_math_hint</span> : <span class="id">nat_maths</span>.<br/>
+<br/>
+<h2> Total order instance </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="nat_le_total_order">nat_le_total_order</a></span> : <span class="id"><a href="SLF.LibOrder.html#Le_total_order">Le_total_order</a></span> (<span class="id">A</span>:=<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">constructor</span>. <span class="id">constructor</span>; <span class="id">unfolds</span>.<br/>
+&nbsp;&nbsp;<span class="id">nat_math</span>. <span class="id">nat_math</span>. <span class="id">nat_math</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span>. <span class="id">intros</span>. <span class="id">tests</span>: (<span class="id">x</span> &lt;= <span class="id">y</span>). <span class="id">left</span>~. <span class="id">right</span>. <span class="id">nat_math</span>.<br/>
+Qed.</div></details>
+<br/>
+<h1> Induction </h1>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="peano_induction">peano_induction</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">P</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">n</span>, (<span class="kwd">forall</span> <span class="id">m</span>, <span class="id">m</span> &lt; <span class="id">n</span> -&gt; <span class="id">P</span> <span class="id">m</span>) -&gt; <span class="id">P</span> <span class="id">n</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">n</span>, <span class="id">P</span> <span class="id">n</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">cuts</span>* <span class="id">K</span>: (<span class="kwd">forall</span> <span class="id">n</span> <span class="id">m</span>, <span class="id">m</span> &lt; <span class="id">n</span> -&gt; <span class="id">P</span> <span class="id">m</span>).<br/>
+&nbsp;&nbsp;<span class="id">nat_comp_to_peano</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">n</span>; <span class="id">introv</span> <span class="id">Le</span>. <span class="id">inversion</span> <span class="id">Le</span>. <span class="id">apply</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id">IHn</span>. <span class="id">nat_math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="measure_induction">measure_induction</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">mu</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, (<span class="kwd">forall</span> <span class="id">y</span>, <span class="id">mu</span> <span class="id">y</span> &lt; <span class="id">mu</span> <span class="id">x</span> -&gt; <span class="id">P</span> <span class="id">y</span>) -&gt; <span class="id">P</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">IH</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">gen_eq</span> <span class="id">n</span>: (<span class="id">mu</span> <span class="id">x</span>). <span class="id">gen</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">n</span> <span class="kwd">using</span> <span class="id"><a href="SLF.LibNat.html#peano_induction">peano_induction</a></span>. <span class="id">introv</span> <span class="id">Eq</span>. <span class="id">subst</span>*.<br/>
+Qed.</div></details>
+<br/>
+<h1> Simplification lemmas </h1>
+<br/>
+<h2> Trivial monoid simplifications </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="plus_zero_r">plus_zero_r</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> + 0 = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="plus_zero_l">plus_zero_l</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;0 + <span class="id">n</span> = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="minus_zero_r">minus_zero_r</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> - 0 = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="plus_succ">plus_succ</a></span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id">n1</span> + <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">n2</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> (<span class="id">n1</span> + <span class="id">n2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="minus_zero">minus_zero</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> - 0 = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="succ_minus_succ">succ_minus_succ</a></span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">n1</span> - <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">n2</span> = <span class="id">n1</span> - <span class="id">n2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="minus_same">minus_same</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> - <span class="id">n</span> = 0.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="plus_minus_same">plus_minus_same</a></span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id">n1</span> + <span class="id">n2</span> - <span class="id">n1</span> = <span class="id">n2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_zero_l">mult_zero_l</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;0 * <span class="id">n</span> = 0.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_zero_r">mult_zero_r</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> * 0 = 0.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_one_l">mult_one_l</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;1 * <span class="id">n</span> = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_one_r">mult_one_r</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> * 1 = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<h2> Simplification tactic </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">rew_nat</span></span> performs some basic simplification on
+    expressions involving natural numbers </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibNat.html#plus_zero_r">plus_zero_r</a></span> <span class="id"><a href="SLF.LibNat.html#plus_zero_l">plus_zero_l</a></span> <span class="id"><a href="SLF.LibNat.html#minus_zero_r">minus_zero_r</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibNat.html#plus_succ">plus_succ</a></span> <span class="id"><a href="SLF.LibNat.html#minus_zero">minus_zero</a></span> <span class="id"><a href="SLF.LibNat.html#succ_minus_succ">succ_minus_succ</a></span> <span class="id"><a href="SLF.LibNat.html#minus_same">minus_same</a></span> <span class="id"><a href="SLF.LibNat.html#plus_minus_same">plus_minus_same</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibNat.html#mult_zero_l">mult_zero_l</a></span> <span class="id"><a href="SLF.LibNat.html#mult_zero_r">mult_zero_r</a></span> <span class="id"><a href="SLF.LibNat.html#mult_one_l">mult_one_l</a></span> <span class="id"><a href="SLF.LibNat.html#mult_one_r">mult_one_r</a></span> : <span class="id">rew_nat</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_nat"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_nat</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_nat"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_nat</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_nat"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_nat</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_nat"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_nat</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_nat"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_nat</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_nat"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_nat</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_nat"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_nat</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_nat"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_nat</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_nat"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_nat</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<h1> Executable functions </h1>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id"><a name="beq">beq</a></span> (<span class="id">x</span> <span class="id">y</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span>, <span class="id">y</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#O">O</a></span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#O">O</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">x'</span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">y'</span> =&gt; <span class="id">beq</span> <span class="id">x'</span> <span class="id">y'</span><br/>
+&nbsp;&nbsp;| _, _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="beq_eq">beq_eq</a></span> : <span class="kwd">forall</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibNat.html#beq">beq</a></span> <span class="id">n1</span> <span class="id">n2</span> = <span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (<span class="id">n1</span> = <span class="id">n2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n1</span>. <span class="id">induction</span> <span class="id">n1</span>; <span class="id">intros</span>; <span class="id">destruct</span> <span class="id">n2</span>; <span class="id">simpl</span>; <span class="id">rew_bool_eq</span>; <span class="id">auto_false</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">IHn1</span>. <span class="id">extens</span>. <span class="id">rew_istrue</span>. <span class="id">nat_math</span>.<br/>
+Qed.</div></details>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

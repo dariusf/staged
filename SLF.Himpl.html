@@ -1,0 +1,814 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Himpl</title>
+<meta name="description" content="Documentation of Coq module Himpl" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Himpl</h1>
+<div class="coq">
+<h1> Himpl: Heap Entailment </h1>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="id"><a href="SLF.LibSepReference.html">LibSepReference</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.Hprop.html">Hprop</a></span>.<br/>
+<br/>
+<h1> First Pass </h1>
+<br/>
+<div class="doc">In the previous chapter, we introduced the type <span class="bracket"><span class="id">hprop</span></span> and the key
+    operators over this type: <span class="bracket">\[]</span>, <span class="bracket">\[<span class="id">P</span>]</span>, <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span>, <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span>, <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H2</span></span>,
+    and <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">H</span></span>.
+    In order to state the reasoning rules of Separation Logic, we need to
+    introduce the "entailment relation" on heap predicates. This relation,
+    written <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H2</span></span>, asserts that any heap that satisfies <span class="bracket"><span class="id">H1</span></span> also
+    satisfies <span class="bracket"><span class="id">H2</span></span>. We also need to extend the entailment relation to
+    postconditions. We write <span class="bracket"><span class="id">Q1</span> ===&gt; <span class="id">Q2</span></span> to asserts that, for any result value
+    <span class="bracket"><span class="id">v</span></span>, the entailment <span class="bracket"><span class="id">Q1</span> <span class="id">v</span> ==&gt; <span class="id">Q2</span> <span class="id">v</span></span> holds.
+    Both entailment relations <span class="bracket">==&gt;</span> and <span class="bracket">===&gt;</span> appear in the statement of the
+    "consequence-frame rule", exploited by the tactic <span class="bracket"><span class="id">xapp</span></span> for reasoning about
+    every function call. This rule explains how to derive a triple of the form
+    <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H</span> <span class="id">Q</span></span>, knowing that the term <span class="bracket"><span class="id">t</span></span> admits the specification
+    <span class="bracket"><span class="id">triple</span> <span class="id">t</span> <span class="id">H1</span> <span class="id">Q1</span></span>. There are two requirements: First, the precondition <span class="bracket"><span class="id">H</span></span>
+    must decompose into <span class="bracket"><span class="id">H1</span></span>, which denotes the precondition expected by the
+    specification, and some remaining part, <span class="bracket"><span class="id">H2</span></span>. Second, the targeted
+    postcondition <span class="bracket"><span class="id">Q</span></span> must be a consequence of the conjunction of <span class="bracket"><span class="id">Q1</span></span>, which
+    denotes the postcondition asserted by the specification, and <span class="bracket"><span class="id">H2</span></span>, which
+    again denotes the remaining part, which should not have been affected during
+    the evaluation of the term <span class="bracket"><span class="id">t</span></span>.
+    The formal statement of the frame rule is as follows.
+    Lemma triple_conseq_frame : forall H2 H1 Q1 t H Q,
+      triple t H1 Q1 -&gt;
+      H ==&gt; (H1 \* H2) -&gt;
+      (Q1 \*+ H2) ===&gt; Q -&gt;
+      triple t H Q.
+    This chapter presents:
+    - the formal definition of the entailment relations for heap predicates
+      and for postconditions,
+    - the lemmas capturing the interaction of entailment with the star operator,
+      and
+    - the features of the tactics <span class="bracket"><span class="id">xsimpl</span></span> and <span class="bracket"><span class="id">xchange</span></span>, which are critically
+      useful for manipulating entailments in practice.
+    The tactics <span class="bracket"><span class="id">xsimpl</span></span> and <span class="bracket"><span class="id">xchange</span></span> were already used in the first two
+    chapters. The implementation of these tactics (from <span class="bracket"><span class="id">LibSepSimpl.v</span></span>) is out
+    of scope for the present course, but in this chapter we explore their
+    features in more depth through examples.
+    This chapter exploits one additional TLC tactic for improving scripts:
+    <span class="bracket"><span class="id">applys</span></span> is an enhanced version of <span class="bracket"><span class="id">eapply</span></span>. This tactic takes as argument a
+    lemma or hypothesis, plus (optionally) a variable number of arguments, which
+    are fed to the lemma on a first-match basis. In other words, <span class="bracket"><span class="id">applys</span> <span class="id">L</span> <span class="id">x</span> <span class="id">y</span></span>
+    is equivalent to <span class="bracket"><span class="id">eapply</span> (<span class="id">L</span> _ _ .. _ <span class="id">x</span> _ _ .. _ _ <span class="id">y</span> _ _ ..)</span> for an
+    appropriate number of underscore symbols. </div>
+<br/>
+<h2> Definition of Entailment </h2>
+<br/>
+<div class="doc">The _entailment relationship_ <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H2</span></span> asserts that any heap <span class="bracket"><span class="id">h</span></span> that
+    satisfies the heap predicate <span class="bracket"><span class="id">H1</span></span> also satisfies <span class="bracket"><span class="id">H2</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="himpl">himpl</a></span> (<span class="id">H1</span> <span class="id">H2</span>:<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">h</span>:<span class="id"><a href="SLF.Hprop.html#heap">heap</a></span>), <span class="id">H1</span> <span class="id">h</span> -&gt; <span class="id">H2</span> <span class="id">h</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"H1 ==&gt; H2"</span> := (<span class="id"><a href="SLF.Himpl.html#himpl">himpl</a></span> <span class="id">H1</span> <span class="id">H2</span>) (<span class="kwd">at</span> <span class="id">level</span> 55).<br/>
+<br/>
+<div class="doc">Entailment is reflexive, transitive, and antisymmetric. It thus forms an
+    order relation on heap predicates. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_refl">himpl_refl</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> <span class="id">h</span>. <span class="id">hnf</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_trans">himpl_trans</a></span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> ==&gt; <span class="id">H2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H2</span> ==&gt; <span class="id">H3</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> ==&gt; <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">H1h</span>. <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<h3> Exercise: 1 star, standard, optional (himpl_antisym)
+    Prove the antisymmetry of entailment result shown below. Hint: use
+    <span class="bracket"><span class="id">predicate_extensionality</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_antisym">himpl_antisym</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> ==&gt; <span class="id">H2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H2</span> ==&gt; <span class="id">H1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> = <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Entailment for Postconditions </h2>
+<br/>
+<div class="doc">The entailment relation on postconditions, written <span class="bracket"><span class="id">Q1</span> ===&gt; <span class="id">Q2</span></span>, asserts
+    that the heap predicate <span class="bracket"><span class="id">Q1</span> <span class="id">v</span></span> entails <span class="bracket"><span class="id">Q2</span> <span class="id">v</span></span> for any value <span class="bracket"><span class="id">v</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="qimpl">qimpl</a></span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">v</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>), <span class="id">Q1</span> <span class="id">v</span> ==&gt; <span class="id">Q2</span> <span class="id">v</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"Q1 ===&gt; Q2"</span> := (<span class="id"><a href="SLF.Himpl.html#qimpl">qimpl</a></span> <span class="id">Q1</span> <span class="id">Q2</span>) (<span class="kwd">at</span> <span class="id">level</span> 55).<br/>
+<br/>
+<div class="doc">In other words, <span class="bracket"><span class="id">Q1</span> ===&gt; <span class="id">Q2</span></span> holds if and only if, for any value <span class="bracket"><span class="id">v</span></span> and any
+    heap <span class="bracket"><span class="id">h</span></span>, the proposition <span class="bracket"><span class="id">Q1</span> <span class="id">v</span> <span class="id">h</span></span> implies <span class="bracket"><span class="id">Q2</span> <span class="id">v</span> <span class="id">h</span></span>. </div>
+<br/>
+<div class="doc">Entailment on postconditions also forms an order relation: </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="qimpl_refl">qimpl_refl</a></span> : <span class="kwd">forall</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q</span> ===&gt; <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> <span class="id">Q</span> <span class="id">v</span>. <span class="id">apply</span> <span class="id"><a href="SLF.Himpl.html#himpl_refl">himpl_refl</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="qimpl_trans">qimpl_trans</a></span> : <span class="kwd">forall</span> <span class="id">Q2</span> <span class="id">Q1</span> <span class="id">Q3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> ===&gt; <span class="id">Q2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q2</span> ===&gt; <span class="id">Q3</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> ===&gt; <span class="id">Q3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">intros</span> <span class="id">v</span>. <span class="id">eapply</span> <span class="id"><a href="SLF.Himpl.html#himpl_trans">himpl_trans</a></span>; <span class="id">eauto</span>. Qed.</div></details>
+<br/>
+<h3> Exercise: 1 star, standard, optional (qimpl_antisym)
+    Prove the antisymmetry of entailment on postconditions. Hint: exploit
+    <span class="bracket"><span class="id">functional_extensionality</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="qimpl_antisym">qimpl_antisym</a></span> : <span class="kwd">forall</span> <span class="id">Q1</span> <span class="id">Q2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> ===&gt; <span class="id">Q2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q2</span> ===&gt; <span class="id">Q1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> = <span class="id">Q2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.   Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Frame Rule for Entailment </h2>
+<br/>
+<div class="doc">A fundamental property is that the star operator is _monotone_ with respect
+    to entailment, meaning that if <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H1'</span></span> then
+    <span class="bracket">(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1'</span> \* <span class="id">H2</span>)</span>. In other words, an arbitrary heap predicate
+    <span class="bracket"><span class="id">H2</span></span> can be "framed" on both sides of an entailment.
+    Viewed the other way around, if we have to prove the entailment relation
+    <span class="bracket">(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1'</span> \* <span class="id">H2</span>)</span>, we can "cancel out" <span class="bracket"><span class="id">H2</span></span> on both sides. In
+    this view, the monotonicity property is a sort of frame rule for the
+    entailment relation.
+    Due to commutativity of star, it suffices to state only the left version of
+    the monotonicity property. </div>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="himpl_frame_l">himpl_frame_l</a></span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">H1'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H1'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1'</span> \* <span class="id">H2</span>).<br/>
+<br/>
+<h2> Rules for Proving Entailments </h2>
+<br/>
+<div class="doc">The rules for introducing and eliminating pure facts and existential
+    quantifiers in entailments are essential. They are presented next. </div>
+<br/>
+<div class="doc">The first rule is captured by the lemma <span class="bracket"><span class="id">himpl_hstar_hpure_r</span></span>. Consider an
+    entailment of the form <span class="bracket"><span class="id">H</span> ==&gt; (\[<span class="id">P</span>] \* <span class="id">H'</span>)</span>. To establish this entailment,
+    we must prove that <span class="bracket"><span class="id">P</span></span> is true and that <span class="bracket"><span class="id">H</span></span> entails <span class="bracket"><span class="id">H'</span></span>. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (himpl_hstar_hpure_r).
+    Prove the rule <span class="bracket"><span class="id">himpl_hstar_hpure_r</span></span>.
+    Hint: recall from <span class="bracket"><span class="id">Hprop</span></span> the lemma <span class="bracket"><span class="id">hstar_hpure_l</span></span>, which asserts the
+    equality <span class="bracket">(\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">h</span> = (<span class="id">P</span> /\ <span class="id">H</span> <span class="id">h</span>)</span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hstar_hpure_r">himpl_hstar_hpure_r</a></span> : <span class="kwd">forall</span> (<span class="id">P</span>:<span class="kwd">Prop</span>) <span class="id">H</span> <span class="id">H'</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id">H'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (\[<span class="id">P</span>] \* <span class="id">H'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Reciprocally, consider an entailment of the form <span class="bracket">(\[<span class="id">P</span>] \* <span class="id">H</span>) ==&gt; <span class="id">H'</span></span>. To
+    establish this entailment, we must prove that <span class="bracket"><span class="id">H</span></span> entails <span class="bracket"><span class="id">H'</span></span> under the
+    assumption that <span class="bracket"><span class="id">P</span></span> is true. The "extraction rule for pure facts in the left
+    of an entailment" captures the property that the pure fact <span class="bracket">\[<span class="id">P</span>]</span> can be
+    extracted into the Coq context. It is stated as follows. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (himpl_hstar_hpure_l).
+    Prove the rule <span class="bracket"><span class="id">himpl_hstar_hpure_l</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hstar_hpure_l">himpl_hstar_hpure_l</a></span> : <span class="kwd">forall</span> (<span class="id">P</span>:<span class="kwd">Prop</span>) (<span class="id">H</span> <span class="id">H'</span>:<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">H</span> ==&gt; <span class="id">H'</span>) -&gt;<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \* <span class="id">H</span>) ==&gt; <span class="id">H'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Consider an entailment of the form <span class="bracket"><span class="id">H</span> ==&gt; (\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>)</span>, where <span class="bracket"><span class="id">x</span></span> has
+    some type <span class="bracket"><span class="id">A</span></span> and <span class="bracket"><span class="id">J</span></span> has type <span class="bracket"><span class="id">A</span>-&gt;<span class="id">hprop</span></span>. To establish this entailment, we
+    must exhibit a value for <span class="bracket"><span class="id">x</span></span> for which <span class="bracket"><span class="id">H</span></span> entails <span class="bracket"><span class="id">J</span> <span class="id">x</span></span>. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (himpl_hexists_r).
+    Prove the rule <span class="bracket"><span class="id">himpl_hexists_r</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hexists_r">himpl_hexists_r</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">x</span>:<span class="id">A</span>) <span class="id">H</span> <span class="id">J</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id">J</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">Reciprocally, consider an entailment <span class="bracket">(\<span class="kwd">exists</span> <span class="id">x</span>, (<span class="id">J</span> <span class="id">x</span>)) ==&gt; <span class="id">H</span></span>. To
+    establish this entailment, one has to prove that, whatever the value of <span class="bracket"><span class="id">x</span></span>,
+    the predicate <span class="bracket"><span class="id">J</span> <span class="id">x</span></span> entails <span class="bracket"><span class="id">H</span></span>. Indeed the former proposition asserts that
+    if a heap <span class="bracket"><span class="id">h</span></span> satisfies <span class="bracket"><span class="id">J</span> <span class="id">x</span></span> for some <span class="bracket"><span class="id">x</span></span>, then <span class="bracket"><span class="id">h</span></span> satisfies <span class="bracket"><span class="id">H'</span></span>, while
+    the latter asserts that if, for some <span class="bracket"><span class="id">x</span></span>, the predicate <span class="bracket"><span class="id">h</span></span> satisfies <span class="bracket"><span class="id">J</span> <span class="id">x</span></span>,
+    then <span class="bracket"><span class="id">h</span></span> satisfies <span class="bracket"><span class="id">H'</span></span>.
+    The "extraction rule for existentials in the left of an entailment" captures
+    the property that existentials can be extracted into the Coq context. It is
+    stated as follows. (Observe how the existential quantifier on the left of
+    the entailment becomes a universal quantifier outside of the arrow.) </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (himpl_hexists_l).
+    Prove the rule <span class="bracket"><span class="id">himpl_hexists_l</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="himpl_hexists_l">himpl_hexists_l</a></span> : <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">H</span>:<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id"><a href="SLF.Hprop.html#hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> ==&gt; <span class="id">H</span>) -&gt;<br/>
+&nbsp;&nbsp;(\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span>) ==&gt; <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> Extracting Information from Heap Predicates </h2>
+<br/>
+<div class="doc">We next present an example showing how entailments can be used to state
+    lemmas allowing that extract information from particular heap predicates.
+    Concretely, we show that, from a heap predicate of the form
+    <span class="bracket">(<span class="id">p</span> ~~&gt; <span class="id">v1</span>) \* (<span class="id">p</span> ~~&gt; <span class="id">v2</span>)</span>, describing two "disjoint" cells that are both
+    "at location <span class="bracket"><span class="id">p</span></span>", one can extract a contradiction. Indeed, such a state
+    cannot exist. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hstar_hsingle_same_loc">hstar_hsingle_same_loc</a></span> : <span class="kwd">forall</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>) (<span class="id">v1</span> <span class="id">v2</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v1</span>) \* (<span class="id">p</span> ~~&gt; <span class="id">v2</span>) ==&gt; \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>].<br/>
+<br/>
+<div class="doc">The proof of this result exploits a result on finite maps. Essentially, the
+    domain of a single singleton map that binds a location <span class="bracket"><span class="id">p</span></span> to some value is
+    the singleton set <span class="bracket">\{<span class="id">p</span>}</span>, so such a singleton map cannot be disjoint from
+    another singleton map that binds the same location <span class="bracket"><span class="id">p</span></span>.
+    Check disjoint_single_single_same_inv : forall (p:loc) (v1 v2:val),
+      Fmap.disjoint (Fmap.single p v1) (Fmap.single p v2) -&gt;
+      False.
+</div>
+<br/>
+<div class="doc">Using this lemma, we can prove <span class="bracket"><span class="id">hstar_hsingle_same_loc</span></span> by unfolding the
+    definition of <span class="bracket"><span class="id">hstar</span></span> to reveal the contradiction on the disjointness
+    assumption. </div>
+<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.Hprop.html#hsingle">hsingle</a></span>. <span class="id">intros</span> <span class="id">h</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">E1</span>&amp;<span class="id">E2</span>&amp;<span class="id">D</span>&amp;<span class="id">E</span>). <span class="id">false</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">eapply</span> <span class="id"><a href="SLF.LibSepReference.html#Fmap.disjoint_single_single_same_inv">Fmap.disjoint_single_single_same_inv</a></span>. <span class="id">eapply</span> <span class="id">D</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">More generally, a heap predicate of the form <span class="bracket"><span class="id">H</span> \* <span class="id">H</span></span> is usually suspicious
+    in Separation Logic. In the simple variant of Separation Logic that we
+    consider in this course, there are only three typical situations where
+    <span class="bracket"><span class="id">H</span> \* <span class="id">H</span></span> makes sense:
+       - (1) if <span class="bracket"><span class="id">H</span></span> is the empty heap predicate <span class="bracket">\[]</span>,
+       - (2) if <span class="bracket"><span class="id">H</span></span> is a pure heap predicate of the form <span class="bracket">\[<span class="id">P</span>]</span>, or
+       - (3) if <span class="bracket"><span class="id">H</span></span> has the form <span class="bracket">\<span class="kwd">exists</span> (<span class="id">H0</span>:<span class="id">hprop</span>), <span class="id">H0</span></span>, which will be written
+             <span class="bracket">\<span class="id">GC</span></span> in chapter <span class="bracket"><span class="id">Affine</span></span>. </div>
+<br/>
+<h3> Rules for Naming Heaps </h3>
+<br/>
+<div class="doc">We write <span class="bracket">= <span class="id">h</span></span> as a shorthand for <span class="bracket"><span class="kwd">fun</span> <span class="id">h'</span> =&gt; <span class="id">h'</span> = <span class="id">h</span></span>, that is, the heap
+    predicate that only accepts heaps exactly equal to <span class="bracket"><span class="id">h</span></span>. </div>
+<br/>
+<h3> Exercise: 3 stars, standard, optional (hexists_named_eq)
+    Prove that a heap predicate <span class="bracket"><span class="id">H</span></span> is equivalent to
+    <span class="bracket">\<span class="kwd">exists</span> <span class="id">h</span>, \[<span class="id">H</span> <span class="id">h</span>] \* (= <span class="id">h</span>))</span>.
+    Hint: In one direction, use <span class="bracket"><span class="id">hexists_intro</span></span> and <span class="bracket"><span class="id">hstar_hpure_l</span></span>. In the
+    other, use the extraction rules <span class="bracket"><span class="id">himpl_hexists_l</span></span> and <span class="bracket"><span class="id">himpl_hstar_hpure_l</span></span>.
+    </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="hexists_named_eq">hexists_named_eq</a></span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> = (\<span class="kwd">exists</span> <span class="id">h</span>, \[<span class="id">H</span> <span class="id">h</span>] \* (= <span class="id">h</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h2> The <span class="bracket"><span class="id">xsimpl</span></span> Tactic </h2>
+<br/>
+<div class="doc">Simplifying entailments by hand is extremely tedious. Fortunately, it can be
+    automated using a specialized Coq tactic. This tactic, called <span class="bracket"><span class="id">xsimpl</span></span>,
+    applies to an entailment and implements a 3-step process:
+    - extract pure facts and existential quantifiers from the LHS;
+    - instantial existential quantifiers from the RHS, using either Coq
+      unification variables or user-provided hints (details are explained
+      further on);
+    - cancel out predicates that occur on both the LHS and RHS; certain
+      Coq unification variables may be instantiated during that process.
+    These steps are detailed and illustrated in the subsections that follow. </div>
+<br/>
+<div class="doc">To make the <span class="bracket"><span class="id">xsimpl</span></span> tactic available, we import the <span class="bracket"><span class="id">LibSepReference</span></span>, over
+    a scope delimited by the module named <span class="bracket"><span class="id">XsimplTactic</span></span>. When doing so, the
+    Separation Logic operators and entailments refer to the definitions from
+    <span class="bracket"><span class="id">LibSepReference</span></span>. These definitions are essentially the same as those
+    presented in <span class="bracket"><span class="id">Hprop</span></span> and earlier in the present chapter. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="XsimplTactic">XsimplTactic</a></span>.<br/>
+<span class="kwd">Import</span> <span class="id"><a href="SLF.LibSepReference.html">LibSepReference</a></span>.<br/>
+<br/>
+<h3> <span class="bracket"><span class="id">xsimpl</span></span> Extracts Pure Facts and Quantifiers in LHS </h3>
+<br/>
+<div class="doc">The first feature of <span class="bracket"><span class="id">xsimpl</span></span> is its ability to extract the pure facts and
+    existential quantifiers from the left-hand side out into the Coq context.
+    In the example below, the pure fact <span class="bracket"><span class="id">n</span> &gt; 0</span> appears in the LHS. After
+    calling <span class="bracket"><span class="id">xsimpl</span></span>, this pure fact is turned into a hypothesis, which may be
+    introduced with a name into the Coq context. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_lhs_hpure">xsimpl_demo_lhs_hpure</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> \* \[<span class="id">n</span> &gt; 0] \* <span class="id">H3</span> ==&gt; <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">Hn</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">In case the LHS includes a contradiction, such as the pure fact <span class="bracket"><span class="id">False</span></span>, the
+    goal gets solved immediately by <span class="bracket"><span class="id">xsimpl</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_lhs_hpure">xsimpl_demo_lhs_hpure</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> \* \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>] \* <span class="id">H3</span> ==&gt; <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The <span class="bracket"><span class="id">xsimpl</span></span> tactic also extracts existential quantifiers from the LHS. It
+    turns them into universally quantified variables outside of the entailment
+    relation. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_lhs_hexists">xsimpl_demo_lhs_hexists</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* \<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), (<span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">H2</span>) \* <span class="id">H3</span> ==&gt; <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">n</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">A single call to <span class="bracket"><span class="id">xsimpl</span></span> extracts _all_ the pure facts and quantifiers from
+    the LHS. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_lhs_several">xsimpl_demo_lhs_several</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> (<span class="id">p</span> <span class="id">q</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* \<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), (<span class="id">p</span> ~~&gt; <span class="id">n</span> \* \[<span class="id">n</span> &gt; 0] \* <span class="id">H2</span>) \* \[<span class="id">p</span> &lt;&gt; <span class="id">q</span>] \* <span class="id">H3</span> ==&gt; <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">n</span> <span class="id">Hn</span> <span class="id">Hp</span>.<br/>
+Abort.</div></details>
+<br/>
+<h3> <span class="bracket"><span class="id">xsimpl</span></span> Cancels Out Heap Predicates from LHS and RHS </h3>
+<br/>
+<div class="doc">The second feature of <span class="bracket"><span class="id">xsimpl</span></span> is its ability to cancel out similar heap
+    predicates that occur on both sides of an entailment.
+    In the example below, <span class="bracket"><span class="id">H2</span></span> occurs on both sides, so it is canceled out by
+    <span class="bracket"><span class="id">xsimpl</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_cancel_one">xsimpl_demo_cancel_one</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> <span class="id">H5</span> <span class="id">H6</span> <span class="id">H7</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span> \* <span class="id">H4</span> ==&gt; <span class="id">H5</span> \* <span class="id">H6</span> \* <span class="id">H2</span> \* <span class="id">H7</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">xsimpl</span></span> actually cancels out _all_ the heap predicates that it can spot
+    appearing on both sides. In the example below, <span class="bracket"><span class="id">H2</span></span>, <span class="bracket"><span class="id">H3</span></span>, and <span class="bracket"><span class="id">H4</span></span> are
+    canceled out. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_cancel_many">xsimpl_demo_cancel_many</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> <span class="id">H5</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span> \* <span class="id">H4</span> ==&gt; <span class="id">H4</span> \* <span class="id">H3</span> \* <span class="id">H5</span> \* <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">If all the pieces of heap predicate get canceled out, the remaining proof
+    obligation is <span class="bracket">\[] ==&gt; \[]</span>. In this case, <span class="bracket"><span class="id">xsimpl</span></span> automatically solves the
+    goal by invoking the reflexivity of entailment. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_cancel_all">xsimpl_demo_cancel_all</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span> \* <span class="id">H4</span> ==&gt; <span class="id">H4</span> \* <span class="id">H3</span> \* <span class="id">H1</span> \* <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> <span class="bracket"><span class="id">xsimpl</span></span> Instantiates Pure Facts and Quantifiers in the RHS </h3>
+<br/>
+<div class="doc">The third feature of <span class="bracket"><span class="id">xsimpl</span></span> is its ability to extract pure facts from the
+    RHS as separate subgoals and to instantiate existential quantifiers from the
+    RHS.
+    Let us first illustrate how it deals with pure facts. In the example below,
+    the fact <span class="bracket"><span class="id">n</span> &gt; 0</span> gets spawned in a separated subgoal. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_rhs_hpure">xsimpl_demo_rhs_hpure</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> (<span class="id">n</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H2</span> \* \[<span class="id">n</span> &gt; 0] \* <span class="id">H3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">When it encounters an existential quantifier in the RHS, the <span class="bracket"><span class="id">xsimpl</span></span> tactic
+    introduces a unification variable denoted by a question mark, that is, an
+    "evar", in Coq terminology. Here, <span class="bracket"><span class="id">xsimpl</span></span> turns <span class="bracket">\<span class="kwd">exists</span> <span class="id">n</span>, .. <span class="id">p</span> ~~&gt; <span class="id">n</span> ..</span>
+    into <span class="bracket">.. <span class="id">p</span> ~~&gt; ?<span class="kwd">Goal</span> ..</span>, where <span class="bracket">?<span class="kwd">Goal</span></span> is the evar. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_rhs_hexists">xsimpl_demo_rhs_hexists</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H2</span> \* \<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), (<span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">H3</span>) \* <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>.<br/>
+<div class="doc">The output of the command <span class="bracket"><span class="id">Show</span> <span class="id">Existentials</span></span> shows <span class="bracket"><span class="kwd">Existential</span> 1</span>, named
+    <span class="bracket">?<span class="kwd">Goal</span></span>, of type <span class="bracket"><span class="id">int</span></span>. This "evar" corresponds to the value assigned to the
+    existentially quantified variable <span class="bracket"><span class="id">n</span></span>. </div>
+Abort.</div></details>
+<br/>
+<div class="doc">The "evar" often gets subsequently instantiated as a result of a
+    cancellation step. For example, in the example below, <span class="bracket"><span class="id">xsimpl</span></span> instantiates
+    the existentially quantified variable <span class="bracket"><span class="id">n</span></span> as <span class="bracket">?<span class="kwd">Goal</span></span>, then cancels out
+    <span class="bracket"><span class="id">p</span> ~~&gt; ?<span class="kwd">Goal</span></span> from the LHS against <span class="bracket"><span class="id">p</span> ~~&gt; 3</span> on the right-hand-side, thereby
+    unifying <span class="bracket">?<span class="kwd">Goal</span></span> with <span class="bracket">3</span>. As a result, the "evar" <span class="bracket">?<span class="kwd">Goal</span></span> is never visible.
+    </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_rhs_hexists_unify">xsimpl_demo_rhs_hexists_unify</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* (<span class="id">p</span> ~~&gt; 3) ==&gt; <span class="id">H2</span> \* \<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), (<span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">H3</span>) \* <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">The instantiation of "evars" can only be observed if there is another
+    occurrence of the same variable in the entailment. In the next example,
+    which refines the previous one, observe how the assertion <span class="bracket"><span class="id">n</span> &gt; 0</span> that
+    appears in the LHS gets turned into the proof obligation <span class="bracket">3 &gt; 0</span>. This
+    results from <span class="bracket"><span class="id">n</span></span> being unified with <span class="bracket">3</span> when <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">n</span></span> is cancelled against
+    <span class="bracket"><span class="id">p</span> ~~&gt; 3</span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_rhs_hexists_unify_view">xsimpl_demo_rhs_hexists_unify_view</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H4</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* (<span class="id">p</span> ~~&gt; 3) ==&gt; <span class="id">H2</span> \* \<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), (<span class="id">p</span> ~~&gt; <span class="id">n</span> \* \[<span class="id">n</span> &gt; 0]) \* <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">In practice, in most cases, <span class="bracket"><span class="id">xsimpl</span></span> would instantiate existentials on the
+    left-hand side, then discharge what remains of the entailment. Here are two
+    typical examples. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_rhs_exists_solved_1">xsimpl_demo_rhs_exists_solved_1</a></span> : <span class="kwd">forall</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 ==&gt;<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), <span class="id">p</span> ~~&gt; <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_rhs_exists_solved_2">xsimpl_demo_rhs_exists_solved_2</a></span> : <span class="kwd">forall</span> (<span class="id">p</span> <span class="id">q</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">q</span> ~~&gt; 3 ==&gt;<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), <span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">q</span> ~~&gt; <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<div class="doc">In certain situations, it may be desirable to provide an explicit value for
+    instantiating an existential quantifier that occurs in the RHS. The <span class="bracket"><span class="id">xsimpl</span></span>
+    tactic accepts arguments, which will be used to instantiate the existentials
+    (on a first-match basis). The syntax is <span class="bracket"><span class="id">xsimpl</span> <span class="id">v1</span> .. <span class="id">vn</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_rhs_hints">xsimpl_demo_rhs_hints</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> (<span class="id">p</span> <span class="id">q</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; \<span class="kwd">exists</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id">int</span>), (<span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">q</span> ~~&gt; <span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span> 8 9.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">If two existential quantifiers quantify variables of the same type, it is
+    possible to provide a value for only the second quantifier by passing as
+    first argument to <span class="bracket"><span class="id">xsimpl</span></span> the special value <span class="bracket"><span class="id">__</span></span>. The following example
+    shows how, on LHS of the form <span class="bracket">\<span class="kwd">exists</span> <span class="id">n</span> <span class="id">m</span>, ...</span>, the tactic <span class="bracket"><span class="id">xsimpl</span> <span class="id">__</span> 9</span>
+    instantiates <span class="bracket"><span class="id">m</span></span> with <span class="bracket">9</span> while leaving <span class="bracket"><span class="id">n</span></span> as an unresolved evar. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xsimpl_demo_rhs_hints_evar">xsimpl_demo_rhs_hints_evar</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> (<span class="id">p</span> <span class="id">q</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; \<span class="kwd">exists</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id">int</span>), (<span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">q</span> ~~&gt; <span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xsimpl</span> <span class="id">__</span> 9.<br/>
+Abort.</div></details>
+<br/>
+<h3> <span class="bracket"><span class="id">xsimpl</span></span> on Entailments Between Postconditions </h3>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xsimpl</span></span> also applies on goals of the form <span class="bracket"><span class="id">Q1</span> ===&gt; <span class="id">Q2</span></span>.
+    For such goals, it unfolds the definition of <span class="bracket">===&gt;</span> to reveal an entailment
+    of the form <span class="bracket">==&gt;</span>, then invokes the <span class="bracket"><span class="id">xsimpl</span></span> tactic. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.qimpl_example_1">qimpl_example_1</a></span> : <span class="kwd">forall</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id"><a href="SLF.LibSepReference.html#val">val</a></span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) (<span class="id">H2</span> <span class="id">H3</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ <span class="id">H2</span> ===&gt; <span class="id">Q2</span> \*+ <span class="id">H2</span> \*+ <span class="id">H3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">r</span>. Abort.</div></details>
+<br/>
+<h3> Example: Entailment Proofs using <span class="bracket"><span class="id">xpull</span></span> and <span class="bracket"><span class="id">xsimpl</span></span> </h3>
+<br/>
+<div class="doc">The <span class="bracket"><span class="id">xpull</span></span> tactic is a restricted version of <span class="bracket"><span class="id">xsimpl</span></span>: it operates on the
+    left-hand side of the entailment, but leaves the right-hand side untouched.
+    In other words, <span class="bracket"><span class="id">xpull</span></span> performs only the first half of the work that
+    <span class="bracket"><span class="id">xsimpl</span></span> would do. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xpull_example_1">xpull_example_1</a></span> : <span class="kwd">forall</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), <span class="id">p</span> ~~&gt; <span class="id">n</span> ==&gt;<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">m</span>:<span class="id">int</span>), <span class="id">p</span> ~~&gt; (<span class="id">m</span> + 1).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xpull</span>.<br/>
+Abort.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xpull_example_2">xpull_example_2</a></span> : <span class="kwd">forall</span> (<span class="id">H</span>:<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>),<br/>
+&nbsp;&nbsp;\[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>] ==&gt; <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">xpull</span>. Qed.</div></details>
+<br/>
+<div class="doc">The next example illustrates an interesting situation where <span class="bracket"><span class="id">xpull</span></span> is
+    required because a plain call to <span class="bracket"><span class="id">xsimpl</span></span> leads to an awkward goal. This
+    examples involves a nontrivial instantiation of an existential quantifier on
+    the right-hand side of the entailment. However, we cannot provide an
+    explicit hint to <span class="bracket"><span class="id">xsimpl</span></span> before extracting an existential quantifier that
+    appears on the left-hand side of the entailment. Here is the example. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xpull_example_3">xpull_example_3</a></span> : <span class="kwd">forall</span> (<span class="id">p</span>:<span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>),<br/>
+&nbsp;&nbsp;(\<span class="kwd">exists</span> (<span class="id">n</span>:<span class="id">int</span>), <span class="id">p</span> ~~&gt; <span class="id">n</span>) ==&gt;<br/>
+&nbsp;&nbsp;(\<span class="kwd">exists</span> (<span class="id">m</span>:<span class="id">int</span>), <span class="id">p</span> ~~&gt; (<span class="id">m</span> + 1)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">xpull</span>. <span class="id">intros</span> <span class="id">n</span>. <span class="id">xsimpl</span> (<span class="id">n</span>-1). <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> The <span class="bracket"><span class="id">xchange</span></span> Tactic </h2>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xchange</span></span> is to entailment what <span class="bracket"><span class="id">rewrite</span></span> is to equality.
+    Assume an entailment goal of the form <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span> ==&gt; <span class="id">H4</span></span>. Assume an
+    entailment assumption <span class="bracket"><span class="id">M</span></span>, say <span class="bracket"><span class="id">H2</span> ==&gt; <span class="id">H2'</span></span>. Then <span class="bracket"><span class="id">xchange</span> <span class="id">M</span></span> turns the goal
+    into <span class="bracket"><span class="id">H1</span> \* <span class="id">H2'</span> \* <span class="id">H3</span> ==&gt; <span class="id">H4</span></span>, effectively replacing <span class="bracket"><span class="id">H2</span></span> with <span class="bracket"><span class="id">H2'</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xchange_demo_base">xchange_demo_base</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H2'</span> <span class="id">H3</span> <span class="id">H4</span>,<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H2'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span> ==&gt; <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">M</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">The <span class="bracket"><span class="id">xchange</span></span> tactic can also take an equality as an argument; <span class="bracket"><span class="id">xchange</span> <span class="id">M</span></span>
+    exploits the left-to-right direction of an equality <span class="bracket"><span class="id">M</span></span>, whereas
+    <span class="bracket"><span class="id">xchange</span> &lt;- <span class="id">M</span></span> exploits the right-to-left direction. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xchange_demo_eq">xchange_demo_eq</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span> <span class="id">H5</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H3</span> = <span class="id">H5</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> \* <span class="id">H3</span> ==&gt; <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">xchange</span> &lt;- <span class="id">M</span>.<br/>
+Abort.</div></details>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xchange</span> <span class="id">M</span></span> will accept a lemma or hypothesis <span class="bracket"><span class="id">M</span></span> with universal
+    quantifiers, as long as its conclusion is an equality or an entailment. In
+    such case, <span class="bracket"><span class="id">xchange</span> <span class="id">M</span></span> instantiates <span class="bracket"><span class="id">M</span></span> before attemting to perform a
+    replacement. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xchange_demo_inst">xchange_demo_inst</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> (<span class="id">J</span> <span class="id">J'</span>:<span class="id">int</span>-&gt;<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hprop">hprop</a></span>) <span class="id">H3</span> <span class="id">H4</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">n</span>, <span class="id">J</span> <span class="id">n</span> = <span class="id">J'</span> (<span class="id">n</span>+1)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">J</span> 3 \* <span class="id">H3</span> ==&gt; <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">xchange</span> <span class="id">M</span>.<br/>
+Abort.</div></details>
+<br/>
+<h2> Identifying True and False Entailments </h2>
+<br/>
+<div class="doc">Quiz: For each entailment below, indicate (without a Coq proof) whether it
+    is true or false. Solutions appear further on. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz">EntailmentQuiz</a></span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">p</span> <span class="id">q</span> : <span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">n</span> <span class="id">m</span> : <span class="id">int</span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_1">case_study_1</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">q</span> ~~&gt; 4<br/>
+&nbsp;&nbsp;==&gt; <span class="id">q</span> ~~&gt; 4 \* <span class="id">p</span> ~~&gt; 3.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_2">case_study_2</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; <span class="id">q</span> ~~&gt; 4 \* <span class="id">p</span> ~~&gt; 3.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_3">case_study_3</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">q</span> ~~&gt; 4 \* <span class="id">p</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; <span class="id">p</span> ~~&gt; 3.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_4">case_study_4</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>] \* <span class="id">p</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; <span class="id">p</span> ~~&gt; 4 \* <span class="id">q</span> ~~&gt; 4.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_5">case_study_5</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">q</span> ~~&gt; 4<br/>
+&nbsp;&nbsp;==&gt; \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>].<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_6">case_study_6</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">p</span> ~~&gt; 4<br/>
+&nbsp;&nbsp;==&gt; \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>].<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_7">case_study_7</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">p</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>].<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_8">case_study_8</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; \<span class="kwd">exists</span> <span class="id">n</span>, <span class="id">p</span> ~~&gt; <span class="id">n</span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_9">case_study_9</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">n</span>, <span class="id">p</span> ~~&gt; <span class="id">n</span><br/>
+&nbsp;&nbsp;==&gt; <span class="id">p</span> ~~&gt; 3.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_10">case_study_10</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">n</span>, <span class="id">p</span> ~~&gt; <span class="id">n</span> \* \[<span class="id">n</span> &gt; 0]<br/>
+&nbsp;&nbsp;==&gt; \<span class="kwd">exists</span> <span class="id">n</span>, \[<span class="id">n</span> &gt; 1] \* <span class="id">p</span> ~~&gt; (<span class="id">n</span>-1).<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_11">case_study_11</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">q</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; \<span class="kwd">exists</span> <span class="id">n</span>, <span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">q</span> ~~&gt; <span class="id">n</span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id"><a name="XsimplTactic.EntailmentQuiz.case_study_12">case_study_12</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; <span class="id">n</span> \* \[<span class="id">n</span> &gt; 0] \* \[<span class="id">n</span> &lt; 0]<br/>
+&nbsp;&nbsp;==&gt; <span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">p</span> ~~&gt; <span class="id">n</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Himpl.html#XsimplTactic.EntailmentQuiz">EntailmentQuiz</a></span>.<br/>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="XsimplTactic.EntailmentQuizAnswers">EntailmentQuizAnswers</a></span>.<br/>
+<br/>
+<div class="doc">The answers to the quiz are as follows.
+    1. True, by commutativity.
+    2. False, because one cell does not entail two cells.
+    3. False, because two cells do not entail one cell.
+    4. True, because \<span class="bracket"><span class="id">False</span></span> entails anything.
+    5. False, because a satisfiable heap predicate does not entail \<span class="bracket"><span class="id">False</span></span>.
+    6. True, because a cell cannot be starred with itself.
+    7. True, because a cell cannot be starred with itself.
+    8. True, by instantiating <span class="bracket"><span class="id">n</span></span> with <span class="bracket">3</span>.
+    9. False, because <span class="bracket"><span class="id">n</span></span> could be something else than <span class="bracket">3</span>.
+    10. True, by instantiating <span class="bracket"><span class="id">n</span></span> in RHS with <span class="bracket"><span class="id">n</span>+1</span> for the <span class="bracket"><span class="id">n</span></span> of the LHS.
+    11. True, by instantiating <span class="bracket"><span class="id">n</span></span> with <span class="bracket">3</span>.
+    12. True, because it is equivalent to <span class="bracket">\[<span class="id">False</span>] ==&gt; \[<span class="id">False</span>]</span>.
+    Proofs for the true results appear below, using the <span class="bracket"><span class="id">xsimpl</span></span> tactic. </div>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">p</span> <span class="id">q</span> : <span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">n</span> <span class="id">m</span> : <span class="id">int</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentQuizAnswers.case_study_1">case_study_1</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">q</span> ~~&gt; 4<br/>
+&nbsp;&nbsp;==&gt; <span class="id">q</span> ~~&gt; 4 \* <span class="id">p</span> ~~&gt; 3.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentQuizAnswers.case_study_4">case_study_4</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>] \* <span class="id">p</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; <span class="id">p</span> ~~&gt; 4 \* <span class="id">q</span> ~~&gt; 4.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentQuizAnswers.case_study_6">case_study_6</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">p</span> ~~&gt; 4<br/>
+&nbsp;&nbsp;==&gt; \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xchange</span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_hsingle_same_loc">hstar_hsingle_same_loc</a></span> <span class="id">p</span>). Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentQuizAnswers.case_study_7">case_study_7</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">p</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; \[<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xchange</span> (<span class="id"><a href="SLF.LibSepReference.html#SepSimplArgs.hstar_hsingle_same_loc">hstar_hsingle_same_loc</a></span> <span class="id">p</span>). Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentQuizAnswers.case_study_8">case_study_8</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; \<span class="kwd">exists</span> <span class="id">n</span>, <span class="id">p</span> ~~&gt; <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentQuizAnswers.case_study_10">case_study_10</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">n</span>, <span class="id">p</span> ~~&gt; <span class="id">n</span> \* \[<span class="id">n</span> &gt; 0]<br/>
+&nbsp;&nbsp;==&gt; \<span class="kwd">exists</span> <span class="id">n</span>, \[<span class="id">n</span> &gt; 1] \* <span class="id">p</span> ~~&gt; (<span class="id">n</span>-1).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">xpull</span>. <span class="id">intros</span> <span class="id">n</span> <span class="id">Hn</span>. <span class="id">xsimpl</span> (<span class="id">n</span>+1).<br/>
+&nbsp;&nbsp;<span class="id">math</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentQuizAnswers.case_study_11">case_study_11</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p</span> ~~&gt; 3 \* <span class="id">q</span> ~~&gt; 3<br/>
+&nbsp;&nbsp;==&gt; \<span class="kwd">exists</span> <span class="id">n</span>, <span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">q</span> ~~&gt; <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">xsimpl</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentQuizAnswers.case_study_12">case_study_12</a></span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">p</span> ~~&gt; <span class="id">n</span> \* \[<span class="id">n</span> &gt; 0] \* \[<span class="id">n</span> &lt; 0] ==&gt; <span class="id">p</span> ~~&gt; <span class="id">n</span> \* <span class="id">p</span> ~~&gt; <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">xsimpl</span>. <span class="id">intros</span> <span class="id">Hn1</span> <span class="id">Hn2</span>. <span class="id">false</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Himpl.html#XsimplTactic.EntailmentQuizAnswers">EntailmentQuizAnswers</a></span>.<br/>
+<br/>
+<h1> More Details </h1>
+<br/>
+<h2> Proving Entailments by Hand </h2>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="XsimplTactic.EntailmentProofs">EntailmentProofs</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">p</span> : <span class="id"><a href="SLF.LibSepReference.html#loc">loc</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">n</span> : <span class="id">int</span>.<br/>
+<br/>
+<div class="doc">Proving an entailment by hand is generally a tedious task. This is why most
+    frameworks based on Separation Logic include an automated tactic for
+    simplifying entailments. In this course, the relevant tactic is named
+    <span class="bracket"><span class="id">xsimpl</span></span>. In order to fully appreciate what a simplification tactic provides
+    and better understand how it works internally, it is very useful to complete
+    a few entailment proofs by hand. </div>
+<br/>
+<h3> Exercise: 3 stars, standard, optional (himpl_example_1)
+    Prove the example entailment below. Hint: exploit <span class="bracket"><span class="id">hstar_comm</span></span>,
+    <span class="bracket"><span class="id">hstar_assoc</span></span>, or <span class="bracket"><span class="id">hstar_comm_assoc</span></span> which combines the two, and exploit
+    <span class="bracket"><span class="id">himpl_frame_l</span></span> or <span class="bracket"><span class="id">himpl_frame_r</span></span> to cancel out matching pieces. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentProofs.himpl_example_1">himpl_example_1</a></span> : <span class="kwd">forall</span> <span class="id">p1</span> <span class="id">p2</span> <span class="id">p3</span> <span class="id">p4</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p1</span> ~~&gt; 6 \* <span class="id">p2</span> ~~&gt; 7 \* <span class="id">p3</span> ~~&gt; 8 \* <span class="id">p4</span> ~~&gt; 9<br/>
+&nbsp;&nbsp;==&gt; <span class="id">p4</span> ~~&gt; 9 \* <span class="id">p3</span> ~~&gt; 8 \* <span class="id">p2</span> ~~&gt; 7 \* <span class="id">p1</span> ~~&gt; 6.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (himpl_example_2)
+    Prove the example entailment below. Hint: use <span class="bracket"><span class="id">himpl_hstar_hpure_l</span></span> to
+    extract pure facts, once they appear at the head of the left-hand side of
+    the entailment. For arithmetic inequalities, use the <span class="bracket"><span class="id">math</span></span> tactic. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentProofs.himpl_example_2">himpl_example_2</a></span> : <span class="kwd">forall</span> <span class="id">p1</span> <span class="id">p2</span> <span class="id">p3</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">p1</span> ~~&gt; 6 \* \[<span class="id">n</span> &gt; 0] \* <span class="id">p2</span> ~~&gt; 7 \* \[<span class="id">n</span> &lt; 0]<br/>
+&nbsp;&nbsp;==&gt; <span class="id">p3</span> ~~&gt; 8.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 2 stars, standard, optional (himpl_example_3)
+    Prove the example entailment below. Hint: use <span class="bracket"><span class="id">himpl_hexists_r</span></span>,
+    <span class="bracket"><span class="id">himpl_hexists_l</span></span>, <span class="bracket"><span class="id">himpl_hstar_hpure_l</span></span> and/or <span class="bracket"><span class="id">himpl_hstar_hpure_r</span></span> to
+    deal with pure facts and quantifiers. You may find the TLC tactic
+    <span class="bracket"><span class="id">math_rewrite</span> (<span class="id">n</span>+1-1 = <span class="id">n</span>)</span> helpful here. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.EntailmentProofs.himpl_example_3">himpl_example_3</a></span> : <span class="kwd">forall</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">n</span>, <span class="id">p</span> ~~&gt; <span class="id">n</span> \* \[<span class="id">n</span> &gt; 0]<br/>
+&nbsp;&nbsp;==&gt; \<span class="kwd">exists</span> <span class="id">n</span>, \[<span class="id">n</span> &gt; 1] \* <span class="id">p</span> ~~&gt; (<span class="id">n</span>-1).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Himpl.html#XsimplTactic.EntailmentProofs">EntailmentProofs</a></span>.<br/>
+<br/>
+<h2> Inside the <span class="bracket"><span class="id">xchange</span></span> Tactic </h2>
+<br/>
+<div class="doc">How does the <span class="bracket"><span class="id">xchange</span></span> tactic work? Consider a goal of the form <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H'</span></span>
+    and assume <span class="bracket"><span class="id">xchange</span></span> is invoked with an hypothesis of type <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H1'</span></span> as
+    argument. It attempts to decompose <span class="bracket"><span class="id">H</span></span> as the star of <span class="bracket"><span class="id">H1</span></span> and the rest of
+    <span class="bracket"><span class="id">H</span></span>, call it <span class="bracket"><span class="id">H2</span></span>. If it succeeds, then the goal <span class="bracket"><span class="id">H</span> ==&gt; <span class="id">H'</span></span> can be rewritten
+    as <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span> ==&gt; <span class="id">H'</span></span>. To exploit the hypothesis <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H1'</span></span>, the tactic
+    should replace the goal with the entailment <span class="bracket"><span class="id">H1'</span> \* <span class="id">H2</span> ==&gt; <span class="id">H'</span></span>. The lemma
+    below mimics this piece of reasoning. </div>
+<br/>
+<h3> Exercise: 2 stars, standard, especially useful (xchange_lemma)
+    Prove the following lemma without using <span class="bracket"><span class="id">xchange</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="XsimplTactic.xchange_lemma">xchange_lemma</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H1'</span> <span class="id">H</span> <span class="id">H'</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H1'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H1</span> \* <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1'</span> \* <span class="id">H2</span> ==&gt; <span class="id">H'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Himpl.html#XsimplTactic">XsimplTactic</a></span>.<br/>
+<br/>
+<h1> Optional Material </h1>
+<br/>
+<h2> Proofs of Rules for Entailment </h2>
+<br/>
+<div class="doc">We next show the details of the proofs establishing some of the fundamental
+    properties of Separation Logic operators. All these results must be proved
+    without help of <span class="bracket"><span class="id">xsimpl</span></span>, because the implementation of <span class="bracket"><span class="id">xsimpl</span></span> itself
+    depends on these properties.
+    We begin with the frame property, which is the simplest to prove. </div>
+<br/>
+<span class="kwd">Module</span> <span class="id"><a name="EntailmentRulesProofs">EntailmentRulesProofs</a></span>.<br/>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (himpl_frame_l)
+    Prove the frame property for entailment. Hint: unfold the definition of
+    <span class="bracket"><span class="id">hstar</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="EntailmentRulesProofs.himpl_frame_l">himpl_frame_l</a></span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">H1'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H1'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1'</span> \* <span class="id">H2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<div class="doc">The lemma <span class="bracket"><span class="id">himpl_frame_l</span></span> admits two useful corollaries, presented next. </div>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (himpl_frame_r)
+    Prove <span class="bracket"><span class="id">himpl_frame_r</span></span>, which is the symmetric of <span class="bracket"><span class="id">himpl_frame_l</span></span>. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="EntailmentRulesProofs.himpl_frame_r">himpl_frame_r</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H2'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H2'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1</span> \* <span class="id">H2'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<h3> Exercise: 1 star, standard, especially useful (himpl_frame_lr)
+    The monotonicity property of the star operator w.r.t. entailment can also be
+    stated in a symmetric fashion, as shown next. Prove this result. Hint:
+    exploit the transitivity of entailment (<span class="bracket"><span class="id">himpl_trans</span></span>) and the asymmetric
+    monotonicity results from the two prior exercises. </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="EntailmentRulesProofs.himpl_frame_lr">himpl_frame_lr</a></span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H1'</span> <span class="id">H2</span> <span class="id">H2'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H1'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H2'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1'</span> \* <span class="id">H2'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.  Admitted.</div></details>
+<br/>
+<div class="doc"><span class="bracket"></span> </div>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.Himpl.html#EntailmentRulesProofs">EntailmentRulesProofs</a></span>.<br/>
+<br/>
+<h2> Historical Notes </h2>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

@@ -1,0 +1,843 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibInt</title>
+<meta name="description" content="Documentation of Coq module LibInt" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibInt</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.ZArith.html">Coq.ZArith.ZArith</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span> <span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span>.<br/>
+<span class="kwd">Export</span> <span class="id"><a href="SLF.LibTactics.html#LibTacticsCompatibility">LibTacticsCompatibility</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibNat.html">LibNat</a></span>.<br/>
+<br/>
+<br/>
+<h1> Parsing of integers and operations </h1>
+<br/>
+<h2> Notation for type and operation </h2>
+<br/>
+<div class="doc">Define <span class="bracket"><span class="id">int</span></span> as an alias for <span class="bracket"><span class="id">Z</span></span>, the type of integers from Coq's stdlib. </div>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">Int_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"'int'"</span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span> : <span class="id">Int_scope</span>.<br/>
+<span class="id">Delimit</span> <span class="kwd">Scope</span> <span class="id">Int_scope</span> <span class="kwd">with</span> <span class="id">I</span>.<br/>
+<br/>
+<span class="id">Local</span> <span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">Int_scope</span>.<br/>
+<br/>
+<h2> Inhabited type </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="Inhab_int">Inhab_int</a></span> : <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">int</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> 0%<span class="id">Z</span>). Qed.</div></details>
+<br/>
+<h2> Coercion from nat </h2>
+<br/>
+<div class="doc">Remark: we cannot simply use the coercion:
+      Coercion Z_of_nat : nat &gt;-&gt; Z.
+   because otherwise when we try to make the coercion opaque using:
+      Opaque Z_of_nat.
+   the lia fails to work.
+   Thus, we introduce an alias, called <span class="bracket"><span class="id">nat_to_Z</span></span> for <span class="bracket"><span class="id">Z_of_nat</span></span>,
+   and we register <span class="bracket"><span class="id">nat_to_Z</span></span> as coercion.
+</div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="nat_to_Z">nat_to_Z</a></span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="nat_to_Z_eq_Z_of_nat">nat_to_Z_eq_Z_of_nat</a></span> : <span class="id"><a href="SLF.LibInt.html#nat_to_Z">nat_to_Z</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibInt.html#nat_to_Z">nat_to_Z</a></span>.<br/>
+<br/>
+<span class="kwd">Coercion</span> <span class="id">nat_to_Z</span> : <span class="id">nat</span> &gt;-&gt; <span class="id">Z</span>.<br/>
+<br/>
+<br/>
+<h2> Order relation </h2>
+<br/>
+<div class="doc">The comparison operators on integers are those from <span class="bracket"><span class="id">LibOrder</span></span>,
+    not the ones from Coq's <span class="bracket"><span class="id">ZArith</span></span>. </div>
+<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">Z_scope</span>.<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">comp_scope</span>.<br/>
+<br/>
+<div class="doc">The typeclass <span class="bracket"><span class="id">le</span></span> on type <span class="bracket"><span class="id">int</span></span> is bound to <span class="bracket"><span class="id">Zle</span></span>, from Coq's
+    standard library </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="le_int_inst">le_int_inst</a></span> : <span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">int</span> := <span class="id"><a href="SLF.LibOrder.html#Build_Le">Build_Le</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.le">Z.le</a></span>.<br/>
+<br/>
+<br/>
+<h1> Conversion to natural numbers, for tactic programming </h1>
+<br/>
+<div class="doc">These tactics are helpful to convert a number passed to a Ltac tactic
+    into a <span class="bracket"><span class="id">nat</span></span>, regardless of whether it is a <span class="bracket"><span class="id">nat</span></span> or an <span class="bracket"><span class="id">int</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="ltac_int_to_nat">ltac_int_to_nat</a></span> (<span class="id">x</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z0">Z0</a></span> =&gt; 0%<span class="id">nat</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Zpos">Zpos</a></span> <span class="id">p</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.PArith.BinPos.html#nat_of_P">nat_of_P</a></span> <span class="id">p</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Zneg">Zneg</a></span> <span class="id">p</span> =&gt; 0%<span class="id">nat</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">number_to_nat</span> <span class="id">N</span> ::=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">N</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> =&gt; <span class="id">constr</span>:(<span class="id">N</span>)<br/>
+&nbsp;&nbsp;| <span class="id">int</span> =&gt; <span class="kwd">let</span> <span class="id">N'</span> := <span class="id">constr</span>:(<span class="id"><a href="SLF.LibInt.html#ltac_int_to_nat">ltac_int_to_nat</a></span> <span class="id">N</span>) <span class="kwd">in</span> <span class="id">eval</span> <span class="id">compute</span> <span class="kwd">in</span> <span class="id">N'</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span> =&gt; <span class="kwd">let</span> <span class="id">N'</span> := <span class="id">constr</span>:(<span class="id"><a href="SLF.LibInt.html#ltac_int_to_nat">ltac_int_to_nat</a></span> <span class="id">N</span>) <span class="kwd">in</span> <span class="id">eval</span> <span class="id">compute</span> <span class="kwd">in</span> <span class="id">N'</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<br/>
+<h1> Decision procedure </h1>
+<br/>
+<div class="doc">A lot of hacks to allow calling the <span class="bracket"><span class="id">lia</span></span> tactic </div>
+<br/>
+<h2> Translation from typeclass order to ZArith, for using <span class="bracket"><span class="id">lia</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="le_zarith">le_zarith</a></span> : <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.le">Z.le</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">extens</span>*. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibInt.html#le_int_inst">le_int_inst</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="lt_zarith">lt_zarith</a></span> : <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.lt">Z.lt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">rew_to_le</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibInt.html#le_zarith">le_zarith</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>. <span class="id">intros</span>. <span class="id">lia</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ge_zarith">ge_zarith</a></span> : <span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.ge">Z.ge</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">rew_to_le</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibInt.html#le_zarith">le_zarith</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>. <span class="id">intros</span>. <span class="id">lia</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="gt_zarith">gt_zarith</a></span> : <span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.gt">Z.gt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">rew_to_le</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibInt.html#le_zarith">le_zarith</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#strict">strict</a></span>, <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>. <span class="id">intros</span>. <span class="id">lia</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibInt.html#le_zarith">le_zarith</a></span> <span class="id"><a href="SLF.LibInt.html#lt_zarith">lt_zarith</a></span> <span class="id"><a href="SLF.LibInt.html#ge_zarith">ge_zarith</a></span> <span class="id"><a href="SLF.LibInt.html#gt_zarith">gt_zarith</a></span> : <span class="id">rew_int_comp</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">int_comp_to_zarith</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_int_comp</span> <span class="kwd">in</span> *.<br/>
+<br/>
+<h2> Hypothesis selection </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">is_additional_arith_type</span> <span class="id">T</span></span> allows for extending the behavior of
+    <span class="bracket"><span class="id">is_arith_type</span></span>. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">is_additional_arith_type</span> <span class="id">T</span> :=<br/>
+&nbsp;&nbsp;<span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>).<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">is_arity_type</span> <span class="id">T</span></span> returns a boolean indicating whether
+    <span class="bracket"><span class="id">T</span></span> is equal to <span class="bracket"><span class="id">nat</span></span> or <span class="bracket"><span class="id">int</span></span> </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">is_arith_type</span> <span class="id">T</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">T</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| <span class="id">int</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">is_additional_arith_type</span> <span class="id">T</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">is_arity</span> <span class="id">E</span></span> returns a boolean indicating whether
+    <span class="bracket"><span class="id">E</span></span> is an arithmetic expression </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">is_arith</span> <span class="id">E</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">E</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| _ = _ :&gt; ?<span class="id">T</span> =&gt; <span class="id">is_arith_type</span> <span class="id">T</span><br/>
+&nbsp;&nbsp;| _ &lt;&gt; _ :&gt; ?<span class="id">T</span> =&gt; <span class="id">is_arith_type</span> <span class="id">T</span><br/>
+&nbsp;&nbsp;| ~ ?<span class="id">E'</span> =&gt; <span class="id">is_arith</span> <span class="id">E'</span><br/>
+&nbsp;&nbsp;| ?<span class="id">E'</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> =&gt; <span class="id">is_arith</span> <span class="id">E'</span><br/>
+&nbsp;&nbsp;| @<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> ?<span class="id">T</span> _ _ _ =&gt; <span class="id">is_arith_type</span> <span class="id">T</span><br/>
+&nbsp;&nbsp;| @<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> ?<span class="id">T</span> _ _ _ =&gt; <span class="id">is_arith_type</span> <span class="id">T</span><br/>
+&nbsp;&nbsp;| @<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> ?<span class="id">T</span> _ _ _ =&gt; <span class="id">is_arith_type</span> <span class="id">T</span><br/>
+&nbsp;&nbsp;| @<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> ?<span class="id">T</span> _ _ _ =&gt; <span class="id">is_arith_type</span> <span class="id">T</span><br/>
+&nbsp;&nbsp;| (_ &lt;= _)%<span class="id">Z</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| (_ &gt;= _)%<span class="id">Z</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| (_ &lt; _)%<span class="id">Z</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| (_ &gt; _)%<span class="id">Z</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| (_ &lt;= _)%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| (_ &gt;= _)%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| (_ &lt; _)%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| (_ &gt; _)%<span class="id">nat</span> =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>)<br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">constr</span>:(<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>)<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">arith_goal_or_false</span></span> looks at the current goal and
+    replaces it with <span class="bracket"><span class="id">False</span></span> if it is not an arithmetic goal</div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">arith_goal_or_false</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> |- ?<span class="id">E</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">is_arith</span> <span class="id">E</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> =&gt; <span class="id">idtac</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> =&gt; <span class="id">false</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">generalize_arith</span></span> generalizes all hypotheses which correspond
+    to some arithmetic goal. It destructs conjunctions on the fly. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="istrue_isTrue_forw">istrue_isTrue_forw</a></span> : <span class="kwd">forall</span> (<span class="id">P</span>:<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> <span class="id">P</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">rew_istrue</span>~ <span class="kwd">in</span> <span class="id">H</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">generalize_arith</span> :=<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">H</span>: <span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> _) |- _ =&gt; <span class="id">generalize</span> (@<span class="id"><a href="SLF.LibInt.html#istrue_isTrue_forw">istrue_isTrue_forw</a></span> _ <span class="id">H</span>); <span class="id">clear</span> <span class="id">H</span>; <span class="id">intro</span><br/>
+&nbsp;&nbsp;| <span class="id">H</span>:?<span class="id">E1</span> /\ ?<span class="id">E2</span> |- _ =&gt; <span class="id">destruct</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| <span class="id">H</span>: ?<span class="id">E</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span> |- _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">is_arith</span> <span class="id">E</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> =&gt; <span class="id">change</span> (<span class="id">E</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) <span class="kwd">with</span> (~ <span class="id">E</span>) <span class="kwd">in</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> =&gt; <span class="id">clear</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span><br/>
+&nbsp;&nbsp;| <span class="id">H</span>:?<span class="id">E</span> |- _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">is_arith</span> <span class="id">E</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> =&gt; <span class="id">generalize</span> <span class="id">H</span>; <span class="id">clear</span> <span class="id">H</span> <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> =&gt; <span class="id">clear</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<br/>
+<h2> Normalization of arithmetic expressions </h2>
+<br/>
+<div class="doc">Two lemmas to help lia out </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Z_of_nat_O">Z_of_nat_O</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#O">O</a></span> = 0.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Z_of_nat_S">Z_of_nat_S</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> <span class="id">n</span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.succ">Z.succ</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span> <span class="id">n</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>~ &lt;- <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Zpos_P_of_succ_nat">Zpos_P_of_succ_nat</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="Z_of_nat_plus1">Z_of_nat_plus1</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span> (1 + <span class="id">n</span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.succ">Z.succ</a></span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span> <span class="id">n</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibInt.html#Z_of_nat_S">Z_of_nat_S</a></span>. <span class="id">fequals</span>~. Qed.</div></details>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">rew_maths</span></span> rewrite any lemma in the base <span class="bracket"><span class="id">rew_maths</span></span>.
+    The goal should not contain any evar, otherwise tactic might loop. </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibInt.html#nat_to_Z_eq_Z_of_nat">nat_to_Z_eq_Z_of_nat</a></span> <span class="id"><a href="SLF.LibInt.html#Z_of_nat_O">Z_of_nat_O</a></span> <span class="id"><a href="SLF.LibInt.html#Z_of_nat_S">Z_of_nat_S</a></span> <span class="id"><a href="SLF.LibInt.html#Z_of_nat_plus1">Z_of_nat_plus1</a></span> : <span class="id">rew_maths</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">rew_maths</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_maths</span> <span class="kwd">in</span> *.<br/>
+<br/>
+<h2> Setting up the goal for <span class="bracket"><span class="id">lia</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">math_setup_goal</span></span> does introduction, splits, and replace
+    the goal by <span class="bracket"><span class="id">False</span></span> if it is not arithmetic. If the goal
+    is of the form <span class="bracket"><span class="id">P1</span> = <span class="id">P2</span> :&gt; <span class="kwd">Prop</span></span>, then the goal is
+    changed to <span class="bracket"><span class="id">P1</span> &lt;-&gt; <span class="id">P2</span></span>. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">math_setup_goal_step</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- _ -&gt; _ =&gt; <span class="id">intro</span><br/>
+&nbsp;&nbsp;| |- _ &lt;-&gt; _ =&gt; <span class="id">iff</span><br/>
+&nbsp;&nbsp;| |- <span class="kwd">forall</span> _, _  =&gt; <span class="id">intro</span><br/>
+&nbsp;&nbsp;| |- _ /\ _ =&gt; <span class="id">split</span><br/>
+&nbsp;&nbsp;| |- _ = _ :&gt; <span class="kwd">Prop</span> =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>; <span class="id">iff</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">math_setup_goal</span> :=<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> (<span class="id">math_setup_goal_step</span> <span class="id">tt</span>);<br/>
+&nbsp;&nbsp;<span class="id">arith_goal_or_false</span>.<br/>
+<br/>
+<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">math</span></span> tactics performs several preprocessing step,
+    selects all arithmetic hypotheses, and the call lia. </div>
+<br/>
+<h2> Main driver for the set up process to goal <span class="bracket"><span class="id">lia</span></span> </h2>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">check_noevar_goal</span> ::=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> |- ?<span class="id">G</span> =&gt; <span class="id">first</span> [ <span class="id">has_evar</span> <span class="id">G</span>; <span class="id">fail</span> 1 | <span class="id">idtac</span> ] <span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">math_0</span> := <span class="id">idtac</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">math_1</span> := <span class="id">intros</span>; <span class="id">generalize_arith</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">math_2</span> := <span class="id">check_noevar_goal</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">math_3</span> := <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_maths</span> <span class="id">rew_int_comp</span> <span class="id">rew_nat_comp</span>; <span class="id">intros</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">math_4</span> := <span class="id">math_setup_goal</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">math_5</span> := <span class="id">lia</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">math_setup</span> := <span class="id">math_0</span>; <span class="id">math_1</span>; <span class="id">math_2</span>; <span class="id">math_3</span>; <span class="id">math_4</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">math_base</span> := <span class="id">math_setup</span>; <span class="id">math_5</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math"</span> := <span class="id">math_base</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math"</span> <span class="id">simple_intropattern</span>(<span class="id">I</span>) <span class="string">":"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">I</span>: <span class="id">E</span>; [ <span class="id">math</span> | ].<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"maths"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">H</span> := <span class="id">fresh</span> <span class="string">"H"</span> <span class="kwd">in</span> <span class="id">asserts</span> <span class="id">H</span>: <span class="id">E</span>; [ <span class="id">math</span> | ].<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">math</span></span> tactic restricted to arithmetic goals </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">math_only</span></span> calls <span class="bracket"><span class="id">math</span></span> but only on goals which
+    have an arithmetic form. Thus, contracty to <span class="bracket"><span class="id">math</span></span>,
+    it does not attempt to look for a contradiction in
+    the hypotheses if the conclusion is not an arithmetic
+    goal. Useful for efficiency. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">math_only_if_arith_core</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> |- ?<span class="id">T</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">is_arith</span> <span class="id">T</span> <span class="kwd">with</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> =&gt; <span class="id">math</span> <span class="kwd">end</span> <span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_only_if_arith"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">math_only_if_arith_core</span> <span class="id">tt</span>.<br/>
+<br/>
+<h2> Elimination of multiplication, to call lia </h2>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_2_eq_plus">mult_2_eq_plus</a></span> : <span class="kwd">forall</span> <span class="id">x</span>, 2 * <span class="id">x</span> = <span class="id">x</span> + <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">ring</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_3_eq_plus">mult_3_eq_plus</a></span> : <span class="kwd">forall</span> <span class="id">x</span>, 3 * <span class="id">x</span> = <span class="id">x</span> + <span class="id">x</span> + <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">ring</span>. Qed.</div></details>
+<br/>
+<h2> Hint externs for calling math in the hint base <span class="bracket"><span class="id">maths</span></span> </h2>
+<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">math_hint</span> := <span class="id">math</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (_ = _ :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (_ = _ :&gt; <span class="id">int</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (_ &lt;&gt; _ :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (_ &lt;&gt; _ :&gt; <span class="id">int</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (_ = _ :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>))) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (_ = _ :&gt; <span class="id">int</span>))) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (_ &lt;&gt; _ :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>))) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (<span class="id"><a href="SLF.LibReflect.html#istrue">istrue</a></span> (<span class="id"><a href="SLF.LibReflect.html#isTrue">isTrue</a></span> (_ &lt;&gt; _ :&gt; <span class="id">int</span>))) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &lt;= _)%<span class="id">nat</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &gt;= _)%<span class="id">nat</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &lt; _)%<span class="id">nat</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &gt; _)%<span class="id">nat</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &lt;= _)%<span class="id">Z</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &gt;= _)%<span class="id">Z</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &lt; _)%<span class="id">Z</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 ((_ &gt; _)%<span class="id">Z</span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">int</span> _ _ _) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id">int</span> _ _ _) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> <span class="id">int</span> _ _ _) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> <span class="id">int</span> _ _ _) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">int</span> _ _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id">int</span> _ _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> <span class="id">int</span> _ _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> <span class="id">int</span> _ _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq">eq</a></span> <span class="id">int</span> _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">int</span> _ _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id">int</span> _ _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> <span class="id">int</span> _ _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> <span class="id">int</span> _ _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq">eq</a></span> <span class="id">int</span> _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (~ @<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq">eq</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _) =&gt; <span class="id">unfold</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#not">not</a></span>; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#ge">ge</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="SLF.LibOrder.html#gt">gt</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 3 (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#eq">eq</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> _ _ -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>) =&gt; <span class="id">math_hint</span> : <span class="id">maths</span>.<br/>
+<br/>
+<h1> Rewriting on arithmetic expressions </h1>
+<br/>
+<h2> Rewriting equalities provable by the <span class="bracket"><span class="id">math</span></span> tactic </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">math_rewrite</span> (<span class="id">E</span> = <span class="id">F</span>)</span> replaces all occurences of <span class="bracket"><span class="id">E</span></span>
+    with the expression <span class="bracket"><span class="id">F</span></span>. It produces the equality <span class="bracket"><span class="id">E</span> = <span class="id">F</span></span>
+    as subgoal, and tries to solve it using the tactic <span class="bracket"><span class="id">math</span></span> </div>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_rewrite"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">asserts_rewrite</span> <span class="id">E</span>; [ <span class="id">try</span> <span class="id">math</span> | ].<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_rewrite"</span> <span class="id">constr</span>(<span class="id">E</span>) <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">asserts_rewrite</span> <span class="id">E</span> <span class="kwd">in</span> <span class="id">H</span>; [ <span class="id">try</span> <span class="id">math</span> | ].<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_rewrite"</span> <span class="id">constr</span>(<span class="id">E</span>) <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">asserts_rewrite</span> <span class="id">E</span> <span class="kwd">in</span> *; [ <span class="id">try</span> <span class="id">math</span> | ].<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_rewrite"</span> <span class="string">"~"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">math_rewrite</span> <span class="id">E</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_rewrite"</span> <span class="string">"~"</span> <span class="id">constr</span>(<span class="id">E</span>) <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">math_rewrite</span> <span class="id">E</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_rewrite"</span> <span class="string">"~"</span> <span class="id">constr</span>(<span class="id">E</span>) <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">math_rewrite</span> <span class="id">E</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_rewrite"</span> <span class="string">"*"</span> <span class="id">constr</span>(<span class="id">E</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">math_rewrite</span> <span class="id">E</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_rewrite"</span> <span class="string">"*"</span> <span class="id">constr</span>(<span class="id">E</span>) <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">math_rewrite</span> <span class="id">E</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"math_rewrite"</span> <span class="string">"*"</span> <span class="id">constr</span>(<span class="id">E</span>) <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">math_rewrite</span> <span class="id">E</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<br/>
+<h2> Addition and substraction </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="plus_zero_r">plus_zero_r</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> + 0 = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="plus_zero_l">plus_zero_l</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;0 + <span class="id">n</span> = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="minus_zero_r">minus_zero_r</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> - 0 = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="minus_zero_l">minus_zero_l</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;0 - <span class="id">n</span> = (-<span class="id">n</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_zero_l">mult_zero_l</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;0 * <span class="id">n</span> = 0.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_zero_r">mult_zero_r</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> * 0 = 0.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_one_l">mult_one_l</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;1 * <span class="id">n</span> = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mult_one_r">mult_one_r</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> * 1 = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="minus_self">minus_self</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> - <span class="id">n</span> = 0.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="one_plus_minus_one_r">one_plus_minus_one_r</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;1 + (<span class="id">n</span> - 1) = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="plus_one_minus_one_l">plus_one_minus_one_l</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;(<span class="id">n</span> + 1) - 1 = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="one_plus_minus_one_l">one_plus_minus_one_l</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;(1 + <span class="id">n</span>) - 1 = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<h2> Simplification tactic </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">rew_int</span></span> performs some basic simplification on
+    expressions involving integers </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibInt.html#plus_zero_r">plus_zero_r</a></span> <span class="id"><a href="SLF.LibInt.html#plus_zero_l">plus_zero_l</a></span> <span class="id"><a href="SLF.LibInt.html#minus_zero_r">minus_zero_r</a></span> <span class="id"><a href="SLF.LibInt.html#minus_zero_l">minus_zero_l</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibInt.html#mult_zero_l">mult_zero_l</a></span> <span class="id"><a href="SLF.LibInt.html#mult_zero_r">mult_zero_r</a></span> <span class="id"><a href="SLF.LibInt.html#mult_one_l">mult_one_l</a></span> <span class="id"><a href="SLF.LibInt.html#mult_one_r">mult_one_r</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibInt.html#minus_self">minus_self</a></span> <span class="id"><a href="SLF.LibInt.html#one_plus_minus_one_r">one_plus_minus_one_r</a></span> <span class="id"><a href="SLF.LibInt.html#plus_one_minus_one_l">plus_one_minus_one_l</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibInt.html#one_plus_minus_one_l">one_plus_minus_one_l</a></span> : <span class="id">rew_int</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_int"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_int</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_int"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_int</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_int"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_int</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_int"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_int</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_int"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_int</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_int"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_int</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_int"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_int</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_int"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_int</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_int"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_int</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<h1> Conversions of operations from <span class="bracket"><span class="id">nat</span></span> to <span class="bracket"><span class="id">int</span></span> and back </h1>
+<br/>
+<div class="doc">-- LATER: make proofs below no longer depend on Coq's stdlib </div>
+<br/>
+<h2> Lifting of comparisons from <span class="bracket"><span class="id">nat</span></span> to <span class="bracket"><span class="id">int</span></span> </h2>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_nat_of_eq_int">eq_nat_of_eq_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) = (<span class="id">m</span>:<span class="id">int</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">n</span> = <span class="id">m</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="neq_nat_of_neq_int">neq_nat_of_neq_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &lt;&gt; (<span class="id">m</span>:<span class="id">int</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &lt;&gt; <span class="id">m</span>)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_int_of_eq_nat">eq_int_of_eq_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">n</span> = <span class="id">m</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) = (<span class="id">m</span>:<span class="id">int</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="neq_int_of_neq_nat">neq_int_of_neq_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &lt;&gt; <span class="id">m</span>)%<span class="id">nat</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &lt;&gt; (<span class="id">m</span>:<span class="id">int</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<h2> Lifting of inequalities from <span class="bracket"><span class="id">nat</span></span> to <span class="bracket"><span class="id">int</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="le_nat_of_le_int">le_nat_of_le_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &lt;= (<span class="id">m</span>:<span class="id">int</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &lt;= <span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="le_int_of_le_nat">le_int_of_le_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &lt;= <span class="id">m</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &lt;= (<span class="id">m</span>:<span class="id">int</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="lt_nat_of_lt_int">lt_nat_of_lt_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &lt; (<span class="id">m</span>:<span class="id">int</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &lt; <span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="lt_int_of_lt_nat">lt_int_of_lt_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &lt; <span class="id">m</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &lt; (<span class="id">m</span>:<span class="id">int</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ge_nat_of_ge_int">ge_nat_of_ge_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &gt;= (<span class="id">m</span>:<span class="id">int</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &gt;= <span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ge_int_of_ge_nat">ge_int_of_ge_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &gt;= <span class="id">m</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &gt;= (<span class="id">m</span>:<span class="id">int</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="gt_nat_of_gt_int">gt_nat_of_gt_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &gt; (<span class="id">m</span>:<span class="id">int</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &gt; <span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="gt_int_of_gt_nat">gt_int_of_gt_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &gt; <span class="id">m</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span>:<span class="id">int</span>) &gt; (<span class="id">m</span>:<span class="id">int</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<h2> Lifting of operations from <span class="bracket"><span class="id">nat</span></span> to <span class="bracket"><span class="id">int</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="plus_nat_eq_plus_int">plus_nat_eq_plus_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span>+<span class="id">m</span>)%<span class="id">nat</span> = (<span class="id">n</span>:<span class="id">int</span>) + (<span class="id">m</span>:<span class="id">int</span>) :&gt; <span class="id">int</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">Transparent</span> <span class="id"><a href="SLF.LibInt.html#nat_to_Z">nat_to_Z</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibInt.html#nat_to_Z">nat_to_Z</a></span>. <span class="id">applys</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Nat2Z.inj_add">Nat2Z.inj_add</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="minus_nat_eq_minus_int">minus_nat_eq_minus_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &gt;= <span class="id">m</span>)%<span class="id">nat</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span>-<span class="id">m</span>)%<span class="id">nat</span> = (<span class="id">n</span>:<span class="id">int</span>) - (<span class="id">m</span>:<span class="id">int</span>) :&gt; <span class="id">int</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">Transparent</span> <span class="id"><a href="SLF.LibInt.html#nat_to_Z">nat_to_Z</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibInt.html#nat_to_Z">nat_to_Z</a></span>. <span class="id">applys</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Nat2Z.inj_sub">Nat2Z.inj_sub</a></span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibInt.html#plus_nat_eq_plus_int">plus_nat_eq_plus_int</a></span> : <span class="id">rew_maths</span>.<br/>
+<br/>
+<h2> Properties of comparison </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="antisym_le_int">antisym_le_int</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#antisym">antisym</a></span> (<span class="id"><a href="SLF.LibOrder.html#le">le</a></span> (<span class="id">A</span>:=<span class="id">int</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span> <span class="id">x</span> <span class="id">y</span> <span class="id">L1</span> <span class="id">L2</span>. <span class="id">math</span>. Qed.</div></details>
+<br/>
+<h2> Absolute function in <span class="bracket"><span class="id">nat</span></span> </h2>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'abs'"</span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.abs_nat">Z.abs_nat</a></span> (<span class="kwd">at</span> <span class="id">level</span> 0).<br/>
+<br/>
+<span class="id">Global</span> <span class="kwd">Arguments</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.abs">Z.abs</a></span> : <span class="id">simpl</span> <span class="id">never</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Arguments</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.abs_nat">Z.abs_nat</a></span> : <span class="id">simpl</span> <span class="id">never</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_nat">abs_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">abs</span> <span class="id">n</span> = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">exact</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Zabs.html#Zabs_nat_Z_of_nat">Zabs_nat_Z_of_nat</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_nonneg">abs_nonneg</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id">abs</span> <span class="id">x</span> = <span class="id">x</span> :&gt; <span class="id">int</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Zabs.html#inj_Zabs_nat">inj_Zabs_nat</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.abs_eq">Z.abs_eq</a></span>. <span class="id">math</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_eq_nat_eq">abs_eq_nat_eq</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>) (<span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">abs</span> <span class="id">x</span> = <span class="id">y</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) = (<span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span> <span class="id">y</span> :&gt; <span class="id">int</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">E</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">rewrite</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Zabs2Nat.id_abs">Zabs2Nat.id_abs</a></span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.abs_eq">Z.abs_eq</a></span>; <span class="id">math</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">rewrite</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Zabs2Nat.id">Zabs2Nat.id</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="lt_abs_abs">lt_abs_abs</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span> : <span class="id">int</span>),<br/>
+&nbsp;&nbsp;(0 &lt;= <span class="id">n</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &lt; <span class="id">m</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">abs</span> <span class="id">n</span> &lt; <span class="id">abs</span> <span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">nat_comp_to_peano</span>. <span class="id">apply</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Zabs.html#Zabs_nat_lt">Zabs_nat_lt</a></span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_to_int">abs_to_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> : <span class="id">int</span>),<br/>
+&nbsp;&nbsp;0 &lt;= <span class="id">n</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span> (<span class="id">abs</span> <span class="id">n</span>) = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibInt.html#abs_nonneg">abs_nonneg</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_le_nat_le">abs_le_nat_le</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>) (<span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(0 &lt;= <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">abs</span> <span class="id">x</span> &lt;= <span class="id">y</span>) = (<span class="id">x</span> &lt;= <span class="id">y</span>)%<span class="id">Z</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">E</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrites</span>~ &lt;-(&gt;&gt; <span class="id"><a href="SLF.LibInt.html#abs_to_int">abs_to_int</a></span> <span class="id">x</span>). <span class="id">math</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrites</span>~ &lt;-(&gt;&gt; <span class="id"><a href="SLF.LibInt.html#abs_to_int">abs_to_int</a></span> <span class="id">x</span>) <span class="kwd">in</span> <span class="id">E</span>. <span class="id">math</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_ge_nat_ge">abs_ge_nat_ge</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>) (<span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(0 &lt;= <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">abs</span> <span class="id">x</span> &gt;= <span class="id">y</span>) = (<span class="id">x</span> &gt;= <span class="id">y</span>)%<span class="id">Z</span> .<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">E</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrites</span>~ &lt;-(&gt;&gt; <span class="id"><a href="SLF.LibInt.html#abs_to_int">abs_to_int</a></span> <span class="id">x</span>). <span class="id">math</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrites</span>~ &lt;-(&gt;&gt; <span class="id"><a href="SLF.LibInt.html#abs_to_int">abs_to_int</a></span> <span class="id">x</span>) <span class="kwd">in</span> <span class="id">E</span>. <span class="id">math</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">-- TODO: many useful lemmas missing </div>
+<br/>
+<h2> <span class="bracket"><span class="id">abs</span></span> distribute on constants and operators </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_0">abs_0</a></span> : <span class="id">abs</span> 0 = 0%<span class="id">nat</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_1">abs_1</a></span> : <span class="id">abs</span> 1 = 1%<span class="id">nat</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_plus">abs_plus</a></span> : <span class="kwd">forall</span> (<span class="id">x</span> <span class="id">y</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;(<span class="id">x</span> &gt;= 0) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">y</span> &gt;= 0) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">abs</span> (<span class="id">x</span> + <span class="id">y</span>) = (<span class="id">abs</span> <span class="id">x</span> + <span class="id">abs</span> <span class="id">y</span>)%<span class="id">nat</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Zabs2Nat.inj_add">Zabs2Nat.inj_add</a></span>; <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_minus">abs_minus</a></span> : <span class="kwd">forall</span> (<span class="id">x</span> <span class="id">y</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;(<span class="id">x</span> &gt;= <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">y</span> &gt;= 0) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">abs</span> (<span class="id">x</span> - <span class="id">y</span>) = (<span class="id">abs</span> <span class="id">x</span> - <span class="id">abs</span> <span class="id">y</span>)%<span class="id">nat</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Zabs2Nat.inj_sub">Zabs2Nat.inj_sub</a></span>; <span class="id">math</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_nat_plus_nonneg">abs_nat_plus_nonneg</a></span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) (<span class="id">x</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> &gt;= 0 -&gt;<br/>
+&nbsp;<span class="id">abs</span> (<span class="id">n</span> + <span class="id">x</span>)%<span class="id">Z</span> = (<span class="id">n</span> + <span class="id">abs</span> <span class="id">x</span>)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibInt.html#eq_nat_of_eq_int">eq_nat_of_eq_int</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibInt.html#plus_nat_eq_plus_int">plus_nat_eq_plus_int</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">do</span> 2 (<span class="id">rewrite</span> <span class="id"><a href="SLF.LibInt.html#abs_nonneg">abs_nonneg</a></span>; [|<span class="id">math</span>]). <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_gt_minus_nat">abs_gt_minus_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) (<span class="id">x</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;(<span class="id">x</span> &gt;= <span class="id">n</span>)%<span class="id">Z</span> -&gt;<br/>
+&nbsp;<span class="id">abs</span> (<span class="id">x</span> - <span class="id">n</span>)%<span class="id">Z</span> = (<span class="id">abs</span> <span class="id">x</span> - <span class="id">n</span>)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">N</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibInt.html#eq_nat_of_eq_int">eq_nat_of_eq_int</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibInt.html#minus_nat_eq_minus_int">minus_nat_eq_minus_int</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">do</span> 2 (<span class="id">rewrite</span> <span class="id"><a href="SLF.LibInt.html#abs_nonneg">abs_nonneg</a></span>; [|<span class="id">math</span>]). <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibInt.html#ge_nat_of_ge_int">ge_nat_of_ge_int</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibInt.html#abs_nonneg">abs_nonneg</a></span>; <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="succ_abs_eq_abs_one_plus">succ_abs_eq_abs_one_plus</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> (<span class="id">abs</span> <span class="id">x</span>) = <span class="id">abs</span> (1 + <span class="id">x</span>) :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">pattern</span> <span class="id">x</span>. <span class="id">applys</span> (@<span class="id"><a href="SLF.LibNat.html#measure_induction">measure_induction</a></span> _ <span class="id">abs</span>). <span class="id">clear</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">IH</span> <span class="id">Pos</span>. <span class="id">rewrite</span> &lt;- <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Zabs.html#Zabs_nat_Zsucc">Zabs_nat_Zsucc</a></span>. <span class="id">fequals</span>. <span class="id">math</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="abs_eq_succ_abs_minus_one">abs_eq_succ_abs_minus_one</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> &gt; 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id">abs</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#S">S</a></span> (<span class="id">abs</span> (<span class="id">x</span> - 1)) :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibInt.html#eq_nat_of_eq_int">eq_nat_of_eq_int</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibInt.html#abs_nonneg">abs_nonneg</a></span>; <span class="id">try</span> <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">rew_abs_nonneg</span></span> to normalize expressions involving <span class="bracket"><span class="id">abs</span></span>
+       issuing side-conditions that arguments are nonnegative </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibInt.html#abs_nat">abs_nat</a></span> <span class="id"><a href="SLF.LibInt.html#abs_0">abs_0</a></span> <span class="id"><a href="SLF.LibInt.html#abs_1">abs_1</a></span> <span class="id"><a href="SLF.LibInt.html#abs_plus">abs_plus</a></span> <span class="id"><a href="SLF.LibInt.html#abs_nonneg">abs_nonneg</a></span> : <span class="id">rew_abs_nonneg</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_abs_nonneg"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_abs_nonneg</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_abs_nonneg"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_abs_nonneg</span>; <span class="id">try</span> <span class="id">math</span>; <span class="id">autos</span>~.<br/>
+<br/>
+<h2> Positive part of an integer. Returns 0 on negative values. </h2>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'to_nat'"</span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.to_nat">Z.to_nat</a></span> (<span class="kwd">at</span> <span class="id">level</span> 0).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_nat">to_nat_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">to_nat</span> <span class="id">n</span> = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">exact</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Nat2Z.id">Nat2Z.id</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_nonneg">to_nat_nonneg</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id">to_nat</span> <span class="id">x</span> = <span class="id">x</span> :&gt; <span class="id">int</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Z2Nat.id">Z2Nat.id</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_neg">to_nat_neg</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> &lt;= 0 -&gt;<br/>
+&nbsp;&nbsp;<span class="id">to_nat</span> <span class="id">x</span> = 0%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">H</span>. <span class="id">destruct</span>~ <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.pos">Z.pos</a></span> <span class="id">p</span> = 0) <span class="kwd">as</span> -&gt;. { <span class="id">forwards</span>: <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Zorder.html#Zle_0_pos">Zle_0_pos</a></span> <span class="id">p</span>. <span class="id">math</span>. }<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_eq_nat_eq">to_nat_eq_nat_eq</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>) (<span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">x</span> &gt;= 0 -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">to_nat</span> <span class="id">x</span> = <span class="id">y</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) = (<span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span> <span class="id">y</span> :&gt; <span class="id">int</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">E</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">rewrite</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Z2Nat.id">Z2Nat.id</a></span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">rewrite</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Nat2Z.id">Nat2Z.id</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="lt_to_nat_to_nat">lt_to_nat_to_nat</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> <span class="id">m</span> : <span class="id">int</span>),<br/>
+&nbsp;&nbsp;(0 &lt;= <span class="id">n</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">n</span> &lt; <span class="id">m</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">to_nat</span> <span class="id">n</span> &lt; <span class="id">to_nat</span> <span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">nat_comp_to_peano</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;-!<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Zabs2Nat.abs_nat_nonneg">Zabs2Nat.abs_nat_nonneg</a></span> <span class="kwd">by</span> <span class="id">math</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Zabs.html#Zabs_nat_lt">Zabs_nat_lt</a></span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_to_int">to_nat_to_int</a></span> : <span class="kwd">forall</span> (<span class="id">n</span> : <span class="id">int</span>),<br/>
+&nbsp;&nbsp;0 &lt;= <span class="id">n</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z_of_nat">Z_of_nat</a></span> (<span class="id">to_nat</span> <span class="id">n</span>) = <span class="id">n</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibInt.html#to_nat_nonneg">to_nat_nonneg</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_le_nat_le">to_nat_le_nat_le</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>) (<span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(0 &lt;= <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">to_nat</span> <span class="id">x</span> &lt;= <span class="id">y</span>) = (<span class="id">x</span> &lt;= <span class="id">y</span>)%<span class="id">Z</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">E</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrites</span>~ &lt;-(&gt;&gt; <span class="id"><a href="SLF.LibInt.html#to_nat_to_int">to_nat_to_int</a></span> <span class="id">x</span>). <span class="id">math</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrites</span>~ &lt;-(&gt;&gt; <span class="id"><a href="SLF.LibInt.html#to_nat_to_int">to_nat_to_int</a></span> <span class="id">x</span>) <span class="kwd">in</span> <span class="id">E</span>. <span class="id">math</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_ge_nat_ge">to_nat_ge_nat_ge</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">int</span>) (<span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;(0 &lt;= <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">to_nat</span> <span class="id">x</span> &gt;= <span class="id">y</span>) = (<span class="id">x</span> &gt;= <span class="id">y</span>)%<span class="id">Z</span> .<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span> <span class="id">E</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrites</span>~ &lt;-(&gt;&gt; <span class="id"><a href="SLF.LibInt.html#to_nat_to_int">to_nat_to_int</a></span> <span class="id">x</span>). <span class="id">math</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrites</span>~ &lt;-(&gt;&gt; <span class="id"><a href="SLF.LibInt.html#to_nat_to_int">to_nat_to_int</a></span> <span class="id">x</span>) <span class="kwd">in</span> <span class="id">E</span>. <span class="id">math</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h2> <span class="bracket"><span class="id">to_nat</span></span> distribute on constants and operators </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_0">to_nat_0</a></span> : <span class="id">to_nat</span> 0 = 0%<span class="id">nat</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_1">to_nat_1</a></span> : <span class="id">to_nat</span> 1 = 1%<span class="id">nat</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_plus">to_nat_plus</a></span> : <span class="kwd">forall</span> (<span class="id">x</span> <span class="id">y</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;(<span class="id">x</span> &gt;= 0) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">y</span> &gt;= 0) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">to_nat</span> (<span class="id">x</span> + <span class="id">y</span>) = (<span class="id">to_nat</span> <span class="id">x</span> + <span class="id">to_nat</span> <span class="id">y</span>)%<span class="id">nat</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Z2Nat.inj_add">Z2Nat.inj_add</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_nat_minus">to_nat_minus</a></span> : <span class="kwd">forall</span> (<span class="id">x</span> <span class="id">y</span>:<span class="id">int</span>),<br/>
+&nbsp;&nbsp;(<span class="id">x</span> &gt;= <span class="id">y</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">y</span> &gt;= 0) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">to_nat</span> (<span class="id">x</span> - <span class="id">y</span>) = (<span class="id">to_nat</span> <span class="id">x</span> - <span class="id">to_nat</span> <span class="id">y</span>)%<span class="id">nat</span> :&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.Znat.html#Z2Nat.inj_sub">Z2Nat.inj_sub</a></span>. Qed.</div></details>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">rew_to_nat_nonneg</span></span> to normalize expressions involving <span class="bracket"><span class="id">to_nat</span></span>
+       issuing side-conditions that arguments are nonnegative </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibInt.html#to_nat_nat">to_nat_nat</a></span> <span class="id"><a href="SLF.LibInt.html#to_nat_0">to_nat_0</a></span> <span class="id"><a href="SLF.LibInt.html#to_nat_1">to_nat_1</a></span> <span class="id"><a href="SLF.LibInt.html#to_nat_plus">to_nat_plus</a></span> <span class="id"><a href="SLF.LibInt.html#to_nat_minus">to_nat_minus</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibInt.html#to_nat_nonneg">to_nat_nonneg</a></span> : <span class="id">rew_to_nat_nonneg</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_to_nat_nonneg"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_to_nat_nonneg</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_to_nat_nonneg"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_to_nat_nonneg</span>; <span class="id">try</span> <span class="id">math</span>; <span class="id">autos</span>~.<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

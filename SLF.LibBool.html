@@ -1,0 +1,352 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibBool</title>
+<meta name="description" content="Documentation of Coq module LibBool" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibBool</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibOperation.html">LibOperation</a></span>.<br/>
+<br/>
+<h1> Boolean type </h1>
+<br/>
+<h2> Definition </h2>
+<br/>
+<div class="doc">From the Prelude:
+  Inductive bool : Type :=
+    | true : bool
+    | false : bool.
+</div>
+<br/>
+<h2> Inhabited </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="Inhab_bool">Inhab_bool</a></span> : <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>). Qed.</div></details>
+<br/>
+<h2> Extensionality </h2>
+<br/>
+<div class="doc">See <span class="bracket"><span class="id">LibReflect</span></span> for extensionality of booleans. </div>
+<br/>
+<h1> Boolean Operations </h1>
+<br/>
+<h2> Comparison </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="eqb">eqb</a></span> (<span class="id">x</span> <span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span>, <span class="id">y</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;| _, _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Negation </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="neg">neg</a></span> (<span class="id">x</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Conjunction </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="and">and</a></span> (<span class="id">x</span> <span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span>, <span class="id">y</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;| _, _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Disjunction </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="or">or</a></span> (<span class="id">x</span> <span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">x</span>, <span class="id">y</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span><br/>
+&nbsp;&nbsp;| _, _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Implication </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="impl">impl</a></span> (<span class="id">x</span> <span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#or">or</a></span> <span class="id">x</span> (<span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> <span class="id">y</span>).<br/>
+<br/>
+<div class="doc">Exclusive or </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="xor">xor</a></span> (<span class="id">x</span> <span class="id">y</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> (<span class="id"><a href="SLF.LibBool.html#eqb">eqb</a></span> <span class="id">x</span> <span class="id">y</span>).<br/>
+<br/>
+<div class="doc">Notations </div>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">Bool_scope</span>.<br/>
+<span class="id">Bind</span> <span class="kwd">Scope</span> <span class="id">Bool_scope</span> <span class="kwd">with</span> <span class="id">bool</span>.<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">Bool_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"! x"</span> := (<span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> <span class="id">x</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 35, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">Bool_scope</span>.<br/>
+<span class="kwd">Infix</span> <span class="string">"&amp;&amp;"</span> := <span class="id"><a href="SLF.LibBool.html#and">and</a></span><br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 40, <span class="id">left</span> <span class="id">associativity</span>) : <span class="id">Bool_scope</span>.<br/>
+<span class="kwd">Infix</span> <span class="string">"||"</span> := <span class="id"><a href="SLF.LibBool.html#or">or</a></span><br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">left</span> <span class="id">associativity</span>) : <span class="id">Bool_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"! x"</span> := (<span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> <span class="id">x</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 35, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">Bool_scope</span>.<br/>
+<span class="kwd">Infix</span> <span class="string">"&amp;&amp;"</span> := <span class="id"><a href="SLF.LibBool.html#and">and</a></span><br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 40, <span class="id">left</span> <span class="id">associativity</span>) : <span class="id">Bool_scope</span>.<br/>
+<span class="kwd">Infix</span> <span class="string">"||"</span> := <span class="id"><a href="SLF.LibBool.html#or">or</a></span><br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">left</span> <span class="id">associativity</span>) : <span class="id">Bool_scope</span>.<br/>
+<br/>
+<h1> Boolean Decision Procedure : tactic working by exponential case
+      analysis on all variables of type bool. </h1>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">tautob</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">tautob</span></span> introduces all variables that it can, performs a
+    case analysis on all the boolean variables, then splits
+    all subgoals and attempts resolution using intuition </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tautob_post</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="id">simpls</span>; <span class="id">try</span> <span class="id">split</span>; <span class="id">intros</span>; <span class="id">try</span> <span class="id">discriminate</span>;<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="id">solve</span> [ <span class="id">intuition</span> <span class="id">auto_false</span> ].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">tautob_core</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">rec</span> <span class="id">aux</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">try</span> <span class="id">intros_all</span>); <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">b</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span> |- _ =&gt; <span class="id">destruct</span> <span class="id">b</span>; <span class="id">clear</span> <span class="id">b</span>; <span class="id">aux</span> <span class="id">tt</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| _ =&gt; <span class="id">tautob_post</span> <span class="id">tt</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="id">aux</span> <span class="id">tt</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"tautob"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">tautob_core</span> <span class="id">tt</span>.<br/>
+<br/>
+<h1> Properties of boolean operators </h1>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">eqb</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eqb_same">eqb_same</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#eqb">eqb</a></span> <span class="id">x</span> <span class="id">x</span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eqb_true_l">eqb_true_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_l">neutral_l</a></span> <span class="id"><a href="SLF.LibBool.html#eqb">eqb</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eqb_true_r">eqb_true_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_r">neutral_r</a></span> <span class="id"><a href="SLF.LibBool.html#eqb">eqb</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eqb_false_l">eqb_false_l</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#eqb">eqb</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> <span class="id">x</span> = <span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eqb_false_r">eqb_false_r</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#eqb">eqb</a></span> <span class="id">x</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> = <span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eqb_comm">eqb_comm</a></span> : <span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id"><a href="SLF.LibBool.html#eqb">eqb</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">and</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_same">and_same</a></span> : <span class="id"><a href="SLF.LibOperation.html#idempotent2">idempotent2</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_true_l">and_true_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_l">neutral_l</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_true_r">and_true_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_r">neutral_r</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_false_l">and_false_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#absorb_l">absorb_l</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_false_r">and_false_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#absorb_r">absorb_r</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_comm">and_comm</a></span> : <span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_assoc">and_assoc</a></span> : <span class="id"><a href="SLF.LibOperation.html#assoc">assoc</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_or_l">and_or_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#distrib_r">distrib_r</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="and_or_r">and_or_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#distrib_l">distrib_l</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">or</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_same">or_same</a></span> : <span class="id"><a href="SLF.LibOperation.html#idempotent2">idempotent2</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_false_l">or_false_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_l">neutral_l</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_false_r">or_false_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#neutral_r">neutral_r</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_true_l">or_true_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#absorb_l">absorb_l</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_true_r">or_true_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#absorb_r">absorb_r</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_comm">or_comm</a></span> : <span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_assoc">or_assoc</a></span> : <span class="id"><a href="SLF.LibOperation.html#assoc">assoc</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_and_l">or_and_l</a></span> : <span class="id"><a href="SLF.LibOperation.html#distrib_r">distrib_r</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="or_and_r">or_and_r</a></span> : <span class="id"><a href="SLF.LibOperation.html#distrib_l">distrib_l</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">neg</span></span> </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="neg_false">neg_false</a></span> : ! <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="neg_true">neg_true</a></span> : ! <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="neg_and">neg_and</a></span> : <span class="id"><a href="SLF.LibOperation.html#automorphism">automorphism</a></span> <span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="neg_or">neg_or</a></span> : <span class="id"><a href="SLF.LibOperation.html#automorphism">automorphism</a></span> <span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="neg_neg">neg_neg</a></span> : <span class="id"><a href="SLF.LibOperation.html#involutive">involutive</a></span> <span class="id"><a href="SLF.LibBool.html#neg">neg</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<h2> Properties of <span class="bracket"><span class="kwd">if</span> <span class="kwd">then</span> <span class="kwd">else</span></span> </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="PropertiesIf">PropertiesIf</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> <span class="id">y</span> <span class="id">z</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#bool">bool</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_true">if_true</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>) = <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_false">if_false</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> <span class="kwd">then</span> <span class="id">x</span> <span class="kwd">else</span> <span class="id">y</span>) = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_then_else_same">if_then_else_same</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id">x</span> <span class="kwd">then</span> <span class="id">y</span> <span class="kwd">else</span> <span class="id">y</span>) = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_then_true_else_false">if_then_true_else_false</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id">x</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> <span class="kwd">else</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>) = <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_then_false_else_true">if_then_false_else_true</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id">x</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> <span class="kwd">else</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>) = !<span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_then_true">if_then_true</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id">x</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> <span class="kwd">else</span> <span class="id">y</span>) = <span class="id">x</span> || <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_then_false">if_then_false</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id">x</span> <span class="kwd">then</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> <span class="kwd">else</span> <span class="id">y</span>) = (!<span class="id">x</span>) &amp;&amp; <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_else_false">if_else_false</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id">x</span> <span class="kwd">then</span> <span class="id">y</span> <span class="kwd">else</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span>) = <span class="id">x</span> &amp;&amp; <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="if_else_true">if_else_true</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">if</span> <span class="id">x</span> <span class="kwd">then</span> <span class="id">y</span> <span class="kwd">else</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span>) = (!<span class="id">x</span>) || <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">tautob</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibBool.html#PropertiesIf">PropertiesIf</a></span>.<br/>
+<br/>
+<h2> Properties of <span class="bracket"><span class="id">impl</span></span> and <span class="bracket"><span class="id">xor</span></span> </h2>
+<br/>
+<div class="doc">We do not provide lemmas for <span class="bracket"><span class="id">impl</span></span> and <span class="bracket"><span class="id">xor</span></span>
+   because these functions can be easily expressed
+   in terms of the other operators. </div>
+<br/>
+<h2> Opacity </h2>
+<br/>
+<span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibBool.html#eqb">eqb</a></span> <span class="id"><a href="SLF.LibBool.html#neg">neg</a></span> <span class="id"><a href="SLF.LibBool.html#and">and</a></span> <span class="id"><a href="SLF.LibBool.html#or">or</a></span>.<br/>
+<br/>
+<h1> Tactics </h1>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">rew_neg_neg</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">rew_neg_neg</span></span> is a tactic that simplifies all double negations
+    of booleans, i.e. replaces <span class="bracket">!!<span class="id">b</span></span> with <span class="bracket"><span class="id">b</span></span>. </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibBool.html#neg_neg">neg_neg</a></span> : <span class="id">rew_neg_neg</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_neg_neg"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_neg_neg</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_neg_neg"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_neg_neg</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_neg_neg"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_neg_neg</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_neg_neg"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_neg_neg</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_neg_neg"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_neg_neg</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_neg_neg"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_neg_neg</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_neg_neg"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_neg_neg</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_neg_neg"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_neg_neg</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_neg_neg"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_neg_neg</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<br/>
+<h2> Tactic <span class="bracket"><span class="id">rew_bool</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">rew_bool</span></span> simplifies boolean expressions, using rewriting
+    lemmas in the database <span class="bracket"><span class="id">rew_bool</span></span> defined below. </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#eqb_same">eqb_same</a></span> <span class="id"><a href="SLF.LibBool.html#eqb_true_l">eqb_true_l</a></span> <span class="id"><a href="SLF.LibBool.html#eqb_true_r">eqb_true_r</a></span> <span class="id"><a href="SLF.LibBool.html#eqb_false_l">eqb_false_l</a></span> <span class="id"><a href="SLF.LibBool.html#eqb_false_r">eqb_false_r</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#neg_false">neg_false</a></span> <span class="id"><a href="SLF.LibBool.html#neg_true">neg_true</a></span> <span class="id"><a href="SLF.LibBool.html#neg_neg">neg_neg</a></span> <span class="id"><a href="SLF.LibBool.html#neg_and">neg_and</a></span> <span class="id"><a href="SLF.LibBool.html#neg_or">neg_or</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#and_true_l">and_true_l</a></span> <span class="id"><a href="SLF.LibBool.html#and_true_r">and_true_r</a></span> <span class="id"><a href="SLF.LibBool.html#and_false_l">and_false_l</a></span> <span class="id"><a href="SLF.LibBool.html#and_false_r">and_false_r</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#or_false_l">or_false_l</a></span> <span class="id"><a href="SLF.LibBool.html#or_false_r">or_false_r</a></span> <span class="id"><a href="SLF.LibBool.html#or_true_l">or_true_l</a></span> <span class="id"><a href="SLF.LibBool.html#or_true_r">or_true_r</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#if_true">if_true</a></span> <span class="id"><a href="SLF.LibBool.html#if_false">if_false</a></span> <span class="id"><a href="SLF.LibBool.html#if_then_else_same">if_then_else_same</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#if_then_true_else_false">if_then_true_else_false</a></span> <span class="id"><a href="SLF.LibBool.html#if_then_false_else_true">if_then_false_else_true</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#if_then_true">if_then_true</a></span> <span class="id"><a href="SLF.LibBool.html#if_else_false">if_else_false</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibBool.html#if_then_false">if_then_false</a></span> <span class="id"><a href="SLF.LibBool.html#if_else_true">if_else_true</a></span><br/>
+&nbsp;&nbsp;: <span class="id">rew_bool</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_bool</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_bool</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_bool</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_bool"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_bool</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibMin</title>
+<meta name="description" content="Documentation of Coq module LibMin" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibMin</h1>
+<div class="coq">
+<br/>
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span> <span class="id"><a href="SLF.LibOperation.html">LibOperation</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span> <span class="id"><a href="SLF.LibOrder.html">LibOrder</a></span> <span class="id"><a href="SLF.LibEpsilon.html">LibEpsilon</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span>.<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="lower_bound">lower_bound</a></span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">x</span>:<span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">y</span> -&gt; <span class="id">le</span> <span class="id">x</span> <span class="id">y</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="min_element">min_element</a></span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">x</span>:<span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id">x</span> /\ <span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span> <span class="id">le</span> <span class="id">P</span> <span class="id">x</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mmin">mmin</a></span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> (<span class="id"><a href="SLF.LibMin.html#min_element">min_element</a></span> <span class="id">le</span> <span class="id">P</span>).<br/>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="upper_bound">upper_bound</a></span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">x</span>:<span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">y</span> -&gt; <span class="id">le</span> <span class="id">y</span> <span class="id">x</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="max_element">max_element</a></span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">x</span>:<span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id">x</span> /\ <span class="id"><a href="SLF.LibMin.html#upper_bound">upper_bound</a></span> <span class="id">le</span> <span class="id">P</span> <span class="id">x</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="mmax">mmax</a></span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> (<span class="id"><a href="SLF.LibMin.html#max_element">max_element</a></span> <span class="id">le</span> <span class="id">P</span>).<br/>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="lub">lub</a></span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">x</span>:<span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#min_element">min_element</a></span> <span class="id">le</span> (<span class="id"><a href="SLF.LibMin.html#upper_bound">upper_bound</a></span> <span class="id">le</span> <span class="id">P</span>) <span class="id">x</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="glb">glb</a></span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">x</span>:<span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#max_element">max_element</a></span> <span class="id">le</span> (<span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span> <span class="id">le</span> <span class="id">P</span>) <span class="id">x</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="upper_bound_inverse">upper_bound_inverse</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#upper_bound">upper_bound</a></span> <span class="id">le</span> = <span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">le</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">intros</span> <span class="id">P</span> <span class="id">x</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span>, <span class="id"><a href="SLF.LibMin.html#upper_bound">upper_bound</a></span>. <span class="id">iff</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="max_element_inverse">max_element_inverse</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">x</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#max_element">max_element</a></span> <span class="id">le</span> <span class="id">P</span> <span class="id">x</span> = <span class="id"><a href="SLF.LibMin.html#min_element">min_element</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">le</span>) <span class="id">P</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibMin.html#max_element">max_element</a></span>, <span class="id"><a href="SLF.LibMin.html#min_element">min_element</a></span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibMin.html#upper_bound_inverse">upper_bound_inverse</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mmax_inverse">mmax_inverse</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#mmax">mmax</a></span> <span class="id">le</span> <span class="id">P</span> = <span class="id"><a href="SLF.LibMin.html#mmin">mmin</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id">le</span>) <span class="id">P</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibEpsilon.html#epsilon_eq">epsilon_eq</a></span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibMin.html#max_element_inverse">max_element_inverse</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="bounded_has_minimal">bounded_has_minimal</a></span> <span class="id">A</span> (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> (<span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span> <span class="id">le</span> <span class="id">P</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> (<span class="id"><a href="SLF.LibMin.html#min_element">min_element</a></span> <span class="id">le</span> <span class="id">P</span>).<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mmin_spec">mmin_spec</a></span> : <span class="kwd">forall</span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">le</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) <span class="id">m</span>,<br/>
+&nbsp;&nbsp;<span class="id">m</span> = <span class="id"><a href="SLF.LibMin.html#mmin">mmin</a></span> <span class="id">le</span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> (<span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span> <span class="id">le</span> <span class="id">P</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#bounded_has_minimal">bounded_has_minimal</a></span> <span class="id">le</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#min_element">min_element</a></span> <span class="id">le</span> <span class="id">P</span> <span class="id">m</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibMin.html#mmin">mmin</a></span>. <span class="id">epsilon</span>* <span class="id">m</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibNat.html">LibNat</a></span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="increment_lower_bound_nat">increment_lower_bound_nat</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>-&gt;<span class="kwd">Prop</span>) <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">P</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">P</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">P</span> (<span class="id">x</span> + 1)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">hlo</span> ?. <span class="id">intros</span> <span class="id">y</span> ?.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Arith.Peano_dec.html#eq_nat_dec">eq_nat_dec</a></span> <span class="id">x</span> <span class="id">y</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">tauto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">forwards</span>: <span class="id">hlo</span>; <span class="id">eauto</span>. <span class="id">nat_math</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="bounded_has_minimal_nat">bounded_has_minimal_nat</a></span> :<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibMin.html#bounded_has_minimal">bounded_has_minimal</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">P</span> [ <span class="id">y</span> ? ].<br/>
+&nbsp;&nbsp;<span class="id">cut</span> (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">k</span> <span class="id">x</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>), (<span class="id">y</span> + 1 - <span class="id">x</span>)%<span class="id">nat</span> = <span class="id">k</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">P</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">z</span>, <span class="id"><a href="SLF.LibMin.html#min_element">min_element</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">P</span> <span class="id">z</span><br/>
+&nbsp;&nbsp;). { <span class="id">intros</span> ? [ <span class="id">x</span> ? ]. <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">k</span>; <span class="id">introv</span> ? <span class="id">hlo</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">false</span>. <span class="id">forwards</span>: <span class="id">hlo</span>; <span class="id">eauto</span>. <span class="id">nat_math</span>. }<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#prop_inv">prop_inv</a></span> (<span class="id">P</span> <span class="id">x</span>)).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="kwd">exists</span> <span class="id">x</span>. <span class="id">split</span>; <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">eapply</span> (<span class="id">IHk</span> (<span class="id">x</span> + 1)%<span class="id">nat</span>). <span class="id">nat_math</span>. <span class="id">eauto</span> <span class="kwd">using</span> <span class="id"><a href="SLF.LibMin.html#increment_lower_bound_nat">increment_lower_bound_nat</a></span>. }<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">bounded_has_minimal_nat</span> : <span class="id">bounded_has_minimal</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="admits_lower_bound_nat">admits_lower_bound_nat</a></span> : <span class="kwd">forall</span> (<span class="id">P</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> (<span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> 0%<span class="id">nat</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibMin.html#lower_bound">lower_bound</a></span>. <span class="id">nat_math</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">admits_lower_bound_nat</span> : <span class="id">admits_lower_bound</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="bounded_has_maximal_nat">bounded_has_maximal_nat</a></span> :<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibMin.html#bounded_has_minimal">bounded_has_minimal</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> (<span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">P</span> [ <span class="id">y</span> ? ] [ <span class="id">x</span> <span class="id">h</span> ].<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">y</span> &lt;= <span class="id">x</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">forwards</span>: <span class="id">h</span>. <span class="id">eauto</span>. <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">self_inverse</span>: <span class="kwd">forall</span> <span class="id">i</span>, <span class="id">i</span> &lt;= <span class="id">x</span> -&gt; (<span class="id">x</span> - (<span class="id">x</span> - <span class="id">i</span>))%<span class="id">nat</span> = <span class="id">i</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">nat_math</span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span> [ <span class="id">z</span> [ ? <span class="id">hz</span> ]]: (@<span class="id"><a href="SLF.LibMin.html#bounded_has_minimal_nat">bounded_has_minimal_nat</a></span> (<span class="kwd">fun</span> <span class="id">i</span> =&gt; <span class="id">P</span> (<span class="id">x</span> - <span class="id">i</span>)%<span class="id">nat</span>)).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="kwd">exists</span> (<span class="id">x</span> - <span class="id">y</span>)%<span class="id">nat</span>. <span class="id">rewrite</span> <span class="id">self_inverse</span> <span class="kwd">by</span> <span class="id">eauto</span>. <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">eauto</span> <span class="kwd">using</span> <span class="id"><a href="SLF.LibMin.html#admits_lower_bound_nat">admits_lower_bound_nat</a></span>. }<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">x</span> - <span class="id">z</span>)%<span class="id">nat</span>.<br/>
+&nbsp;&nbsp;<span class="id">clear</span> <span class="id">dependent</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">split</span>; [ <span class="id">assumption</span> | ].<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">y</span> ?.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">y</span> &lt;= <span class="id">x</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">forwards</span>: <span class="id">h</span>. <span class="id">eauto</span>. <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>: <span class="id">hz</span> (<span class="id">x</span> - <span class="id">y</span>)%<span class="id">nat</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id">self_inverse</span> <span class="kwd">by</span> <span class="id">eauto</span>. <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#inverse">inverse</a></span>. <span class="id">nat_math</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">bounded_has_maximal_nat</span> : <span class="id">bounded_has_minimal</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="mmin_spec_nat">mmin_spec_nat</a></span>:<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">P</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>-&gt;<span class="kwd">Prop</span>) <span class="id">m</span>,<br/>
+&nbsp;&nbsp;<span class="id">m</span> = <span class="id"><a href="SLF.LibMin.html#mmin">mmin</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> <span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id">m</span> /\ (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">m</span> &lt;= <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">E</span> <span class="id">Q</span>. <span class="id">applys</span> (@<span class="id"><a href="SLF.LibMin.html#mmin_spec">mmin_spec</a></span> _ _ _ <span class="id">P</span> <span class="id">m</span> <span class="id">E</span> <span class="id">Q</span>).<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibMin.html#admits_lower_bound_nat">admits_lower_bound_nat</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibMin.html#bounded_has_minimal_nat">bounded_has_minimal_nat</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="MMin">MMin</a></span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} := <span class="id"><a href="SLF.LibMin.html#mmin">mmin</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="MMax">MMax</a></span> `{<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} `{<span class="id"><a href="SLF.LibOrder.html#Le">Le</a></span> <span class="id">A</span>} := <span class="id"><a href="SLF.LibMin.html#mmax">mmax</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span>.<br/>
+<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

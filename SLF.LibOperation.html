@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibOperation</title>
+<meta name="description" content="Documentation of Coq module LibOperation" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibOperation</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span>.<br/>
+<br/>
+<br/>
+<h1> Definitions </h1>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Definitions">Definitions</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Definitions.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> <span class="id">g</span> : <span class="id"><a href="SLF.LibOperation.html#Definitions.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibOperation.html#Definitions.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibOperation.html#Definitions.A">A</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">i</span> : <span class="id"><a href="SLF.LibOperation.html#Definitions.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibOperation.html#Definitions.A">A</a></span>.<br/>
+<br/>
+<h2> Commutativity, associativity </h2>
+<br/>
+<div class="doc">Commutativity </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="comm">comm</a></span> <span class="id">f</span> := <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x</span> <span class="id">y</span> = <span class="id">f</span> <span class="id">y</span> <span class="id">x</span>.<br/>
+<br/>
+<div class="doc">Associativity </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="assoc">assoc</a></span> <span class="id">f</span> := <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">z</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">y</span> <span class="id">z</span>) = <span class="id">f</span> (<span class="id">f</span> <span class="id">x</span> <span class="id">y</span>) <span class="id">z</span>.<br/>
+<br/>
+<div class="doc">Combined associativity commutativity </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="comm_assoc">comm_assoc</a></span> <span class="id">f</span> := <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">z</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x</span> (<span class="id">f</span> <span class="id">y</span> <span class="id">z</span>) = <span class="id">f</span> <span class="id">y</span> (<span class="id">f</span> <span class="id">x</span> <span class="id">z</span>).<br/>
+<br/>
+<h2> Distributivity </h2>
+<br/>
+<div class="doc">Distributivity of unary operator </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="distrib">distrib</a></span> <span class="id">i</span> <span class="id">f</span> := <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">i</span> (<span class="id">f</span> <span class="id">x</span> <span class="id">y</span>) = <span class="id">f</span> (<span class="id">i</span> <span class="id">x</span>) (<span class="id">i</span> <span class="id">y</span>).<br/>
+<br/>
+<div class="doc">comm distributivity of unary operator </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="distrib_comm">distrib_comm</a></span> <span class="id">i</span> <span class="id">f</span> := <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">i</span> (<span class="id">f</span> <span class="id">x</span> <span class="id">y</span>) = <span class="id">f</span> (<span class="id">i</span> <span class="id">y</span>) (<span class="id">i</span> <span class="id">x</span>).<br/>
+<br/>
+<div class="doc">Left distributivity </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="distrib_l">distrib_l</a></span> <span class="id">f</span> <span class="id">g</span> := <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">z</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x</span> (<span class="id">g</span> <span class="id">y</span> <span class="id">z</span>) = <span class="id">g</span> (<span class="id">f</span> <span class="id">x</span> <span class="id">y</span>) (<span class="id">f</span> <span class="id">x</span> <span class="id">z</span>).<br/>
+<br/>
+<div class="doc">Right distributivity </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="distrib_r">distrib_r</a></span> <span class="id">f</span> <span class="id">g</span> := <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">z</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> (<span class="id">g</span> <span class="id">y</span> <span class="id">z</span>) <span class="id">x</span> = <span class="id">g</span> (<span class="id">f</span> <span class="id">y</span> <span class="id">x</span>) (<span class="id">f</span> <span class="id">z</span> <span class="id">x</span>).<br/>
+<br/>
+<h2> Neutral and absorbant </h2>
+<br/>
+<div class="doc">Left Neutral </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="neutral_l">neutral_l</a></span> <span class="id">f</span> <span class="id">e</span>:= <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">e</span> <span class="id">x</span> = <span class="id">x</span>.<br/>
+<br/>
+<div class="doc">Right Neutral </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="neutral_r">neutral_r</a></span> <span class="id">f</span> <span class="id">e</span> := <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x</span> <span class="id">e</span> = <span class="id">x</span>.<br/>
+<br/>
+<div class="doc">Left Absorbant </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="absorb_l">absorb_l</a></span> <span class="id">f</span> <span class="id">a</span> := <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">a</span> <span class="id">x</span> = <span class="id">a</span>.<br/>
+<br/>
+<div class="doc">Right Absorbant </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="absorb_r">absorb_r</a></span> <span class="id">f</span> <span class="id">a</span> := <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x</span> <span class="id">a</span> = <span class="id">a</span>.<br/>
+<br/>
+<div class="doc">Idempotence </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="idempotent">idempotent</a></span> <span class="id">i</span> := <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">i</span> (<span class="id">i</span> <span class="id">x</span>) = <span class="id">i</span> <span class="id">x</span>.<br/>
+<br/>
+<div class="doc">Idempotence </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="involutive">involutive</a></span> <span class="id">i</span> := <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">i</span> (<span class="id">i</span> <span class="id">x</span>) = <span class="id">x</span>.<br/>
+<br/>
+<div class="doc">Idempotence for binary operators </div>
+ <br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="idempotent2">idempotent2</a></span> <span class="id">f</span> := <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x</span> <span class="id">x</span> = <span class="id">x</span>.<br/>
+<br/>
+<div class="doc">Self Neutral </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="self_neutral">self_neutral</a></span> <span class="id">f</span> <span class="id">e</span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x</span> <span class="id">x</span> = <span class="id">e</span>.<br/>
+<br/>
+<h2> Inverses </h2>
+<br/>
+<div class="doc">Left Inverse </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="inverse_for_l">inverse_for_l</a></span> <span class="id">f</span> <span class="id">e</span> <span class="id">a</span> <span class="id">b</span> :=<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">a</span> <span class="id">b</span> = <span class="id">e</span>.<br/>
+<br/>
+<div class="doc">Right Inverse </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="inverse_for_r">inverse_for_r</a></span> <span class="id">f</span> <span class="id">e</span> <span class="id">a</span> <span class="id">b</span> :=<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">b</span> <span class="id">a</span> = <span class="id">e</span>.<br/>
+<br/>
+<div class="doc">Left Inverse function -- todo arguments in order f i e ? </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="inverse_l">inverse_l</a></span> <span class="id">f</span> <span class="id">e</span> <span class="id">i</span> := <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> (<span class="id">i</span> <span class="id">x</span>) <span class="id">x</span> = <span class="id">e</span>.<br/>
+<br/>
+<div class="doc">Right Inverse function </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="inverse_r">inverse_r</a></span> <span class="id">f</span> <span class="id">e</span> <span class="id">i</span> := <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">f</span> <span class="id">x</span> (<span class="id">i</span> <span class="id">x</span>) = <span class="id">e</span>.<br/>
+<br/>
+<div class="doc">Self Inverse </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="self_inverse">self_inverse</a></span> <span class="id">i</span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;<span class="id">i</span> <span class="id">x</span> = <span class="id">x</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibOperation.html#Definitions">Definitions</a></span>.<br/>
+<br/>
+<h2> Morphism and automorphism </h2>
+<br/>
+<div class="doc">Morphism </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="morphism">morphism</a></span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) (<span class="id">h</span> : <span class="id">A</span>-&gt;<span class="id">B</span>) (<span class="id">f</span> : <span class="id">A</span>-&gt;<span class="id">A</span>-&gt;<span class="id">A</span>) (<span class="id">g</span> : <span class="id">B</span>-&gt;<span class="id">B</span>-&gt;<span class="id">B</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>, <span class="id">h</span> (<span class="id">f</span> <span class="id">x</span> <span class="id">y</span>) = <span class="id">g</span> (<span class="id">h</span> <span class="id">x</span>) (<span class="id">h</span> <span class="id">y</span>).<br/>
+<br/>
+<div class="doc">Auto-morphism </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="automorphism">automorphism</a></span> <span class="id">A</span> := @<span class="id"><a href="SLF.LibOperation.html#morphism">morphism</a></span> <span class="id">A</span> <span class="id">A</span>.<br/>
+<span class="kwd">Arguments</span> <span class="id"><a href="SLF.LibOperation.html#automorphism">automorphism</a></span> [<span class="id">A</span>].<br/>
+<br/>
+<h2> Injectivity </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="injective">injective</a></span> <span class="id">A</span> <span class="id">B</span> (<span class="id">f</span> : <span class="id">A</span> -&gt; <span class="id">B</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>, <span class="id">f</span> <span class="id">x</span> = <span class="id">f</span> <span class="id">y</span> -&gt; <span class="id">x</span> = <span class="id">y</span>.<br/>
+<br/>
+<h1> Lemmas </h1>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="OpProperties">OpProperties</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="OpProperties.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">h</span> : <span class="id"><a href="SLF.LibOperation.html#OpProperties.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibOperation.html#OpProperties.A">A</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> <span class="id">g</span> : <span class="id"><a href="SLF.LibOperation.html#OpProperties.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibOperation.html#OpProperties.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibOperation.html#OpProperties.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="idempotent_inv">idempotent_inv</a></span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#idempotent">idempotent</a></span> <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">y</span> = <span class="id">h</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h</span> <span class="id">y</span> = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<div class="doc">For comm operators, right-properties can be derived from
+    corresponding left-properties </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="neutral_r_of_comm_neutral_l">neutral_r_of_comm_neutral_l</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">e</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#neutral_l">neutral_l</a></span> <span class="id">f</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#neutral_r">neutral_r</a></span> <span class="id">f</span> <span class="id">e</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">C</span> <span class="id">N</span>. <span class="id">intros_all</span>. <span class="id">rewrite</span>* <span class="id">C</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="inverse_r_of_comm_inverse_l">inverse_r_of_comm_inverse_l</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">e</span> <span class="id">i</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#inverse_l">inverse_l</a></span> <span class="id">f</span> <span class="id">e</span> <span class="id">i</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#inverse_r">inverse_r</a></span> <span class="id">f</span> <span class="id">e</span> <span class="id">i</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">C</span> <span class="id">I</span>. <span class="id">intros_all</span>. <span class="id">rewrite</span>* <span class="id">C</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="distrib_r_of_comm_distrib_l">distrib_r_of_comm_distrib_l</a></span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">g</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#distrib_l">distrib_l</a></span> <span class="id">f</span> <span class="id">g</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#distrib_r">distrib_r</a></span> <span class="id">f</span> <span class="id">g</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">C</span> <span class="id">N</span>. <span class="id">intros_all</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibOperation.html#distrib_l">distrib_l</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">do</span> 3 <span class="id">rewrite</span> &lt;- (<span class="id">C</span> <span class="id">x</span>). <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="comm_assoc_of_comm_and_assoc">comm_assoc_of_comm_and_assoc</a></span> : <span class="kwd">forall</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#comm">comm</a></span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#assoc">assoc</a></span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html#comm_assoc">comm_assoc</a></span> <span class="id">f</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">C</span> <span class="id">S</span>. <span class="id">intros_all</span>. <span class="id">rewrite</span> <span class="id">C</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">S</span>. <span class="id">rewrite</span>~ (<span class="id">C</span> <span class="id">x</span>).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibOperation.html#OpProperties">OpProperties</a></span>.<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Preface</title>
+<meta name="description" content="Documentation of Coq module Preface" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Preface</h1>
+<div class="coq">
+<h1> Preface: Introduction to the Course </h1>
+<br/>
+<h1> Welcome </h1>
+<br/>
+<div class="doc">This electronic book is Volume 6 of the _Software Foundations_ series, which
+    presents the mathematical underpinnings of reliable software.
+    *COMPANION COURSE NOTES*: A large part of this course is also written up in
+    traditional LaTeX-style presentation. It's available from
+    <span class="bracket"><span class="id">http</span>://<span class="id">www.chargueraud.org</span>/<span class="id">teach</span>/<span class="id">verif</span>/<span class="id">slf_notes.pdf</span></span>.
+    This book will teach you about the foundations of Separation Logic, a
+    practical approach to the modular verification of imperative programs. In
+    particular, it presents the building blocks for constructing a program
+    verification tool. It does not, however, focus on reasoning about data
+    structures and algorithms using Separation Logic. This aspect is covered to
+    some extent by Volume 5 of _Software Foundations_, which presents Verifiable
+    C, a program logic and proof system for C. For OCaml programs, this aspect
+    will be covered in a yet-to-be-written volume presenting CFML, a tool that
+    builds upon all the techniques presented in this volume.
+    You are only assumed to understand the material in _Software Foundations_
+    Volume 1 (_Logical Foundations_), and the two chapters on Hoare Logic (Hoare
+    and Hoare2) from Software Foundations Volume 2 (_PL Foundations_). Volume 5
+    is not a prerequisite. The exposition here is intended for a broad range of
+    readers, from advanced undergraduates to PhD students and researchers. </div>
+<br/>
+<h1> Separation Logic </h1>
+<br/>
+<div class="doc">Separation Logic is a _program logic_: it enables one to establish that a
+    program satisfies its specification. Specifications are expressed using
+    triples of the form <span class="bracket">{<span class="id">H</span>} <span class="id">t</span> {<span class="id">Q</span>}</span>. Whereas in Hoare logic the precondition <span class="bracket"><span class="id">H</span></span>
+    and the postcondition <span class="bracket"><span class="id">Q</span></span> describe the whole memory state, in Separation
+    Logic <span class="bracket"><span class="id">H</span></span> and <span class="bracket"><span class="id">Q</span></span> describe only a fragment of the memory state that includes
+    the resources necessary to the execution of <span class="bracket"><span class="id">t</span></span>.
+    A key ingredient of Separation Logic is the frame rule, which enables
+    modular proofs. It is stated as follows.
+         { H } t { Q }
+    -------------------------
+     { H \* H' } t { Q \* H' }
+    The above rule asserts that if, a term <span class="bracket"><span class="id">t</span></span> executes correctly with the
+    resources <span class="bracket"><span class="id">H</span></span> and produces <span class="bracket"><span class="id">Q</span></span>, then <span class="bracket"><span class="id">t</span></span> admits the same behavior in a
+    larger memory state, described by the union of <span class="bracket"><span class="id">H</span></span> with a disjoint component
+    <span class="bracket"><span class="id">H'</span></span>, producing the postcondition <span class="bracket"><span class="id">Q</span></span> extended with that same resource <span class="bracket"><span class="id">H'</span></span>
+    unmodified. The star symbol <span class="bracket">\*</span> denotes the _separating conjunction_
+    operator of Separation Logic.
+    Separation Logic can be exploited in three kind of tools.
+    - Automated proofs: the user provides only the code, and the tool
+      locates sources of potential bugs. A good automated tool provides
+      feedback that (at least most of time) is relevant.
+    - Semi-automated proofs: the user provides not just the code,
+      but also specifications and invariants. The tool then leverages
+      automated solvers (e.g., SMT solvers) to discharge proof obligations.
+    - Interactive proofs: the user provides not just the code and its
+      specifications, but also a detailed proof script justifying the
+      correctness of the code. These proofs may be developed interactively
+      using a proof assistant such as Coq.
+    The present course focuses on the third approach, that is, the integration
+    of Separation Logic in an interactive proof assistant. This approach has
+    been successfully put to practice throughout the world, using various proof
+    assistants (Coq, Isabelle/HOL, HOL), targeting different languages
+    (Assembly, C, SML, OCaml, Rust...) and for verifying various kind of
+    programs, ranging from low-level operating system kernels to high-level data
+    structures and algorithms. </div>
+<br/>
+<h1> Separation Logic in a Proof Assistant </h1>
+<br/>
+<div class="doc">The benefits of exploiting Separation Logic in a proof assistant include at
+    least four major points:
+    - higher-order logic provides virtually unlimited expressiveness
+      that enables formulating arbitrarily complex specifications and
+      invariants;
+    - a proof assistant provides a unified framework to prove both
+      the implementation details of the code and the underlying
+      mathematical results, e.g., results from number theory or graph
+      theory;
+    - proof scripts may be easily maintained to reflect changes
+      to the source code; and
+    - the fact that Separation Logic itself is formalized in the proof
+      assistant provides high confidence in the correctness of the tool.
+    Pretty much all the tools that leverage Separation Logic in proof assistants
+    are constructed following the same schema:
+    - A formalization of the syntax and semantics of the source language.
+      This is called a _deep embedding_ of the programming language.
+    - A definition of Separation Logic predicates as predicates in
+      higher-order logic. This is called a _shallow embedding_ of the
+      program logic.
+    - A definition of Separation Logic triples as a predicate, the
+      statements of the reasoning rules as lemmas, and the proof of
+      these reasoning rules with respect to the semantics.
+    - An infrastructure that consists of lemmas, tactics and notations,
+      allowing for the verification of concrete programs to be carried out
+      through relatively concise proof scripts.
+    - Applications of this infrastructure to the verification of concrete
+      programs.
+    The purpose of this course is to explain how to set up such a construction.
+    To that end, we consider in this course the simplest possible variant of
+    Separation Logic, and apply it to a minimalistic imperative programming
+    language. The language essentially consists of a lambda-calculus with
+    references. This language admits a simple semantics. It avoids, in
+    particular, the need to distinguish between stack variables and heap-
+    allocated variables. Advanced chapters later in the course explain how to
+    add support for loops, records, arrays, and n-ary functions. </div>
+<br/>
+<h1> Multiple Reading Depths </h1>
+<br/>
+<div class="doc">All chapters except the first one are organized in three parts.
+    - The _First Pass_ section presents the most important ideas only.
+      The course in designed in such a way that it is possible to read only
+      the _First Pass_ section of every chapter. The reader may be interested
+      in going through all these sections to get the big picture, before
+      revisiting each chapter in more detail.
+    - The _More Details_ section presents additional material explaining
+      in more depth the meaning and the consequences of the key results.
+      This section also contains descriptions of the most important proofs.
+      By default, readers would eventually read all this material.
+    - The _Optional Material_ section typically contains the remaining
+      proofs, as well as discussions of alternative definitions. The _Optional
+      Material_ sections are all independent from each other. These sections
+      are intended for (1) readers who plan to continue studying Separation
+      Logic beyond the present course, and (2) teachers using the course. </div>
+<br/>
+<h1> Chapters Overview </h1>
+<br/>
+<div class="doc">The first two chapters, <span class="bracket"><span class="id">Basic</span></span> and <span class="bracket"><span class="id">Repr</span></span>, give a primer on how
+    to prove imperative programs in Separation Logic, i.e. they focus on the end
+    user's perspective. The eight following chapters focus on the implementor's
+    perspective, explaining how Separation Logic is defined and how a practical
+    verification tool can be constructed. The last three chapters cover language
+    extensions, from the perspective of both the user and the implementor.
+    The list of chapters appears below. The numbering corresponds to _teaching
+    units_: if the chapters were taught as part of a University course, one
+    could reasonably aim to cover one teaching unit per week.
+    - (1) <span class="bracket"><span class="id">Basic</span></span>: introduction to the core features of Separation Logic,
+    - (2) <span class="bracket"><span class="id">Repr</span></span>: introduction to representation predicates in Separation
+          Logic, in particular for describing mutable lists and trees.
+    - (2) <span class="bracket"><span class="id">Hprop</span></span>: definition of the core operators of Separation Logic.
+    - (2) <span class="bracket"><span class="id">Himpl</span></span>: definition of the entailment relation, statement and
+          proofs of its fundamental properties, and description of the
+          simplification tactic for entailment.
+    - (3) <span class="bracket"><span class="id">Triples</span></span>: definition of Separation Logic triples in terms
+          of the semantics of the programming language.
+    - (3) <span class="bracket"><span class="id">Rules</span></span>: statement and proofs of the reasoning rules of
+          Separation Logic, and example proofs of programs using these rules.
+    - (4) <span class="bracket"><span class="id">Wand</span></span>: introduction of the magic wand operator and other
+          Separation Logic operators, and to the ramified frame rule.
+    - (4) <span class="bracket"><span class="id">WPsem</span></span>: definition of the semantic notion of weakest
+          precondition, and statement of rules in weakest-precondition style.
+    - (5) <span class="bracket"><span class="id">WPgen</span></span>: presentation of a function that effectively computes
+          the weakest precondition of a term, independently of its
+          specification.
+    - (5) <span class="bracket"><span class="id">WPsound</span></span>: soundness proof for the weakest precondition
+          generator (mostly optional).
+    - (6) <span class="bracket"><span class="id">Affine</span></span>: description of a generalization of Separation Logic
+          with affine heap predicates, which are useful, in particular, for
+          handling garbage-collected programming languages.
+    - (6) <span class="bracket"><span class="id">Arrays</span></span>: specification of both ML-style arrays with headers
+          and C-style arrays with pointer arithmetic.
+    - (6) <span class="bracket"><span class="id">Records</span></span>: representation predicate for records, allowing us to
+          isolate arbitrary subsets of a record's fields. </div>
+<br/>
+<h1> Other Distributed Files </h1>
+<br/>
+<div class="doc">The chapters listed above depend on a number of auxiliary files, which the
+    reader does not need to go through but might be interested in looking at,
+    either by curiosity, or for checking out a specific implementation detail.
+    - <span class="bracket"><span class="id">LibSepReference</span></span>: a long file that defines the program
+      verification tool that is used in the first two chapters, and whose
+      implementation is discussed throughout the other chapters. Each
+      chapter from the course imports this module, as opposed to importing
+      earlier chapters.
+    - <span class="bracket"><span class="id">LibSepVar</span></span>: a formalization of program variables, together with
+      a bunch of notations for parsing variables.
+    - <span class="bracket"><span class="id">LibSepFmap</span></span>: a formalization of finite maps, which are used for
+      representing the memory state.
+    - <span class="bracket"><span class="id">LibSepSimpl</span></span>: a functor that implements a powerful tactic for
+      automatically simplifying entailments in Separation Logic.
+    - <span class="bracket"><span class="id">LibSepMinimal</span></span>: a minimalistic formalization of a soundness proof
+      for Separation Logic, up to the verification of the <span class="bracket"><span class="id">incr</span></span> function.
+    - All other <span class="bracket"><span class="id">Lib</span>*</span> files are imports from the TLC library, which is
+      described next. </div>
+<br/>
+<div class="doc">The TLC library is a collection of general purpose theory and tactics
+    developed over the years by Arthur Charguéraud. The TLC library is exploited
+    in this course to streamline the presentation. TLC provides, in particular,
+    extensions for classical logic and tactics that are particularly well suited
+    for meta-theory. Prior knowledge of TLC is not required, and all exercises
+    can be completed without using TLC tactics.
+    The classical logic aspects of TLC are presented in chapter <span class="bracket"><span class="id">Hprop</span></span>.
+    Each TLC tactic is introduced when it is first used. Most of these tactics
+    are also presented in the chapter <span class="bracket"><span class="id">UseTactics</span></span> of Software
+    Foundations Volume 2 (_Programming Language Foundations_). </div>
+<br/>
+<h1> Practicalities </h1>
+<br/>
+<h2> System Requirements </h2>
+<br/>
+<div class="doc">Install instructions for Coq and IDEs may be found on this page:
+    <span class="bracket"><span class="id">https</span>://<span class="id">www.chargueraud.org</span>/<span class="id">teach</span>/<span class="id">verif</span>/<span class="id">install</span>/<span class="id">install.html</span></span>
+    The files you are reading have been tested with Coq version 8.17.1 but
+    may also work with other versions. </div>
+<br/>
+<h2> Feedback Welcome </h2>
+<br/>
+<div class="doc">If you intend to use this course either in class of for self-study, the
+    author would love to hear from you. Just knowing in which contexts the
+    course has been used and how much of the text students were able to cover is
+    very valuable information.
+    You can send feedback to slf --at-- chargueraud.org.
+    If you plan on providing any non-small amount of feedback, do not hesitate
+    to ask the author to be added as contributor to the github repository. </div>
+<br/>
+<h2> Exercises </h2>
+<br/>
+<div class="doc">Each chapter includes numerous exercises. The star rating scheme is
+    described in the <span class="bracket"><span class="id">Preface</span></span> of Software Foundations Volume 1 (_Logical
+    Foundations_).
+    _Disclaimer_: the difficulty ratings currently in place are fairly
+    speculative. You feedback is very much welcome.
+    _Disclaimer_: (for instructors) the auto-grading system has not been tested
+    for this volume. If you are interested in using auto-grading for this
+    volume, please contact the author. </div>
+<br/>
+<h2> Recommended Citation Format </h2>
+<br/>
+<div class="doc">If you want to refer to this volume in your own writing, please do so as
+    follows:
+    @book            {Chargueraud:SF6,
+    author       =   {Arthur Charguéraud},
+    editor       =   {Benjamin C. Pierce},
+    title        =   "Separation Logic Foundations",
+    series       =   "Software Foundations",
+    volume       =   "6",
+    year         =   "2024",
+    publisher    =   "Electronic textbook",
+    note         =   {Version 2.1, \URL{http://softwarefoundations.cis.upenn.edu} },
+    }
+</div>
+<br/>
+<h1> Thanks </h1>
+<br/>
+<div class="doc">The development of the technical infrastructure for the _Software
+    Foundations_ series has been supported, in part, by the National Science
+    Foundation under the NSF Expeditions grant 1521523, _The Science of Deep
+    Specification_. </div>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

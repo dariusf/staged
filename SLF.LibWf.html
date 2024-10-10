@@ -1,0 +1,491 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibWf</title>
+<meta name="description" content="Documentation of Coq module LibWf" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibWf</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span><br/>
+&nbsp;<span class="id"><a href="SLF.LibProd.html">LibProd</a></span> <span class="id"><a href="SLF.LibSum.html">LibSum</a></span> <span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span> <span class="id"><a href="SLF.LibNat.html">LibNat</a></span> <span class="id"><a href="SLF.LibInt.html">LibInt</a></span>.<br/>
+<br/>
+<h1> Compatibility </h1>
+<br/>
+<div class="doc">Coq's stdlib Prelude defines:
+ Inductive Acc A (R:A-&gt;A-&gt;Prop) (x:A) : Prop :=
+   | Acc_intro : (forall (y:A), R y x -&gt; Acc y) -&gt; Acc x.
+ Definition well_founded A (R:A-&gt;A-&gt;Prop) :=
+    forall (x:A), Acc x.
+</div>
+<br/>
+<div class="doc">TLC introduces <span class="bracket"><span class="id">wf</span></span> as a shorter name for <span class="bracket"><span class="id">well_founded</span></span>, both
+    for conciseness and for tactics to specifically recognize
+    this symbol. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="wf">wf</a></span> := <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#well_founded">well_founded</a></span>.<br/>
+<br/>
+<h2> Tactics </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">auto</span> <span class="kwd">with</span> <span class="id">wf</span></span> attempts to unfold the names of
+    the relations given as argument to <span class="bracket"><span class="id">wf</span></span>. </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 (<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> ?<span class="id">R</span>) =&gt; <span class="id">progress</span> (<span class="id">unfold</span> <span class="id">R</span>) : <span class="id">wf</span>.<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">solve_wf</span></span> is a shorthand for solving goals using
+    <span class="bracket"><span class="id">auto</span> <span class="kwd">with</span> <span class="id">wf</span></span>, aimed to prove goals of the form <span class="bracket"><span class="id">wf</span> <span class="id">R</span></span>. </div>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"solve_wf"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">solve</span> [ <span class="id">auto</span> <span class="kwd">with</span> <span class="id">wf</span> ].<br/>
+<br/>
+<br/>
+<br/>
+<h2> Definition </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">measure</span> <span class="id">f</span></span> is a well-founded binary relation which
+    relates <span class="bracket"><span class="id">x</span></span> to <span class="bracket"><span class="id">y</span></span> when <span class="bracket"><span class="id">f</span> <span class="id">x</span> &lt; <span class="id">f</span> <span class="id">y</span></span>, at type <span class="bracket"><span class="id">nat</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="measure">measure</a></span> <span class="id">A</span> (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">x1</span> <span class="id">x2</span> =&gt; (<span class="id">f</span> <span class="id">x1</span> &lt; <span class="id">f</span> <span class="id">x2</span>).<br/>
+<br/>
+<h2> Properties </h2>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Measure">Measure</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Measure.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="kwd">Type</span> <span class="id">f</span> : <span class="id"><a href="SLF.LibWf.html#Measure.A">A</a></span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_measure">wf_measure</a></span> : <span class="kwd">forall</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibWf.html#measure">measure</a></span> <span class="id">f</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">f</span> <span class="id">a</span>. <span class="id">gen_eq</span> <span class="id">n</span>: (<span class="id">f</span> <span class="id">a</span>). <span class="id">gen</span> <span class="id">a</span>. <span class="id">pattern</span> <span class="id">n</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="SLF.LibNat.html#peano_induction">peano_induction</a></span>. <span class="id">clear</span> <span class="id">n</span>. <span class="id">introv</span> <span class="id">IH</span> <span class="id">Eq</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#Acc_intro">Acc_intro</a></span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">unfolds</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">Eq</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">apply</span>* <span class="id">IH</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="trans_measure">trans_measure</a></span> : <span class="kwd">forall</span> (<span class="id">f</span> : <span class="id"><a href="SLF.LibWf.html#Measure.A">A</a></span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span> (<span class="id"><a href="SLF.LibWf.html#measure">measure</a></span> <span class="id">f</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibWf.html#measure">measure</a></span>, <span class="id"><a href="SLF.LibRelation.html#trans">trans</a></span>. <span class="id">intros</span>. <span class="id">nat_math</span>. Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibWf.html#Measure">Measure</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">wf_measure</span> : <span class="id">wf</span>.<br/>
+<br/>
+<h2> Measure on pairs </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="measure2">measure2</a></span> <span class="id">A1</span> <span class="id">A2</span> (<span class="id">f</span> : <span class="id">A1</span> -&gt; <span class="id">A2</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> (<span class="id">A1</span>*<span class="id">A2</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">p1</span> <span class="id">p2</span> =&gt; <span class="kwd">let</span> (<span class="id">x1</span>,<span class="id">y1</span>) := <span class="id">p1</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> (<span class="id">x2</span>,<span class="id">y2</span>) := <span class="id">p2</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">f</span> <span class="id">x1</span> <span class="id">y1</span> &lt; <span class="id">f</span> <span class="id">x2</span> <span class="id">y2</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_measure2">wf_measure2</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> (<span class="id">f</span>:<span class="id">A1</span>-&gt;<span class="id">A2</span>-&gt;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibWf.html#measure2">measure2</a></span> <span class="id">f</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">f</span> [<span class="id">x1</span> <span class="id">x2</span>]. <span class="id">apply</span> (@<span class="id"><a href="SLF.LibNat.html#measure_induction">measure_induction</a></span> _ (<span class="id"><a href="SLF.LibProd.html#uncurry2">uncurry2</a></span> <span class="id">f</span>)). <span class="id">clear</span> <span class="id">x1</span> <span class="id">x2</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> [<span class="id">x1</span> <span class="id">x2</span>] <span class="id">H</span>. <span class="id">apply</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#Acc_intro">Acc_intro</a></span>. <span class="id">intros</span> [<span class="id">y1</span> <span class="id">y2</span>] <span class="id">Lt</span>. <span class="id">apply</span>~ <span class="id">H</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">wf_measure2</span> : <span class="id">wf</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">induction_wf_process_wf_hyp</span> <span class="id">tt</span> ::= <br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> _ =&gt; <span class="id">auto</span> <span class="kwd">with</span> <span class="id">wf</span><br/>
+&nbsp;&nbsp;| |- <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#well_founded">well_founded</a></span> _ =&gt; <span class="id">change</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#well_founded">well_founded</a></span> <span class="kwd">with</span> <span class="id"><a href="SLF.LibWf.html#wf">wf</a></span>; <span class="id">auto</span> <span class="kwd">with</span> <span class="id">wf</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">induction_wf_process_measure</span> <span class="id">E</span> ::= <br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#well_founded_ind">well_founded_ind</a></span> (<span class="id"><a href="SLF.LibWf.html#wf_measure">wf_measure</a></span> <span class="id">E</span>).<br/>
+<br/>
+<h1> Construction of well-founded relations </h1>
+<br/>
+<h2> Empty relation </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_empty">wf_empty</a></span> : <span class="kwd">forall</span> <span class="id">A</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (@<span class="id"><a href="SLF.LibRelation.html#empty">empty</a></span> <span class="id">A</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros_all</span>. <span class="id">constructor</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">false</span>. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">wf_empty</span> : <span class="id">wf</span>.<br/>
+<br/>
+<h2> Inclusion </h2>
+<br/>
+<div class="doc">Well-foundedness preserved by inclusion </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_of_rel_incl">wf_of_rel_incl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R1</span> <span class="id">R2</span> : <span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#rel_incl">rel_incl</a></span> <span class="id">R2</span> <span class="id">R1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W1</span> <span class="id">Inc</span>. <span class="id">intros</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">pattern</span> <span class="id">x</span>. <span class="id">apply</span> (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#well_founded_ind">well_founded_ind</a></span> <span class="id">W1</span>). <span class="id">clear</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">IH</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id">IH</span>. <span class="id">apply</span>~ <span class="id">Inc</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">Peano.lt</span></span> on <span class="bracket"><span class="id">nat</span></span> </h2>
+<br/>
+<div class="doc">The relation "less than" on natural numbers is well_founded. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_peano_lt">wf_peano_lt</a></span> : <span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Peano.html#lt">Peano.lt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">x</span> <span class="kwd">using</span> <span class="id"><a href="SLF.LibNat.html#peano_induction">peano_induction</a></span>. <span class="id">apply</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#Acc_intro">Acc_intro</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">H</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">wf_peano_lt</span> : <span class="id">wf</span>.<br/>
+<br/>
+<h2> <span class="bracket"><span class="id">lt</span></span> on <span class="bracket"><span class="id">nat</span></span> </h2>
+<br/>
+<div class="doc">The relation "less than" on natural numbers is well_founded. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_lt">wf_lt</a></span> : @<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> <span class="id"><a href="SLF.LibOrder.html#lt">lt</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">x</span> <span class="kwd">using</span> <span class="id"><a href="SLF.LibNat.html#peano_induction">peano_induction</a></span>. <span class="id">apply</span>~ <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#Acc_intro">Acc_intro</a></span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">wf_lt</span> : <span class="id">wf</span>.<br/>
+<br/>
+<h2> The relation "greater than" on the set of
+       natural number lower than a fixed upper bound. </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="nat_upto">nat_upto</a></span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>) =&gt; (<span class="id">n</span> &lt;= <span class="id">b</span>)%<span class="id">nat</span> /\ (<span class="id">m</span> &lt; <span class="id">n</span>)%<span class="id">nat</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="nat_upto_eq">nat_upto_eq</a></span> : <span class="kwd">forall</span> (<span class="id">b</span> <span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#nat_upto">nat_upto</a></span> <span class="id">b</span> <span class="id">n</span> <span class="id">m</span> = ((<span class="id">n</span> &lt;= <span class="id">b</span>)%<span class="id">nat</span> /\ (<span class="id">m</span> &lt; <span class="id">n</span>)%<span class="id">nat</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_nat_upto">wf_nat_upto</a></span> : <span class="kwd">forall</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibWf.html#nat_upto">nat_upto</a></span> <span class="id">b</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">b</span> <span class="id">n</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: (<span class="id"><a href="SLF.LibWf.html#wf_measure">wf_measure</a></span> (<span class="kwd">fun</span> <span class="id">n</span> =&gt; (<span class="id">b</span>-<span class="id">n</span>)%<span class="id">nat</span>)) <span class="id">n</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#Acc_intro">Acc_intro</a></span>. <span class="id">introv</span> [<span class="id">H1</span> <span class="id">H2</span>]. <span class="id">apply</span> <span class="id">IH</span>.<br/>
+&nbsp;&nbsp;<span class="id">hnf</span>. <span class="id">nat_math</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<h2> The relation "less than" on the set of
+       integers greater than a fixed lower bound. </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="downto">downto</a></span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span>) =&gt; (<span class="id">b</span> &lt;= <span class="id">n</span>) /\ (<span class="id">n</span> &lt; <span class="id">m</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="downto_eq">downto_eq</a></span> : <span class="kwd">forall</span> (<span class="id">b</span> <span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#downto">downto</a></span> <span class="id">b</span> <span class="id">n</span> <span class="id">m</span> = (<span class="id">b</span> &lt;= <span class="id">n</span> /\ <span class="id">n</span> &lt; <span class="id">m</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="downto_intro">downto_intro</a></span> : <span class="kwd">forall</span> (<span class="id">b</span> <span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span>),<br/>
+&nbsp;&nbsp;<span class="id">b</span> &lt;= <span class="id">n</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">n</span> &lt; <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#downto">downto</a></span> <span class="id">b</span> <span class="id">n</span> <span class="id">m</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">split</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_downto">wf_downto</a></span> : <span class="kwd">forall</span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibWf.html#downto">downto</a></span> <span class="id">b</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">b</span> <span class="id">n</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: (<span class="id"><a href="SLF.LibWf.html#wf_measure">wf_measure</a></span> (<span class="kwd">fun</span> <span class="id">n</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.abs_nat">Z.abs_nat</a></span> (<span class="id">n</span>-<span class="id">b</span>))) <span class="id">n</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#Acc_intro">Acc_intro</a></span>. <span class="id">introv</span> [<span class="id">H1</span> <span class="id">H2</span>]. <span class="id">apply</span> <span class="id">IH</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfolds</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibInt.html#lt_abs_abs">lt_abs_abs</a></span>; <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">wf_downto</span> : <span class="id">wf</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Unfold</span> <span class="id"><a href="SLF.LibWf.html#downto">downto</a></span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 (<span class="id"><a href="SLF.LibWf.html#downto">downto</a></span> _ _ _) =&gt; <span class="id">math</span> : <span class="id">maths</span>.<br/>
+<br/>
+<h2> The relation "greater than" on the set of
+       integers lower than a fixed upper bound. </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="upto">upto</a></span> (<span class="id">b</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">n</span> <span class="id">m</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Numbers.BinNums.html#Z">Z</a></span>) =&gt; (<span class="id">n</span> &lt;= <span class="id">b</span>) /\ (<span class="id">m</span> &lt; <span class="id">n</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="upto_eq">upto_eq</a></span> : <span class="kwd">forall</span> <span class="id">b</span> <span class="id">n</span> <span class="id">m</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#upto">upto</a></span> <span class="id">b</span> <span class="id">n</span> <span class="id">m</span> = ((<span class="id">n</span> &lt;= <span class="id">b</span>) /\ (<span class="id">m</span> &lt; <span class="id">n</span>)).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="upto_intro">upto_intro</a></span> : <span class="kwd">forall</span> <span class="id">b</span> <span class="id">n</span> <span class="id">m</span>,<br/>
+&nbsp;&nbsp;<span class="id">n</span> &lt;= <span class="id">b</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">m</span> &lt; <span class="id">n</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#upto">upto</a></span> <span class="id">b</span> <span class="id">n</span> <span class="id">m</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">split</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_upto">wf_upto</a></span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibWf.html#upto">upto</a></span> <span class="id">n</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">b</span> <span class="id">n</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: (<span class="id"><a href="SLF.LibWf.html#wf_measure">wf_measure</a></span> (<span class="kwd">fun</span> <span class="id">n</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.ZArith.BinInt.html#Z.abs_nat">Z.abs_nat</a></span> (<span class="id">b</span>-<span class="id">n</span>))) <span class="id">n</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#Acc_intro">Acc_intro</a></span>. <span class="id">introv</span> [<span class="id">H1</span> <span class="id">H2</span>]. <span class="id">apply</span> <span class="id">IH</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibInt.html#lt_abs_abs">lt_abs_abs</a></span>; <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">wf_upto</span> : <span class="id">wf</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Unfold</span> <span class="id"><a href="SLF.LibWf.html#upto">upto</a></span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 (<span class="id"><a href="SLF.LibWf.html#upto">upto</a></span> _ _ _) =&gt; <span class="id">math</span> : <span class="id">maths</span>.<br/>
+<br/>
+<h1> Inverse projections </h1>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="UnprojWf">UnprojWf</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="UnprojWf.A1">A1</a></span> <span class="id"><a name="UnprojWf.A2">A2</a></span> <span class="id"><a name="UnprojWf.A3">A3</a></span> <span class="id"><a name="UnprojWf.A4">A4</a></span> <span class="id"><a name="UnprojWf.A5">A5</a></span> : <span class="kwd">Type</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj21">wf_unproj21</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj21">unproj21</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [<span class="id">x1</span> <span class="id">x2</span>]. <span class="id">gen</span> <span class="id">x2</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x1</span>. <span class="id">constructor</span>. <span class="id">intros</span> [<span class="id">y1</span> <span class="id">y2</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj22">wf_unproj22</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj22">unproj22</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [<span class="id">x1</span> <span class="id">x2</span>]. <span class="id">gen</span> <span class="id">x1</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x2</span>. <span class="id">constructor</span>. <span class="id">intros</span> [<span class="id">y1</span> <span class="id">y2</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj31">wf_unproj31</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj31">unproj31</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A3">A3</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [[<span class="id">x1</span> <span class="id">x2</span>] <span class="id">x3</span>]. <span class="id">gen</span> <span class="id">x2</span> <span class="id">x3</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x1</span>. <span class="id">constructor</span>. <span class="id">intros</span> [[<span class="id">y1</span> <span class="id">y2</span>] <span class="id">y3</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj32">wf_unproj32</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj32">unproj32</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A3">A3</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [[<span class="id">x1</span> <span class="id">x2</span>] <span class="id">x3</span>]. <span class="id">gen</span> <span class="id">x1</span> <span class="id">x3</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x2</span>. <span class="id">constructor</span>. <span class="id">intros</span> [[<span class="id">y1</span> <span class="id">y2</span>] <span class="id">y3</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj33">wf_unproj33</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A3">A3</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj33">unproj33</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [[<span class="id">x1</span> <span class="id">x2</span>] <span class="id">x3</span>]. <span class="id">gen</span> <span class="id">x1</span> <span class="id">x2</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x3</span>. <span class="id">constructor</span>. <span class="id">intros</span> [[<span class="id">y1</span> <span class="id">y2</span>] <span class="id">y3</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj41">wf_unproj41</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj41">unproj41</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A3">A3</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A4">A4</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [[[<span class="id">x1</span> <span class="id">x2</span>] <span class="id">x3</span>] <span class="id">x4</span>]. <span class="id">gen</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x1</span>. <span class="id">constructor</span>. <span class="id">intros</span> [[[<span class="id">y1</span> <span class="id">y2</span>] <span class="id">y3</span>] <span class="id">y4</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj42">wf_unproj42</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj42">unproj42</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A3">A3</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A4">A4</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [[[<span class="id">x1</span> <span class="id">x2</span>] <span class="id">x3</span>] <span class="id">x4</span>]. <span class="id">gen</span> <span class="id">x1</span> <span class="id">x3</span> <span class="id">x4</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x2</span>. <span class="id">constructor</span>. <span class="id">intros</span> [[[<span class="id">y1</span> <span class="id">y2</span>] <span class="id">y3</span>] <span class="id">y4</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj43">wf_unproj43</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A3">A3</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj43">unproj43</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A4">A4</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [[[<span class="id">x1</span> <span class="id">x2</span>] <span class="id">x3</span>] <span class="id">x4</span>]. <span class="id">gen</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x4</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x3</span>. <span class="id">constructor</span>. <span class="id">intros</span> [[[<span class="id">y1</span> <span class="id">y2</span>] <span class="id">y3</span>] <span class="id">y4</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj44">wf_unproj44</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A4">A4</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj44">unproj44</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A3">A3</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [[[<span class="id">x1</span> <span class="id">x2</span>] <span class="id">x3</span>] <span class="id">x4</span>]. <span class="id">gen</span> <span class="id">x1</span> <span class="id">x2</span> <span class="id">x3</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x4</span>. <span class="id">constructor</span>. <span class="id">intros</span> [[[<span class="id">y1</span> <span class="id">y2</span>] <span class="id">y3</span>] <span class="id">y4</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_unproj51">wf_unproj51</a></span> : <span class="kwd">forall</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A1">A1</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibProd.html#unproj51">unproj51</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A2">A2</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A3">A3</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A4">A4</a></span> <span class="id"><a href="SLF.LibWf.html#UnprojWf.A5">A5</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">R</span> <span class="id">H</span> [[[[<span class="id">x1</span> <span class="id">x2</span>] <span class="id">x3</span>] <span class="id">x4</span>] <span class="id">x5</span>]. <span class="id">gen</span> <span class="id">x2</span> <span class="id">x3</span> <span class="id">x4</span> <span class="id">x5</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">H</span> <span class="id">x1</span>. <span class="id">constructor</span>. <span class="id">intros</span> [[[[<span class="id">y1</span> <span class="id">y2</span>] <span class="id">y3</span>] <span class="id">y4</span>] <span class="id">y5</span>]. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibWf.html#UnprojWf">UnprojWf</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span><br/>
+&nbsp;&nbsp;<span class="id">wf_unproj21</span> <span class="id">wf_unproj22</span><br/>
+&nbsp;&nbsp;<span class="id">wf_unproj31</span> <span class="id">wf_unproj32</span> <span class="id">wf_unproj33</span><br/>
+&nbsp;&nbsp;<span class="id">wf_unproj41</span> <span class="id">wf_unproj42</span> <span class="id">wf_unproj43</span> <span class="id">wf_unproj44</span><br/>
+&nbsp;&nbsp;<span class="id">wf_unproj51</span> : <span class="id">wf</span>.<br/>
+<br/>
+<h1> Lexicographical product </h1>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_lexico2">wf_lexico2</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span><br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#lexico2">lexico2</a></span> <span class="id">R1</span> <span class="id">R2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W1</span> <span class="id">W2</span>. <span class="id">intros</span> [<span class="id">x1</span> <span class="id">x2</span>]. <span class="id">gen</span> <span class="id">x2</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH1</span>: <span class="id">W1</span> <span class="id">x1</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH2</span>: <span class="id">W2</span> <span class="id">x2</span>. <span class="id">constructor</span>. <span class="id">intros</span> [<span class="id">y1</span> <span class="id">y2</span>] <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpls</span>. <span class="id">destruct</span> <span class="id">H</span> <span class="kwd">as</span> [<span class="id">H1</span>|[<span class="id">H1</span> <span class="id">H2</span>]].<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id">IH1</span>. <span class="id">rewrite</span> <span class="id">H1</span>. <span class="id">apply</span>~ <span class="id">IH2</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_lexico3">wf_lexico3</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span><br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>) (<span class="id">R3</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A3</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#lexico3">lexico3</a></span> <span class="id">R1</span> <span class="id">R2</span> <span class="id">R3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_lexico2">wf_lexico2</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_lexico2">wf_lexico2</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_lexico4">wf_lexico4</a></span> : <span class="kwd">forall</span> <span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span><br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>) (<span class="id">R3</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A3</span>) (<span class="id">R4</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A4</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R4</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#lexico4">lexico4</a></span> <span class="id">R1</span> <span class="id">R2</span> <span class="id">R3</span> <span class="id">R4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_lexico3">wf_lexico3</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_lexico2">wf_lexico2</a></span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">wf_lexico2</span> <span class="id">wf_lexico3</span> <span class="id">wf_lexico4</span> : <span class="id">wf</span>.<br/>
+<br/>
+<h1> Symmetric product </h1>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_prod2_of_wf_1">wf_prod2_of_wf_1</a></span> : <span class="kwd">forall</span> (<span class="id">A1</span> <span class="id">A2</span>:<span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#prod2">prod2</a></span> <span class="id">R1</span> <span class="id">R2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W1</span>. <span class="id">intros</span> [<span class="id">x1</span> <span class="id">x2</span>].<br/>
+&nbsp;&nbsp;<span class="id">gen</span> <span class="id">x2</span>. <span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">W1</span> <span class="id">x1</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span> [<span class="id">y1</span> <span class="id">y2</span>] [<span class="id">E1</span> <span class="id">E2</span>]. <span class="id">apply</span>~ <span class="id">IH</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_prod2_of_wf_2">wf_prod2_of_wf_2</a></span> : <span class="kwd">forall</span> (<span class="id">A1</span> <span class="id">A2</span>:<span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#prod2">prod2</a></span> <span class="id">R1</span> <span class="id">R2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W2</span>. <span class="id">intros</span> [<span class="id">x1</span> <span class="id">x2</span>].<br/>
+&nbsp;&nbsp;<span class="id">gen</span> <span class="id">x1</span>. <span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">W2</span> <span class="id">x2</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span> [<span class="id">y1</span> <span class="id">y2</span>] [<span class="id">E1</span> <span class="id">E2</span>]. <span class="id">apply</span>~ <span class="id">IH</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_prod3_of_wf_1">wf_prod3_of_wf_1</a></span> : <span class="kwd">forall</span> (<span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span>:<span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>) (<span class="id">R3</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A3</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#prod3">prod3</a></span> <span class="id">R1</span> <span class="id">R2</span> <span class="id">R3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibWf.html#wf_prod2_of_wf_1">wf_prod2_of_wf_1</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_prod2_of_wf_1">wf_prod2_of_wf_1</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_prod3_of_wf_2">wf_prod3_of_wf_2</a></span> : <span class="kwd">forall</span> (<span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span>:<span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>) (<span class="id">R3</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A3</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#prod3">prod3</a></span> <span class="id">R1</span> <span class="id">R2</span> <span class="id">R3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibWf.html#wf_prod2_of_wf_1">wf_prod2_of_wf_1</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_prod2_of_wf_2">wf_prod2_of_wf_2</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_prod3_of_wf_3">wf_prod3_of_wf_3</a></span> : <span class="kwd">forall</span> (<span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span>:<span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>) (<span class="id">R3</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A3</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#prod3">prod3</a></span> <span class="id">R1</span> <span class="id">R2</span> <span class="id">R3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_prod2_of_wf_2">wf_prod2_of_wf_2</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_prod4_of_wf_1">wf_prod4_of_wf_1</a></span> : <span class="kwd">forall</span> (<span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span>:<span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>) (<span class="id">R3</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A3</span>) (<span class="id">R4</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A4</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#prod4">prod4</a></span> <span class="id">R1</span> <span class="id">R2</span> <span class="id">R3</span> <span class="id">R4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibWf.html#wf_prod2_of_wf_1">wf_prod2_of_wf_1</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_prod3_of_wf_1">wf_prod3_of_wf_1</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_prod4_of_wf_2">wf_prod4_of_wf_2</a></span> : <span class="kwd">forall</span> (<span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span>:<span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>) (<span class="id">R3</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A3</span>) (<span class="id">R4</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A4</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#prod4">prod4</a></span> <span class="id">R1</span> <span class="id">R2</span> <span class="id">R3</span> <span class="id">R4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibWf.html#wf_prod2_of_wf_1">wf_prod2_of_wf_1</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_prod3_of_wf_2">wf_prod3_of_wf_2</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_prod4_of_wf_3">wf_prod4_of_wf_3</a></span> : <span class="kwd">forall</span> (<span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span>:<span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>) (<span class="id">R3</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A3</span>) (<span class="id">R4</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A4</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#prod4">prod4</a></span> <span class="id">R1</span> <span class="id">R2</span> <span class="id">R3</span> <span class="id">R4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibWf.html#wf_prod2_of_wf_1">wf_prod2_of_wf_1</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_prod3_of_wf_3">wf_prod3_of_wf_3</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_prod4_of_wf_4">wf_prod4_of_wf_4</a></span> : <span class="kwd">forall</span> (<span class="id">A1</span> <span class="id">A2</span> <span class="id">A3</span> <span class="id">A4</span>:<span class="kwd">Type</span>)<br/>
+&nbsp;(<span class="id">R1</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A1</span>) (<span class="id">R2</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A2</span>) (<span class="id">R3</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A3</span>) (<span class="id">R4</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A4</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R4</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#prod4">prod4</a></span> <span class="id">R1</span> <span class="id">R2</span> <span class="id">R3</span> <span class="id">R4</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibWf.html#wf_prod2_of_wf_2">wf_prod2_of_wf_2</a></span>. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span><br/>
+&nbsp;&nbsp;<span class="id">wf_prod2_of_wf_1</span> <span class="id">wf_prod2_of_wf_2</span><br/>
+&nbsp;&nbsp;<span class="id">wf_prod3_of_wf_1</span> <span class="id">wf_prod3_of_wf_2</span> <span class="id">wf_prod3_of_wf_3</span><br/>
+&nbsp;&nbsp;<span class="id">wf_prod4_of_wf_1</span> <span class="id">wf_prod4_of_wf_2</span> <span class="id">wf_prod4_of_wf_3</span> <span class="id">wf_prod4_of_wf_4</span> : <span class="id">wf</span>.<br/>
+<br/>
+<h1> Well-foundedness of a function image </h1>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_rel_preimage">wf_rel_preimage</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">B</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#rel_preimage">rel_preimage</a></span> <span class="id">R</span> <span class="id">f</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">gen_eq</span> <span class="id">a</span>: (<span class="id">f</span> <span class="id">x</span>). <span class="id">gen</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction_wf</span> <span class="id">IH</span>: <span class="id">W</span> <span class="id">a</span>. <span class="id">introv</span> <span class="id">E</span>. <span class="id">constructors</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">y</span> <span class="id">Hy</span>. <span class="id">subst</span> <span class="id">a</span>. <span class="id">hnf</span> <span class="kwd">in</span> <span class="id">Hy</span>. <span class="id">applys</span>* <span class="id">IH</span>.<br/>
+Qed.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">wf_rel_preimage</span> : <span class="id">wf</span>.<br/>
+<br/>
+<br/>
+<br/>
+<h1> Union </h1>
+<br/>
+<br/>
+<br/>
+<br/>
+<h1> Transitive closure </h1>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="wf_tclosure">wf_tclosure</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">R</span>:<span class="id"><a href="SLF.LibRelation.html#binary">binary</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibWf.html#wf">wf</a></span> (<span class="id"><a href="SLF.LibRelation.html#tclosure">tclosure</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibWf.html#wf">wf</a></span>, <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#well_founded">well_founded</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HAcc</span>. <span class="id">intro</span> <span class="id">a</span>. <span class="id">specializes</span> <span class="id">HAcc</span> <span class="id">a</span>. <span class="id">generalize</span> <span class="id">dependent</span> <span class="id">a</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> 1 <span class="kwd">as</span> [ <span class="id">a</span> _ <span class="id">IH</span> ].<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span> <span class="id">b</span> <span class="id">Hba</span>.<br/>
+&nbsp;&nbsp;<span class="id">generalize</span> <span class="id">a</span> <span class="id">b</span> <span class="id">Hba</span> <span class="id">IH</span>. <span class="id">clear</span> <span class="id">a</span> <span class="id">b</span> <span class="id">Hba</span> <span class="id">IH</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> 1; <span class="id">eauto</span> <span class="kwd">using</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Wf.html#Acc_inv">Acc_inv</a></span>.<br/>
+Qed.</div></details>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

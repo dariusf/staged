@@ -1,0 +1,1056 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibSet</title>
+<meta name="description" content="Documentation of Coq module LibSet" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibSet</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span>.<br/>
+<span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="https://coq.inria.fr/library/Coq.Classes.Morphisms.html">Coq.Classes.Morphisms</a></span>. <br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibReflect.html">LibReflect</a></span> <span class="id"><a href="SLF.LibList.html">LibList</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibOperation.html">LibOperation</a></span> <span class="id"><a href="SLF.LibMonoid.html">LibMonoid</a></span> <span class="id"><a href="SLF.LibInt.html">LibInt</a></span> <span class="id"><a href="SLF.LibNat.html">LibNat</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEpsilon.html">LibEpsilon</a></span> <span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span> <span class="id"><a href="SLF.LibMin.html">LibMin</a></span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id"><a href="SLF.LibContainer.html">LibContainer</a></span>.<br/>
+<br/>
+<h1> Construction of sets as predicates </h1>
+<br/>
+<h2> Basic definitions </h2>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="set">set</a></span> (<span class="id">A</span> : <span class="kwd">Type</span>) := <span class="id">A</span> -&gt; <span class="kwd">Prop</span>.<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Operations">Operations</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Operations.A">A</a></span> <span class="id"><a name="Operations.B">B</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> : <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">E</span> <span class="id">F</span> <span class="id">G</span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="set_st">set_st</a></span> (<span class="id">P</span>:<span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>-&gt;<span class="kwd">Prop</span>) : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id">P</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="empty_impl">empty_impl</a></span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="full_impl">full_impl</a></span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> _ =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#True">True</a></span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="single_impl">single_impl</a></span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;(= <span class="id">x</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="in_impl">in_impl</a></span> <span class="id">x</span> <span class="id">E</span> :=<br/>
+&nbsp;&nbsp;<span class="id">E</span> <span class="id">x</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="compl_impl">compl_impl</a></span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> :=<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibLogic.html#pred_not">pred_not</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>. <br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="union_impl">union_impl</a></span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> :=<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibLogic.html#pred_or">pred_or</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="inter_impl">inter_impl</a></span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> :=<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibLogic.html#pred_and">pred_and</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="remove_impl">remove_impl</a></span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">E</span> <span class="id">F</span> <span class="id">x</span> =&gt; <span class="id">E</span> <span class="id">x</span> /\ ~ <span class="id">F</span> <span class="id">x</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="incl_impl">incl_impl</a></span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="disjoint_impl">disjoint_impl</a></span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> -&gt; <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> =&gt; <span class="id"><a href="SLF.LibSet.html#inter_impl">inter_impl</a></span> <span class="id">E</span> <span class="id">F</span> = <span class="id"><a href="SLF.LibSet.html#empty_impl">empty_impl</a></span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="list_repr_impl">list_repr_impl</a></span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>) (<span class="id">l</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#noduplicates">noduplicates</a></span> <span class="id">l</span> /\ <span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">x</span> <span class="id">l</span> &lt;-&gt; <span class="id">E</span> <span class="id">x</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="to_list">to_list</a></span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> (<span class="id"><a href="SLF.LibSet.html#list_repr_impl">list_repr_impl</a></span> <span class="id">E</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="to_set">to_set</a></span> (<span class="id">xs</span> : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>) : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">x</span> <span class="id">xs</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="list_covers_impl">list_covers_impl</a></span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>) <span class="id">L</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">E</span> <span class="id">x</span> -&gt; <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">x</span> <span class="id">L</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="finite">finite</a></span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">L</span>, <span class="id"><a href="SLF.LibSet.html#list_covers_impl">list_covers_impl</a></span> <span class="id">E</span> <span class="id">L</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="card_impl">card_impl</a></span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>) : <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nat">nat</a></span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMin.html#mmin">mmin</a></span> <span class="id"><a href="SLF.LibOrder.html#le">le</a></span> (<span class="kwd">fun</span> <span class="id">n</span> =&gt; <span class="kwd">exists</span> <span class="id">L</span>, <span class="id"><a href="SLF.LibSet.html#list_covers_impl">list_covers_impl</a></span> <span class="id">E</span> <span class="id">L</span> /\ <span class="id">n</span> = <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="fold_impl">fold_impl</a></span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.B">B</a></span>) (<span class="id">f</span>:<span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>-&gt;<span class="id"><a href="SLF.LibSet.html#Operations.B">B</a></span>) (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Operations.A">A</a></span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#fold_right">LibList.fold_right</a></span> (<span class="kwd">fun</span> <span class="id">x</span> <span class="id">acc</span> =&gt; <span class="id"><a href="SLF.LibMonoid.html#monoid_oper">monoid_oper</a></span> <span class="id">m</span> (<span class="id">f</span> <span class="id">x</span>) <span class="id">acc</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id"><a href="SLF.LibMonoid.html#monoid_neutral">monoid_neutral</a></span> <span class="id">m</span>) (<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> <span class="id">E</span>).<br/>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSet.html#Operations">Operations</a></span>.<br/>
+<br/>
+<h2> Notations to help the typechecker </h2>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"x \indom E"</span> := (<span class="id">x</span> \<span class="kwd">in</span> (<span class="id"><a href="SLF.LibContainer.html#dom">dom</a></span> <span class="id">E</span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> _))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39) : <span class="id">container_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"x \notindom E"</span> := (<span class="id">x</span> \<span class="id">notin</span> ((<span class="id"><a href="SLF.LibContainer.html#dom">dom</a></span> <span class="id">E</span>) : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> _))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39) : <span class="id">container_scope</span>.<br/>
+<br/>
+<h2> Inhabited </h2>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="Inhab_set">Inhab_set</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> (<span class="id"><a href="SLF.LibLogic.html#Inhab_of_val">Inhab_of_val</a></span> (@<span class="id"><a href="SLF.LibSet.html#empty_impl">empty_impl</a></span> <span class="id">A</span>)). Qed.</div></details>
+<br/>
+<h2> Notation through typeclasses </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_inst">in_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagIn">BagIn</a></span> <span class="id">A</span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">exact</span> (@<span class="id"><a href="SLF.LibSet.html#in_impl">in_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Extern</span> 1 (<span class="id"><a href="SLF.LibContainer.html#BagIn">BagIn</a></span> _ (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> _)) =&gt; <span class="id">apply</span> <span class="id"><a href="SLF.LibSet.html#in_inst">in_inst</a></span> : <span class="id">typeclass_instances</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="empty_inst">empty_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagEmpty">BagEmpty</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">apply</span> (@<span class="id"><a href="SLF.LibSet.html#empty_impl">empty_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="single_inst">single_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagSingle">BagSingle</a></span> <span class="id">A</span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibSet.html#single_impl">single_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="union_inst">union_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagUnion">BagUnion</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibSet.html#union_impl">union_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="inter_inst">inter_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagInter">BagInter</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibSet.html#inter_impl">inter_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="remove_inst">remove_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagRemove">BagRemove</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>) (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibSet.html#remove_impl">remove_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="incl_inst">incl_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagIncl">BagIncl</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibSet.html#incl_impl">incl_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="disjoint_inst">disjoint_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagDisjoint">BagDisjoint</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibSet.html#disjoint_impl">disjoint_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="fold_inst">fold_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span>, <span class="id"><a href="SLF.LibContainer.html#BagFold">BagFold</a></span> <span class="id">B</span> (<span class="id">A</span>-&gt;<span class="id">B</span>) (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibSet.html#fold_impl">fold_impl</a></span> <span class="id">A</span> <span class="id">B</span>). Defined.</div></details>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id"><a name="card_inst">card_inst</a></span> : <span class="kwd">forall</span> <span class="id">A</span>, <span class="id"><a href="SLF.LibContainer.html#BagCard">BagCard</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rapply</span> (@<span class="id"><a href="SLF.LibSet.html#card_impl">card_impl</a></span> <span class="id">A</span>). Defined.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id"><a href="SLF.LibSet.html#in_inst">in_inst</a></span> <span class="id"><a href="SLF.LibSet.html#empty_inst">empty_inst</a></span> <span class="id"><a href="SLF.LibSet.html#single_inst">single_inst</a></span> <span class="id"><a href="SLF.LibSet.html#union_inst">union_inst</a></span> <span class="id"><a href="SLF.LibSet.html#inter_inst">inter_inst</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#remove_inst">remove_inst</a></span> <span class="id"><a href="SLF.LibSet.html#incl_inst">incl_inst</a></span> <span class="id"><a href="SLF.LibSet.html#disjoint_inst">disjoint_inst</a></span> <span class="id"><a href="SLF.LibSet.html#card_inst">card_inst</a></span> <span class="id"><a href="SLF.LibSet.html#fold_inst">fold_inst</a></span>.<br/>
+<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">list_repr</span> <span class="id">E</span> <span class="id">L</span></span> asserts that elements of <span class="bracket"><span class="id">E</span></span> are exactly
+    the elements from the list <span class="bracket"><span class="id">L</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="list_repr">list_repr</a></span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>) (<span class="id">L</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#noduplicates">noduplicates</a></span> <span class="id">L</span> /\ (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">x</span> <span class="id">L</span> &lt;-&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>).<br/>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">list_covers</span> <span class="id">E</span> <span class="id">L</span></span> asserts that all elements of <span class="bracket"><span class="id">E</span></span> all
+    belong to the list <span class="bracket"><span class="id">L</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="list_covers">list_covers</a></span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>) (<span class="id">L</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id">A</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">x</span> <span class="id">L</span>.<br/>
+<br/>
+<h2> Notations for building sets </h2>
+<br/>
+<div class="doc">DISCLAIMER: these definitions are experimental, they'll probably change </div>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">set_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\set{ x | P }"</span> := (@<span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> _ (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">P</span>))<br/>
+&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">x</span> <span class="id">name</span>, <span class="id">P</span> <span class="kwd">at</span> <span class="id">level</span> 200) : <span class="id">set_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"\set{ x : A | P }"</span> := (@<span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> <span class="id">A</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">P</span>))<br/>
+&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">x</span> <span class="id">name</span>, <span class="id">P</span> <span class="kwd">at</span> <span class="id">level</span> 200) : <span class="id">set_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"\set{ x '\in' E | P }"</span> := (@<span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> _ (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">P</span>))<br/>
+&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">x</span> <span class="id">name</span>, <span class="id">P</span> <span class="kwd">at</span> <span class="id">level</span> 200) : <span class="id">set_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\set{= e | x '\in' E }"</span> :=<br/>
+&nbsp;(@<span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> _ (<span class="kwd">fun</span> <span class="id">a</span> =&gt; <span class="id">exists_</span> <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>, <span class="id">a</span> = <span class="id">e</span> ))<br/>
+&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">x</span> <span class="id">name</span>, <span class="id">E</span> <span class="kwd">at</span> <span class="id">level</span> 200) : <span class="id">set_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"\set{= e | x '\in' E , y ''\in' F }"</span> :=<br/>
+&nbsp;(@<span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> _ (<span class="kwd">fun</span> <span class="id">a</span> =&gt; <span class="id">exists_</span> <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>, <span class="id">exists_</span> <span class="id">y</span> \<span class="kwd">in</span> <span class="id">F</span>, <span class="id">a</span> = <span class="id">e</span> ))<br/>
+&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">x</span> <span class="id">name</span>, <span class="id">F</span> <span class="kwd">at</span> <span class="id">level</span> 200) : <span class="id">set_scope</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"\set{= e | x y '\in' E }"</span> :=<br/>
+&nbsp;(@<span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> _ (<span class="kwd">fun</span> <span class="id">a</span> =&gt; <span class="id">exists_</span> <span class="id">x</span> <span class="id">y</span> \<span class="kwd">in</span> <span class="id">E</span>, <span class="id">a</span> = <span class="id">e</span> ))<br/>
+&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">x</span> <span class="id">name</span>, <span class="id">y</span> <span class="id">name</span>, <span class="id">E</span> <span class="kwd">at</span> <span class="id">level</span> 200) : <span class="id">set_scope</span>.<br/>
+<br/>
+<h1> Properties of sets </h1>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Instances">Instances</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Instances.A">A</a></span>:<span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Transparent</span> <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id"><a href="SLF.LibSet.html#empty_inst">empty_inst</a></span> <span class="id"><a href="SLF.LibSet.html#single_inst">single_inst</a></span> <span class="id"><a href="SLF.LibSet.html#single_impl">single_impl</a></span> <span class="id"><a href="SLF.LibSet.html#in_inst">in_inst</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#incl_inst">incl_inst</a></span> <span class="id"><a href="SLF.LibSet.html#inter_inst">inter_inst</a></span> <span class="id"><a href="SLF.LibSet.html#union_inst">union_inst</a></span> <span class="id"><a href="SLF.LibSet.html#card_inst">card_inst</a></span> <span class="id"><a href="SLF.LibSet.html#fold_inst">fold_inst</a></span> <span class="id"><a href="SLF.LibSet.html#remove_inst">remove_inst</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#disjoint_inst">disjoint_inst</a></span>.<br/>
+<span class="kwd">Hint</span> <span class="id">Constructors</span> <span class="id"><a href="SLF.LibSet.html#mem">mem</a></span>.<br/>
+<br/>
+<div class="doc">Local tactic to help unfolding all intermediate definitions </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">set_unf</span> := <span class="id">unfold</span> <span class="id"><a href="SLF.LibSet.html#finite">finite</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#card_inst">card_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#card_impl">card_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#card">card</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#disjoint_impl">disjoint_impl</a></span>, <span class="id"><a href="SLF.LibSet.html#disjoint_inst">disjoint_inst</a></span>, <span class="id"><a href="SLF.LibContainer.html#disjoint">disjoint</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#incl_inst">incl_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#incl_impl">incl_impl</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#empty_inst">empty_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#empty_impl">empty_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#empty">empty</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#single_inst">single_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#single_impl">single_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#single">single</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#in_inst">in_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#in_impl">in_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#is_in">is_in</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#incl_inst">incl_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#incl_impl">incl_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#incl">incl</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#compl_impl">compl_impl</a></span>, <span class="id"><a href="SLF.LibLogic.html#pred_not">pred_not</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#inter_inst">inter_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#inter_impl">inter_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#inter">inter</a></span>, <span class="id"><a href="SLF.LibLogic.html#pred_and">pred_and</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#union_inst">union_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#union_impl">union_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#union">union</a></span>, <span class="id"><a href="SLF.LibLogic.html#pred_or">pred_or</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#remove_inst">remove_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#remove_impl">remove_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#remove">remove</a></span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#fold_inst">fold_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#fold_impl">fold_impl</a></span>, <span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="kwd">in</span> *.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="disjoint_eq_inter_empty">disjoint_eq_inter_empty</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;(<span class="id">E</span> \# <span class="id">F</span>) = (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span> = \{}).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="in_set_st_eq">in_set_st_eq</a></span> : <span class="kwd">forall</span> (<span class="id">P</span>:<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>-&gt;<span class="kwd">Prop</span>) <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> <span class="id">P</span> = <span class="id">P</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_ext_eq">set_ext_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;(<span class="id">E</span> = <span class="id">F</span>) = (<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>), <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> &lt;-&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. <span class="id">iff</span> <span class="id">H</span>. <span class="id">subst</span>*. <span class="id">extens</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_ext">set_ext</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>), <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> &lt;-&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">E</span> = <span class="id">F</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibSet.html#set_ext_eq">set_ext_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_st_eq">set_st_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A</span> -&gt; <span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">P</span> <span class="id">x</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> <span class="id">P</span> = <span class="id"><a href="SLF.LibSet.html#set_st">set_st</a></span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">asserts_rewrite</span>~ (<span class="id">P</span> = <span class="id">Q</span>). <span class="id">extens</span>~. Qed.</div></details>
+<br/>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_extens_inst">in_extens_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#In_extens">In_extens</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibSet.html#set_ext_eq">set_ext_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_empty_eq_inst">in_empty_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#In_empty_eq">In_empty_eq</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_single_eq_inst">in_single_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#In_single_eq">In_single_eq</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_union_eq_inst">in_union_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#In_union_eq">In_union_eq</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">set_unf</span>. <span class="id">simpl</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_inter_eq_inst">in_inter_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#In_inter_eq">In_inter_eq</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">set_unf</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="in_remove_eq_inst">in_remove_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#In_remove_eq">In_remove_eq</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">set_unf</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="incl_in_eq_inst">incl_in_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Incl_in_eq">Incl_in_eq</a></span> (<span class="id">A</span>:=<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">set_unf</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="disjoint_eq_inst">disjoint_eq_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Disjoint_eq">Disjoint_eq</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#disjoint_eq_inter_empty">disjoint_eq_inter_empty</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">set_unf</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">rewrite</span>* &lt;- (@<span class="id"><a href="SLF.LibEqual.html#fun_eq_1">fun_eq_1</a></span> _ _ <span class="id">x</span> _ _ <span class="id">M</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">extens</span>*.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_union_single_remove_one">eq_union_single_remove_one</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">E</span> = \{<span class="id">x</span>} \<span class="id">u</span> (<span class="id">E</span> \-- <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">set_unf</span>. <span class="id">extens</span>. <span class="id">intros</span> <span class="id">y</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simpls</span>. <span class="id">tests</span>*: (<span class="id">y</span> = <span class="id">x</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">M</span>. <span class="id">subst</span>*. <span class="id">autos</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_remove_one_add_same">set_remove_one_add_same</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">E</span> = (<span class="id">E</span> \<span class="id">u</span> \{<span class="id">x</span>}) \-- <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hx</span>. <span class="id">set_unf</span>. <span class="id">extens</span>. <span class="id">iff</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">split</span>. <span class="id">eauto</span>. <span class="id">intro</span>. <span class="id">subst</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">tauto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="list_covers_of_list_repr">list_covers_of_list_repr</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">L</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> <span class="id">L</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span> <span class="id">E</span> <span class="id">L</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> (<span class="id">ND</span>&amp;<span class="id">EQ</span>). <span class="id">introv</span> <span class="id">Hx</span>. <span class="id">rewrite</span>~ <span class="id">EQ</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="list_repr_disjoint_union">list_repr_disjoint_union</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span> <span class="id">LE</span> <span class="id">LF</span>,<br/>
+&nbsp;&nbsp;<span class="id">E</span> \# <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> <span class="id">LE</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">F</span> <span class="id">LF</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) (<span class="id">LE</span> ++ <span class="id">LF</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">D</span> (<span class="id">HE</span>&amp;<span class="id">QE</span>) (<span class="id">HF</span>&amp;<span class="id">QF</span>). <span class="id">split</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>~ <span class="id"><a href="SLF.LibList.html#noduplicates_app">noduplicates_app</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> ? ?. <span class="id">applys</span>* @<span class="id"><a href="SLF.LibContainer.html#disjoint_inv">disjoint_inv</a></span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">typeclass</span>. <span class="id">rewrite</span>~ &lt;- <span class="id">QE</span>. <span class="id">rewrite</span>~ &lt;- <span class="id">QF</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibList.html#mem_app_eq">mem_app_eq</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">QE</span>. <span class="id">rewrite</span>* &lt;- <span class="id">QF</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="noduplicates_of_list_repr">noduplicates_of_list_repr</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">xs</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> <span class="id">xs</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibList.html#noduplicates">noduplicates</a></span> <span class="id">xs</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span>. <span class="id">tauto</span>. Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="ex_list_repr_impl_of_ex_list_covers_impl">ex_list_repr_impl_of_ex_list_covers_impl</a></span> : <span class="kwd">forall</span> <span class="id">E</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> (<span class="id"><a href="SLF.LibSet.html#list_covers_impl">list_covers_impl</a></span> <span class="id">E</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> (<span class="id"><a href="SLF.LibSet.html#list_repr_impl">list_repr_impl</a></span> <span class="id">E</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> (<span class="id">L</span>&amp;<span class="id">M</span>). <span class="id">sets_eq</span> <span class="id">L1</span> <span class="id">EQL1</span>: (<span class="id"><a href="SLF.LibList.html#remove_duplicates">remove_duplicates</a></span> <span class="id">L</span>).<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>~ (<span class="id">HN</span>&amp;<span class="id">HM</span>&amp;_): <span class="id"><a href="SLF.LibList.html#remove_duplicates_spec">remove_duplicates_spec</a></span> <span class="id">EQL1</span>.<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">L2</span>: (<span class="id"><a href="SLF.LibList.html#filter">filter</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>) <span class="id">L1</span>).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">L2</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id"><a href="SLF.LibList.html#noduplicates_filter">noduplicates_filter</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">M</span> <span class="id">x</span>. <span class="id">rewrite</span> &lt;- <span class="id">HM</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">set_unf</span>. <span class="id">iff</span> <span class="id">N</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span> <span class="id">L2</span>. <span class="id">forwards</span>*: <span class="id"><a href="SLF.LibList.html#mem_filter_inv">mem_filter_inv</a></span> <span class="id">N</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id"><a href="SLF.LibList.html#mem_filter">mem_filter</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="list_repr_to_list_of_finite">list_repr_to_list_of_finite</a></span> : <span class="kwd">forall</span> <span class="id">E</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> (<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> <span class="id">E</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">FE</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span>, <span class="id"><a href="SLF.LibSet.html#finite">finite</a></span>, <span class="id"><a href="SLF.LibSet.html#list_repr_impl">list_repr_impl</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">epsilon</span>~ <span class="id">L'</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>~ <span class="id"><a href="SLF.LibSet.html#ex_list_repr_impl_of_ex_list_covers_impl">ex_list_repr_impl_of_ex_list_covers_impl</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="eq_to_list_inv">eq_to_list_inv</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">L</span>,<br/>
+&nbsp;&nbsp;<span class="id">L</span> = <span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> <span class="id">L</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">EQ</span> <span class="id">HE</span>. <span class="id">unfolds</span>. <span class="id">subst</span>. <span class="id">forwards</span>* (?&amp;?): <span class="id"><a href="SLF.LibSet.html#list_repr_to_list_of_finite">list_repr_to_list_of_finite</a></span> <span class="id">HE</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_eq_in_iff_mem_to_list">finite_eq_in_iff_mem_to_list</a></span> : <span class="kwd">forall</span> <span class="id">E</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> &lt;-&gt; <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">x</span> (<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> <span class="id">E</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibAxioms.html#prop_ext">prop_ext</a></span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">forwards</span>* (<span class="id">N1</span>&amp;<span class="id">N2</span>): <span class="id"><a href="SLF.LibSet.html#eq_to_list_inv">eq_to_list_inv</a></span> <span class="id">E</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">specializes</span> <span class="id">N2</span> <span class="id">x</span>. <span class="id">autos</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="kwd">exists</span> (<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> <span class="id">E</span>). <span class="id">intros</span> <span class="id">x</span> <span class="id">Ex</span>. <span class="id">rewrite</span>~ &lt;- <span class="id">M</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_list_empty">to_list_empty</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> (\{}:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">set_unf</span>. <span class="id">epsilon</span> <span class="id">l</span>.<br/>
+&nbsp;&nbsp;{ <span class="kwd">exists</span> (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>). <span class="id">split</span>. { <span class="id">constructor</span>. } { <span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibList.html#mem_nil_eq">mem_nil_eq</a></span>. } }<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">Hl</span>. <span class="id">inverts</span> <span class="id">Hl</span>. <span class="id">simpls</span>. <span class="id">destruct</span>~ <span class="id">l</span>. <span class="id">false</span>. <span class="id">rewrite</span> &lt;- <span class="id">H0</span>. <span class="id">simple</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="to_list_single">to_list_single</a></span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> (\{<span class="id">x</span>}) = <span class="id">x</span>::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span>. <span class="id">epsilon</span> <span class="id">l</span>.<br/>
+&nbsp;&nbsp;{ <span class="kwd">exists</span> (<span class="id">x</span>::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>). <span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id"><a href="SLF.LibList.html#noduplicates_one">noduplicates_one</a></span>. }<br/>
+&nbsp;&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id"><a href="SLF.LibSet.html#single_inst">single_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#single_impl">single_impl</a></span>. <span class="id">simple</span>~.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span>* <span class="id"><a href="SLF.LibList.html#mem_one_eq">mem_one_eq</a></span>. } }<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hl</span>. <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSet.html#single_inst">single_inst</a></span>, <span class="id"><a href="SLF.LibSet.html#single_impl">single_impl</a></span>. <span class="id">simpls</span>~.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">Hl</span> <span class="kwd">as</span> <span class="id">H</span> <span class="id">H0</span>. <span class="id">destruct</span> (<span class="id">H0</span> <span class="id">x</span>). <span class="id">specializes</span>~ <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">l</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H2</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">tests</span> <span class="id">E</span>: (<span class="id">x</span> = <span class="id">a</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">fequals</span>. <span class="id">destruct</span> <span class="id">l</span>. <span class="id">auto</span>. <span class="id">forwards</span>~: (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> (<span class="id">H0</span> <span class="id">a0</span>)).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">false</span>* <span class="id">M1</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H2</span>. <span class="id">false</span>. <span class="id">forwards</span>~: (<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#proj1">proj1</a></span> (<span class="id">H0</span> <span class="id">a</span>)). <span class="id">false</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_of_list_covers">finite_of_list_covers</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) <span class="id">L</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span> <span class="id">E</span> <span class="id">L</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="kwd">exists</span>* <span class="id">L</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_of_list_repr">finite_of_list_repr</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) <span class="id">L</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> <span class="id">L</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> (<span class="id">ND</span>&amp;<span class="id">EQ</span>). <span class="kwd">exists</span>~ <span class="id">L</span>. <span class="id">introv</span> <span class="id">Hx</span>. <span class="id">rewrite</span>~ <span class="id">EQ</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_of_ex_list_covers">finite_of_ex_list_covers</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex">ex</a></span> (<span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span> <span class="id">E</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> (<span class="id">L</span>&amp;<span class="id">H</span>). <span class="id">applys</span>* <span class="id"><a href="SLF.LibSet.html#finite_of_list_covers">finite_of_list_covers</a></span>. Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="finite_inv_list_covers_and_card">finite_inv_list_covers_and_card</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">L</span>, <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span> <span class="id">E</span> <span class="id">L</span> /\ <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> = <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> (<span class="id">L</span>&amp;<span class="id">H</span>). <span class="id">sets</span> <span class="id">m</span>: (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span>).<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>* (<span class="id">R</span>&amp;<span class="id">P</span>): <span class="id"><a href="SLF.LibMin.html#mmin_spec_nat">mmin_spec_nat</a></span> <span class="id">m</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_inv_list_covers">finite_inv_list_covers</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">L</span>, <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span> <span class="id">E</span> <span class="id">L</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> (<span class="id">L</span>&amp;<span class="id">HN</span>). <span class="kwd">exists</span> <span class="id">L</span>. <span class="id">intros</span>. <span class="id">applys</span>* <span class="id">HN</span>. Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_empty">finite_empty</a></span> :<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (\{} : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSet.html#finite_of_ex_list_covers">finite_of_ex_list_covers</a></span>. <span class="id">set_unf</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>). <span class="id">introv</span> <span class="id">M</span>. <span class="id">inverts</span> <span class="id">M</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_single">finite_single</a></span> : <span class="kwd">forall</span> (<span class="id">a</span> : <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> \{<span class="id">a</span>}.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSet.html#finite_of_ex_list_covers">finite_of_ex_list_covers</a></span>. <span class="id">set_unf</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">a</span>::<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span>). <span class="id">introv</span> <span class="id">M</span>. <span class="id">hnf</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">subst</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_union">finite_union</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSet.html#finite_of_ex_list_covers">finite_of_ex_list_covers</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">L1</span>&amp;<span class="id">E1</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">L2</span>&amp;<span class="id">E2</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">L1</span>++<span class="id">L2</span>). <span class="id">unfolds</span> <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> @<span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span> <span class="kwd">in</span> <span class="id">M</span>; <span class="id">try</span> <span class="id">typeclass</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id"><a href="SLF.LibList.html#mem_app_eq">mem_app_eq</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_union_inv">finite_union_inv</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> /\ <span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">lets</span> (<span class="id">L</span>&amp;<span class="id">HL</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">H</span>. <span class="id">split</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.LibSet.html#finite_of_ex_list_covers">finite_of_ex_list_covers</a></span>. <span class="kwd">exists</span> <span class="id">L</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span>. <span class="id">intros</span> <span class="id">x</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id">HL</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_l">in_union_l</a></span>. <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.LibSet.html#finite_of_ex_list_covers">finite_of_ex_list_covers</a></span>. <span class="kwd">exists</span> <span class="id">L</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span>. <span class="id">intros</span> <span class="id">x</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id">HL</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_r">in_union_r</a></span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_union_eq">finite_union_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = (<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> /\ <span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">iff</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSet.html#finite_union_inv">finite_union_inv</a></span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSet.html#finite_union">finite_union</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_inter">finite_inter</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> \/ <span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSet.html#finite_of_ex_list_covers">finite_of_ex_list_covers</a></span>. <span class="id">destruct</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">L</span>&amp;<span class="id">EQ</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">H</span>. <span class="kwd">exists</span> <span class="id">L</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span>. <span class="id">set_unf</span>. <span class="id">autos</span>*.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">L</span>&amp;<span class="id">EQ</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">H</span>. <span class="kwd">exists</span> <span class="id">L</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span>. <span class="id">set_unf</span>. <span class="id">autos</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_inter_l">finite_inter_l</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSet.html#finite_inter">finite_inter</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_inter_r">finite_inter_r</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSet.html#finite_inter">finite_inter</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_incl">finite_incl</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id">E</span> \<span class="id">c</span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HI</span> <span class="id">HF</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSet.html#finite_of_ex_list_covers">finite_of_ex_list_covers</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">L</span>&amp;<span class="id">EQ</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">HF</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">set_unf</span>. <span class="kwd">exists</span>* <span class="id">L</span>. <span class="id">introv</span> <span class="id">Ex</span>. <span class="id">applys</span> <span class="id">EQ</span>. <span class="id">applys</span>~ <span class="id">HI</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_remove">finite_remove</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (<span class="id">E</span> \- <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HE</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibSet.html#finite_of_ex_list_covers">finite_of_ex_list_covers</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">L</span>&amp;<span class="id">EQ</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">HE</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span>. <span class="id">set_unf</span>. <span class="kwd">exists</span>* <span class="id">L</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Instances.Finite_remove_inv">Finite_remove_inv</a></span>.<br/>
+<span class="id">Local</span> <span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibSet.html#remove_inst">remove_inst</a></span> <span class="id"><a href="SLF.LibSet.html#single_inst">single_inst</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_remove_inv">finite_remove_inv</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (<span class="id">E</span> \- <span class="id">F</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">lets</span> (<span class="id">L1</span>&amp;<span class="id">R1</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">L2</span>&amp;<span class="id">R2</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSet.html#finite_of_list_covers">finite_of_list_covers</a></span> (<span class="id">L1</span> ++ <span class="id">L2</span>).<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">y</span> <span class="id">Hy</span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibList.html#mem_app_eq">mem_app_eq</a></span>. <span class="id">tests</span>: (<span class="id">y</span> \<span class="kwd">in</span> <span class="id">F</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">autos</span>~.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">forwards</span>~ <span class="id">M</span>: <span class="id">R1</span> <span class="id">y</span>. <span class="id">rewrite</span>~ @<span class="id"><a href="SLF.LibContainer.html#in_remove_eq">in_remove_eq</a></span>. <span class="id">typeclass</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSet.html#Instances.Finite_remove_inv">Finite_remove_inv</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="finite_remove_one_inv">finite_remove_one_inv</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> (<span class="id">E</span> \-- <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSet.html#finite_remove_inv">finite_remove_inv</a></span> <span class="id">H</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSet.html#finite_single">finite_single</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="list_repr_nil">list_repr_nil</a></span>:<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> \{} (@<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#nil">nil</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id"><a href="SLF.LibSet.html#to_list_empty">to_list_empty</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> <span class="id"><a href="SLF.LibSet.html#eq_to_list_inv">eq_to_list_inv</a></span>; <span class="id">eauto</span> <span class="kwd">using</span> <span class="id"><a href="SLF.LibSet.html#finite_empty">finite_empty</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="list_covers_inv_card">list_covers_inv_card</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) <span class="id">L</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span> <span class="id">E</span> <span class="id">L</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> &lt;= <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">sets</span> <span class="id">m</span>: (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span>). <span class="id">set_unf</span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>* (<span class="id">R</span>&amp;<span class="id">P</span>): <span class="id"><a href="SLF.LibMin.html#mmin_spec_nat">mmin_spec_nat</a></span> <span class="id">m</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpls</span>. <span class="id">applys</span> <span class="id">P</span>. <span class="kwd">exists</span> <span class="id">L</span>. <span class="id">splits</span>~.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="finite_inv_list_repr_and_card">finite_inv_list_repr_and_card</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">L</span>, <span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> <span class="id">L</span> /\ <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> = <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">forwards</span> (<span class="id">L1</span>&amp;<span class="id">HL1</span>&amp;<span class="id">EL1</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers_and_card">finite_inv_list_covers_and_card</a></span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">L2</span>: (<span class="id"><a href="SLF.LibList.html#remove_duplicates">remove_duplicates</a></span> <span class="id">L1</span>).<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>~ (<span class="id">ND</span>&amp;<span class="id">EQ</span>&amp;<span class="id">LE</span>): <span class="id"><a href="SLF.LibList.html#remove_duplicates_spec">remove_duplicates_spec</a></span> <span class="id">L1</span> <span class="id">L2</span>.<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">L3</span>: (<span class="id"><a href="SLF.LibList.html#filter">filter</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>) <span class="id">L2</span>).<br/>
+&nbsp;&nbsp;<span class="id">asserts</span>: (<span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L3</span> &lt;= <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L2</span>)%<span class="id">nat</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibList.html#length_filter">length_filter</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">R3</span>: (<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> <span class="id">L3</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>~ <span class="id"><a href="SLF.LibList.html#noduplicates_filter">noduplicates_filter</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">L3</span> <span class="kwd">in</span> <span class="id">M</span>. <span class="id">lets</span>~ (_&amp;?): <span class="id"><a href="SLF.LibList.html#mem_filter_inv">mem_filter_inv</a></span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>~ <span class="id"><a href="SLF.LibList.html#mem_filter">mem_filter</a></span>. <span class="id">rewrite</span>~ <span class="id">EQ</span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span> <span class="id">C3</span>: <span class="id"><a href="SLF.LibSet.html#list_covers_of_list_repr">list_covers_of_list_repr</a></span> <span class="id">R3</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">L3</span>. <span class="id">splits</span>*.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>: <span class="id"><a href="SLF.LibSet.html#list_covers_inv_card">list_covers_inv_card</a></span> <span class="id">C3</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="list_repr_inv_card">list_repr_inv_card</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) (<span class="id">L</span>:<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#list">list</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> <span class="id">L</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> = <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HR</span>. <span class="id">lets</span> (<span class="id">ND</span>&amp;<span class="id">EQ</span>): <span class="id">HR</span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>~ (<span class="id">L'</span>&amp;(<span class="id">ND'</span>&amp;<span class="id">HR'</span>)&amp;<span class="id">EQ'</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_repr_and_card">finite_inv_list_repr_and_card</a></span> <span class="id">E</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id"><a href="SLF.LibSet.html#finite_of_list_repr">finite_of_list_repr</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id"><a href="SLF.LibContainer.html#card">card</a></span>. <span class="id">simpl</span>. <span class="id">rewrite</span> <span class="id">EQ'</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>~ <span class="id"><a href="SLF.LibList.html#noduplicates_length_eq">noduplicates_length_eq</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span>. <span class="id">rewrite</span> <span class="id">EQ</span>. <span class="id">rewrite</span>* <span class="id">HR'</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="finite_inv_card_ge">finite_inv_card_ge</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">L</span>, <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span> <span class="id">E</span> <span class="id">L</span> -&gt; (<span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span> &gt;= <span class="id">n</span>)%<span class="id">nat</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> &gt;= <span class="id">n</span>)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">sets</span> <span class="id">m</span>: (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span>).<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>* (<span class="id">R</span>&amp;<span class="id">P</span>): <span class="id"><a href="SLF.LibMin.html#mmin_spec_nat">mmin_spec_nat</a></span> <span class="id">m</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">L</span>&amp;<span class="id">EL</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers">finite_inv_list_covers</a></span> <span class="id">H</span>. <span class="kwd">exists</span>~ (<span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>) <span class="id">L</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpls</span>. <span class="id">introv</span> <span class="id">HL</span>. <span class="id">destruct</span> <span class="id">R</span> <span class="kwd">as</span> (<span class="id">L</span>&amp;<span class="id">CR</span>&amp;<span class="id">ER</span>).<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>~: <span class="id">HL</span> <span class="id">L</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="list_covers_inv_card_eq">list_covers_inv_card_eq</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>) <span class="id">L</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span> <span class="id">E</span> <span class="id">L</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">L'</span>, <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span> <span class="id">E</span> <span class="id">L'</span> -&gt; (<span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L'</span> &gt;= <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>)%<span class="id">nat</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> = <span class="id"><a href="SLF.LibList.html#length">length</a></span> <span class="id">L</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HC</span> <span class="id">HG</span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>~: <span class="id"><a href="SLF.LibSet.html#list_covers_inv_card">list_covers_inv_card</a></span> <span class="id">HC</span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>~: <span class="id"><a href="SLF.LibSet.html#finite_inv_card_ge">finite_inv_card_ge</a></span> <span class="id">HG</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id"><a href="SLF.LibSet.html#finite_of_list_covers">finite_of_list_covers</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="card_eq_length_to_list">card_eq_length_to_list</a></span> : <span class="kwd">forall</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> = <span class="id"><a href="SLF.LibList.html#length">length</a></span> (<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> <span class="id">E</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">FE</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSet.html#list_repr_inv_card">list_repr_inv_card</a></span>. <span class="id">applys</span>~ <span class="id"><a href="SLF.LibSet.html#eq_to_list_inv">eq_to_list_inv</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="card_empty_inst">card_empty_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Card_empty">Card_empty</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#card_eq_length_to_list">card_eq_length_to_list</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> <span class="id">E</span>: <span class="id"><a href="SLF.LibSet.html#to_list_empty">to_list_empty</a></span>. <span class="id">set_unf</span>. <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">rew_list</span>~.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSet.html#finite_empty">finite_empty</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="id">Global</span> <span class="kwd">Instance</span> <span class="id"><a name="card_single_inst">card_single_inst</a></span> : <span class="id"><a href="SLF.LibContainer.html#Card_single">Card_single</a></span> (<span class="id">T</span>:=<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Instances.A">A</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span> <span class="id">a</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#card_eq_length_to_list">card_eq_length_to_list</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> <span class="id">E</span>: <span class="id"><a href="SLF.LibSet.html#to_list_single">to_list_single</a></span> <span class="id">a</span>. <span class="id">set_unf</span>. <span class="id">rewrite</span> <span class="id">E</span>. <span class="id">rew_list</span>~.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id"><a href="SLF.LibSet.html#finite_single">finite_single</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSet.html#Instances">Instances</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">finite_empty</span> <span class="id">finite_single</span> <span class="id">finite_union</span><br/>
+&nbsp;&nbsp;<span class="id">finite_inter</span> <span class="id">finite_incl</span> <span class="id">finite_remove</span> : <span class="id">finite</span>.<br/>
+<br/>
+<h1> Tactics for proving set equalities and set inclusions </h1>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">set_prove</span></span> aims at proving set equality by testing
+    double inclusion using a boolean tautology decision procedure. </div>
+<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Autorewrite">Autorewrite</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="Autorewrite.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">x</span> <span class="id">y</span> : <span class="id"><a href="SLF.LibSet.html#Autorewrite.A">A</a></span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Autorewrite.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_in_empty_eq">set_in_empty_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (\{}:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Autorewrite.A">A</a></span>) = <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_empty_eq">in_empty_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_in_single_eq">set_in_single_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (\{<span class="id">y</span>}:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#Autorewrite.A">A</a></span>) = (<span class="id">x</span> = <span class="id">y</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_in_inter_eq">set_in_inter_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) = (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_inter_eq">in_inter_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_in_union_eq">set_in_union_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> \/ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_in_remove_eq">set_in_remove_eq</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> (<span class="id">E</span> \- <span class="id">F</span>) = (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> /\ ~ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_remove_eq">in_remove_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_in_extens_eq">set_in_extens_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;(<span class="id">E</span> = <span class="id">F</span>) = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> &lt;-&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">extens</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>*.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> @<span class="id"><a href="SLF.LibContainer.html#in_extens_eq">in_extens_eq</a></span>. <span class="id">typeclass</span>. <span class="id">intros</span>. <span class="id">extens</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_incl_in_eq">set_incl_in_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;(<span class="id">E</span> \<span class="id">c</span> <span class="id">F</span>) = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#incl_in_eq">incl_in_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="set_disjoint_eq">set_disjoint_eq</a></span> : <span class="kwd">forall</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;(<span class="id">E</span> \# <span class="id">F</span>) = (<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span> -&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False">False</a></span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_eq">disjoint_eq</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSet.html#Autorewrite">Autorewrite</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibSet.html#in_set_st_eq">in_set_st_eq</a></span> <span class="id"><a href="SLF.LibSet.html#set_in_empty_eq">set_in_empty_eq</a></span> <span class="id"><a href="SLF.LibSet.html#set_in_single_eq">set_in_single_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#set_in_inter_eq">set_in_inter_eq</a></span> <span class="id"><a href="SLF.LibSet.html#set_in_union_eq">set_in_union_eq</a></span> <span class="id"><a href="SLF.LibSet.html#set_in_remove_eq">set_in_remove_eq</a></span> <span class="id"><a href="SLF.LibSet.html#set_in_extens_eq">set_in_extens_eq</a></span><br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#set_incl_in_eq">set_incl_in_eq</a></span> <span class="id"><a href="SLF.LibSet.html#set_disjoint_eq">set_disjoint_eq</a></span> : <span class="id">rew_set</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">rew_set_tactic</span> <span class="id">tt</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_set</span>).<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">set_specialize_hyps</span> <span class="id">A</span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> <span class="id">H</span>: <span class="kwd">forall</span> _:?<span class="id">A</span>, _ |- _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">set_specialize_classic</span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> <span class="id">E</span>: <span class="id"><a href="SLF.LibSet.html#set">set</a></span> _ |- _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id">H</span>: <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> \/ ~ <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> |- _ =&gt; <span class="id">fail</span> 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| _ =&gt; <span class="id">lets</span>: (<span class="id"><a href="SLF.LibLogic.html#prop_inv">prop_inv</a></span> (<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">set_specialize</span> <span class="id">use_classic</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span> |- <span class="kwd">forall</span> _:?<span class="id">A</span>, _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">x</span> := <span class="id">fresh</span> <span class="string">"x"</span> <span class="kwd">in</span> <span class="id">intros</span> <span class="id">x</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">set_specialize_hyps</span> <span class="id">A</span> <span class="id">x</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">use_classic</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#true">true</a></span> =&gt; <span class="id">set_specialize_classic</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Datatypes.html#false">false</a></span> =&gt; <span class="id">idtac</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">set_prove_setup</span> <span class="id">use_classic</span> :=<br/>
+&nbsp;&nbsp;<span class="id">intros</span>;<br/>
+&nbsp;&nbsp;<span class="id">rew_set_tactic</span> <span class="id">tt</span>;<br/>
+&nbsp;&nbsp;<span class="id">try</span> <span class="id">set_specialize</span> <span class="id">use_classic</span>;<br/>
+&nbsp;&nbsp;<span class="id">rew_set_tactic</span> <span class="id">tt</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">set_prove_conclude</span> :=<br/>
+&nbsp;&nbsp;<span class="id">solve</span> [ <span class="id">intros</span>; <span class="id">subst</span>; <span class="id">tauto</span> ].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">set_prove</span> :=<br/>
+&nbsp;&nbsp;<span class="id">set_prove_setup</span> <span class="id">false</span>; <span class="id">set_prove_conclude</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">set_prove_classic</span> :=<br/>
+&nbsp;&nbsp;<span class="id">set_prove_setup</span> <span class="id">true</span>; <span class="id">set_prove_conclude</span>.<br/>
+<br/>
+<h1> More properties </h1>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="card_le_of_incl">card_le_of_incl</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span> <span class="id">F</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">E</span> \<span class="id">c</span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> &lt;= <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">F</span>)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">FF</span> <span class="id">CF</span>. <span class="id">lets</span> <span class="id">FE</span>: <span class="id"><a href="SLF.LibSet.html#finite_incl">finite_incl</a></span> <span class="id">CF</span> <span class="id">FF</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">LF</span>&amp;<span class="id">RF</span>&amp;<span class="id">QF</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers_and_card">finite_inv_list_covers_and_card</a></span> <span class="id">FF</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">QF</span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSet.html#list_covers_inv_card">list_covers_inv_card</a></span>. <span class="id">introv</span> <span class="id">Ex</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">RF</span>. <span class="id">applys</span>* @<span class="id"><a href="SLF.LibContainer.html#incl_inv">incl_inv</a></span>. <span class="id">typeclass</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="card_union_le">card_union_le</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span> <span class="id">F</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) &lt;= (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> + <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">F</span>)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">FE</span> <span class="id">FF</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">LE</span>&amp;<span class="id">RE</span>&amp;<span class="id">QE</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers_and_card">finite_inv_list_covers_and_card</a></span> <span class="id">FE</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">LF</span>&amp;<span class="id">RF</span>&amp;<span class="id">QF</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers_and_card">finite_inv_list_covers_and_card</a></span> <span class="id">FF</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> <span class="id">H</span>: <span class="id"><a href="SLF.LibSet.html#list_covers_inv_card">list_covers_inv_card</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) (<span class="id">LE</span>++<span class="id">LF</span>) <span class="id">__</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfolds</span> <span class="id"><a href="SLF.LibSet.html#list_covers">list_covers</a></span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibList.html#mem_app">mem_app</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">autos</span>*.<br/>
+&nbsp;&nbsp;<span class="id">rew_list</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="card_disjoint_union">card_disjoint_union</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span> <span class="id">F</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">E</span> \# <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> + <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">F</span>)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">FE</span> <span class="id">FF</span> <span class="id">EF</span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>: <span class="id"><a href="SLF.LibSet.html#card_union_le">card_union_le</a></span> <span class="id">FE</span> <span class="id">FF</span>.<br/>
+&nbsp;&nbsp;<span class="id">cuts</span>: (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) &gt;= (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> + <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">F</span>)%<span class="id">nat</span>). <span class="id">math</span>. <span class="id">clear</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span> (<span class="id">L</span>&amp;<span class="id">LC</span>&amp;<span class="id">LL</span>): <span class="id"><a href="SLF.LibSet.html#finite_inv_list_covers_and_card">finite_inv_list_covers_and_card</a></span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>). <span class="id">applys</span>~ <span class="id"><a href="SLF.LibSet.html#finite_union">finite_union</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">LL</span>. <span class="id">clear</span> <span class="id">LL</span>.<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">PE</span>: (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>). <span class="id">sets</span> <span class="id">LE</span>: (<span class="id"><a href="SLF.LibList.html#filter">filter</a></span> <span class="id">PE</span> <span class="id">L</span>).<br/>
+&nbsp;&nbsp;<span class="id">sets</span> <span class="id">PF</span>: (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">F</span>). <span class="id">sets</span> <span class="id">LF</span>: (<span class="id"><a href="SLF.LibList.html#filter">filter</a></span> <span class="id">PF</span> <span class="id">L</span>).<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>: <span class="id"><a href="SLF.LibSet.html#list_covers_inv_card">list_covers_inv_card</a></span> <span class="id">E</span> <span class="id">LE</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">LE</span>, <span class="id">PE</span>. <span class="id">introv</span> <span class="id">Ex</span>. <span class="id">forwards</span>: <span class="id">LC</span> <span class="id">x</span>. <span class="id">set_prove</span>. <span class="id">applys</span>~ <span class="id"><a href="SLF.LibList.html#mem_filter">mem_filter</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>: <span class="id"><a href="SLF.LibSet.html#list_covers_inv_card">list_covers_inv_card</a></span> <span class="id">F</span> <span class="id">LF</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">LF</span>, <span class="id">PF</span>. <span class="id">introv</span> <span class="id">Fx</span>. <span class="id">forwards</span>: <span class="id">LC</span> <span class="id">x</span>. <span class="id">set_prove</span>. <span class="id">applys</span>~ <span class="id"><a href="SLF.LibList.html#mem_filter">mem_filter</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span> <span class="id">LEF</span>: <span class="id"><a href="SLF.LibList.html#filter_length_two_disjoint">filter_length_two_disjoint</a></span> <span class="id">PE</span> <span class="id">PF</span> <span class="id">L</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> _ <span class="id">HEx</span> <span class="id">HFx</span>. <span class="id">unfolds</span> <span class="id">PE</span>, <span class="id">PF</span>. <span class="id">applys</span>* @<span class="id"><a href="SLF.LibContainer.html#disjoint_inv">disjoint_inv</a></span>. <span class="id">typeclass</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span> <span class="id">LE</span> <span class="id">LF</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="card_inter_le_l">card_inter_le_l</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span> <span class="id">F</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) &lt;= <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span>~ <span class="id"><a href="SLF.LibSet.html#card_le_of_incl">card_le_of_incl</a></span>. <span class="id">set_prove</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="card_inter_le_r">card_inter_le_r</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span> <span class="id">F</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \<span class="id">n</span> <span class="id">F</span>) &lt;= <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">F</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#inter_comm">inter_comm</a></span>. <span class="id">apply</span>~ <span class="id"><a href="SLF.LibSet.html#card_inter_le_l">card_inter_le_l</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="card_ge_one">card_ge_one</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>) <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;1%<span class="id">nat</span> &lt;= <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id"><a href="SLF.LibContainer.html#card_single">card_single</a></span> <span class="id">x</span>).<br/>
+&nbsp;&nbsp;<span class="id">applys</span>~ <span class="id"><a href="SLF.LibSet.html#card_le_of_incl">card_le_of_incl</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">set_prove</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="card_disjoint_union_single">card_disjoint_union_single</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>) <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \<span class="id">u</span> \{<span class="id">x</span>}) = <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> + 1)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">replace</span> 1%<span class="id">nat</span> <span class="kwd">with</span> (<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> \{<span class="id">x</span>}) <span class="kwd">by</span> <span class="id">eauto</span> <span class="kwd">using</span> @<span class="id"><a href="SLF.LibContainer.html#card_single">card_single</a></span>, @<span class="id"><a href="SLF.LibSet.html#card_single_inst">card_single_inst</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>~ <span class="id"><a href="SLF.LibSet.html#card_disjoint_union">card_disjoint_union</a></span>. <span class="id">applys</span> <span class="id"><a href="SLF.LibSet.html#finite_single">finite_single</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#disjoint_single_r_eq">disjoint_single_r_eq</a></span>. <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="card_diff_single">card_diff_single</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>) <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id"><a href="SLF.LibContainer.html#card">card</a></span> (<span class="id">E</span> \-- <span class="id">x</span>) = <span class="id"><a href="SLF.LibContainer.html#card">card</a></span> <span class="id">E</span> - 1)%<span class="id">nat</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">h1</span>: (<span class="id">E</span> \-- <span class="id">x</span>) \<span class="id">u</span> \{<span class="id">x</span>} = <span class="id">E</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#union_comm">union_comm</a></span>. <span class="id">erewrite</span> <span class="id"><a href="SLF.LibSet.html#eq_union_single_remove_one">eq_union_single_remove_one</a></span> <span class="kwd">by</span> <span class="id">eauto</span>. <span class="id">reflexivity</span>. }<br/>
+&nbsp;&nbsp;<span class="id">forwards</span> <span class="id">h2</span>: <span class="id"><a href="SLF.LibSet.html#card_disjoint_union_single">card_disjoint_union_single</a></span> (<span class="id">E</span> \-- <span class="id">x</span>) <span class="id">x</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">eauto</span> <span class="kwd">with</span> <span class="id">finite</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id"><a href="SLF.LibContainer.html#notin">notin</a></span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#set_in_remove_eq">set_in_remove_eq</a></span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rew_logic</span>. <span class="id">right</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span>. }<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">h1</span> <span class="kwd">in</span> <span class="id">h2</span>.<br/>
+&nbsp;&nbsp;<span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fold_eq_fold_to_list">fold_eq_fold_to_list</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">B</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">B</span>) (<span class="id">E</span>: <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> <span class="id">E</span> = <span class="id"><a href="SLF.LibList.html#fold">LibList.fold</a></span> <span class="id">m</span> <span class="id">f</span> (<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> <span class="id">E</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">reflexivity</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fold_eq_fold_list_repr">fold_eq_fold_list_repr</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">B</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">B</span>) (<span class="id">E</span>: <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>) <span class="id">L</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Comm_monoid">Comm_monoid</a></span> <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#list_repr">list_repr</a></span> <span class="id">E</span> <span class="id">L</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> <span class="id">E</span> = <span class="id"><a href="SLF.LibList.html#fold">LibList.fold</a></span> <span class="id">m</span> <span class="id">f</span> <span class="id">L</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HM</span> <span class="id">EL</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#fold_eq_fold_to_list">fold_eq_fold_to_list</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>~ (<span class="id">N</span>&amp;<span class="id">EQ2</span>): <span class="id"><a href="SLF.LibSet.html#eq_to_list_inv">eq_to_list_inv</a></span> <span class="id">E</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibSet.html#finite_of_list_repr">finite_of_list_repr</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">EL</span> <span class="kwd">as</span> (<span class="id">ND</span>&amp;<span class="id">EQ1</span>).<br/>
+&nbsp;&nbsp;<span class="id">applys</span>~ <span class="id"><a href="SLF.LibList.html#fold_equiv">LibList.fold_equiv</a></span>. <span class="id">intros</span>. <span class="id">rewrite</span> <span class="id">EQ2</span>. <span class="id">rewrite</span>* <span class="id">EQ1</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fold_induction">fold_induction</a></span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">m</span> : <span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">B</span>) (<span class="id">f</span> : <span class="id">A</span> -&gt; <span class="id">B</span>) (<span class="id">P</span> : <span class="id">B</span> -&gt; <span class="kwd">Prop</span>) (<span class="id">E</span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Comm_monoid">Comm_monoid</a></span> <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> (<span class="id"><a href="SLF.LibMonoid.html#monoid_neutral">monoid_neutral</a></span> <span class="id">m</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span> <span class="id">a</span>, <span class="id">a</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">P</span> (<span class="id"><a href="SLF.LibMonoid.html#monoid_oper">monoid_oper</a></span> <span class="id">m</span> (<span class="id">f</span> <span class="id">a</span>) <span class="id">x</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> (<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> <span class="id">E</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hm</span> <span class="id">Hbase</span> <span class="id">Hstep</span> <span class="id">Hfinite</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="kwd">forall</span> <span class="id">xs</span>, <span class="id"><a href="SLF.LibList.html#Forall">LibList.Forall</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>) <span class="id">xs</span> -&gt; <span class="id">P</span> (<span class="id"><a href="SLF.LibList.html#fold">LibList.fold</a></span> <span class="id">m</span> <span class="id">f</span> <span class="id">xs</span>)).<br/>
+&nbsp;&nbsp;{ <span class="id">induction</span> <span class="id">xs</span>; <span class="id">rew_listx</span>*. }<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>: <span class="id"><a href="SLF.LibSet.html#list_repr_to_list_of_finite">list_repr_to_list_of_finite</a></span> <span class="id">Hfinite</span>.<br/>
+&nbsp;&nbsp;<span class="id">erewrite</span> <span class="id"><a href="SLF.LibSet.html#fold_eq_fold_list_repr">fold_eq_fold_list_repr</a></span> <span class="kwd">by</span> <span class="id">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H</span>. <span class="id">sets</span> <span class="id">L</span>: (<span class="id"><a href="SLF.LibSet.html#to_list">to_list</a></span> <span class="id">E</span>). <span class="id">destruct</span> <span class="id">H0</span> <span class="kwd">as</span> (_&amp;<span class="id">M</span>).<br/>
+&nbsp;&nbsp;<span class="id">asserts</span> <span class="id">M'</span>: (<span class="kwd">forall</span> <span class="id">x</span> : <span class="id">A</span>, <span class="id"><a href="SLF.LibList.html#mem">mem</a></span> <span class="id">x</span> <span class="id">L</span> -&gt; <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span>). { <span class="id">intros</span>. <span class="id">applys</span>* <span class="id">M</span>. } <span class="id">clear</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">induction</span> <span class="id">L</span>. { <span class="id">constructor</span>. } { <span class="id">constructor</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">M'</span>. } { <span class="id">applys</span> <span class="id">IHL</span>. <span class="id">introv</span> <span class="id">Lx</span>. <span class="id">applys</span>* <span class="id">M'</span>. } } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fold_congruence">fold_congruence</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">B</span>) (<span class="id">f</span> <span class="id">g</span>:<span class="id">A</span> -&gt; <span class="id">B</span>) (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Comm_monoid">Comm_monoid</a></span> <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">f</span> <span class="id">x</span> = <span class="id">g</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> <span class="id">E</span> = <span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">g</span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hm</span> <span class="id">HE</span> <span class="id">h</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#fold_eq_fold_to_list">fold_eq_fold_to_list</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> <span class="id"><a href="SLF.LibList.html#fold_congruence">LibList.fold_congruence</a></span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">h</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#finite_eq_in_iff_mem_to_list">finite_eq_in_iff_mem_to_list</a></span> <span class="kwd">in</span> <span class="id">HE</span>. <span class="id">rewrite</span>* <span class="id">HE</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fold_empty">fold_empty</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">B</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> (\{}:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>) = <span class="id"><a href="SLF.LibMonoid.html#monoid_neutral">monoid_neutral</a></span> <span class="id">m</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#fold_eq_fold_to_list">fold_eq_fold_to_list</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#to_list_empty">to_list_empty</a></span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibList.html#fold_nil">LibList.fold_nil</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fold_single">fold_single</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">B</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">B</span>) (<span class="id">x</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Monoid">Monoid</a></span> <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> \{<span class="id">x</span>} = <span class="id">f</span> <span class="id">x</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#fold_eq_fold_to_list">fold_eq_fold_to_list</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibSet.html#to_list_single">to_list_single</a></span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibList.html#fold_cons">fold_cons</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id"><a href="SLF.LibList.html#fold_nil">fold_nil</a></span>. <span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibMonoid.html#monoid_neutral_r">monoid_neutral_r</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fold_union">fold_union</a></span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">m</span>:<span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">B</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">B</span>) (<span class="id">E</span> <span class="id">F</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Comm_monoid">Comm_monoid</a></span> <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">E</span> \# <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = <span class="id"><a href="SLF.LibMonoid.html#monoid_oper">monoid_oper</a></span> <span class="id">m</span> (<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> <span class="id">E</span>) (<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HM</span> <span class="id">HE</span> <span class="id">HF</span> <span class="id">HD</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id"><a href="SLF.LibSet.html#fold_eq_fold_to_list">fold_eq_fold_to_list</a></span> <span class="id">E</span>).<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id"><a href="SLF.LibSet.html#fold_eq_fold_to_list">fold_eq_fold_to_list</a></span> <span class="id">F</span>).<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id"><a href="SLF.LibSet.html#list_repr_to_list_of_finite">list_repr_to_list_of_finite</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>~ <span class="id">HR</span>: <span class="id"><a href="SLF.LibSet.html#list_repr_disjoint_union">list_repr_disjoint_union</a></span> <span class="id">HD</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span>~ (&gt;&gt; <span class="id"><a href="SLF.LibSet.html#fold_eq_fold_list_repr">fold_eq_fold_list_repr</a></span> <span class="id">HR</span>).<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>~ <span class="id"><a href="SLF.LibList.html#fold_app">LibList.fold_app</a></span>. <span class="id">typeclass</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="fold_isolate">fold_isolate</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">E</span>:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id">A</span>) <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibSet.html#finite">finite</a></span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">B</span> (<span class="id">m</span> : <span class="id"><a href="SLF.LibMonoid.html#monoid_op">monoid_op</a></span> <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibMonoid.html#Comm_monoid">Comm_monoid</a></span> <span class="id">m</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">f</span> : <span class="id">A</span> -&gt; <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> <span class="id">E</span> = <span class="id"><a href="SLF.LibMonoid.html#monoid_oper">monoid_oper</a></span> <span class="id">m</span> (<span class="id">f</span> <span class="id">x</span>) (<span class="id"><a href="SLF.LibContainer.html#fold">fold</a></span> <span class="id">m</span> <span class="id">f</span> (<span class="id">E</span> \- \{<span class="id">x</span>})).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id"><a href="SLF.LibSet.html#eq_union_single_remove_one">eq_union_single_remove_one</a></span> <span class="id">E</span> <span class="id">x</span>) <span class="kwd">at</span> 1 <span class="kwd">by</span> <span class="id">eauto</span>.<br/>
+&nbsp;&nbsp;<span class="id">erewrite</span> &lt;- (<span class="id"><a href="SLF.LibSet.html#fold_single">fold_single</a></span> <span class="id">f</span> <span class="id">x</span>) <span class="kwd">by</span> <span class="id">typeclass</span>.<br/>
+&nbsp;&nbsp;<span class="id">epose</span> (<span class="id"><a href="SLF.LibContainer.html#remove_disjoint">remove_disjoint</a></span>).<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> <span class="id"><a href="SLF.LibSet.html#fold_union">fold_union</a></span>; <span class="id">eauto</span> <span class="kwd">with</span> <span class="id">finite</span>.<br/>
+Qed.</div></details>
+<br/>
+<h2> Structural properties </h2>
+<br/>
+<div class="doc">Rewriting tactics <span class="bracket"><span class="id">rew_set</span></span> </div>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibSet.html#in_set_st_eq">in_set_st_eq</a></span> : <span class="id">rew_set</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_set"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_set</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_set"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_set</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_set"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_set</span> <span class="kwd">in</span> *.<br/>
+<br/>
+<br/>
+<h1> MORE </h1>
+<br/>
+<h2> TEMPORARY Foreach </h2>
+<br/>
+<div class="doc">-- TODO: these lemmas should be instead derived as typeclasses
+       in a generic way, in LibContainer. </div>
+<br/>
+<div class="doc">-- TODO: add a paragraphe of the definition:
+             foreach P E = (forall x, x \in E -&gt; P x) </div>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="ForeachProp">ForeachProp</a></span>.<br/>
+<span class="kwd">Variables</span> (<span class="id"><a name="ForeachProp.A">A</a></span> : <span class="kwd">Type</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> <span class="id">Q</span> : <span class="id"><a href="SLF.LibSet.html#ForeachProp.A">A</a></span> -&gt; <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">E</span> <span class="id">F</span> : <span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#ForeachProp.A">A</a></span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_empty">foreach_empty</a></span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id"><a href="SLF.LibSet.html#ForeachProp.A">A</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#ForeachProp.A">A</a></span>) _ <span class="id">P</span> \{}.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros_all</span>. <span class="id">false</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_single">foreach_single</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">X</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id">X</span> -&gt;<br/>
+&nbsp;&nbsp;@<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id"><a href="SLF.LibSet.html#ForeachProp.A">A</a></span> (<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#ForeachProp.A">A</a></span>) _ <span class="id">P</span> (\{ <span class="id">X</span> }).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros_all</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_single_eq">in_single_eq</a></span> <span class="kwd">in</span> <span class="id">H0</span>. <span class="id">subst</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_union">foreach_union</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">F</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros_all</span>. <span class="id">destruct</span>~ (<span class="id"><a href="SLF.LibContainer.html#in_union_inv">in_union_inv</a></span> <span class="id">H1</span>). Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_union_inv">foreach_union_inv</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> /\ <span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">F</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>. <span class="id">split</span>; <span class="id">introv</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span>. <span class="id">rewrite</span>~ @<span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. <span class="id">typeclass</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span>. <span class="id">rewrite</span>~ @<span class="id"><a href="SLF.LibContainer.html#in_union_eq">in_union_eq</a></span>. <span class="id">typeclass</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_union_eq">foreach_union_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (<span class="id">E</span> \<span class="id">u</span> <span class="id">F</span>) = (<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> /\ <span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibSet.html#foreach_union_inv">foreach_union_inv</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">intuition</span> <span class="id">eauto</span> <span class="kwd">using</span> <span class="id"><a href="SLF.LibSet.html#foreach_union">foreach_union</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_single_eq">foreach_single_eq</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">X</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (\{<span class="id">X</span>}:<span class="id"><a href="SLF.LibSet.html#set">set</a></span> <span class="id"><a href="SLF.LibSet.html#ForeachProp.A">A</a></span>) = <span class="id">P</span> <span class="id">X</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">extens</span>. <span class="id">iff</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span>. <span class="id">apply</span> <span class="id"><a href="SLF.LibContainer.html#in_single_self">in_single_self</a></span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id"><a href="SLF.LibSet.html#foreach_single">foreach_single</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_of_pred_incl">foreach_of_pred_incl</a></span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">Q</span> <span class="id">E</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#pred_incl">pred_incl</a></span> <span class="id">P</span> <span class="id">Q</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">Q</span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span> <span class="id">L</span> <span class="id">K</span>. <span class="id">apply</span>~ <span class="id">L</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_remove_of_foreach_all">foreach_remove_of_foreach_all</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (<span class="id">E</span> \- <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">H</span>. <span class="id">applys</span> <span class="id">M</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_remove_eq">in_remove_eq</a></span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">autos</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="foreach_remove">foreach_remove</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">E</span> <span class="id">F</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">x</span> \<span class="kwd">in</span> <span class="id">E</span> -&gt; <span class="id">x</span> \<span class="id">notin</span> <span class="id">F</span> -&gt; <span class="id">P</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> (<span class="id">E</span> \- <span class="id">F</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">Px</span>. <span class="id">rewrite</span> <span class="id"><a href="SLF.LibContainer.html#in_remove_eq">in_remove_eq</a></span> <span class="kwd">in</span> <span class="id">Px</span>. <span class="id">applys</span>* <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="notin_of_foreach_not">notin_of_foreach_not</a></span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">x</span> <span class="id">E</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibContainer.html#foreach">foreach</a></span> <span class="id">P</span> <span class="id">E</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">P</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> \<span class="id">notin</span> <span class="id">E</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">N</span> <span class="id">I</span>. <span class="id">applys</span> <span class="id">N</span>. <span class="id">applys</span>~ <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibSet.html#ForeachProp">ForeachProp</a></span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">foreach_empty</span> <span class="id">foreach_single</span> <span class="id">foreach_union</span>.<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id"><a href="SLF.LibSet.html#foreach_union_eq">foreach_union_eq</a></span> <span class="id"><a href="SLF.LibSet.html#foreach_single_eq">foreach_single_eq</a></span> : <span class="id">rew_foreach</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_foreach"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_foreach</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_foreach"</span> <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_foreach</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_foreach"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite_in_star_patch</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">tt</span> =&gt; <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">rew_foreach</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_foreach"</span> <span class="string">"~"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_foreach</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_foreach"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_foreach</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_foreach"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="id">constr</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_foreach</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_foreach"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="id">constr</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">rew_foreach</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_foreach"</span> <span class="string">"~"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_foreach</span> <span class="kwd">in</span> *; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"rew_foreach"</span> <span class="string">"*"</span> <span class="string">"in"</span> <span class="string">"*"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_foreach</span> <span class="kwd">in</span> *; <span class="id">auto_star</span>.<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

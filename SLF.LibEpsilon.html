@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibEpsilon</title>
+<meta name="description" content="Documentation of Coq module LibEpsilon" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibEpsilon</h1>
+<div class="coq">
+<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id"><a href="SLF.LibTactics.html">LibTactics</a></span> <span class="id"><a href="SLF.LibLogic.html">LibLogic</a></span> <span class="id"><a href="SLF.LibRelation.html">LibRelation</a></span>.<br/>
+<span class="id">Generalizable</span> <span class="kwd">Variables</span> <span class="id">A</span> <span class="id">B</span>.<br/>
+<br/>
+<h1> Definition and specification of Hilbert's epsilon operator </h1>
+<br/>
+<h2> Definition of epsilon </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">epsilon</span> <span class="id">P</span></span> where <span class="bracket"><span class="id">P</span></span> is a predicate over an inhabited type <span class="bracket"><span class="id">A</span></span>,
+    returns a value <span class="bracket"><span class="id">x</span></span> of type <span class="bracket"><span class="id">A</span></span> that satisfies <span class="bracket"><span class="id">P</span></span>, if there exists
+    one such value, else it returns an arbitrary value of type <span class="bracket"><span class="id">A</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="epsilon_def">epsilon_def</a></span> : <span class="kwd">forall</span> <span class="id">A</span> {<span class="id">IA</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;{ <span class="id">x</span> : <span class="id">A</span> | (<span class="kwd">exists</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">y</span>) -&gt; <span class="id">P</span> <span class="id">x</span> }.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">A</span> <span class="id">IA</span> <span class="id">P</span>. <span class="id">destruct</span> (<span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> (<span class="kwd">exists</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">y</span>)) <span class="kwd">as</span> [<span class="id">H</span>|<span class="id">H</span>].<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id"><a href="SLF.LibAxioms.html#indefinite_description">indefinite_description</a></span>. <span class="id">destruct</span> <span class="id">H</span> <span class="kwd">as</span> [<span class="id">x</span> <span class="id">H</span>].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">x</span>. <span class="id">intros</span> _. <span class="id">apply</span> <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;{ <span class="kwd">exists</span> (@<span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span> <span class="id">A</span> <span class="id">IA</span>). <span class="id">intros</span> <span class="id">N</span>. <span class="id">false</span> <span class="id">H</span>. <span class="id">apply</span> <span class="id">N</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="epsilon">epsilon</a></span> <span class="id">A</span> {<span class="id">IA</span>: <span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) : <span class="id">A</span> :=<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#sig_val">sig_val</a></span> (<span class="id"><a href="SLF.LibEpsilon.html#epsilon_def">epsilon_def</a></span> <span class="id">P</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_epsilon">pred_epsilon</a></span> : <span class="kwd">forall</span> <span class="id">A</span> {<span class="id">IA</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> (<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>~ (<span class="id"><a href="SLF.LibLogic.html#sig_proof">sig_proof</a></span> (<span class="id"><a href="SLF.LibEpsilon.html#epsilon_def">epsilon_def</a></span> <span class="id">P</span>)). Qed.</div></details>
+<br/>
+<span class="kwd">Opaque</span> <span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">epsilon_def'</span> <span class="id">A</span> {<span class="id">IA</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) :<br/>
+&nbsp;&nbsp;{ <span class="id">x</span> : <span class="id">A</span> | (<span class="kwd">exists</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">y</span>) -&gt; <span class="id">P</span> <span class="id">x</span> } :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id"><a href="SLF.LibLogic.html#classicT">classicT</a></span> (<span class="kwd">exists</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">y</span>) <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#left">left</a></span> <span class="id">H</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibAxioms.html#indefinite_description">indefinite_description</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">let</span> (<span class="id">x</span>,<span class="id">H0</span>) := <span class="id">H</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#ex_intro">ex_intro</a></span> (<span class="kwd">fun</span> <span class="id">x0</span> =&gt; (<span class="kwd">exists</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">y</span>) -&gt; <span class="id">P</span> <span class="id">x0</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">x</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">N</span> =&gt; <span class="id">H0</span>))<br/>
+&nbsp;&nbsp;| <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#right">right</a></span> <span class="id">H</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Specif.html#exist">exist</a></span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; (<span class="kwd">exists</span> <span class="id">y</span>, <span class="id">P</span> <span class="id">y</span>) -&gt; <span class="id">P</span> <span class="id">x</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">N</span> =&gt; <span class="id"><a href="https://coq.inria.fr/library/Coq.Init.Logic.html#False_ind">False_ind</a></span> (<span class="id">P</span> <span class="id"><a href="SLF.LibLogic.html#arbitrary">arbitrary</a></span>) (<span class="id">H</span> <span class="id">N</span>))<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<h2> Lemmas about epsilon </h2>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_epsilon_weaken">pred_epsilon_weaken</a></span> : <span class="kwd">forall</span> <span class="id">A</span> {<span class="id">IA</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">P</span> <span class="id">Q</span> : <span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">Q</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">E</span> <span class="id">M</span>. <span class="id">apply</span> <span class="id">M</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibEpsilon.html#pred_epsilon">pred_epsilon</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_epsilon_of_val">pred_epsilon_of_val</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) {<span class="id">IA</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>},<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> (<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibEpsilon.html#pred_epsilon">pred_epsilon</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="pred_epsilon_of_val_weaken">pred_epsilon_of_val_weaken</a></span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">P</span> <span class="id">Q</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) {<span class="id">IA</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>},<br/>
+&nbsp;&nbsp;<span class="id">P</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> -&gt; <span class="id">Q</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q</span> (<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">Px</span> <span class="id">W</span>. <span class="id">apply</span> <span class="id">W</span>. <span class="id">apply</span>* <span class="id"><a href="SLF.LibEpsilon.html#pred_epsilon">pred_epsilon</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="epsilon_eq">epsilon_eq</a></span> : <span class="kwd">forall</span> <span class="id">A</span> {<span class="id">IA</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>} (<span class="id">P</span> <span class="id">Q</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span> &lt;-&gt; <span class="id">Q</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">P</span> = <span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">H</span>. <span class="id">fequals</span>. <span class="id">extens</span>*. Qed.</div></details>
+<br/>
+<h2> (Private) tactic <span class="bracket"><span class="id">epsilon_find</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">epsilon_find</span> <span class="id">cont</span></span> locates an expression of the form <span class="bracket"><span class="id">epsilon</span> <span class="id">P</span></span>
+    in the goal and invokes the continuation <span class="bracket"><span class="id">cont</span></span> on <span class="bracket"><span class="id">P</span></span>.
+    <span class="bracket"><span class="id">epsilon_find_in</span> <span class="id">H</span> <span class="id">cont</span></span> is similar but looks for the expression
+    only in the hypothesis named <span class="bracket"><span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">epsilon_find</span> <span class="id">cont</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">context</span> [<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> ?<span class="id">P</span>] =&gt; <span class="id">cont</span> <span class="id">P</span><br/>
+&nbsp;&nbsp;| <span class="id">H</span>: <span class="id">context</span> [<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> ?<span class="id">P</span>] |- _ =&gt; <span class="id">cont</span> <span class="id">P</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">epsilon_find_in</span> <span class="id">H</span> <span class="id">cont</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">H</span> <span class="kwd">with</span> <span class="id">context</span> [<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> ?<span class="id">P</span>] =&gt; <span class="id">cont</span> <span class="id">P</span> <span class="kwd">end</span>.<br/>
+<br/>
+<h2> Tactics <span class="bracket"><span class="id">epsilon_name</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">epsilon_name</span> <span class="id">X</span></span> assigns a name <span class="bracket"><span class="id">X</span></span> to an expression of the
+    form <span class="bracket"><span class="id">epsilon</span> <span class="id">P</span></span> that appears in the goal or an hypothesis,
+    by calling <span class="bracket"><span class="id">set</span> (<span class="id">X</span> := <span class="id">epsilon</span> <span class="id">P</span>)</span>.
+    <span class="bracket"><span class="id">epsilon_name</span> <span class="id">X</span> <span class="kwd">in</span> <span class="id">H</span></span> assignes a name <span class="bracket"><span class="id">X</span></span> to an expression of the
+    form <span class="bracket"><span class="id">epsilon</span> <span class="id">P</span></span> that appears in hypothesis <span class="bracket"><span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">epsilon_name_core</span> <span class="id">X</span> :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon_find</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">P</span> =&gt; <span class="id">sets</span> <span class="id">X</span>: (<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">P</span>)).<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">epsilon_name_in_core</span> <span class="id">X</span> <span class="id">H</span> :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon_find_in</span> <span class="id">H</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">P</span> =&gt; <span class="id">sets</span> <span class="id">X</span>: (<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">P</span>)).<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"epsilon_name"</span> <span class="id">ident</span>(<span class="id">X</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon_name_core</span> <span class="id">X</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"epsilon_name"</span> <span class="id">ident</span>(<span class="id">X</span>) <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>)  :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon_name_in_core</span> <span class="id">X</span> <span class="id">H</span>.<br/>
+<br/>
+<h2> Tactics to work with <span class="bracket"><span class="id">epsilon</span></span> </h2>
+<br/>
+<div class="doc"><span class="bracket"><span class="id">epsilon</span> <span class="id">X</span></span> locates an expression of the form <span class="bracket"><span class="id">epsilon</span> <span class="id">P</span></span> in the goal,
+    names <span class="bracket"><span class="id">X</span></span> this expression (like <span class="bracket"><span class="id">epsilon_name</span> <span class="id">X</span></span>), then produces
+    a subgoal <span class="bracket"><span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span></span>, and leaves at the head of the main goal
+    an hypothesis <span class="bracket"><span class="id">P</span> <span class="id">X</span></span>.
+    <span class="bracket"><span class="id">epsilon</span> <span class="id">X</span> <span class="kwd">in</span> <span class="id">H</span></span> is similar, but looks for <span class="bracket"><span class="id">epsilon</span> <span class="id">P</span></span> only in
+    hypothesis <span class="bracket"><span class="id">H</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">pred_epsilon'</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">IA</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">A</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> (<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibEpsilon.html#pred_epsilon">pred_epsilon</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">epsilon_cont</span> <span class="id">X</span> <span class="id">P</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">I</span> := <span class="id">fresh</span> <span class="string">"H"</span> <span class="id">X</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="id">lets</span> <span class="id">I</span>: (&gt;&gt; (@<span class="id">pred_epsilon'</span> _ <span class="id">P</span>) <span class="id">__</span> <span class="id">__</span>);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[ | <span class="id">sets</span> <span class="id">X</span>: (<span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> <span class="id">P</span>); <span class="id">revert</span> <span class="id">I</span> ].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">epsilon_core</span> <span class="id">X</span> :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon_find</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">P</span> =&gt; <span class="id">epsilon_cont</span> <span class="id">X</span> <span class="id">P</span>).<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">epsilon_in_core</span> <span class="id">X</span> <span class="id">H</span> :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon_find_in</span> <span class="id">H</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">P</span> =&gt; <span class="id">epsilon_cont</span> <span class="id">X</span> <span class="id">P</span>).<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"epsilon"</span> <span class="id">ident</span>(<span class="id">X</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon_core</span> <span class="id">X</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"epsilon"</span> <span class="id">ident</span>(<span class="id">X</span>) <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon_in_core</span> <span class="id">X</span> <span class="id">H</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"epsilon"</span> <span class="string">"~"</span> <span class="id">ident</span>(<span class="id">X</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon</span> <span class="id">X</span>; <span class="id">auto_tilde</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"epsilon"</span> <span class="string">"~"</span> <span class="id">ident</span>(<span class="id">X</span>) <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon</span> <span class="id">X</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_tilde</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"epsilon"</span> <span class="string">"*"</span> <span class="id">ident</span>(<span class="id">X</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon</span> <span class="id">X</span>; <span class="id">auto_star</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"epsilon"</span> <span class="string">"*"</span> <span class="id">ident</span>(<span class="id">X</span>) <span class="string">"in"</span> <span class="id">hyp</span>(<span class="id">H</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">epsilon</span> <span class="id">X</span> <span class="kwd">in</span> <span class="id">H</span>; <span class="id">auto_star</span>.<br/>
+<br/>
+<h1> Construction of a function from a relation, using <span class="bracket"><span class="id">epsilon</span></span> </h1>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id"><a name="rel_to_fun">rel_to_fun</a></span> <span class="id">A</span> `{<span class="id">IB</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>} (<span class="id">R</span>:<span class="id">A</span>-&gt;<span class="id">B</span>-&gt;<span class="kwd">Prop</span>) : <span class="id">A</span> -&gt; <span class="id">B</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> (<span class="id">a</span>:<span class="id">A</span>) =&gt; <span class="id"><a href="SLF.LibEpsilon.html#epsilon">epsilon</a></span> (<span class="kwd">fun</span> <span class="id">b</span> =&gt; <span class="id">R</span> <span class="id">a</span> <span class="id">b</span>).<br/>
+<br/>
+<span class="kwd">Section</span> <span class="id"><a name="Rel_to_fun">Rel_to_fun</a></span>.<br/>
+<span class="kwd">Context</span> (<span class="id">A</span> <span class="id">B</span> : <span class="kwd">Type</span>) {<span class="id">IB</span>:<span class="id"><a href="SLF.LibLogic.html#Inhab">Inhab</a></span> <span class="id">B</span>}.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">R</span> : <span class="id"><a href="SLF.LibEpsilon.html#Rel_to_fun.A">A</a></span> -&gt; <span class="id"><a href="SLF.LibEpsilon.html#Rel_to_fun.B">B</a></span> -&gt; <span class="kwd">Prop</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="rel_rel_to_fun_of_exists">rel_rel_to_fun_of_exists</a></span> : <span class="kwd">forall</span> <span class="id">R</span> <span class="id">a</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">b</span>, <span class="id">R</span> <span class="id">a</span> <span class="id">b</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">R</span> <span class="id">a</span> (<span class="id"><a href="SLF.LibEpsilon.html#rel_to_fun">rel_to_fun</a></span> <span class="id">R</span> <span class="id">a</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span> <span class="id">IB</span>. <span class="id">introv</span> [<span class="id">x</span> <span class="id">H</span>]. <span class="id">unfold</span> <span class="id"><a href="SLF.LibEpsilon.html#rel_to_fun">rel_to_fun</a></span>. <span class="id">epsilon</span>* <span class="id">y</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="rel_rel_to_fun_of_rel">rel_rel_to_fun_of_rel</a></span> : <span class="kwd">forall</span> <span class="id">R</span> <span class="id">a</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;<span class="id">R</span> <span class="id">a</span> <span class="id">b</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">R</span> <span class="id">a</span> (<span class="id"><a href="SLF.LibEpsilon.html#rel_to_fun">rel_to_fun</a></span> <span class="id">R</span> <span class="id">a</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span> <span class="id">IB</span>. <span class="id">intros</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibEpsilon.html#rel_rel_to_fun_of_exists">rel_rel_to_fun_of_exists</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="rel_rel_to_fun_of_not_forall">rel_rel_to_fun_of_not_forall</a></span> : <span class="kwd">forall</span> <span class="id">R</span> <span class="id">a</span>,<br/>
+&nbsp;&nbsp;~ (<span class="kwd">forall</span> <span class="id">b</span>, ~ <span class="id">R</span> <span class="id">a</span> <span class="id">b</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">R</span> <span class="id">a</span> (<span class="id"><a href="SLF.LibEpsilon.html#rel_to_fun">rel_to_fun</a></span> <span class="id">R</span> <span class="id">a</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span> <span class="id">IB</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span>. <span class="id">rew_logic</span>. <span class="id">intros</span> [<span class="id">x</span> <span class="id">H</span>]. <span class="id">applys</span>* <span class="id"><a href="SLF.LibEpsilon.html#rel_rel_to_fun_of_exists">rel_rel_to_fun_of_exists</a></span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="rel_in_fun_rel_to_fun">rel_in_fun_rel_to_fun</a></span> : <span class="kwd">forall</span> <span class="id">R</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#functional">functional</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#rel_in_fun">rel_in_fun</a></span> <span class="id">R</span> (<span class="id"><a href="SLF.LibEpsilon.html#rel_to_fun">rel_to_fun</a></span> <span class="id">R</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span> <span class="id">IB</span>. <span class="id">unfold</span> <span class="id"><a href="SLF.LibRelation.html#rel_in_fun">rel_in_fun</a></span>, <span class="id"><a href="SLF.LibEpsilon.html#rel_to_fun">rel_to_fun</a></span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">H</span>. <span class="id">epsilon</span>* <span class="id">z</span>. Qed.</div></details>
+<br/>
+<div class="doc">Reformulation of above </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id"><a name="rel_to_fun_eq_of_functional">rel_to_fun_eq_of_functional</a></span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">R</span>,<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibRelation.html#functional">functional</a></span> <span class="id">R</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">R</span> <span class="id">x</span> <span class="id">y</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id"><a href="SLF.LibEpsilon.html#rel_to_fun">rel_to_fun</a></span> <span class="id">R</span> <span class="id">x</span> = <span class="id">y</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span> <span class="id">IB</span>. <span class="id">introv</span> <span class="id">M</span> <span class="id">E</span>. <span class="id">applys</span>* <span class="id"><a href="SLF.LibEpsilon.html#rel_in_fun_rel_to_fun">rel_in_fun_rel_to_fun</a></span>. Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id"><a href="SLF.LibEpsilon.html#Rel_to_fun">Rel_to_fun</a></span>.<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>
