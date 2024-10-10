@@ -61,7 +61,7 @@ function buildLemmaIndex() {
   let index = document.createElement("div");
 
   let lemmas = nodesWithTextAndClass(
-    `//*[(contains(text(), 'Lemma') or contains(text(), 'Theorem')) and contains(@class, 'kwd')]`
+    `//*[(contains(text(), 'Definition') or contains(text(), 'Inductive') or contains(text(), 'Lemma') or contains(text(), 'Theorem')) and contains(@class, 'kwd')]`
   );
 
   const list = document.createElement("ul");
@@ -71,6 +71,9 @@ function buildLemmaIndex() {
   index.appendChild(list);
   lemmas.forEach((lem, index) => {
     const kind = lem.textContent;
+    if (!lem.nextSibling) {
+      return;
+    }
     const name = lem.nextSibling.nextSibling.textContent;
     const id = name;
     const anchor = document.createElement("a");
