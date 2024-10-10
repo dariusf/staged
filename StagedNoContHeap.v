@@ -129,7 +129,7 @@ Inductive satisfies (e : env) : state -> state -> val -> flow -> Prop :=
   satisfies e S S' v (fex A FA)
 (* all a, FA *)
 | s_fall (S S' : state) (v : val) (A : Type) (FA : A -> flow) :
-  (forall a, exists S'', satisfies e S S'' v (FA a)) ->
+  (forall a, satisfies e S S' v (FA a)) ->
   satisfies e S S' v (fall A FA).
 
 Module Example.
