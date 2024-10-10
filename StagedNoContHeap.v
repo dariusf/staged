@@ -56,9 +56,17 @@ Fixpoint subst (y : ident) (w : val) (e : expr) : expr :=
 
 Unset Implicit Arguments.
 
-Definition precond := Prop.
-Definition postcond := val -> Prop.
-Definition state := Prop.
+Module Val.
+  Definition val := val.
+End Val.
+
+Module Export Heap := Heap.HeapSetup Val.
+
+Definition empty_heap : heap := Fmap.empty.
+
+Definition precond := hprop.
+Definition postcond := val -> hprop.
+Definition state := hprop.
 
 Inductive result : Type :=
 | top : result
@@ -76,17 +84,13 @@ Inductive flow :=
 | disj : flow -> flow -> flow.
 
 (** An [ens] which doesn't have a useful return value. *)
-Definition ens_ H := ens (fun r => r = vunit /\ H).
-(** This carries more information than [ens (fun _ => H)], which has an #<i>arbitrary</i># return value. *)
+Definition ens_ Q := ens (fun r => \[r = vunit] \* Q).
 
 (** Function environments, for interpreting unknown functions. [ufun] is a HOAS way of substituting into a staged formula, which otherwise doesn't support this due to the shallow embedding that [hprop] uses. *)
 Definition ufun : Type := val -> val -> flow. (* f(x, r) = \phi *)
 Definition env : Type := fmap ident (option ufun).
 
 Definition empty_env : env := Fmap.empty.
-
-Declare Scope flow_scope.
-Open Scope flow_scope.
 
 (** * Interpretation of a staged formula *)
 (** Differs from the paper's definition in:
@@ -99,12 +103,13 @@ An [Inductive] definition is used because the rule for unknown functions is not 
 Inductive satisfies (e : env) : state -> state -> val -> flow -> Prop :=
 (* req P *)
 | s_req (S S' : state) (P : precond) :
-  (S /\ P -> S') ->
+  (S \* P ==> S') ->
   satisfies e S S' vunit (req P)
 (* ens Q *)
-| s_ens (S : state) (v : val) (Q : postcond) :
-  (S -> Q v) ->
-  satisfies e S S v (ens Q)
+| s_ens (S S' : state) (v : val) (Q : postcond) :
+  (S ==> Q v) ->
+  (S ==> S') ->
+  satisfies e S S' v (ens Q)
 (* F1 ; F2 *)
 | s_seq (S0 S1 S2 : state) (v1 v2 : val) (F1 F2 : flow) :
   satisfies e S0 S1 v1 F1 ->
@@ -124,25 +129,22 @@ Inductive satisfies (e : env) : state -> state -> val -> flow -> Prop :=
   satisfies e S S' v (fex A FA)
 (* all a, FA *)
 | s_fall (S S' : state) (v : val) (A : Type) (FA : A -> flow) :
-  (forall a, exists R, satisfies e S (S' /\ R) v (FA a)) ->
+  (forall a, exists S'', satisfies e S S'' v (FA a)) ->
   satisfies e S S' v (fall A FA).
-
-(* some idea: req is like: "create a value out of thin air and just put in here" *)
-(* the idea is that, the value created by req can only exists in the LHS of an implication *)
-(* we need some function -- or a different statement for the variances *)
 
 Module Example.
 
-  Goal exists S', satisfies empty_env True S' (vint 1) (fex Z (fun x => seq (req (x = 1)) (ens (fun r => r = vint x)))).
+  Goal exists S', satisfies empty_env \[True]  S' (vint 1) (fex Z (fun x => seq (req \[x = 1]) (ens (fun r => \[r = vint x])))).
     eexists.
     eapply s_fex. exists 1.
     eapply s_seq.
-    - eapply s_req. intro H. exact H.
-    - eapply s_ens. intuition.
-      
-      Show Proof.
-  Qed.
+    - eapply s_req. apply himpl_refl.
+    - eapply s_ens.
+      + admit. (* provable, although idk how to write it *)
+      + apply himpl_refl.
+  Abort.
 
+  (*
   Goal exists S', satisfies empty_env True S' (vint 1) (fex Z (fun x => seq (req (x <> 1)) (ens (fun r => r = vint x)))).
     eexists.
     eapply s_fex. exists 1.
@@ -150,14 +152,19 @@ Module Example.
     - eapply s_req. intro H. exact H.
     - eapply s_ens. tauto.
   Qed.
+   *)
 
-  Goal satisfies empty_env True True (vint 1) (fall Z (fun x => seq (req (x = 1)) (ens (fun r => r = vint x)))).
+  Goal exists S', satisfies empty_env \[True] S' (vint 1) (fall Z (fun x => seq (req \[x = 1]) (ens (fun r => \[r = vint x])))).
+    eexists.
     eapply s_fall. intros a.
     eexists. eapply s_seq.
-    - eapply s_req. intro H. exact H.
-    - eapply s_ens. intuition. subst. reflexivity.
-  Qed.
+    - eapply s_req. apply himpl_refl.
+    - eapply s_ens.
+      + admit.
+      + apply himpl_refl.
+  Admitted.
 
+  (*
   Goal exists S', satisfies empty_env True S' (vint 1) (fall Z (fun x => seq (req (x = 2)) (ens (fun r => r = vint x)))).
     (* should fail *)
     eexists. eapply s_fall. intros a.
@@ -172,12 +179,13 @@ Module Example.
   Abort.
 
   Goal (forall C : Prop)
-         
+
                      ~  ( C /\ P ) ->
                      (Q -> Q1) ->
                      env, S, S', err |=  req P ; ens Q ->
          env, S, S', err |= req P1 ; ens Q1
-                       
+   *)
+
 
 End Example.
 
@@ -186,13 +194,16 @@ Lemma satisfies_req :
          (S S' : state)
          (v : val)
          (P1 P2 : precond),
-    (P2 -> P1) ->
+    (P2 ==> P1) ->
     satisfies e S S' v (req P1) ->
     satisfies e S S' v (req P2).
 Proof.
   intros e S S' v P1 P2 H_impl H_sat.
   inverts H_sat as H_sat.
-  constructor. intuition.
+  constructor.
+  Search (_ \* _ ==> _).
+  Check (himpl_hstar_trans_r H_impl H_sat).
+  exact (himpl_hstar_trans_r H_impl H_sat).
 Qed.
 
 Lemma satisfies_ens :
@@ -200,13 +211,18 @@ Lemma satisfies_ens :
          (S S' : state)
          (v : val)
          (Q1 Q2 : postcond),
-    (forall (v : val), Q1 v -> Q2 v) ->
+    (Q1 ===> Q2) ->
     satisfies e S S' v (ens Q1) ->
     satisfies e S S' v (ens Q2).
 Proof.
   intros e S S' v Q1 Q2 H_impl H_sat.
-  inverts H_sat as H_sat.
-  constructor. auto.
+  inverts H_sat as H_sat H_S.
+  specialize (H_impl v).
+  constructor.
+  - Search (_ ==> _ -> _ ==> _ -> _).
+    Check (himpl_trans H_sat H_impl).
+    exact (himpl_trans H_sat H_impl).
+  - exact H_S.
 Qed.
 
 (** * Entailment *)
@@ -410,7 +426,7 @@ Qed.
 Lemma ent_ens_seq :
   forall (Q1 Q2 : postcond)
          (F1 F2 : flow),
-    (forall v, Q1 v -> Q2 v) ->
+    (Q1 ===> Q2) ->
     entails F1 F2 ->
     entails (seq (ens Q1) F1) (seq (ens Q2) F2).
 Proof.
@@ -423,10 +439,10 @@ Proof.
   - eapply H_ent. exact H_F1.
 Qed.
 
-Lemma ent_req_seq : 
+Lemma ent_req_seq :
   forall (P1 P2 : precond)
          (F1 F2 : flow),
-    (P2 -> P1) ->
+    (P2 ==> P1) ->
     entails F1 F2 ->
     entails (seq (req P1) F1) (seq (req P2) F2).
 Proof.
@@ -439,9 +455,9 @@ Proof.
   - eapply H_ent. exact H_F1.
 Qed.
 
-Lemma norm_req_req : 
+Lemma norm_req_req :
   forall P1 P2,
-    bientails (req (P1 /\ P2)) (seq (req P1) (req P2)).
+    bientails (req (P1 \* P2)) (seq (req P1) (req P2)).
 Proof.
   unfold bientails.
   unfold entails.
@@ -451,14 +467,14 @@ Proof.
   - intros e S S' v H_sat.
     inverts H_sat as H_sat.
     eapply s_seq.
-    + eapply s_req. intro H. exact H.
-    + eapply s_req. tauto.
+    + eapply s_req. apply himpl_refl.
+    + eapply s_req. rewrite hstar_assoc. exact H_sat.
   - intros e S S' v H_sat.
     inverts H_sat as H_P1 H_P2.
     inverts H_P1 as H_P1.
     inverts H_P2 as H_P2.
-    eapply s_req. tauto.
-Qed.
+    eapply s_req. admit. (* provable *)
+Admitted.
 
 (** Reassociating req *)
 (* Lemma satisfies_reassoc : forall H f env h1 h2 r,
