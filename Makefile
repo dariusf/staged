@@ -5,7 +5,7 @@ ALLVFILES := LibAxioms.v LibTactics.v LibEqual.v LibLogic.v LibOperation.v LibBo
 docs:
 	coq2html -base SLF -short-names -no-css -d docs *.glob *.v
 	perl -pi -e 's@/title>@/title><script src="coq2html.js"></script>@' docs/SLF.Staged.html
-	[[ $$OSTYPE == 'darwin'* ]] && open docs/SLF.Staged.html || true
+	# [[ $$OSTYPE == 'darwin'* ]] && open docs/SLF.Staged.html || true
 
 alectryon:
 	alectryon -R . SLF --frontend coqdoc --backend webpage Staged*.v --output-directory docs
