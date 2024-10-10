@@ -1,4 +1,4 @@
-
+(** A formalization of #<a href="https://dl.acm.org/doi/10.1007/978-3-031-71162-6_26">Staged Specification Logic for Verifying Higher-Order Imperative Programs</a># (FM 2024). *)
 From Coq Require Import Classes.RelationClasses.
 From Coq Require Morphisms Program.Basics.
 
@@ -142,13 +142,7 @@ Notation "'ens' r '.' Q" := (ens (fun r => Q))
   (at level 80, format "'ens'  r '.'  Q" , only printing) : flow_scope.
 
 (** * Interpretation of a staged formula *)
-(** Differs from the paper's definition in:
-    
-- the addition of an environment, to give interpretations for unknown functions
-- the removal of stores, to sidestep impredicativity problems
-- the definition of [req], whose variance has been fixed
-
-An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
+(** An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
 Inductive satisfies : env -> heap -> heap -> result -> flow -> Prop :=
 
   | s_req env p (h1 h2:heap) r f
@@ -2436,3 +2430,34 @@ Module ForwardExamples.
   Qed.
 
 End ForwardExamples.
+
+(** * Correspondence with the paper *)
+(** ** Section 3.1. Semantics of staged formulae *)
+(** The semantics of staged formulae is given as #<a href="&num;satisfies">satisfies</a>#. *)
+(** There are a number of differences from the paper:
+- An environment is added to give interpretations for unknown functions (a similar one is added to the #<a href="&num;bigstep">big-step semantics</a>#)
+- Stores are removed to sidestep impredicativity problems, and replaced with substitution
+- The definition of [req] is different, restoring its contravariance
+*)
+(** ** Section 3.2. Compaction *)
+(** Compaction is really just #<a href="&num;entailment">entailment</a>#, so soundness (Theorem 1) is ensured by construction. *)
+(** The six rules in Fig 7:
+- #<a href="&num;norm_ens_false_l">norm_ens_false_l</a>#
+- #<a href="&num;norm_empty_l">norm_empty_l</a>#
+- #<a href="&num;norm_empty_r">norm_empty_r</a>#
+- #<a href="&num;norm_req_req">norm_req_req</a>#
+- #<a href="&num;norm_ens_ens_void_l">norm_ens_ens_void_l</a>#
+- #<a href="&num;norm_ens_req_transpose">norm_ens_req_transpose</a># *)
+(** ** Section 4. Forward rules *)
+(** The reasoning rules for programs are first presented as a more primitive relation #<a href="&num;forward">forward</a># between programs and staged formulae, without history. The validity of these rules for each program construct is defined as a collection of #<i>semantic tuples</i># #<a href="&num;sem_tuple">sem_tuple</a># (analogous to semantic triples), and soundness (Theorem 2) is #<a href="&num;soundness">explicitly proved</a>#, under a new #<a href="&num;env_compatible">env_compatible</a># condition. *)
+(** #<a href="&num;hist_triple"><i>History triples</i></a># (Fig 8) are then defined. Many of the resulting rules can be derived from semantic tuples using the structural #<i>history-frame rule</i># #<a href="&num;hist_frame">hist_frame</a>#. History triples are also defined semantically and are hence sound by construction. *)
+(** Other differences from the paper:
+- The #<a href="&num;sem_passert">assert</a># rule takes a value (or expression, under ANF), not a heap formula. No expressiveness is lost as it's still possible to assert things about the content of heap locations by first reading them.
+- The #<a href="&num;sem_papp_fun">fun</a>#/#<a href="&num;sem_papp_fun">fix</a># rules require function specifications to be given via triples, instead of via annotations in the syntax
+- The #<a href="&num;sem_plet">let</a># rule substitutes (a symbolic value) into the program, instead of quantifying free variables
+- The value of the location that #<a href="&num;sem_pderef">deref</a># retrieves is universally quantified, to match the new definition for [req] *)
+(** ** Section 5. Entailment *)
+(** #<a href="&num;entailment">Entailment</a># is defined semantically, so soundness (Theorem 3) is ensured by construction. *)
+(** The two entailment rules in the paper are shown to be sound.
+- #<a href="&num;ent_ens_seq">ent_ens_seq</a>#
+- #<a href="&num;ent_req_seq">ent_req_seq</a># *)
