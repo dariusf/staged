@@ -2744,6 +2744,15 @@ End ForwardExamples.
 - The value of the location that #<a href="&num;sem_pderef">deref</a># retrieves is universally quantified, to match the new definition for [req] *)
 (** ** Section 5. Entailment *)
 (** #<a href="&num;entailment">Entailment</a># is defined semantically, so soundness (Theorem 3) is ensured by construction. *)
-(** The two entailment rules in the paper are shown to be sound.
+(** The two entailment rules in the main paper
 - #<a href="&num;ent_ens_seq">ent_ens_seq</a>#
 - #<a href="&num;ent_req_seq">ent_req_seq</a># *)
+(** and the additional rules from Appendix G
+- #<a href="&num;ent_func">ent_func</a>#
+- #<a href="&num;ent_disj_right_l">ent_disj_right_l</a>#
+- #<a href="&num;ent_disj_right_r">ent_disj_right_r</a>#
+- #<a href="&num;ent_disj_left">ent_disj_left</a># *)
+(** are shown to be sound. The separation logic rules are the standard ones from SLF. *)
+(** ** Appendix D. Intersection *)
+(** This section is really about the completeness of biabduction. The main paper elides the case where two locations may not be known to be equal. A more complete definition is given as b_pts_diff/#<a href="&num;b_pts_diff_single">b_pts_diff_single</a>#, which works even without a known disquality between [x] and [y]. *)
+(** Intersection (conjunction lifted to staged formulae) is an orthogonal concern. The example from the paper is proved correct using it in #<a href="&num;ex3_intersection">ex3_intersection</a>#. *)
