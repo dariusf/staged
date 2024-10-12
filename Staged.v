@@ -390,7 +390,7 @@ Section Proprium.
   #[global]
   Instance Proper_seq_bi : Proper (bientails ====> bientails ====> bientails) seq.
   Proof.
-    unfold Proper, bientails, entails, respectful.
+    unfold Proper, bientails, respectful.
     intros.
     split; intros.
     { inverts H1 as H1; destr H1.
@@ -403,6 +403,35 @@ Section Proprium.
       split.
       apply H; auto.
       apply H0; auto. }
+  Qed.
+
+  #[global]
+  Instance Proper_req_entails : Proper (eq ====> entails ====> entails) req.
+  Proof.
+    unfold Proper, entails, respectful, flip.
+    intros.
+    constructor. intros.
+    rewrite <- H in H2.
+    inverts H1 as H1.
+    specializes H1 H3 ___.
+  Qed.
+
+  #[global]
+  Instance Proper_req_bi : Proper (eq ====> bientails ====> bientails) req.
+  Proof.
+    unfold Proper, bientails, respectful.
+    intros.
+    split; intros H1.
+    { constructor. intros hp hr H2 H3 H4.
+      rewrite <- H in H2.
+      inverts H1 as H1.
+      specializes H1 H3 ___.
+      apply H0. assumption. }
+    { constructor. intros hp hr H2 H3 H4.
+      rewrite H in H2.
+      inverts H1 as H1.
+      specializes H1 H3 ___.
+      apply H0. assumption. }
   Qed.
 
 End Proprium.
@@ -962,7 +991,7 @@ Proof.
   apply ens_no_result.
 Qed.
 
-(** Compaction rule 3 from the paper *)
+(** Compaction rule 3 from the paper. Stated this way to ensure [f] has no meaningful result. *)
 Lemma norm_empty_r : forall f H,
   bientails (f;; ens_ H;; empty) (f;; ens_ H).
 Proof.
@@ -1313,44 +1342,33 @@ Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
     biab (\[a=b] \* Ha) (x~~>a \* H1) (x~~>b \* H2) Hf
 
   | b_pts_diff : forall a b H1 H2 Ha Hf x y,
-    x <> y ->
+    (* x <> y -> *)
     biab Ha H1 H2 Hf ->
     biab (y~~>b \* Ha) (x~~>a \* H1) (y~~>b \* H2) (x~~>a \* Hf).
 
-Module BiabductionExamples.
+Lemma b_pts_single : forall x a b,
+  biab \[a=b] (x~~>a) (x~~>b) \[].
+Proof.
+  intros.
+  rewrite <- (hstar_hempty_r (x~~>a)).
+  rewrite <- (hstar_hempty_r (x~~>b)).
+  applys_eq b_pts_match.
+  instantiate (1 := \[]).
+  xsimpl.
+  intuition.
+  intuition.
+  apply b_base_empty.
+Qed.
 
-  (** [(a=3) * x->a*y->b |- x->3 * (y->b)] *)
-  Example ex1_biab : forall x y,
-    exists Ha Hf a, biab Ha (x~~>vint a \* y~~>vint 2) (x~~>vint 3) Hf.
-  Proof.
-    intros.
-    eexists.
-    eexists.
-    eexists.
-    rewrite <- (hstar_hempty_r (x ~~> vint 3)) at 2.
-    apply b_pts_match.
-    apply b_base_empty.
-  Qed.
-
-  (* we can see from the ex_intro constrs that the frame is y->2, and the abduced contraint is trivial but gives a value to a, which was immediately substituted *)
-  (* Print ex1_biab. *)
-
-  Example ex2_biab : forall x y,
-    x <> y ->
-    exists Ha Hf, biab Ha (x~~>vint 2) (y~~>vint 3) Hf.
-  Proof.
-    intros.
-    eexists. eexists.
-    rewrite <- (hstar_hempty_r (x ~~> vint 2)).
-    rewrite <- (hstar_hempty_r (y ~~> vint 3)).
-    lets H1: b_pts_diff H.
-    apply H1.
-    apply b_base_empty.
-  Qed.
-
-  (* Print ex2_biab. *)
-
-End BiabductionExamples.
+Lemma b_pts_diff_single : forall x y a b,
+  biab (y~~>b) (x~~>a) (y~~>b) (x~~>a).
+Proof.
+  intros.
+  rewrite <- (hstar_hempty_r (x~~>a)).
+  rewrite <- (hstar_hempty_r (y~~>b)).
+  applys_eq b_pts_diff.
+  apply b_base_empty.
+Qed.
 
 Lemma biab_sound : forall Ha H1 H2 Hf,
   biab Ha H1 H2 Hf ->
@@ -1462,16 +1480,16 @@ Proof.
                 = (h5+hyb+hxa)+h7 *)
 
     (* extract x~~>a *)
-    inverts H3 as H3. destruct H3 as (h3&r0&?&?).
+    inverts H3 as H3. destruct H3 as (h3&r0&H3&H4).
     rewrite norm_ens_ens_void in H3.
-    inverts H3 as H3. destruct H3 as (h4&r1&?&?).
-    inverts H3 as H3. destruct H3 as (v0&hxa&?&?&?&?).
+    inverts H3 as H3. destruct H3 as (h4&r1&H3&H5).
+    inverts H3 as H3. destruct H3 as (v0&hxa&?&H6&?&?).
     rewrite hstar_hpure_l in H6. destr H6.
 
     (* extract y~~>b *)
     rewrite norm_req_req.
-    constructor; intros hyb h5; intros.
-    constructor; intros hHa h6; intros.
+    constructor; intros hyb h5. intros.
+    constructor; intros hHa h6. intros H13. intros.
 
     (* supply x~~>a *)
     rewrite norm_ens_ens_void.
@@ -1486,8 +1504,8 @@ Proof.
 
     (* find out about the heap we need *)
     pose proof H5 as HensH0. (* copy, as we're about to invert and destroy this *)
-    inverts H5 as H5; destruct H5 as (v1&h7&?&?&?&?).
-    rewrite hstar_hpure_l in H16. destr H16.
+    inverts H5 as H5; destruct H5 as (v1&h7&?&H16&?&?).
+    rewrite hstar_hpure_l in H16. destruct H16 as (?&H20).
 
     (* reduce ens on the left *)
     pose proof (ens_reduce_frame) as Hreduce.
@@ -1512,12 +1530,75 @@ Proof.
       assumption. }
     (* got the seq... now we can use the IH *)
 
-    forwards H21: IHHbi env0 (h5 \u hxa) H16.
+    forwards H21: IHHbi env0 (h5 \u hxa) H18.
     inverts H21 as H26.
     applys H26 H13.
     fmap_eq.
     fmap_disjoint. }
 Qed.
+
+Module BiabductionExamples.
+
+  (** [(a=3) * x->a*y->b |- x->3 * (y->b)] *)
+  Example ex1_biab : forall x y,
+    exists Ha Hf a, biab Ha (x~~>vint a \* y~~>vint 2) (x~~>vint 3) Hf.
+  Proof.
+    intros.
+    eexists.
+    eexists.
+    eexists.
+    rewrite <- (hstar_hempty_r (x ~~> vint 3)) at 2.
+    apply b_pts_match.
+    apply b_base_empty.
+  Qed.
+
+  (* we can see from the ex_intro constrs that the frame is y->2, and the abduced contraint is trivial but gives a value to a, which was immediately substituted *)
+  (* Print ex1_biab. *)
+
+  Example ex2_biab : forall x y,
+    (* x <> y -> *)
+    exists Ha Hf, biab Ha (x~~>vint 2) (y~~>vint 3) Hf.
+  Proof.
+    intros.
+    eexists. eexists.
+    rewrite <- (hstar_hempty_r (x ~~> vint 2)).
+    rewrite <- (hstar_hempty_r (y ~~> vint 3)).
+    lets H1: b_pts_diff.
+    apply H1.
+    apply b_base_empty.
+  Qed.
+
+  (* Print ex2_biab. *)
+
+  (** Example from Appendex D of the paper *)
+  Example ex3_intersection : forall x y a b,
+    entails (ens_ (x~~>a);; req_ (y~~>b))
+      (intersect (req_ \[x=y /\ a=b])
+        (req (y~~>b) (ens_ (x~~>a)))).
+  Proof.
+    intros.
+    constructor.
+    { constructor. intros.
+      apply hpure_inv in H0. destr H0. subst.
+
+      rewrite norm_ens_req_transpose in H;
+      only 2: apply b_pts_single.
+
+      simpl in H.
+      inverts H as H. specializes H empty_heap hr ___.
+      apply hpure_intro.
+      reflexivity.
+      fmap_eq.
+
+      apply norm_seq_ens_empty in H.
+      assumption. }
+    { rewrite norm_ens_req_transpose in H; only 2: apply b_pts_diff_single.
+      pose proof (norm_ens_empty_r (x~~>a)) .
+      rewrite (norm_ens_empty_r (x~~>a)) in H.
+      assumption. }
+  Qed.
+
+End BiabductionExamples.
 
 (** * Examples *)
 (** Examples of everything defined so far, which is enough for entailments to be defined and proved. *)
