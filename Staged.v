@@ -710,7 +710,8 @@ Proof.
 Qed.
 
 Lemma entails_ens_void : forall H1 H2,
-  H1 ==> H2 -> entails (ens_ H1) (ens_ H2).
+  H1 ==> H2 ->
+  entails (ens_ H1) (ens_ H2).
 Proof.
   unfold entails.
   intros.
@@ -1160,8 +1161,7 @@ Proof.
 
   apply hstar_intro; auto.
   subst. inj H2. assumption.
-  subst. rew_fmap.
-  reflexivity.
+  subst. fmap_eq.
 Qed.
 
 Lemma norm_ens_ens_combine : forall Q1 Q2,
@@ -1199,10 +1199,7 @@ Proof.
   exists h0.
   intuition.
   subst.
-  rew_fmap.
-  assert (h0 \u h4 = h4 \u h0). fmap_eq.
-  rewrite H1.
-  reflexivity.
+  fmap_eq.
 Qed.
 
 Lemma norm_ens_split : forall H Q,
@@ -1212,16 +1209,56 @@ Proof.
   apply satisfies_ens_sep_split.
 Qed.
 
+(* These tactics don't really help simplify proofs because the directions of inverting/introing ens/req are flipped, making it confusing whether a heap is provided or named *)
+Ltac intro_req hp hr :=
+  match goal with
+  | |- satisfies _ _ _ _ (req _ _) => constructor; intros hp hr; intros
+  end.
+
+Ltac inv_req H hp hr :=
+  match type of H with
+  | satisfies _ _ _ _ (req _ _) =>
+    let H1 := fresh "H" in
+    inverts H as H1; specializes H1 hp hr ___
+  end.
+
+Ltac intro_seq a b :=
+  match goal with
+  | |- satisfies _ _ _ _ (_;; _) =>
+    constructor; exists a; exists b
+  end.
+
+Ltac inv_seq H h :=
+  match type of H with
+  | satisfies _ _ _ _ (_ ;; _) =>
+    let H1 := fresh "H" in
+    let r := fresh "r" in
+    inverts H as H1; destruct H1 as (h&r&?&?)
+  end.
+
+Ltac inv_ens H h :=
+  match type of H with
+  | satisfies _ _ _ _ (ens_ _) =>
+    let H1 := fresh "H" in
+    let v := fresh "v" in
+    inverts H as H1; destruct H1 as (v&h&?&?&?&?)
+  end.
+
 (** * Biabduction *)
 (** Simplified definition following #<a href="http://www0.cs.ucl.ac.uk/staff/p.ohearn/papers/popl09.pdf">Compositional Shape Analysis by means of Bi-Abduction</a># (Fig 1). *)
 Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
+
+  | b_base_empty : forall Hf,
+    biab \[] Hf \[] Hf
 
   | b_pts_match : forall a b H1 H2 Ha Hf x,
     biab Ha H1 H2 Hf ->
     biab (\[a=b] \* Ha) (x~~>a \* H1) (x~~>b \* H2) Hf
 
-  | b_base_empty : forall Hf,
-    biab \[] Hf \[] Hf.
+  | b_pts_diff : forall a b H1 H2 Ha Hf x y,
+    x <> y ->
+    biab Ha H1 H2 Hf ->
+    biab (y~~>b \* Ha) (x~~>a \* H1) (y~~>b \* H2) (x~~>a \* Hf).
 
 Module BiabductionExamples.
 
@@ -1241,6 +1278,21 @@ Module BiabductionExamples.
   (* we can see from the ex_intro constrs that the frame is y->2, and the abduced contraint is trivial but gives a value to a, which was immediately substituted *)
   (* Print ex1_biab. *)
 
+  Example ex2_biab : forall x y,
+    x <> y ->
+    exists Ha Hf, biab Ha (x~~>vint 2) (y~~>vint 3) Hf.
+  Proof.
+    intros.
+    eexists. eexists.
+    rewrite <- (hstar_hempty_r (x ~~> vint 2)).
+    rewrite <- (hstar_hempty_r (y ~~> vint 3)).
+    lets H1: b_pts_diff H.
+    apply H1.
+    apply b_base_empty.
+  Qed.
+
+  (* Print ex2_biab. *)
+
 End BiabductionExamples.
 
 Lemma biab_sound : forall Ha H1 H2 Hf,
@@ -1249,8 +1301,9 @@ Lemma biab_sound : forall Ha H1 H2 Hf,
 Proof.
   intros.
   induction H.
-  { xsimpl; auto. }
   { xsimpl. }
+  { xsimpl; auto. }
+  { xsimpl; auto. }
 Qed.
 
 (** Biabduction for a single location. *)
@@ -1272,12 +1325,39 @@ Proof.
   forward H4. fmap_eq.
   forward H4. fmap_disjoint.
 
-  constructor.
-  exists (h1 \u x3).
-  exists r1.
+  constructor. exists (h1 \u x3). exists r1.
   split.
-  { constructor. eexists. exists x3. intuition. exact H. rewrite hstar_hpure_l. intuition. }
+  { constructor. eexists. exists x3.
+    intuition.
+    exact H.
+    rewrite hstar_hpure_l. intuition. }
   { assumption. }
+Qed.
+
+(** We can remove a framing heap [hf] from both sides of a [satisfies] if it is disjoint from the part of the heap satisfying [ens_ H]. *)
+Lemma ens_reduce_frame : forall env h1 h hf r H,
+  H h ->
+  Fmap.disjoint h (hf \u h1) ->
+  satisfies env (hf \u h1) (hf \u h1 \u h) r (ens_ H) ->
+  satisfies env h1 (h1 \u h) r (ens_ H).
+Proof.
+  introv H0 Hd. intros.
+  inverts H1 as H1. destr H1.
+  rewrite hstar_hpure_l in H1. destr H1.
+
+  constructor. exists v. exists h3.
+  intuition.
+  rewrite hstar_hpure_l. intuition.
+  fmap_eq.
+
+  forwards: Fmap.union_eq_inv_of_disjoint (hf \u h1) h h3.
+  fmap_disjoint.
+  fmap_disjoint.
+  { asserts_rewrite (h \u hf \u h1 = hf \u h1 \u h). fmap_eq.
+    asserts_rewrite (h3 \u hf \u h1 = (hf \u h1) \u h3). fmap_eq.
+    assumption. }
+
+  assumption.
 Qed.
 
 (** The [Float Pre] rule (compaction 6) from the paper. *)
@@ -1290,16 +1370,8 @@ Proof.
   introv Hbi.
   induction Hbi.
 
-  { intros.
-    specialize (IHHbi env0).
-
-    rewrite norm_req_req.
-    constructor. intros. finv H3. subst. rew_fmap.
-
-    apply IHHbi.
-    apply (biab_single H). }
-
-  { introv H2.
+  { (* base case *)
+    introv H2.
     constructor. intros. finv H. subst hp. rew_fmap *. subst hr. clear H3.
     inverts H2 as H2. destr H2.
     constructor. exists h3. exists r1.
@@ -1312,6 +1384,82 @@ Proof.
     forward H2. fmap_disjoint.
 
     assumption. }
+
+  { (* b_pts_match *)
+    intros.
+
+    (* use the req *)
+    rewrite norm_req_req.
+    constructor. intros. finv H3. subst. rew_fmap.
+
+    apply (IHHbi env0).
+    apply (biab_single H). }
+
+  { (* b_pts_diff *)
+    introv H3.
+    (* the idea of this proof is to demonstrate that we can commute adding x~~>a and removing y~~>b by showing that we can start from a heap without x~~>a (using the lemma ens_reduce_frame), perform the operations, and arrive at the same result. reasoning semantically is quite nasty. maybe we can come up with a way to push y~~>b past H0? *)
+
+    (* h4 -(+h7)-> h3 -(-hyb)-> h5+hxa+h7 -> h2
+                  ||
+                  h4+h7
+                = (h5+hyb+hxa)+h7 *)
+
+    (* extract x~~>a *)
+    inverts H3 as H3. destruct H3 as (h3&r0&?&?).
+    rewrite norm_ens_ens_void in H3.
+    inverts H3 as H3. destruct H3 as (h4&r1&?&?).
+    inverts H3 as H3. destruct H3 as (v0&hxa&?&?&?&?).
+    rewrite hstar_hpure_l in H6. destr H6.
+
+    (* extract y~~>b *)
+    rewrite norm_req_req.
+    constructor; intros hyb h5; intros.
+    constructor; intros hHa h6; intros.
+
+    (* supply x~~>a *)
+    rewrite norm_ens_ens_void.
+    rewrite <- norm_seq_assoc.
+    constructor. exists (h6 \u hxa). exists (norm vunit).
+    split.
+    { constructor. exists vunit. exists hxa.
+      intuition. rewrite hstar_hpure_l. intuition. }
+
+    (* need to subtract a heap from both sides of H5 *)
+    (* that heap is y~~>2 *)
+
+    (* find out about the heap we need *)
+    pose proof H5 as HensH0. (* copy, as we're about to invert and destroy this *)
+    inverts H5 as H5; destruct H5 as (v1&h7&?&?&?&?).
+    rewrite hstar_hpure_l in H16. destr H16.
+
+    (* reduce ens on the left *)
+    pose proof (ens_reduce_frame) as Hreduce.
+    specializes Hreduce env0 (h5 \u hxa) h7 hyb.
+    specializes Hreduce r0 H20.
+    forward Hreduce. fmap_disjoint.
+    asserts_rewrite (h4 = hyb \u h5 \u hxa) in HensH0. fmap_eq.
+    asserts_rewrite (h3 = hyb \u (h5 \u hxa) \u h7) in HensH0. fmap_eq.
+    apply Hreduce in HensH0.
+
+    (* provide the heap for y~~>b *)
+    rewrite norm_req_req in H4.
+    inverts H4 as H4.
+    specializes H4 hyb (h5 \u hxa \u h7) H6 ___.
+
+    lets Hseq: s_seq env0 (ens_ H0) (req H2 f) (h5 \u hxa) h2.
+    forwards: Hseq r.
+    { exists (h5 \u hxa \u h7).
+      exists r0.
+      split.
+      applys_eq HensH0. fmap_eq.
+      assumption. }
+    (* got the seq... now we can use the IH *)
+
+    forwards H21: IHHbi env0 (h5 \u hxa) H16.
+    inverts H21 as H26.
+    applys H26 H13.
+    fmap_eq.
+    fmap_disjoint. }
 Qed.
 
 (** * Examples *)
