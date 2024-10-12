@@ -98,6 +98,7 @@ Inductive flow :=
   | fex : forall A, (A -> flow) -> flow
   | fall : forall A, (A -> flow) -> flow
   | unk : ident -> val -> val -> flow
+  | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow.
 
 (** An [ens] which doesn't have a useful return value.*)
@@ -181,6 +182,11 @@ Inductive satisfies : env -> heap -> heap -> result -> flow -> Prop :=
     (He: Fmap.read env fn = Some f)
     (Hr: satisfies env h1 h2 (norm r) (f x r)) :
     satisfies env h1 h2 (norm r) (unk fn x r)
+
+  | s_intersect env h1 h2 r f1 f2
+    (H1: satisfies env h1 h2 r f1)
+    (H2: satisfies env h1 h2 r f2) :
+    satisfies env h1 h2 r (intersect f1 f2)
 
   | s_disj_l env h1 h2 r f1 f2
     (H: satisfies env h1 h2 r f1) :
