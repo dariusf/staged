@@ -1244,6 +1244,57 @@ Ltac inv_ens H h :=
     inverts H as H1; destruct H1 as (v&h&?&?&?&?)
   end.
 
+(** Rule DisjLeft from the paper *)
+Lemma ent_disj_left : forall f1 f2 f3,
+  entails f1 f3 ->
+  entails f2 f3 ->
+  entails (disj f1 f2) f3.
+Proof.
+  unfold entails.
+  intros.
+  inverts H1 as H1; auto.
+Qed.
+
+(** Half of DisjRight from the paper *)
+Lemma ent_disj_right_l : forall f1 f2 f3,
+  entails f3 f1 ->
+  entails f3 (disj f1 f2).
+Proof.
+  unfold entails.
+  intros.
+  apply s_disj_l.
+  auto.
+Qed.
+
+(** The other half of DisjRight from the paper *)
+Lemma ent_disj_right_r : forall f1 f2 f3,
+  entails f3 f2 ->
+  entails f3 (disj f1 f2).
+Proof.
+  unfold entails.
+  intros.
+  apply s_disj_r.
+  auto.
+Qed.
+
+Lemma disj_comm : forall env h1 h2 r f1 f2,
+  satisfies env h1 h2 r (disj f2 f1) ->
+  satisfies env h1 h2 r (disj f1 f2).
+Proof.
+  intros.
+  inverts H as H.
+  apply s_disj_r. assumption.
+  apply s_disj_l. assumption.
+Qed.
+
+(** EntFunc *)
+Lemma ent_func : forall f x r,
+  entails (unk f x r) (unk f x r).
+Proof.
+  intros.
+  apply entails_refl.
+Qed.
+
 (** * Biabduction *)
 (** Simplified definition following #<a href="http://www0.cs.ucl.ac.uk/staff/p.ohearn/papers/popl09.pdf">Compositional Shape Analysis by means of Bi-Abduction</a># (Fig 1). *)
 Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
