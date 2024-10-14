@@ -392,6 +392,19 @@ Section Proprium.
   Qed.
 
   #[global]
+  Instance fex_entails_under_morphism (A : Type) : forall env,
+    Proper (Morphisms.pointwise_relation A (entails_under env) ====> entails_under env) (@fex A).
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation, entails_under.
+    intros.
+    inverts H0 as H0. destr H0.
+    constructor.
+    exists v.
+    apply H.
+    assumption.
+  Qed.
+
+  #[global]
   Instance Proper_seq_bi : Proper (bientails ====> bientails ====> bientails) seq.
   Proof.
     unfold Proper, bientails, respectful.
@@ -676,6 +689,7 @@ Ltac fintro :=
   match goal with
   (* | |- satisfies _ _ _ _ (ens (fun _ => \[_])) => apply ens_pure_intro *)
   (* | |- satisfies _ _ _ _ (ens (fun _ => \[])) => apply ens_empty_intro *)
+  | |- satisfies _ _ _ _ empty => apply empty_intro
   | |- satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_intro
   | |- \[] _ => apply hempty_intro
   | |- \[_] _ => apply hpure_intro
@@ -730,7 +744,7 @@ Ltac resolve_fn_in_env :=
   (* | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g *)
   end.
 
-(** * Entailment/normalization rules *)
+(** * (Unconditional) entailment and normalization rules *)
 (** Covariance of ens *)
 Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
   (forall v, Q1 v ==> Q2 v) ->
@@ -751,8 +765,7 @@ Qed.
 Lemma entails_ens : forall Q1 Q2,
   (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
 Proof.
-  unfold entails.
-  intros.
+  unfold entails. intros.
   applys* satisfies_ens.
 Qed.
 
@@ -779,20 +792,6 @@ Proof.
   applys* satisfies_ens_void H.
 Qed.
 
-(** Rule EntEns from the paper *)
-Lemma ent_ens_seq : forall H1 H2 f1 f2,
-  H1 ==> H2 ->
-  entails f1 f2 ->
-  entails (ens_ H1;; f1) (ens_ H2;; f2).
-Proof.
-  unfold entails.
-  intros.
-  inverts H3 as H3. destr H3.
-  apply (satisfies_ens_void H) in H4.
-  constructor. exists h3. exists r1.
-  intuition.
-Qed.
-
 (** Contravariance of req *)
 Lemma satisfies_req : forall H1 H2 env h1 h2 r f,
   H2 ==> H1 ->
@@ -816,18 +815,6 @@ Proof.
   unfold entails.
   intros.
   applys* satisfies_req H1.
-Qed.
-
-(** Rule EntReq from the paper *)
-Lemma ent_req_seq : forall H1 H2 f1 f2,
-  H2 ==> H1 ->
-  entails f1 f2 ->
-  entails (req H1 f1) (req H2 f2).
-Proof.
-  unfold entails.
-  intros.
-  constructor. intros hH2 h3. intros.
-  inverts H3 as H3. specializes H3 hH2 h3.
 Qed.
 
 (** seq is associative *)
@@ -1269,6 +1256,7 @@ Proof.
   apply satisfies_ens_sep_split.
 Qed.
 
+(** * Tactics for unconditional [entails] and [satisfies] *)
 (* These tactics don't really help simplify proofs because the directions of inverting/introing ens/req are flipped, making it confusing whether a heap is provided or named *)
 Ltac intro_req hp hr :=
   match goal with
@@ -1303,57 +1291,6 @@ Ltac inv_ens H h :=
     let v := fresh "v" in
     inverts H as H1; destruct H1 as (v&h&?&?&?&?)
   end.
-
-(** Rule DisjLeft from the paper *)
-Lemma ent_disj_left : forall f1 f2 f3,
-  entails f1 f3 ->
-  entails f2 f3 ->
-  entails (disj f1 f2) f3.
-Proof.
-  unfold entails.
-  intros.
-  inverts H1 as H1; auto.
-Qed.
-
-(** Half of DisjRight from the paper *)
-Lemma ent_disj_right_l : forall f1 f2 f3,
-  entails f3 f1 ->
-  entails f3 (disj f1 f2).
-Proof.
-  unfold entails.
-  intros.
-  apply s_disj_l.
-  auto.
-Qed.
-
-(** The other half of DisjRight from the paper *)
-Lemma ent_disj_right_r : forall f1 f2 f3,
-  entails f3 f2 ->
-  entails f3 (disj f1 f2).
-Proof.
-  unfold entails.
-  intros.
-  apply s_disj_r.
-  auto.
-Qed.
-
-Lemma disj_comm : forall env h1 h2 r f1 f2,
-  satisfies env h1 h2 r (disj f2 f1) ->
-  satisfies env h1 h2 r (disj f1 f2).
-Proof.
-  intros.
-  inverts H as H.
-  apply s_disj_r. assumption.
-  apply s_disj_l. assumption.
-Qed.
-
-(** EntFunc *)
-Lemma ent_func : forall f x r,
-  entails (unk f x r) (unk f x r).
-Proof.
-  intros.
-  apply entails_refl.
-Qed.
 
 (** * Biabduction *)
 (** Simplified definition following #<a href="http://www0.cs.ucl.ac.uk/staff/p.ohearn/papers/popl09.pdf">Compositional Shape Analysis by means of Bi-Abduction</a># (Fig 1). *)
@@ -1624,6 +1561,199 @@ Module BiabductionExamples.
   Qed.
 
 End BiabductionExamples.
+
+(** * Entailment sequent *)
+(** Rule EntEns from the paper *)
+Lemma entails_ens_seq : forall H1 H2 f1 f2,
+  H1 ==> H2 ->
+  entails f1 f2 ->
+  entails (ens_ H1;; f1) (ens_ H2;; f2).
+Proof.
+  unfold entails.
+  intros.
+  inverts H3 as H3. destr H3.
+  apply (satisfies_ens_void H) in H4.
+  constructor. exists h3. exists r1.
+  intuition.
+Qed.
+
+(** Rule EntReq from the paper *)
+Lemma entails_req_seq : forall H1 H2 f1 f2,
+  H2 ==> H1 ->
+  entails f1 f2 ->
+  entails (req H1 f1) (req H2 f2).
+Proof.
+  unfold entails.
+  intros.
+  constructor. intros hH2 h3. intros.
+  inverts H3 as H3. specializes H3 hH2 h3.
+Qed.
+
+(** Rule DisjLeft from the paper *)
+Lemma entails_disj_left : forall f1 f2 f3,
+  entails f1 f3 ->
+  entails f2 f3 ->
+  entails (disj f1 f2) f3.
+Proof.
+  unfold entails.
+  intros.
+  inverts H1 as H1; auto.
+Qed.
+
+(** Half of DisjRight from the paper *)
+Lemma entails_disj_right_l : forall f1 f2 f3,
+  entails f3 f1 ->
+  entails f3 (disj f1 f2).
+Proof.
+  unfold entails.
+  intros.
+  apply s_disj_l.
+  auto.
+Qed.
+
+(** The other half of DisjRight from the paper *)
+Lemma entails_disj_right_r : forall f1 f2 f3,
+  entails f3 f2 ->
+  entails f3 (disj f1 f2).
+Proof.
+  unfold entails.
+  intros.
+  apply s_disj_r.
+  auto.
+Qed.
+
+Lemma disj_comm : forall env h1 h2 r f1 f2,
+  satisfies env h1 h2 r (disj f2 f1) ->
+  satisfies env h1 h2 r (disj f1 f2).
+Proof.
+  intros.
+  inverts H as H.
+  apply s_disj_r. assumption.
+  apply s_disj_l. assumption.
+Qed.
+
+(** EntFunc *)
+Lemma entails_func : forall f x r,
+  entails (unk f x r) (unk f x r).
+Proof.
+  intros.
+  apply entails_refl.
+Qed.
+
+Lemma ent_ens_l : forall env f P,
+  (P -> entails_under env empty f) ->
+  entails_under env (ens_ \[P]) f.
+Proof.
+  unfold entails_under. intros.
+  fdestr H0. subst.
+  apply H.
+  assumption.
+  fintro.
+Qed.
+
+Lemma ent_seq_ens_l : forall env f f1 P,
+  (P -> entails_under env f1 f) ->
+  entails_under env (ens_ \[P];; f1) f.
+Proof.
+  unfold entails_under. intros.
+  fdestr H0.
+  fdestr H1.
+  apply H.
+  assumption.
+  subst.
+  auto.
+Qed.
+
+Lemma ent_ens_single : forall env P P1,
+  (P1 -> P) ->
+  entails_under env (ens_ \[P1]) (ens_ \[P]).
+Proof.
+  unfold entails_under. intros.
+  fdestr H0.
+  constructor. exists vunit. exists empty_heap.
+  apply H in H1.
+  intuition.
+  fintro.
+  intuition.
+  fintro.
+  assumption.
+  fmap_eq.
+Qed.
+
+Lemma ent_seq_unk : forall fn fn1 f1 f2 env x r,
+  Fmap.read env fn = Some fn1 ->
+  entails_under env (fn1 x r;; f1) f2 ->
+  entails_under env (unk fn x r;; f1) f2.
+Proof.
+  intros.
+  rewrites (>> norm_unk env0).
+  apply H.
+  assumption.
+Qed.
+
+Lemma ent_disj_left : forall f1 f2 f3 env,
+  entails_under env f1 f3 ->
+  entails_under env f2 f3 ->
+  entails_under env (disj f1 f2) f3.
+Proof.
+  unfold entails_under. intros.
+  inverts H1 as H1; auto.
+Qed.
+
+Lemma ent_seq_disj : forall f1 f2 f3 f4 env,
+  entails_under env (f1;; f3) f4 ->
+  entails_under env (f2;; f3) f4 ->
+  entails_under env (disj f1 f2;; f3) f4.
+Proof.
+  unfold entails_under. intros.
+  fdestr H1.
+  inverts H2 as H2.
+  { apply H.
+    constructor. eexists. eexists.
+    split. apply H2. apply H3. }
+  { apply H0.
+    constructor. eexists. eexists.
+    split. apply H2. apply H3. }
+Qed.
+
+Lemma ent_seq_ex_l : forall A (f1: A -> flow) f2 f3 env,
+  (forall x, entails_under env (f1 x;; f2) f3) ->
+  entails_under env (fex (fun x => f1 x);; f2) f3.
+Proof.
+  unfold entails_under. intros.
+  fdestr H0.
+  fdestr H1.
+  applys H v.
+  constructor.
+  eexists.
+  eexists.
+  split.
+  apply H0.
+  apply H2.
+Qed.
+
+Lemma ent_ex_l : forall f A (fctx:A -> flow) env,
+  (forall x, entails_under env (fctx x) f) ->
+  entails_under env (fex (fun x => fctx x)) f.
+Proof.
+  unfold entails_under. intros.
+  fdestr H0.
+  specializes H H1.
+  auto.
+Qed.
+
+Lemma ent_ex_r : forall f A (fctx:A -> flow) env,
+  (exists x, entails_under env f (fctx x)) ->
+  entails_under env f (fex (fun x => fctx x)).
+Proof.
+  unfold entails_under. intros.
+  destr H.
+  constructor.
+  exists x.
+  auto.
+Qed.
+
+(* * * High-level tactics *)
 
 (** * Examples *)
 (** Examples of everything defined so far, which is enough for entailments to be defined and proved. *)
@@ -2090,12 +2220,12 @@ Module Examples.
       | y :: ys => y + sum ys
       end.
 
-    Fixpoint sum_val (xs:list val) : expr :=
+    (* Fixpoint sum_val (xs:list val) : expr :=
       match xs with
       | nil => pval (vint 0)
       | vint y :: ys => padd (pval (vint y)) (sum_val ys)
       | _ :: ys => pval vunit
-      end.
+      end. *)
 
     Fixpoint to_int_list (xs:list val) : list int :=
       match xs with
@@ -2106,11 +2236,12 @@ Module Examples.
 
     (* This isn't actually needed at this point *)
     Definition uncurried_plus_program :=
-      (vfun "x"
+      vfun "x"
         (plet "a" (pfst (pvar "x"))
         (plet "b" (psnd (pvar "x"))
-        (padd (pvar "a") (pvar "b"))))).
+        (padd (pvar "a") (pvar "b")))).
 
+    (* plus((a, b), r) = ens[_] r=a+b *)
     Definition uncurried_plus_spec : ufun := fun args rr =>
       match args with
       | vtup (vint a) (vint b) => ens_ \[rr = vint (a + b)]
@@ -2118,52 +2249,79 @@ Module Examples.
       end.
 
     Definition foldr_env :=
-      (Fmap.update
+      Fmap.update
          (Fmap.single "foldr" (Some foldr))
-         "f" (Some uncurried_plus_spec)).
+         "f" (Some uncurried_plus_spec).
 
     Lemma foldr_sum: forall xs res,
       entails_under foldr_env
         (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
         (fex (fun r => ens_ \[res = vint r /\ r = sum (to_int_list xs)])).
     Proof.
-      simpl. intros xs. induction_wf IH: list_sub xs. intros.
-      unfold entails_under. introv H.
-      rewrite norm_unk in H. 2: { unfold foldr_env; resolve_fn_in_env. }
-      simpl in H.
-      inverts H.
-      { (* base case *)
-        fdestr H5.
-        fexists 0.
-        subst. fintro.
-        intuition.
-      }
-      { (* rec *)
-        (* get at all the facts... *)
-        fdestr H5 as (x&H5).
-        fdestr H5 as (r0&H5).
-        fdestr H5 as (l1&H5).
-        fdestr H5 as (h3&r1&H1&H2).
-        fdestr H1.
-        (* apply induction hypothesis *)
-        specialize (IH l1). forward IH. rewrite H. auto.
-        rewrite IH in H2.
+      dup.
+      { intros xs. induction_wf IH: list_sub xs. intros.
+        unfold entails_under. introv H.
+        rewrite norm_unk in H. 2: { unfold foldr_env; resolve_fn_in_env. }
+        simpl in H.
+        inverts H.
+        { (* base case *)
+            fdestr H5.
+            fexists 0.
+            subst. fintro.
+            intuition. }
+        { (* rec *)
+            (* get at all the facts... *)
+            fdestr H5 as (x&H5).
+            fdestr H5 as (r0&H5).
+            fdestr H5 as (l1&H5).
+            fdestr H5 as (h3&r1&H1&H2).
+            fdestr H1.
+            (* apply induction hypothesis *)
+            specialize (IH l1). forward IH. rewrite H. auto.
+            rewrite IH in H2.
 
-        fdestr H2 as (h0&r2&H0&Hf).
-        fdestr H0 as (v&?H0).
-        fdestr H0.
+            fdestr H2 as (h0&r2&H0&Hf).
+            fdestr H0 as (v&?H0).
+            fdestr H0.
 
-        (* reason about f *)
-        rewrite norm_unk in Hf. 2: { unfold foldr_env. resolve_fn_in_env. }
+            (* reason about f *)
+            rewrite norm_unk in Hf. 2: { unfold foldr_env. resolve_fn_in_env. }
 
-        (* apply ens_void_pure_inv in H1. destr H1. *)
-        unfold uncurried_plus_spec in Hf. subst r0.
-        fdestr Hf.
+            (* apply ens_void_pure_inv in H1. destr H1. *)
+            unfold uncurried_plus_spec in Hf. subst r0.
+            fdestr Hf.
 
-        fexists (x + v).
-        subst. fintro.
-        intuition.
-      }
+            fexists (x + v).
+            subst. fintro.
+            intuition. } }
+
+      (* alternative proof using entailment rules *)
+
+      { intros xs. induction_wf IH: list_sub xs. intros.
+        rewrite norm_unk. 2: { unfold foldr_env; resolve_fn_in_env. }
+        simpl.
+        apply ent_disj_left.
+
+        { apply ent_ex_r. exists 0.
+          apply ent_ens_single. intros.
+          intuition. subst. reflexivity. }
+
+        { apply ent_ex_l. intros x.
+          apply ent_ex_l. intros r.
+          apply ent_ex_l. intros l1.
+          apply ent_seq_ens_l. intros H.
+
+          specialize (IH l1). forward IH. rewrite H. auto.
+          rewrite IH.
+
+          rewrite (@norm_unk foldr_env).
+          2: { unfold foldr_env. resolve_fn_in_env. }
+          apply ent_seq_ex_l. intros r0.
+          apply ent_seq_ens_l. intros (?&?). subst r.
+          simpl.
+          apply ent_ex_r. exists (x + r0).
+          apply ent_ens_single.
+          subst. intuition. } }
     Qed.
   End foldr.
 
@@ -2854,13 +3012,13 @@ End ForwardExamples.
 (** ** Section 5. Entailment *)
 (** #<a href="&num;entailment">Entailment</a># is defined semantically, so soundness (Theorem 3) is ensured by construction. *)
 (** The two entailment rules in the main paper
-- #<a href="&num;ent_ens_seq">ent_ens_seq</a>#
-- #<a href="&num;ent_req_seq">ent_req_seq</a># *)
+- #<a href="&num;entails_ens_seq">entails_ens_seq</a>#
+- #<a href="&num;entails_req_seq">entails_req_seq</a># *)
 (** and the additional rules from Appendix G
-- #<a href="&num;ent_func">ent_func</a>#
-- #<a href="&num;ent_disj_right_l">ent_disj_right_l</a>#
-- #<a href="&num;ent_disj_right_r">ent_disj_right_r</a>#
-- #<a href="&num;ent_disj_left">ent_disj_left</a># *)
+- #<a href="&num;entails_func">entails_func</a>#
+- #<a href="&num;entails_disj_right_l">entails_disj_right_l</a>#
+- #<a href="&num;entails_disj_right_r">entails_disj_right_r</a>#
+- #<a href="&num;entails_disj_left">entails_disj_left</a># *)
 (** are shown to be sound. The separation logic rules are the standard ones from SLF. *)
 (** ** Appendix D. Intersection *)
 (** This section is really about the completeness of biabduction. The main paper elides the case where two locations may not be known to be equal. A more complete definition is given as b_pts_diff/#<a href="&num;b_pts_diff_single">b_pts_diff_single</a>#, which works even without a known disquality between [x] and [y]. *)
