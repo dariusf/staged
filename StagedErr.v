@@ -62,7 +62,7 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   end.
 
 Module Val.
-  Definition val := val.
+  Definition value := val.
 End Val.
 
 (** SLF's heap theory as a functor. *)

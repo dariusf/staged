@@ -38,14 +38,16 @@ with expr : Type :=
   | plet (x: ident) (e1 e2: expr)
   | pfix (f: ident) (x: ident) (e: expr)
   | pfun (x: ident) (e: expr)
-  | padd (x y: val)
-  | pminus (x y: val)
+  | padd (x y: expr)
+  | pfst (t: expr)
+  | psnd (t: expr)
+  | pminus (x y: expr)
   | passert (b: val)
   | pref (v: val)
   | pderef (v: val)
   | passign (x: val) (v: val)
   | pif (x: val) (e1: expr) (e2: expr)
-  | papp (x: expr) (a: val).
+  | papp (x: expr) (a: expr).
 
 #[global]
 Instance Inhab_val : Inhab val.
@@ -62,6 +64,8 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   | pval v => pval v
   | padd x y => padd x y
   | pminus x y => pminus x y
+  | pfst x => pfst x
+  | psnd x => psnd x
   | pvar x => if_y_eq x (pval w) e
   | passert b => passert b
   | pderef r => pderef r
@@ -75,11 +79,11 @@ Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
   end.
 
 Module Val.
-  Definition val := val.
+  Definition value := val.
 End Val.
 
 (** SLF's heap theory as a functor. *)
-Module Export Heap := Heap.HeapSetup(Val).
+Module Export Heap := Heap.HeapSetup Val.
 
 Definition empty_heap : heap := Fmap.empty.
 
@@ -657,14 +661,6 @@ Proof.
 Qed.
 
 (** * Tactics for reasoning about entailments *)
-Ltac felim H :=
-  match type of H with
-  | satisfies _ _ _ _ (fex _) => inverts H as H
-  | satisfies _ _ _ _ (_ ;; _) => inverts H as H
-  | satisfies _ _ _ _ (ens (fun _ => \[_])) => apply ens_pure_inv in H
-  (* | satisfies _ (req \[]) _ _ _ => apply req_empty_inv in H; subst *)
-  (* | satisfies _ (unk _ _ _) _ _ _ => inverts H as H *)
-  end.
 
 Ltac finv H :=
   match type of H with
@@ -678,31 +674,61 @@ Ltac finv H :=
 
 Ltac fintro :=
   match goal with
-  | |- satisfies _ _ _ _ (ens (fun _ => \[_])) => apply ens_pure_intro
-  | |- satisfies _ _ _ _ (ens (fun _ => \[])) => apply ens_empty_intro
+  (* | |- satisfies _ _ _ _ (ens (fun _ => \[_])) => apply ens_pure_intro *)
+  (* | |- satisfies _ _ _ _ (ens (fun _ => \[])) => apply ens_empty_intro *)
+  | |- satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_intro
   | |- \[] _ => apply hempty_intro
   | |- \[_] _ => apply hpure_intro
   | |- (_ \* _) (_ \u _) => apply hstar_intro
-  | |- (\[_] \* \[_]) _ => idtac "use rewrite hstar_hpure_l or hstar_hpure_r"
+  (* | |- (\[_] \* \[_]) _ => idtac "use rewrite hstar_hpure_l or hstar_hpure_r" *)
   | |- (\[_] \* _) _ => rewrite hstar_hpure_l
   | |- (_ \* \[_]) _ => rewrite hstar_hpure_r
   (* | |- satisfies _ (req \[]) _ _ _ => apply req_empty_intro *)
   (* | |- satisfies _ (req \[];; _) _ _ _ => apply seq_req_emp_intro_l *)
   end.
 
-  Ltac resolve_fn_in_env :=
-    match goal with
-    | |- Fmap.read (Fmap.update _ ?k (Some _)) ?k = _ =>
-      rewrite fmap_read_update; auto
-    | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
-      rewrite Fmap.read_single; reflexivity
-    | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g
-    end.
-
-(* Ltac fexists v :=
+Ltac fexists v :=
   match goal with
-  | |- satisfies _ (fex _) _ _ _ => unfold fex; exists v
-  end. *)
+  | |- satisfies _ _ _ _ (fex _) => constructor; exists v
+  end.
+
+Ltac fdestr_rec H :=
+  match type of H with
+  | satisfies _ _ _ _ (fex (fun x => _)) => inverts H as H; destr H
+  | satisfies _ _ _ _ (_ ;; _) => inverts H as H; destr H
+  | satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_inv in H; destr H
+  end.
+
+Ltac fdestr_pat H pat :=
+  match type of H with
+  | satisfies _ _ _ _ (fex (fun x => _)) => inverts H as H; destruct H as pat
+  | satisfies _ _ _ _ (_ ;; _) => inverts H as H; destruct H as pat
+  | satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_inv in H; destruct H as pat
+  end.
+
+(* Use these on product-like things like sequencing, existentials, and ens *)
+Tactic Notation "fdestr" constr(H) := fdestr_rec H.
+Tactic Notation "fdestr" constr(H) "as" simple_intropattern(pat) := fdestr_pat H pat.
+
+Ltac solve_trivial_not_indom :=
+  match goal with
+  | |- ~ Fmap.indom _ _ => unfold not; rewrite Fmap.indom_single_eq; intros; false
+  end.
+
+Ltac resolve_fn_in_env :=
+  match goal with
+  | |- Fmap.read (Fmap.update _ ?k (Some _)) ?k = _ =>
+    rewrite fmap_read_update; [reflexivity | solve_trivial_not_indom]
+  | |- Fmap.read (Fmap.update _ _ _) _ = _ =>
+    unfold Fmap.update;
+    first [
+      rewrite Fmap.read_union_l; [resolve_fn_in_env | apply Fmap.indom_single] |
+        rewrite Fmap.read_union_r; [resolve_fn_in_env | solve_trivial_not_indom]
+    ]
+  | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
+    rewrite Fmap.read_single; reflexivity
+  (* | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g *)
+  end.
 
 (** * Entailment/normalization rules *)
 (** Covariance of ens *)
@@ -1183,13 +1209,12 @@ Lemma satisfies_ens_sep_combine : forall Q1 Q2 env h1 h2 r,
   satisfies env h1 h2 r (ens (fun r0 : val => \exists r1 : val, Q1 r1 \* Q2 r0)).
 Proof.
   intros.
-  felim H.
-  destruct H as (h3 & r1 & H1 & H2).
+  fdestr H as (h3&r1&H1&H2).
 
   constructor. destruct r.
   exists v.
-  inverts H1 as H1. destruct H1 as (v0 & h0 & ? & ? & ? & ?).
-  inverts H2 as H2. destruct H2 as (v1 & h4 & ? & ? & ? & ?).
+  inverts H1 as H1. destruct H1 as (v0&h0&?&?&?&?).
+  inverts H2 as H2. destruct H2 as (v1&h4&?&?&?&?).
   exists (h0 \u h4).
   intuition.
   apply hexists_intro with (x := v0).
@@ -1779,7 +1804,7 @@ Module Examples.
     rewrite hstar_hpure_r.
     split. fintro; auto. math.
     fmap_eq.
-  Abort.
+  Qed.
 
   Example e1 : forall x,
     satisfies empty_env empty_heap empty_heap (norm vunit) (req_ \[x = 1]).
@@ -2023,9 +2048,9 @@ Module Examples.
       apply ens_void_pure_intro.
       f_equal. math. }
     (* recursive case *)
-    { felim H1. destruct H1 as (n1&H1).
+    { fdestr H1 as (n1&H1).
       apply seq_ens_void_pure_inv in H1. destruct H1 as ((?&?)&H1).
-      felim H1. destruct H1 as (r1&H1).
+      fdestr H1 as (r1&H1).
 
       rewrites (>> norm_unk sum_env) in H1.
       { unfold sum_env; resolve_fn_in_env. }
@@ -2041,23 +2066,106 @@ Module Examples.
       rewrite <- norm_ens_ens_void in H1.
       rewrite hstar_hpure_conj in H1.
       apply ens_void_pure_inv in H1. destr H1. subst.
-      apply ens_void_pure_intro.
+      fintro.
       inj H2. inj H1. f_equal. math. }
   Qed.
 
-  Definition foldr : ufun := fun args rr =>
-    match args with
-    | vtup (vstr f) (vtup (vint a) (vlist l)) =>
-      disj
-        (ens_ \[rr = vint a /\ l = nil])
-        (fex (fun x => fex (fun r => fex (fun l1 =>
-          ens_ \[l = cons x l1];;
-          unk "foldr" (vtup (vstr f) (vtup (vint a) (vlist l1))) r;;
-          unk f (vtup x r) rr))))
-    | _ => empty
-    end.
+  Module foldr.
 
-  Definition foldr_env := (Fmap.update empty_env "foldr" (Some foldr)).
+    Definition foldr : ufun := fun (args:val) rr =>
+      match args with
+      | vtup (vstr f) (vtup (vint a) (vlist l)) =>
+        disj
+          (ens_ \[rr = vint a /\ l = nil])
+          (fex (fun x => fex (fun r => fex (fun l1 =>
+            ens_ \[l = cons (vint x) l1];;
+            unk "foldr" (vtup (vstr f) (vtup (vint a) (vlist l1))) r;;
+            unk f (vtup (vint x) r) rr))))
+      | _ => empty
+      end.
+
+    Fixpoint sum (xs:list int) : int :=
+      match xs with
+      | nil => 0
+      | y :: ys => y + sum ys
+      end.
+
+    Fixpoint sum_val (xs:list val) : expr :=
+      match xs with
+      | nil => pval (vint 0)
+      | vint y :: ys => padd (pval (vint y)) (sum_val ys)
+      | _ :: ys => pval vunit
+      end.
+
+    Fixpoint to_int_list (xs:list val) : list int :=
+      match xs with
+      | nil => nil
+      | vint y :: ys => cons y (to_int_list ys)
+      | _ :: _ => nil
+      end.
+
+    (* This isn't actually needed at this point *)
+    Definition uncurried_plus_program :=
+      (vfun "x"
+        (plet "a" (pfst (pvar "x"))
+        (plet "b" (psnd (pvar "x"))
+        (padd (pvar "a") (pvar "b"))))).
+
+    Definition uncurried_plus_spec : ufun := fun args rr =>
+      match args with
+      | vtup (vint a) (vint b) => ens_ \[rr = vint (a + b)]
+      | _ => empty
+      end.
+
+    Definition foldr_env :=
+      (Fmap.update
+         (Fmap.single "foldr" (Some foldr))
+         "f" (Some uncurried_plus_spec)).
+
+    Lemma foldr_sum: forall xs res,
+      entails_under foldr_env
+        (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
+        (fex (fun r => ens_ \[res = vint r /\ r = sum (to_int_list xs)])).
+    Proof.
+      simpl. intros xs. induction_wf IH: list_sub xs. intros.
+      unfold entails_under. introv H.
+      rewrite norm_unk in H. 2: { unfold foldr_env; resolve_fn_in_env. }
+      simpl in H.
+      inverts H.
+      { (* base case *)
+        fdestr H5.
+        fexists 0.
+        subst. fintro.
+        intuition.
+      }
+      { (* rec *)
+        (* get at all the facts... *)
+        fdestr H5 as (x&H5).
+        fdestr H5 as (r0&H5).
+        fdestr H5 as (l1&H5).
+        fdestr H5 as (h3&r1&H1&H2).
+        fdestr H1.
+        (* apply induction hypothesis *)
+        specialize (IH l1). forward IH. rewrite H. auto.
+        rewrite IH in H2.
+
+        fdestr H2 as (h0&r2&H0&Hf).
+        fdestr H0 as (v&?H0).
+        fdestr H0.
+
+        (* reason about f *)
+        rewrite norm_unk in Hf. 2: { unfold foldr_env. resolve_fn_in_env. }
+
+        (* apply ens_void_pure_inv in H1. destr H1. *)
+        unfold uncurried_plus_spec in Hf. subst r0.
+        fdestr Hf.
+
+        fexists (x + v).
+        subst. fintro.
+        intuition.
+      }
+    Qed.
+  End foldr.
 
 End Examples.
 
@@ -2081,10 +2189,10 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
     bigstep env h1 (plet x e1 e2) h2 r
 
   | eval_padd : forall h x y env,
-    bigstep env h (padd (vint x) (vint y)) h (enorm (vint (x + y)))
+    bigstep env h (padd (pval (vint x)) (pval (vint y))) h (enorm (vint (x + y)))
 
   | eval_pminus : forall h x y env,
-    bigstep env h (pminus (vint x) (vint y)) h (enorm (vint (x - y)))
+    bigstep env h (pminus (pval (vint x)) (pval (vint y))) h (enorm (vint (x - y)))
 
   | eval_pfun : forall h x e env,
     bigstep env h (pfun x e) h (enorm (vfun x e))
@@ -2095,17 +2203,17 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
   | eval_app_fun : forall v1 v2 h x e r env,
     v1 = vfun x e ->
     bigstep env h (subst x v2 e) h r ->
-    bigstep env h (papp (pval v1) v2) h r
+    bigstep env h (papp (pval v1) (pval v2)) h r
 
   | eval_app_fix : forall v1 v2 h x e r fn env,
     v1 = vfix fn x e ->
     bigstep env h (subst x v2 (subst fn v1 e)) h r ->
-    bigstep env h (papp (pval v1) v2) h r
+    bigstep env h (papp (pval v1) (pval v2)) h r
 
   | eval_app_unk : forall va h r f fn env,
     Fmap.read env fn = Some f ->
     bigstep env h (f va) h r ->
-    bigstep env h (papp (pvar fn) va) h r
+    bigstep env h (papp (pvar fn) (pval va)) h r
 
   | eval_pif_true : forall h1 h2 r e1 e2 env,
     bigstep env h1 e1 h2 r ->
@@ -2172,15 +2280,15 @@ Inductive forward : expr -> flow -> Prop :=
   | fw_app_fun: forall vf x e va f,
     vf = vfun x e ->
     forward (subst x va e) f ->
-    forward (papp (pval vf) va) f
+    forward (papp (pval vf) (pval va)) f
 
   | fw_app_fix: forall vf x e va f fn,
     vf = vfix fn x e ->
     forward (subst x va (subst fn vf e)) f ->
-    forward (papp (pval vf) va) f
+    forward (papp (pval vf) (pval va)) f
 
   | fw_app_unk: forall f va,
-    forward (papp (pvar f) va) (fex (fun r => unk f va r)).
+    forward (papp (pvar f) (pval va)) (fex (fun r => unk f va r)).
 
 
 Module Soundness.
@@ -2376,7 +2484,7 @@ Module Soundness.
   Lemma sem_papp_fun: forall vf x e va f,
     vf = vfun x e ->
     sem_tuple (subst x va e) f ->
-    sem_tuple (papp (pval vf) va) f.
+    sem_tuple (papp (pval vf) (pval va)) f.
   Proof.
     intros. subst.
     unfold sem_tuple. introv Hc Hb.
@@ -2391,7 +2499,7 @@ Module Soundness.
   Lemma sem_papp_fix: forall vf x e va f fn,
     vf = vfix fn x e ->
     sem_tuple (subst x va (subst fn vf e)) f ->
-    sem_tuple (papp (pval vf) va) f.
+    sem_tuple (papp (pval vf) (pval va)) f.
   Proof.
     intros. subst.
     unfold sem_tuple. introv Hc Hb.
@@ -2403,7 +2511,7 @@ Module Soundness.
   Qed.
 
   Lemma sem_papp_unk: forall f va,
-    sem_tuple (papp (pvar f) va) (fex (fun r => unk f va r)).
+    sem_tuple (papp (pvar f) (pval va)) (fex (fun r => unk f va r)).
   Proof.
     intros.
     unfold sem_tuple. introv Hc Hb.
@@ -2635,7 +2743,7 @@ Module HistoryTriples.
   Lemma hist_papp_fun: forall vf x e va f fh,
     vf = vfun x e ->
     hist_triple fh (subst x va e) f ->
-    hist_triple fh (papp (pval vf) va) f.
+    hist_triple fh (papp (pval vf) (pval va)) f.
   Proof.
     intros. subst.
     unfold hist_triple. intros.
@@ -2649,7 +2757,7 @@ Module HistoryTriples.
   Lemma hist_papp_fix: forall vf x e va f fn fh,
     vf = vfix fn x e ->
     hist_triple fh (subst x va (subst fn vf e)) f ->
-    hist_triple fh (papp (pval vf) va) f.
+    hist_triple fh (papp (pval vf) (pval va)) f.
   Proof.
     intros. subst.
     unfold hist_triple. intros.
@@ -2661,7 +2769,8 @@ Module HistoryTriples.
   Qed.
 
   Lemma hist_papp_unk: forall f va fh,
-    hist_triple fh (papp (pvar f) va) (fh;; fex (fun r => unk f va r)).
+    hist_triple fh (papp (pvar f) (pval va))
+      (fh;; fex (fun r => unk f va r)).
   Proof.
     intros.
     applys hist_frame_sem fh (@sem_papp_unk f va).

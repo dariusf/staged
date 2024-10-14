@@ -6,13 +6,14 @@ From SLF Require LibSepSimpl.
 
 Module Type Params.
 
-Parameter val : Type.
+Parameter value : Type.
 
 End Params.
 
 
 Module HeapSetup (V : Params).
 Import V.
+Local Notation val := V.value.
 Set Implicit Arguments.
 
 Definition loc : Type := nat.
