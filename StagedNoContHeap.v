@@ -66,7 +66,7 @@ Definition empty_heap : heap := Fmap.empty.
 
 Definition precond := hprop.
 Definition postcond := val -> hprop.
-Definition state := hprop.
+Definition state := Prop.
 
 Inductive result : Type :=
 | top : result
@@ -100,38 +100,46 @@ Definition empty_env : env := Fmap.empty.
 - the definition of [req], whose variance has been fixed
 
 An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
-Inductive satisfies (e : env) : state -> state -> val -> flow -> Prop :=
+Inductive satisfies (e : env) (h h' : heap) (S S' : state) : val -> flow -> Prop :=
 (* req P *)
-| s_req (S S' : state) (P : precond) :
-  (S \* P ==> S') ->
-  satisfies e S S' vunit (req P)
+| s_req (v : val) (P : precond) :
+  (S -> (forall (hp : heap),
+            Fmap.union hp h' = h ->
+            Fmap.disjoint hp h' ->
+            P hp ->
+            S')) ->
+  satisfies e h h' S S' v (req P)
 (* ens Q *)
-| s_ens (S S' : state) (v : val) (Q : postcond) :
-  (S ==> Q v) ->
-  (S ==> S') ->
-  satisfies e S S' v (ens Q)
+| s_ens (v : val) (Q : postcond) :
+  (S -> (exists (hq : heap),
+            Fmap.union hq h = h'
+            /\ Fmap.disjoint hq h
+            /\ Q v hq
+            /\ S')) ->
+  satisfies e h h' S S' v (ens Q)
 (* F1 ; F2 *)
-| s_seq (S0 S1 S2 : state) (v1 v2 : val) (F1 F2 : flow) :
-  satisfies e S0 S1 v1 F1 ->
-  satisfies e S1 S2 v2 F2 ->
-  satisfies e S0 S2 v2 (seq F1 F2)
+| s_seq (h1 : heap) (S1 : state) (v1 v : val) (F1 F2 : flow) :
+  satisfies e h h1 S S1 v1 F1 ->
+  satisfies e h1 h' S1 S' v F2 ->
+  satisfies e h h' S S' v (seq F1 F2)
 (* F1 \/ F2 when F1 *)
-| s_disj_l (S S' : state) (v : val) (F1 F2 : flow) :
-  satisfies e S S' v F1 ->
-  satisfies e S S' v (disj F1 F2)
+| s_disj_l (v : val) (F1 F2 : flow) :
+  satisfies e h h' S S' v F1 ->
+  satisfies e h h' S S' v (disj F1 F2)
 (* F1 \/ F2 when F2 *)
-| s_disj_r (S S' : state) (v : val) (F1 F2 : flow) :
-  satisfies e S S' v F2 ->
-  satisfies e S S' v (disj F1 F2)
+| s_disj_r (v : val) (F1 F2 : flow) :
+  satisfies e h h' S S' v F2 ->
+  satisfies e h h' S S' v (disj F1 F2)
 (* ex a, FA *)
-| s_fex (S S' : state) (v : val) (A : Type) (FA : A -> flow) :
-  (exists a, satisfies e S S' v (FA a)) ->
-  satisfies e S S' v (fex A FA)
+| s_fex (v : val) (A : Type) (FA : A -> flow) :
+  (exists a, satisfies e h h' S S' v (FA a)) ->
+  satisfies e h h' S S' v (fex A FA)
 (* all a, FA *)
-| s_fall (S S' : state) (v : val) (A : Type) (FA : A -> flow) :
-  (forall a, satisfies e S S' v (FA a)) ->
-  satisfies e S S' v (fall A FA).
+| s_fall (v : val) (A : Type) (FA : A -> flow) :
+  (forall a, satisfies e h h' S S' v (FA a)) ->
+  satisfies e h h' S S' v (fall A FA).
 
+(*
 Module Example.
 
   Goal exists S', satisfies empty_env \[True]  S' (vint 1) (fex Z (fun x => seq (req \[x = 1]) (ens (fun r => \[r = vint x])))).
@@ -144,7 +152,6 @@ Module Example.
       + apply himpl_refl.
   Abort.
 
-  (*
   Goal exists S', satisfies empty_env True S' (vint 1) (fex Z (fun x => seq (req (x <> 1)) (ens (fun r => r = vint x)))).
     eexists.
     eapply s_fex. exists 1.
@@ -152,7 +159,6 @@ Module Example.
     - eapply s_req. intro H. exact H.
     - eapply s_ens. tauto.
   Qed.
-   *)
 
   Goal exists S', satisfies empty_env \[True] S' (vint 1) (fall Z (fun x => seq (req \[x = 1]) (ens (fun r => \[r = vint x])))).
     eexists.
@@ -164,7 +170,6 @@ Module Example.
       + apply himpl_refl.
   Admitted.
 
-  (*
   Goal exists S', satisfies empty_env True S' (vint 1) (fall Z (fun x => seq (req (x = 2)) (ens (fun r => r = vint x)))).
     (* should fail *)
     eexists. eapply s_fall. intros a.
@@ -184,66 +189,59 @@ Module Example.
                      (Q -> Q1) ->
                      env, S, S', err |=  req P ; ens Q ->
          env, S, S', err |= req P1 ; ens Q1
-   *)
-
-
 End Example.
+*)
 
 Lemma satisfies_req :
   forall (e : env)
+         (h h' : heap)
          (S S' : state)
          (v : val)
          (P1 P2 : precond),
     (P2 ==> P1) ->
-    satisfies e S S' v (req P1) ->
-    satisfies e S S' v (req P2).
+    satisfies e h h' S S' v (req P1) ->
+    satisfies e h h' S S' v (req P2).
 Proof.
-  intros e S S' v P1 P2 H_impl H_sat.
-  inverts H_sat as H_sat.
-  constructor.
-  Search (_ \* _ ==> _).
-  Check (himpl_hstar_trans_r H_impl H_sat).
-  exact (himpl_hstar_trans_r H_impl H_sat).
+  unfold "==>".
+  intros. inverts H0.
+  constructor. eauto.
 Qed.
 
 Lemma satisfies_ens :
   forall (e : env)
+         (h h' : heap)
          (S S' : state)
          (v : val)
          (Q1 Q2 : postcond),
     (Q1 ===> Q2) ->
-    satisfies e S S' v (ens Q1) ->
-    satisfies e S S' v (ens Q2).
+    satisfies e h h' S S' v (ens Q1) ->
+    satisfies e h h' S S' v (ens Q2).
 Proof.
-  intros e S S' v Q1 Q2 H_impl H_sat.
-  inverts H_sat as H_sat H_S.
-  specialize (H_impl v).
-  constructor.
-  - Search (_ ==> _ -> _ ==> _ -> _).
-    Check (himpl_trans H_sat H_impl).
-    exact (himpl_trans H_sat H_impl).
-  - exact H_S.
+  unfold "===>".
+  unfold "==>".
+  intros. inverts H0.
+  constructor. intros.
+  destruct (H3 H0) as [hq ?].
+  exists hq. intuition.
 Qed.
 
 (** * Entailment *)
 (** This is defined directly in terms of the semantics, in contrast to the paper's syntactic definition. *)
 
-Definition entails_under (e : env) (S S' : state) (v : val) (F1 F2 : flow) : Prop :=
-  satisfies e S S' v F1 -> satisfies e S S' v F2.
+Definition entails_under (e : env) (h h' : heap) (S S' : state) (v : val) (F1 F2 : flow) : Prop :=
+  satisfies e h h' S S' v F1 -> satisfies e h h' S S' v F2.
 
 Definition entails (F1 F2 : flow) : Prop :=
   forall (e : env)
+         (h h' : heap)
          (S S' : state)
          (v : val),
-    entails_under e S S' v F1 F2.
+    entails_under e h h' S S' v F1 F2.
 
 Definition bientails (F1 F2 : flow) : Prop :=
   entails F1 F2 /\ entails F2 F1.
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
-
-(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-(* Check (forall f1 f2 f3, f1 ;; f3 ⊑ f2). *)
 
 (** * Inversion/introduction lemmas *)
 (*
@@ -400,27 +398,16 @@ Qed. *)
 (** seq is associative *)
 Lemma seq_assoc :
   forall (e : env)
+         (h h' : heap)
          (S S' : state)
          (v : val)
          (F1 F2 F3 : flow),
-    satisfies e S S' v (seq F1 (seq F2 F3)) <-> satisfies e S S' v (seq (seq F1 F2) F3).
+    satisfies e h h' S S' v (seq F1 (seq F2 F3)) <-> satisfies e h h' S S' v (seq (seq F1 F2) F3).
 Proof.
-  intros e S S' v F1 F2 F3.
-  split; intros H.
-  { inverts H as H_1 H_23.
-    inverts H_23 as H_2 H_3.
-    eapply s_seq.
-    eapply s_seq.
-    - exact H_1.
-    - exact H_2.
-    - exact H_3. }
-  { inverts H as H_12 H_3.
-    inverts H_12 as H_1 H_2.
-    eapply s_seq.
-    2: eapply s_seq.
-    - exact H_1.
-    - exact H_2.
-    - exact H_3. }
+  intros.
+  split; intros.
+  { inverts H. inverts H4. eauto using s_seq. }
+  { inverts H. inverts H3. eauto using s_seq. }
 Qed.
 
 Lemma ent_ens_seq :
@@ -430,13 +417,12 @@ Lemma ent_ens_seq :
     entails F1 F2 ->
     entails (seq (ens Q1) F1) (seq (ens Q2) F2).
 Proof.
-  unfold entails in *.
-  unfold entails_under in *.
-  intros Q1 Q2 F1 F2 H_impl H_ent e S S' v H_sat.
-  inverts H_sat as H_Q1 H_F1.
+  unfold entails.
+  unfold entails_under.
+  intros. inverts H1.
   eapply s_seq.
-  - eapply satisfies_ens. exact H_impl. exact H_Q1.
-  - eapply H_ent. exact H_F1.
+  - eapply satisfies_ens. exact H. exact H5.
+  - apply H0. exact H6.
 Qed.
 
 Lemma ent_req_seq :
@@ -446,35 +432,44 @@ Lemma ent_req_seq :
     entails F1 F2 ->
     entails (seq (req P1) F1) (seq (req P2) F2).
 Proof.
-  unfold entails in *.
-  unfold entails_under in *.
-  intros P1 P2 F1 F2 H_impl H_ent e S S' v H_sat.
-  inverts H_sat as H_P1 H_F1.
+  unfold entails.
+  unfold entails_under.
+  intros. inverts H1.
   eapply s_seq.
-  - eapply satisfies_req. exact H_impl. exact H_P1.
-  - eapply H_ent. exact H_F1.
+  - eapply satisfies_req; eauto.
+  - eauto.
 Qed.
+
+Lemma norm_req_req_combine :
+  forall P1 P2,
+    entails (seq (req P1) (req P2)) (req (P1 \* P2)).
+Proof.
+  unfold entails.
+  unfold entails_under.
+  intros.
+  inverts H.
+  inverts H3.
+  inverts H4.
+  constructor. intros.
+  admit.
+Admitted.
+
+Lemma norm_req_req_split :
+  forall P1 P2,
+    entails (req (P1 \* P2)) (seq (req P1) (req P2)).
+Proof.
+  admit.
+Admitted.
 
 Lemma norm_req_req :
   forall P1 P2,
     bientails (req (P1 \* P2)) (seq (req P1) (req P2)).
 Proof.
   unfold bientails.
-  unfold entails.
-  unfold entails_under.
-  intros P1 P2.
-  split.
-  - intros e S S' v H_sat.
-    inverts H_sat as H_sat.
-    eapply s_seq.
-    + eapply s_req. apply himpl_refl.
-    + eapply s_req. rewrite hstar_assoc. exact H_sat.
-  - intros e S S' v H_sat.
-    inverts H_sat as H_P1 H_P2.
-    inverts H_P1 as H_P1.
-    inverts H_P2 as H_P2.
-    eapply s_req. admit. (* provable *)
-Admitted.
+  intros. split.
+  - apply norm_req_req_split.
+  - apply norm_req_req_combine.
+Qed.
 
 (** Reassociating req *)
 (* Lemma satisfies_reassoc : forall H f env h1 h2 r,
