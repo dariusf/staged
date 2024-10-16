@@ -1688,8 +1688,7 @@ Lemma ent_seq_unk : forall fn fn1 f1 f2 env x r,
   entails_under env (unk fn x r;; f1) f2.
 Proof.
   intros.
-  rewrites (>> norm_unk env0).
-  apply H.
+  rewrites (>> norm_unk env0); [ apply H | ].
   assumption.
 Qed.
 
@@ -1750,8 +1749,7 @@ Lemma ent_ex_r : forall f A (fctx:A -> flow) env,
 Proof.
   unfold entails_under. intros.
   destr H.
-  constructor.
-  exists x.
+  constructor. exists x.
   auto.
 Qed.
 
@@ -1780,15 +1778,15 @@ Qed.
 
 (** * High-level tactics *)
 Ltac funfold_hyp H env f :=
-  rewrite (@norm_unk env _ _ f) in H; [ | unfold env; resolve_fn_in_env ]; simpl.
+  rewrites (>> norm_unk env f) in H; [ unfold env; resolve_fn_in_env | ].
 
 Ltac funfold_ env f :=
-  rewrites (>> norm_unk env f); [ unfold env; resolve_fn_in_env | ]; simpl.
+  rewrites (>> norm_unk env f); [ unfold env; resolve_fn_in_env | ].
 
 Tactic Notation "funfold" constr(env) constr(f) := funfold_ env f.
-Tactic Notation "funfold" constr(env) constr(f) "in" constr(H) := funfold_ H env f.
+Tactic Notation "funfold" constr(env) constr(f) "in" constr(H) := funfold_hyp H env f.
 
-Ltac solve_entailment_step :=
+Ltac ent_step :=
   match goal with
 
   (* assume things on the left side *)
@@ -1818,7 +1816,7 @@ Ltac solve_entailment_step :=
   (* if there is no IH, try to resolve from the environment *)
   | |- entails_under ?env (unk ?f _ _) _ =>
     (* rewrite (@norm_unk env); [ | unfold env; resolve_fn_in_env ]; simpl *)
-    funfold env f
+    funfold env f; simpl
 
   (* try to work on the right side *)
   | |- entails_under _ _ (fex (fun _ => _)) =>
@@ -1843,7 +1841,7 @@ Ltac solve_entailment_step :=
     end.
 
   Ltac solve_entailment :=
-    repeat solve_entailment_step.
+    repeat ent_step.
 
 
 (** * Examples *)
@@ -1923,8 +1921,7 @@ Module Examples.
     intros.
     rewrite norm_empty_l in H.
     inverts H as H. specializes H v1.
-    rewrite (@norm_unk f4_env) in H.
-    2: { unfold f4_env. resolve_fn_in_env. }
+    funfold f4_env "f" in H.
     simpl in H.
     apply ens_void_pure_inv in H.
     intuition.
@@ -2175,7 +2172,7 @@ Module Examples.
     clear Hr. clear Hf.
 
     (* this is quite inconvenient compared to rewriting, however *)
-    rewrites (>> norm_unk e6_env) in H. { unfold e6_env; resolve_fn_in_env. } simpl in H.
+    funfold e6_env "f" in H. simpl in H.
     clear G.
 
     (* reassociate *)
@@ -2272,10 +2269,7 @@ Module Examples.
     { fdestr H1 as (n1&H1).
       apply seq_ens_void_pure_inv in H1. destruct H1 as ((?&?)&H1).
       fdestr H1 as (r1&H1).
-
-      rewrites (>> norm_unk sum_env) in H1.
-      { unfold sum_env; resolve_fn_in_env. }
-
+      funfold sum_env "sum" in H1.
       specialize (IH (n1-1)).
       forward IH. assert (n1 = n). congruence. unfold downto. math.
       specialize (IH (vint (n1-1)) (vint r1)).
@@ -2344,16 +2338,19 @@ Module Examples.
          (Fmap.single "foldr" (Some foldr))
          "f" (Some uncurried_plus_spec).
 
-    Lemma foldr_sum: forall xs res,
+    (** A re-summarization lemma *)
+    Definition foldr_sum := forall xs res,
       entails_under foldr_env
         (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
         (fex (fun r => ens_ \[res = vint r /\ r = sum (to_int_list xs)])).
+
+    (** Reasoning semantically *)
+    Lemma foldr_sum_semantic:
+      foldr_sum.
     Proof.
-      dup.
       { intros xs. induction_wf IH: list_sub xs. intros.
         unfold entails_under. introv H.
-        rewrite norm_unk in H. 2: { unfold foldr_env; resolve_fn_in_env. }
-        simpl in H.
+        funfold foldr_env "foldr" in H. simpl in H.
         inverts H.
         { (* base case *)
           fdestr H5.
@@ -2376,21 +2373,22 @@ Module Examples.
           fdestr H0.
 
           (* reason about f *)
-          rewrite norm_unk in Hf. 2: { unfold foldr_env. resolve_fn_in_env. }
+          funfold foldr_env "f" in Hf.
 
-          (* apply ens_void_pure_inv in H1. destr H1. *)
-          unfold uncurried_plus_spec in Hf. subst r0.
+          simpl in Hf. subst r0.
           fdestr Hf.
 
           fexists (x + v).
           subst. fintro.
           intuition. } }
+    Qed.
 
-      (* alternative proof using entailment rules *)
-      dup.
+    (** Proof using entailment rules *)
+    Lemma foldr_sum_entailment:
+      foldr_sum.
+    Proof.
       { intros xs. induction_wf IH: list_sub xs. intros.
-        rewrite norm_unk. 2: { unfold foldr_env; resolve_fn_in_env. }
-        simpl.
+        funfold foldr_env "foldr"; simpl.
         apply ent_disj_left.
 
         { apply ent_ex_r. exists 0.
@@ -2403,19 +2401,23 @@ Module Examples.
           apply ent_seq_ens_l. intros H.
           (* specialize (IH l1). forward IH. rewrite H. auto. *)
           rewrite IH; [ | subst; auto ].
-          rewrite (@norm_unk foldr_env).
-          2: { unfold foldr_env. resolve_fn_in_env. }
+          funfold foldr_env "f".
           apply ent_seq_ex_l. intros r0.
           apply ent_seq_ens_l. intros (?&?). subst r.
           simpl.
           apply ent_ex_r. exists (x + r0).
           apply ent_ens_single.
           subst. intuition. } }
+    Qed.
 
-      (* alternative automated proof *)
-      { intros xs. induction_wf IH: list_sub xs. intros.
-        funfold foldr_env "foldr".
-        solve_entailment. }
+    (* Automated proof *)
+    Lemma foldr_sum_auto:
+      foldr_sum.
+    Proof.
+      intros xs. induction_wf IH: list_sub xs. intros.
+      funfold foldr_env "foldr".
+      simpl.
+      solve_entailment.
     Qed.
   End foldr.
 
