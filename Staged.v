@@ -1,4 +1,4 @@
-(** A formalization of #<a href="https://dl.acm.org/doi/10.1007/978-3-031-71162-6_26">Staged Specification Logic for Verifying Higher-Order Imperative Programs</a># (FM 2024). *)
+(** A minimal, reference formalization of #<a href="https://dl.acm.org/doi/10.1007/978-3-031-71162-6_26">Staged Specification Logic for Verifying Higher-Order Imperative Programs</a># (FM 2024). *)
 From Coq Require Import Classes.RelationClasses.
 From Coq Require Morphisms Program.Basics.
 
@@ -214,14 +214,18 @@ Definition has_no_result f :=
   forall env h1 h2 r, satisfies env h1 h2 r f -> r = norm vunit.
 
 (** * Entailment *)
-(** This is defined directly in terms of the semantics, in contrast to the paper's syntactic definition. *)
-(* TODO the paper's definition should later be implemented as an Inductive here and proved sound with respect to the lemmas we can write using this semantic definition *)
+(** This sequent is useful for (interactive) proofs involving functions. *)
 Definition entails_under env f1 f2 :=
   forall h1 h2 r,
     satisfies env h1 h2 r f1 -> satisfies env h1 h2 r f2.
 
+(** General entailments which work for arbitrary environments. *)
 Definition entails (f1 f2:flow) : Prop :=
   forall env h1 h2 r, satisfies env h1 h2 r f1 -> satisfies env h1 h2 r f2.
+
+Definition bientails (f1 f2:flow) : Prop :=
+  forall h1 h2 r env,
+    satisfies env h1 h2 r f1 <-> satisfies env h1 h2 r f2.
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
@@ -231,12 +235,7 @@ Notation "env '⊢' f1 '⊑' f2" :=
 (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 (* Check (forall f1 f2 f3, f1 ;; f3 ⊑ f2). *)
 
-Definition bientails (f1 f2:flow) : Prop :=
-  forall h1 h2 r env,
-    satisfies env h1 h2 r f1 <-> satisfies env h1 h2 r f2.
-
 (** * Rewriting *)
-
 Instance entails_refl : Reflexive entails.
 Proof.
   unfold Reflexive, entails.
@@ -673,7 +672,7 @@ Proof.
   applys ens_void_inv H0.
 Qed.
 
-(** * Tactics for reasoning about entailments *)
+(** * Tactics for simple introduction/inversion *)
 
 Ltac finv H :=
   match type of H with
@@ -720,7 +719,7 @@ Ltac fdestr_pat H pat :=
   | satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_inv in H; destruct H as pat
   end.
 
-(* Use these on product-like things like sequencing, existentials, and ens *)
+(** Use these on product-like things like sequencing, existentials, and ens *)
 Tactic Notation "fdestr" constr(H) := fdestr_rec H.
 Tactic Notation "fdestr" constr(H) "as" simple_intropattern(pat) := fdestr_pat H pat.
 
@@ -744,7 +743,7 @@ Ltac resolve_fn_in_env :=
   (* | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g *)
   end.
 
-(** * (Unconditional) entailment and normalization rules *)
+(** * Entailment and normalization rules *)
 (** Covariance of ens *)
 Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
   (forall v, Q1 v ==> Q2 v) ->
@@ -815,6 +814,16 @@ Proof.
   unfold entails.
   intros.
   applys* satisfies_req H1.
+Qed.
+
+Lemma disj_comm : forall env h1 h2 r f1 f2,
+  satisfies env h1 h2 r (disj f2 f1) ->
+  satisfies env h1 h2 r (disj f1 f2).
+Proof.
+  intros.
+  inverts H as H.
+  apply s_disj_r. assumption.
+  apply s_disj_l. assumption.
 Qed.
 
 (** seq is associative *)
@@ -951,7 +960,7 @@ Proof.
   rew_fmap *.
 Qed.
 
-(* The converse is not true as the result would change *)
+(** The converse is not true as the result would change *)
 Lemma norm_seq_ens_empty : forall f,
   entails (ens_ \[];; f) f.
 Proof.
@@ -1256,41 +1265,72 @@ Proof.
   apply satisfies_ens_sep_split.
 Qed.
 
-(** * Tactics for unconditional [entails] and [satisfies] *)
-(* These tactics don't really help simplify proofs because the directions of inverting/introing ens/req are flipped, making it confusing whether a heap is provided or named *)
-Ltac intro_req hp hr :=
-  match goal with
-  | |- satisfies _ _ _ _ (req _ _) => constructor; intros hp hr; intros
-  end.
+(** Rule EntEns from the paper *)
+Lemma entails_ens_seq : forall H1 H2 f1 f2,
+  H1 ==> H2 ->
+  entails f1 f2 ->
+  entails (ens_ H1;; f1) (ens_ H2;; f2).
+Proof.
+  unfold entails.
+  intros.
+  inverts H3 as H3. destr H3.
+  apply (satisfies_ens_void H) in H4.
+  constructor. exists h3. exists r1.
+  intuition.
+Qed.
 
-Ltac inv_req H hp hr :=
-  match type of H with
-  | satisfies _ _ _ _ (req _ _) =>
-    let H1 := fresh "H" in
-    inverts H as H1; specializes H1 hp hr ___
-  end.
+(** Rule EntReq from the paper *)
+Lemma entails_req_seq : forall H1 H2 f1 f2,
+  H2 ==> H1 ->
+  entails f1 f2 ->
+  entails (req H1 f1) (req H2 f2).
+Proof.
+  unfold entails.
+  intros.
+  constructor. intros hH2 h3. intros.
+  inverts H3 as H3. specializes H3 hH2 h3.
+Qed.
 
-Ltac intro_seq a b :=
-  match goal with
-  | |- satisfies _ _ _ _ (_;; _) =>
-    constructor; exists a; exists b
-  end.
+(** Rule DisjLeft from the paper *)
+Lemma entails_disj_left : forall f1 f2 f3,
+  entails f1 f3 ->
+  entails f2 f3 ->
+  entails (disj f1 f2) f3.
+Proof.
+  unfold entails.
+  intros.
+  inverts H1 as H1; auto.
+Qed.
 
-Ltac inv_seq H h :=
-  match type of H with
-  | satisfies _ _ _ _ (_ ;; _) =>
-    let H1 := fresh "H" in
-    let r := fresh "r" in
-    inverts H as H1; destruct H1 as (h&r&?&?)
-  end.
+(** Half of DisjRight from the paper *)
+Lemma entails_disj_right_l : forall f1 f2 f3,
+  entails f3 f1 ->
+  entails f3 (disj f1 f2).
+Proof.
+  unfold entails.
+  intros.
+  apply s_disj_l.
+  auto.
+Qed.
 
-Ltac inv_ens H h :=
-  match type of H with
-  | satisfies _ _ _ _ (ens_ _) =>
-    let H1 := fresh "H" in
-    let v := fresh "v" in
-    inverts H as H1; destruct H1 as (v&h&?&?&?&?)
-  end.
+(** The other half of DisjRight from the paper *)
+Lemma entails_disj_right_r : forall f1 f2 f3,
+  entails f3 f2 ->
+  entails f3 (disj f1 f2).
+Proof.
+  unfold entails.
+  intros.
+  apply s_disj_r.
+  auto.
+Qed.
+
+(** EntFunc *)
+Lemma entails_func : forall f x r,
+  entails (unk f x r) (unk f x r).
+Proof.
+  intros.
+  apply entails_refl.
+Qed.
 
 (** * Biabduction *)
 (** Simplified definition following #<a href="http://www0.cs.ucl.ac.uk/staff/p.ohearn/papers/popl09.pdf">Compositional Shape Analysis by means of Bi-Abduction</a># (Fig 1). *)
@@ -1562,84 +1602,7 @@ Module BiabductionExamples.
 
 End BiabductionExamples.
 
-(** * Entailment sequent *)
-(** Rule EntEns from the paper *)
-Lemma entails_ens_seq : forall H1 H2 f1 f2,
-  H1 ==> H2 ->
-  entails f1 f2 ->
-  entails (ens_ H1;; f1) (ens_ H2;; f2).
-Proof.
-  unfold entails.
-  intros.
-  inverts H3 as H3. destr H3.
-  apply (satisfies_ens_void H) in H4.
-  constructor. exists h3. exists r1.
-  intuition.
-Qed.
-
-(** Rule EntReq from the paper *)
-Lemma entails_req_seq : forall H1 H2 f1 f2,
-  H2 ==> H1 ->
-  entails f1 f2 ->
-  entails (req H1 f1) (req H2 f2).
-Proof.
-  unfold entails.
-  intros.
-  constructor. intros hH2 h3. intros.
-  inverts H3 as H3. specializes H3 hH2 h3.
-Qed.
-
-(** Rule DisjLeft from the paper *)
-Lemma entails_disj_left : forall f1 f2 f3,
-  entails f1 f3 ->
-  entails f2 f3 ->
-  entails (disj f1 f2) f3.
-Proof.
-  unfold entails.
-  intros.
-  inverts H1 as H1; auto.
-Qed.
-
-(** Half of DisjRight from the paper *)
-Lemma entails_disj_right_l : forall f1 f2 f3,
-  entails f3 f1 ->
-  entails f3 (disj f1 f2).
-Proof.
-  unfold entails.
-  intros.
-  apply s_disj_l.
-  auto.
-Qed.
-
-(** The other half of DisjRight from the paper *)
-Lemma entails_disj_right_r : forall f1 f2 f3,
-  entails f3 f2 ->
-  entails f3 (disj f1 f2).
-Proof.
-  unfold entails.
-  intros.
-  apply s_disj_r.
-  auto.
-Qed.
-
-Lemma disj_comm : forall env h1 h2 r f1 f2,
-  satisfies env h1 h2 r (disj f2 f1) ->
-  satisfies env h1 h2 r (disj f1 f2).
-Proof.
-  intros.
-  inverts H as H.
-  apply s_disj_r. assumption.
-  apply s_disj_l. assumption.
-Qed.
-
-(** EntFunc *)
-Lemma entails_func : forall f x r,
-  entails (unk f x r) (unk f x r).
-Proof.
-  intros.
-  apply entails_refl.
-Qed.
-
+(** * Lemmas about entailment sequents *)
 Lemma ent_ens_l : forall env f P,
   (P -> entails_under env empty f) ->
   entails_under env (ens_ \[P]) f.
@@ -2993,7 +2956,7 @@ End ForwardExamples.
 - The definition of [req] is different, restoring its contravariance
 *)
 (** ** Section 3.2. Compaction *)
-(** Compaction is really just #<a href="&num;entailment">entailment</a>#, so soundness (Theorem 1) is ensured by construction. *)
+(** Compaction is really just #<a href="&num;entails">entailment</a>#, so soundness (Theorem 1) is ensured by construction. *)
 (** The six rules in Fig 7:
 - #<a href="&num;norm_ens_false_l">norm_ens_false_l</a>#
 - #<a href="&num;norm_empty_l">norm_empty_l</a>#
@@ -3001,6 +2964,7 @@ End ForwardExamples.
 - #<a href="&num;norm_req_req">norm_req_req</a>#
 - #<a href="&num;norm_ens_ens_void_l">norm_ens_ens_void_l</a>#
 - #<a href="&num;norm_ens_req_transpose">norm_ens_req_transpose</a># *)
+(** A definition of #<a href="&num;biabduction">biabduction</a># is given and proved sound with respect to heap entailment. *)
 (** ** Section 4. Forward rules *)
 (** The reasoning rules for programs are first presented as a more primitive relation #<a href="&num;forward">forward</a># between programs and staged formulae, without history. The validity of these rules for each program construct is defined as a collection of #<i>semantic tuples</i># #<a href="&num;sem_tuple">sem_tuple</a># (analogous to semantic triples), and soundness (Theorem 2) is #<a href="&num;soundness">explicitly proved</a>#, under a new #<a href="&num;env_compatible">env_compatible</a># condition. *)
 (** #<a href="&num;hist_triple"><i>History triples</i></a># (Fig 8) are then defined. Many of the resulting rules can be derived from semantic tuples using the structural #<i>history-frame rule</i># #<a href="&num;hist_frame">hist_frame</a>#. History triples are also defined semantically and are hence sound by construction. *)
@@ -3010,7 +2974,7 @@ End ForwardExamples.
 - The #<a href="&num;sem_plet">let</a># rule substitutes (a symbolic value) into the program, instead of quantifying free variables
 - The value of the location that #<a href="&num;sem_pderef">deref</a># retrieves is universally quantified, to match the new definition for [req] *)
 (** ** Section 5. Entailment *)
-(** #<a href="&num;entailment">Entailment</a># is defined semantically, so soundness (Theorem 3) is ensured by construction. *)
+(** #<a href="&num;entails">Entailment</a># is defined semantically, so soundness (Theorem 3) is ensured by construction. *)
 (** The two entailment rules in the main paper
 - #<a href="&num;entails_ens_seq">entails_ens_seq</a>#
 - #<a href="&num;entails_req_seq">entails_req_seq</a># *)
@@ -3020,6 +2984,7 @@ End ForwardExamples.
 - #<a href="&num;entails_disj_right_r">entails_disj_right_r</a>#
 - #<a href="&num;entails_disj_left">entails_disj_left</a># *)
 (** are shown to be sound. The separation logic rules are the standard ones from SLF. *)
+(** In practice, entailment proofs of interesting (higher-order/recursive) programs involve giving unknown functions specific interpretations using an environment. They will thus involve the #<a href="&num;entails_under">entails_under</a># sequent and use lemmas with the [ent_] prefix instead. *)
 (** ** Appendix D. Intersection *)
 (** This section is really about the completeness of biabduction. The main paper elides the case where two locations may not be known to be equal. A more complete definition is given as b_pts_diff/#<a href="&num;b_pts_diff_single">b_pts_diff_single</a>#, which works even without a known disquality between [x] and [y]. *)
 (** Intersection (conjunction lifted to staged formulae) is an orthogonal concern. The example from the paper is proved correct using it in #<a href="&num;ex3_intersection">ex3_intersection</a>#. *)
