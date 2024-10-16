@@ -60,8 +60,11 @@ function buildTOC() {
 function buildLemmaIndex() {
   let index = document.createElement("div");
 
+  const contains = ["Definition", "Inductive", "Example", "Lemma", "Theorem"]
+    .map((a) => `contains(text(), '${a}')`)
+    .join(" or ");
   let lemmas = nodesWithTextAndClass(
-    `//*[(contains(text(), 'Definition') or contains(text(), 'Inductive') or contains(text(), 'Lemma') or contains(text(), 'Theorem')) and contains(@class, 'kwd')]`
+    `//*[(${contains}) and contains(@class, 'kwd')]`
   );
 
   const list = document.createElement("ul");
