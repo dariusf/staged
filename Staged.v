@@ -122,13 +122,16 @@ Definition empty_env : env := Fmap.empty.
 Declare Scope flow_scope.
 Open Scope flow_scope.
 
-Infix ";;" := seq (at level 80, right associativity) : flow_scope.
+Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 
 Notation "'∃' x1 .. xn , H" :=
   (fex (fun x1 => .. (fex (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
    format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'",
    only printing) : flow_scope.
+
+(* Check (fex (fun x => ens_ \[x = vint 1];; empty)). *)
+(* Check (fex (fun x => ens_ \[x = vint 1]);; empty). *)
 
 Notation "'∀' x1 .. xn , H" :=
   (fall (fun x1 => .. (fall (fun xn => H)) ..))
@@ -399,6 +402,42 @@ Section Proprium.
     inverts H0 as H0. destr H0.
     constructor.
     exists v.
+    apply H.
+    assumption.
+  Qed.
+
+  #[global]
+  Instance entails_entails_under : forall env,
+    Proper (flip entails ====> entails ====> impl) (entails_under env).
+  Proof.
+    unfold Proper, respectful, entails_under, entails, flip, impl.
+    intros.
+    eauto.
+  Qed.
+
+  (* For rewriting forwad in the goal *)
+  #[global]
+  Instance entails_entails_under_flip : forall env,
+    Proper (entails ====> flip entails ====> flip impl) (entails_under env).
+  Proof.
+    unfold Proper, respectful, entails_under, entails, flip, impl.
+    intros.
+    eauto.
+  Qed.
+
+  #[global]
+  Instance bientails_entails_under : forall env,
+    Proper (bientails ====> bientails ====> iff) (entails_under env).
+  Proof.
+    unfold Proper, respectful, entails_under, bientails, impl.
+    intros.
+    split; intros.
+    apply H0.
+    apply H1.
+    apply H.
+    assumption.
+    apply H0.
+    apply H1.
     apply H.
     assumption.
   Qed.
@@ -1716,6 +1755,29 @@ Proof.
   auto.
 Qed.
 
+Lemma ent_ex : forall A (fctx fctx1:A -> flow) env,
+  (forall x, entails_under env (fctx x) (fctx1 x)) ->
+  entails_under env (fex (fun x => fctx x)) (fex (fun y => fctx1 y)).
+Proof.
+  unfold entails_under. intros.
+  fdestr H0.
+  constructor. exists v.
+  auto.
+Qed.
+
+Lemma ent_seq_ex_reassoc : forall A f f1,
+  bientails (fex (fun (x:A) => f x);; f1) (fex (fun (x:A) => f x;; f1)).
+Proof.
+  intros. split; intros.
+  { fdestr H. fdestr H0.
+    constructor. exists v.
+    constructor. exists h3. exists r1. intuition. }
+  { fdestr H. fdestr H0.
+    constructor. exists h3. exists r1.
+    split.
+    constructor. exists v. assumption. assumption. }
+Qed.
+
 (* * * High-level tactics *)
 
 (** * Examples *)
@@ -2273,10 +2335,8 @@ Module Examples.
           apply ent_ex_l. intros r.
           apply ent_ex_l. intros l1.
           apply ent_seq_ens_l. intros H.
-
           specialize (IH l1). forward IH. rewrite H. auto.
           rewrite IH.
-
           rewrite (@norm_unk foldr_env).
           2: { unfold foldr_env. resolve_fn_in_env. }
           apply ent_seq_ex_l. intros r0.
