@@ -1778,7 +1778,73 @@ Proof.
     constructor. exists v. assumption. assumption. }
 Qed.
 
-(* * * High-level tactics *)
+(** * High-level tactics *)
+Ltac funfold_hyp H env f :=
+  rewrite (@norm_unk env _ _ f) in H; [ | unfold env; resolve_fn_in_env ]; simpl.
+
+Ltac funfold_ env f :=
+  rewrites (>> norm_unk env f); [ unfold env; resolve_fn_in_env | ]; simpl.
+
+Tactic Notation "funfold" constr(env) constr(f) := funfold_ env f.
+Tactic Notation "funfold" constr(env) constr(f) "in" constr(H) := funfold_ H env f.
+
+Ltac solve_entailment_step :=
+  match goal with
+
+  (* assume things on the left side *)
+  | |- entails_under _ (disj _ _) _ =>
+    simple apply ent_disj_left
+  | |- entails_under _ (fex (fun y => _)) _ =>
+    let x := fresh y in
+    simple apply ent_ex_l; intros x
+  | |- entails_under _ (fex (fun _ => _);; _) _ =>
+    rewrite ent_seq_ex_reassoc
+  | |- entails_under _ (ens_ \[_];; _) _ =>
+    let H := fresh "H" in
+    simple apply ent_seq_ens_l; intros H
+
+  (* if there is an IH, try to use it *)
+  | IH: context[entails_under ?env (unk _ _ _) _] |-
+    context[unk ?f _ _] =>
+
+    (* if it fails, try to resolve it from the environment *)
+    first [
+      (* TODO unfortunately this immediately tries the IH. we need to delay it until we've unfolded at least once *)
+        rewrite IH; [ | subst; auto ]
+      (* | rewrite (@norm_unk env); [ | unfold env; resolve_fn_in_env ]; simpl *)
+      (* | funfold env f *)
+    ]
+
+  (* if there is no IH, try to resolve from the environment *)
+  | |- entails_under ?env (unk ?f _ _) _ =>
+    (* rewrite (@norm_unk env); [ | unfold env; resolve_fn_in_env ]; simpl *)
+    funfold env f
+
+  (* try to work on the right side *)
+  | |- entails_under _ _ (fex (fun _ => _)) =>
+    simple apply ent_ex_r; eexists
+  | |- entails_under _ (ens_ \[_]) (ens_ \[_]) =>
+    simple apply ent_ens_single; subst; intuition
+
+    (* if all else fails, try basic tactics to hopefully get other steps to apply *)
+    | H: _ /\ _ |- _ =>
+      destruct H
+    | _: ?v = ?w |- _ =>
+      first [subst v | subst w]
+
+    (* after we've tried everything, try to solve *)
+    | |- _ = _ =>
+      (* simpl; simple apply eq_refl *)
+      (* https://coq.inria.fr/doc/master/refman/proofs/writing-proofs/proof-mode.html#coq:flag.Solve-Unification-Constraints *)
+      solve [solve_constraints; reflexivity]
+
+    (* always have a no-match so we can repeat this *)
+    | |- ?g => idtac "no match"; idtac g; fail
+    end.
+
+  Ltac solve_entailment :=
+    repeat solve_entailment_step.
+
 
 (** * Examples *)
 (** Examples of everything defined so far, which is enough for entailments to be defined and proved. *)
@@ -2290,38 +2356,38 @@ Module Examples.
         simpl in H.
         inverts H.
         { (* base case *)
-            fdestr H5.
-            fexists 0.
-            subst. fintro.
-            intuition. }
+          fdestr H5.
+          fexists 0.
+          subst. fintro.
+          intuition. }
         { (* rec *)
-            (* get at all the facts... *)
-            fdestr H5 as (x&H5).
-            fdestr H5 as (r0&H5).
-            fdestr H5 as (l1&H5).
-            fdestr H5 as (h3&r1&H1&H2).
-            fdestr H1.
-            (* apply induction hypothesis *)
-            specialize (IH l1). forward IH. rewrite H. auto.
-            rewrite IH in H2.
+          (* get at all the facts... *)
+          fdestr H5 as (x&H5).
+          fdestr H5 as (r0&H5).
+          fdestr H5 as (l1&H5).
+          fdestr H5 as (h3&r1&H1&H2).
+          fdestr H1.
+          (* apply induction hypothesis *)
+          specialize (IH l1). forward IH. rewrite H. auto.
+          rewrite IH in H2.
 
-            fdestr H2 as (h0&r2&H0&Hf).
-            fdestr H0 as (v&?H0).
-            fdestr H0.
+          fdestr H2 as (h0&r2&H0&Hf).
+          fdestr H0 as (v&?H0).
+          fdestr H0.
 
-            (* reason about f *)
-            rewrite norm_unk in Hf. 2: { unfold foldr_env. resolve_fn_in_env. }
+          (* reason about f *)
+          rewrite norm_unk in Hf. 2: { unfold foldr_env. resolve_fn_in_env. }
 
-            (* apply ens_void_pure_inv in H1. destr H1. *)
-            unfold uncurried_plus_spec in Hf. subst r0.
-            fdestr Hf.
+          (* apply ens_void_pure_inv in H1. destr H1. *)
+          unfold uncurried_plus_spec in Hf. subst r0.
+          fdestr Hf.
 
-            fexists (x + v).
-            subst. fintro.
-            intuition. } }
+          fexists (x + v).
+          subst. fintro.
+          intuition. } }
 
       (* alternative proof using entailment rules *)
-
+      dup.
       { intros xs. induction_wf IH: list_sub xs. intros.
         rewrite norm_unk. 2: { unfold foldr_env; resolve_fn_in_env. }
         simpl.
@@ -2335,8 +2401,8 @@ Module Examples.
           apply ent_ex_l. intros r.
           apply ent_ex_l. intros l1.
           apply ent_seq_ens_l. intros H.
-          specialize (IH l1). forward IH. rewrite H. auto.
-          rewrite IH.
+          (* specialize (IH l1). forward IH. rewrite H. auto. *)
+          rewrite IH; [ | subst; auto ].
           rewrite (@norm_unk foldr_env).
           2: { unfold foldr_env. resolve_fn_in_env. }
           apply ent_seq_ex_l. intros r0.
@@ -2345,6 +2411,11 @@ Module Examples.
           apply ent_ex_r. exists (x + r0).
           apply ent_ens_single.
           subst. intuition. } }
+
+      (* alternative automated proof *)
+      { intros xs. induction_wf IH: list_sub xs. intros.
+        funfold foldr_env "foldr".
+        solve_entailment. }
     Qed.
   End foldr.
 
