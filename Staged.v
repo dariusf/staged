@@ -5,7 +5,7 @@ From Coq Require Morphisms Program.Basics.
 From SLF Require LibSepFmap.
 Module Fmap := LibSepFmap.
 
-From SLF Require Export Extra Heap Tactics.
+From Staged Require Export Extra Heap Tactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
@@ -16,16 +16,16 @@ Set Implicit Arguments.
 
 (** * Programs *)
 (** The representation of programs and the use of substitution are mostly reused from SLF. *)
-Definition ident : Type := string.
-Definition ident_eq := String.string_dec.
+Definition var : Type := string.
+Definition var_eq := String.string_dec.
 
 Definition loc := nat.
 
 Inductive val :=
   | vunit : val
   | vint : Z -> val
-  | vfun : ident -> expr -> val
-  | vfix : ident -> ident -> expr -> val
+  | vfun : var -> expr -> val
+  | vfix : var -> var -> expr -> val
   | vloc : loc -> val
   | vtup : val -> val -> val
   | vstr : string -> val
@@ -33,11 +33,11 @@ Inductive val :=
   | vlist : list val -> val
 
 with expr : Type :=
-  | pvar (x: ident)
+  | pvar (x: var)
   | pval (v: val)
-  | plet (x: ident) (e1 e2: expr)
-  | pfix (f: ident) (x: ident) (e: expr)
-  | pfun (x: ident) (e: expr)
+  | plet (x: var) (e1 e2: expr)
+  | pfix (f: var) (x: var) (e: expr)
+  | pfun (x: var) (e: expr)
   | padd (x y: expr)
   | pfst (t: expr)
   | psnd (t: expr)
@@ -57,9 +57,9 @@ Proof.
   constructor.
 Qed.
 
-Fixpoint subst (y:ident) (w:val) (e:expr) : expr :=
+Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   let aux t := subst y w t in
-  let if_y_eq x t1 t2 := if ident_eq x y then t1 else t2 in
+  let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
   | padd x y => padd x y
@@ -101,7 +101,7 @@ Inductive flow :=
   | seq : flow -> flow -> flow
   | fex : forall A, (A -> flow) -> flow
   | fall : forall A, (A -> flow) -> flow
-  | unk : ident -> val -> val -> flow
+  | unk : var -> val -> val -> flow
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow.
 
@@ -115,7 +115,7 @@ Notation req_ H := (req H empty).
 
 (** Function environments, for interpreting unknown functions. [ufun] is a HOAS way of substituting into a staged formula, which otherwise doesn't support this due to the shallow embedding that [hprop] uses. *)
 Definition ufun := val -> val -> flow.
-Definition env := fmap ident (option ufun).
+Definition env := fmap var (option ufun).
 
 Definition empty_env : env := Fmap.empty.
 
@@ -1832,9 +1832,9 @@ Ltac ent_step :=
 
     (* after we've tried everything, try to solve *)
     | |- _ = _ =>
-      (* simpl; simple apply eq_refl *)
+      solve [simpl; simple apply eq_refl]
       (* https://coq.inria.fr/doc/master/refman/proofs/writing-proofs/proof-mode.html#coq:flag.Solve-Unification-Constraints *)
-      solve [solve_constraints; reflexivity]
+      (* solve [solve_constraints; reflexivity] *)
 
     (* always have a no-match so we can repeat this *)
     | |- ?g => idtac "no match"; idtac g; fail
@@ -1843,592 +1843,12 @@ Ltac ent_step :=
   Ltac solve_entailment :=
     repeat ent_step.
 
-
-(** * Examples *)
-(** Examples of everything defined so far, which is enough for entailments to be defined and proved. *)
-Module Examples.
-
-  Definition f1 : flow := ens (fun r => \[r=vint 1]).
-  Definition f2 : flow := fall (fun x => req_ (\[x = vint 1])).
-  Definition f3 : flow := f1 ;; f2.
-
-  Example ex1: satisfies empty_env Fmap.empty Fmap.empty (norm (vint 1)) f1.
-  Proof.
-    intros.
-    unfold f1.
-    apply s_ens.
-    econstructor. eexists. intuition.
-    apply hpure_intro_hempty.
-    apply hempty_intro.
-    reflexivity.
-    fmap_eq.
-  Qed.
-
-  Example ex2_ret: flow_res f1 (vint 1).
-  Proof.
-    unfold f1, flow_res.
-    intros.
-    inverts H as H. destr H.
-    inj H0.
-    inv H.
-    reflexivity.
-  Qed.
-
-  Lemma flow_res_inv: forall v v1 f h1 h2 env,
-    satisfies env h1 h2 (norm v) f ->
-    flow_res f v1 ->
-    v = v1.
-  Proof.
-    unfold flow_res.
-    intros.
-    specializes H0 H.
-    assumption.
-  Qed.
-
-  Example ex2_ret1: forall v, flow_res f1 v -> v = vint 1.
-  Proof.
-    unfold f1, flow_res.
-    intros.
-    forwards: H empty_heap empty_heap empty_env (vint 1).
-    { constructor.
-      exists (vint 1). exists empty_heap.
-      intuition.
-      apply hpure_intro. reflexivity.
-      fmap_eq. }
-      congruence.
-  Qed.
-
-  Example ex3_req_ret: flow_res f2 vunit.
-  Proof.
-    unfold flow_res, f2.
-    intros.
-    inverts H as H.
-    specializes H (vint 1).
-    apply req_pure_ret_inv in H.
-    congruence.
-    reflexivity.
-  Qed.
-
-  Definition f4 : flow := empty;; fall (fun r => unk "f" (vint 1) r).
-  Definition f4_env : env :=
-    Fmap.update empty_env "f" (Some (fun _ r => ens_ \[r = vint 2])).
-
-  (* has to be 2 *)
-  Example ex5_f_ret:
-    flow_res_in_env f4 (vint 2) f4_env.
-  Proof.
-    unfold flow_res_in_env, f4.
-    intros.
-    rewrite norm_empty_l in H.
-    inverts H as H. specializes H v1.
-    funfold f4_env "f" in H.
-    simpl in H.
-    apply ens_void_pure_inv in H.
-    intuition.
-  Qed.
-
-  Definition f5 : flow := ens (fun r => \[r = vint 2]).
-  Definition f6 : flow := f1 ;; ens (fun r => \[r = vint 2]).
-
-  Example ex6_ent : f5 ⊑ f6.
-  Proof.
-    unfold entails, f5, f6.
-    intros.
-    inverts H as H2.
-    destruct H2 as (v & h3 & H1 & H2 & H3 & H4).
-    subst r.
-    constructor.
-    exists h1.
-    exists (norm (vint 1)).
-    intuition.
-
-    - unfold f1.
-      constructor.
-      exists (vint 1).
-      exists empty_heap.
-      intuition.
-      apply hpure_intro_hempty.
-      apply hempty_intro.
-      intuition.
-      fmap_eq.
-    -
-      constructor.
-      eexists.
-      exists empty_heap.
-      intuition.
-      apply hpure_intro_hempty.
-      apply hempty_intro.
-      apply hpure_inv in H2.
-      intuition.
-      apply hpure_inv in H2.
-      intuition.
-      fmap_eq.
-  Qed.
- 
-  Example ex7_rewrite : f5 ⊑ f6.
-  Proof.
-    rewrite ex6_ent.
-    apply entails_refl.
-  Qed.
-
-  Example ex1_rewrite : forall H H1 f,
-    entails (req (H \* H1) f) (req H (req H1 f)).
-  Proof.
-    intros.
-    rewrite norm_req_req.
-    apply entails_refl.
-  Qed.
-
-  Example ex3_rewrite : forall H H1 f,
-    bientails (req (H \* H1) f) (req H (req H1 f)).
-  Proof.
-    intros.
-    unfold bientails; split.
-    { rewrite norm_req_sep_split.
-      trivial. }
-    { rewrite norm_req_sep_combine.
-      apply entails_refl. }
-  Qed.
-
-  Example ex2_rewrite : forall H H1 H2 f,
-    entails (req (H \* H1) (req H2 f)) (req H (req (H1 \* H2) f)).
-  Proof.
-    intros.
-    rewrite <- norm_req_req.
-    rewrite <- norm_req_req.
-    rewrite hstar_assoc.
-    apply entails_refl.
-  Qed.
-
-  (* ensure that this can be done semantically *)
-  Example ex1_entail_co_contra : forall x y,
-    entails (req \[x>0] (ens_ \[y=1])) (req \[x=1] (ens_ \[y>0])).
-  Proof.
-    unfold entails.
-    intros.
-    (* get the condition in the req from the right *)
-    constructor.
-    intros.
-    finv H0.
-    (* use it to satisfy the req on the left *)
-    inverts H as H.
-    specialize (H hp hr).
-    forward H. subst hp. fintro. math.
-    specialize (H H1 H2).
-    (* do the same for ens, but from left to right, as per normal *)
-    inverts H as H. destr H. finv H. finv H. finv H6.
-    constructor. exists v. exists empty_heap.
-    intuition.
-    rewrite hstar_hpure_r.
-    split. fintro; auto. math.
-    fmap_eq.
-  Qed.
-
-  Example e1 : forall x,
-    satisfies empty_env empty_heap empty_heap (norm vunit) (req_ \[x = 1]).
-  Proof.
-    intros.
-    apply s_req.
-    intros.
-    apply hpure_inv in H as (?&?).
-    intuition fmap_eq.
-    constructor.
-    eexists.
-    eexists.
-    intuition.
-    rewrite hstar_hpure_l.
-    split. auto.
-    apply hpure_intro.
-    constructor.
-    assumption.
-  Qed.
-
-  Example e2 : forall x,
-    satisfies empty_env (Fmap.single x (vint 1)) (Fmap.single x (vint 1)) (norm vunit) (req (x~~>vint 1) (ens_ (x~~>vint 1))).
-  Proof.
-    intros.
-    apply s_req.
-    intros hp H.
-    intros.
-
-    apply hsingle_inv in H0. rew_fmap *.
-
-    constructor.
-    eexists.
-    exists (Fmap.single x (vint 1)).
-    intuition.
-    { rewrite hstar_hpure_l; split; auto.
-    apply hsingle_intro. }
-    { subst. assumption. }
-  Qed.
-
-  Example e3 : forall x,
-    satisfies empty_env empty_heap empty_heap (norm vunit) ((ens_ (x~~>vint 1)) ;; req_ (x~~>vint 1)).
-  Proof.
-    intros.
-    constructor.
-    exists (Fmap.single x (vint 1)).
-    exists (norm vunit).
-    split.
-    { constructor.
-      exists vunit.
-      exists (Fmap.single x (vint 1)).
-      intuition.
-      rewrite hstar_hpure_l; split; auto.
-      apply hsingle_intro.
-      fmap_eq. }
-    {
-      apply s_req.
-      intros.
-      { constructor.
-        exists vunit.
-        exists empty_heap.
-        apply hsingle_inv in H.
-        intuition.
-        subst.
-        rewrite hstar_hpure_l; split; auto.
-        apply hpure_intro.
-        constructor.
-        fmap_eq.
-        rewrite <- Fmap.union_empty_l in H0 at 1.
-        apply Fmap.union_eq_inv_of_disjoint in H0.
-        fmap_eq.
-        unfold empty_heap; reflexivity.
-        fmap_disjoint.
-        fmap_disjoint. } }
-  Qed.
-
-  Example e4_req_false : forall x,
-    satisfies empty_env
-      (Fmap.single x (vint 1)) (Fmap.single x (vint 2)) (norm vunit)
-      (req_ \[False]).
-  Proof.
-    intros.
-    apply s_req.
-    intros.
-    apply hpure_inv in H.
-    destr H.
-    inv H0.
-    inv H2.
-  Qed.
-
-  Example e5_rew : forall x y,
-    entails (req (x~~>vint 1) (req_ (y~~>vint 2)))
-      (req_ (x~~>vint 1 \* y~~>vint 2)).
-  Proof.
-    unfold entails.
-    intros.
-
-    (* reason backwrds *)
-    apply s_req.
-    intros.
-    (* extract info from what we gained *)
-    rew_fmap.
-    apply hstar_inv in H0 as (hx&hy&Hx&Hy&?&?).
-
-    (* start going forward *)
-    inverts H as H.
-    specialize (H _ (hy \u hr) Hx).
-    forward H. fmap_eq.
-    forward H. fmap_disjoint.
-
-    inverts H as H12.
-    specialize (H12 hy hr Hy).
-    forward H12. fmap_eq.
-    forward H12. fmap_disjoint.
-
-    assumption.
-  Qed.
-
-  Definition e6_env : env :=
-    Fmap.single "f" (Some (fun y r =>
-    match y with
-    | vloc x => req (x~~>vint 1) (ens_ (x~~>vint 2))
-    | _ => empty
-    end)).
-
-  Example e6_fn_reassoc : forall x,
-    entails_under e6_env
-     (unk "f" (vloc x) vunit;; fall (fun a => req (x~~>vint a) (ens_ (x~~>vint a))))
-     (req (x~~>vint 1) (ens_ (x~~>vint 2))).
-  Proof.
-    (* Set Mangle Names. *)
-
-    unfold entails_under.
-    intros x h1 h2 r H.
-
-    (* first reason backward to access the req *)
-    constructor. intros hp hr H0 H1 H2. intros.
-
-    (* the function is unknown, so use its definition,
-      make it known, then build back up into a sequence *)
-    pose proof H as G.
-    inverts G as G. destruct G as (h3&r1&Hf&Hr).
-    (* resolve the function *)
-    unfold e6_env in Hf;
-    eapply unk_inv in Hf; only 2: resolve_fn_in_env; simpl;
-    fold e6_env in Hf; simpl in Hf.
-    pose proof (@s_seq e6_env _ _ h1 h2 r (ex_intro (fun h3 => _) h3 (ex_intro (fun x => _) r1 (conj Hf Hr)))) as G.
-    clear Hr. clear Hf.
-
-    (* this is quite inconvenient compared to rewriting, however *)
-    funfold e6_env "f" in H. simpl in H.
-    clear G.
-
-    (* reassociate *)
-    rewrite norm_reassoc in H.
-
-    (* discharge the req *)
-    pose proof (hsingle_inv H0) as H3.
-    (* finv H0. *)
-    rewrite H1 in H.
-    rewrite H3 in H.
-    inverts H as H.
-    specialize (H hp hr H0).
-    forward H. fmap_eq.
-    forward H. fmap_disjoint.
-    clear H3. clear H0. clear H1. clear H2.
-
-    dup.
-    (* a semantic proof *)
-    { (* seq *)
-      inverts H as H. destruct H as (h0&r2&He&Hr).
-
-      (* assume the ens *)
-      inverts He as He. destruct He as (?&h4&?&H3&H4&?).
-      rewrite hstar_hpure_l in H3. destruct H3 as [_ H6].
-      pose proof (hsingle_inv H6) as H5.
-      rewrite H4 in Hr.
-      rewrite H5 in Hr.
-      clear H4.
-
-      (* existential *)
-      inverts Hr as Hr.
-      (* destr H4. *)
-      specialize (Hr 2).
-
-      (* prove next req *)
-      inverts Hr as Hr.
-      specialize (Hr h4 hr H6).
-      forward Hr. fmap_eq.
-      forward Hr. fmap_disjoint.
-
-      auto. }
-
-    (* we can reason at a higher level with rewriting *)
-
-    rewrite norm_forall in H.
-    inverts H as H. specialize (H 2).
-
-    rewrites (>> norm_ens_req_transpose) in H.
-    { instantiate (1 := fun _ => hempty). simpl.
-      rewrite <- (hstar_hempty_r (x ~~> vint 2)).
-      apply b_pts_match.
-      apply b_base_empty. }
-
-    rew_heap in H.
-    rewrite norm_req_pure in H. 2: { reflexivity. }
-    rewrite norm_seq_ens_empty in H.
-    assumption.
-  Qed.
-
-  (* lfp interpretation *)
-  (*
-    forall n res, sum(n, res) =
-         n=0/\res=0
-      \/ ex n1. ens n=n1/\n1>0; ex r1. sum(n-1,r1); ens res=1+r1
-  *)
-  Definition sum n res :=
-    disj
-      (ens_ \[exists n1, n = vint n1 /\ n1 <= 0 /\ res = vint 0])
-      (fex (fun n1 => ens_ \[n = vint n1 /\ n1 > 0];; fex (fun r1 =>
-        (unk "sum" (vint (n1-1)) (vint r1);;
-          ens_ \[res = vint (1 + r1)])))).
-
-  Definition sum_env := (Fmap.update empty_env "sum" (Some sum)).
-  Definition sum_property (n res:val) := ens_ \[res = n].
-
-  (* Close Scope flow_scope. *)
-
-  Lemma ex_sum : forall n1 n res, n1 >= 0 ->
-    n = vint n1 ->
-    entails_under sum_env (sum n res) (sum_property n res).
-  Proof.
-    unfold sum_property.
-    (* do induction on the numeric value of n *)
-    intros n.
-    induction_wf IH: (downto 0) n.
-    unfold sum, entails_under.
-    intros.
-    inverts H1 as H1.
-    (* base case *)
-    { apply ens_void_pure_inv in H1. destr H1. subst. inj H2.
-      apply ens_void_pure_intro.
-      f_equal. math. }
-    (* recursive case *)
-    { fdestr H1 as (n1&H1).
-      apply seq_ens_void_pure_inv in H1. destruct H1 as ((?&?)&H1).
-      fdestr H1 as (r1&H1).
-      funfold sum_env "sum" in H1.
-      specialize (IH (n1-1)).
-      forward IH. assert (n1 = n). congruence. unfold downto. math.
-      specialize (IH (vint (n1-1)) (vint r1)).
-      forward IH. math.
-      forward IH. reflexivity.
-      rewrite IH in H1.
-      clear IH.
-
-      rewrite <- norm_ens_ens_void in H1.
-      rewrite hstar_hpure_conj in H1.
-      apply ens_void_pure_inv in H1. destr H1. subst.
-      fintro.
-      inj H2. inj H1. f_equal. math. }
-  Qed.
-
-  Module foldr.
-
-    Definition foldr : ufun := fun (args:val) rr =>
-      match args with
-      | vtup (vstr f) (vtup (vint a) (vlist l)) =>
-        disj
-          (ens_ \[rr = vint a /\ l = nil])
-          (fex (fun x => fex (fun r => fex (fun l1 =>
-            ens_ \[l = cons (vint x) l1];;
-            unk "foldr" (vtup (vstr f) (vtup (vint a) (vlist l1))) r;;
-            unk f (vtup (vint x) r) rr))))
-      | _ => empty
-      end.
-
-    Fixpoint sum (xs:list int) : int :=
-      match xs with
-      | nil => 0
-      | y :: ys => y + sum ys
-      end.
-
-    (* Fixpoint sum_val (xs:list val) : expr :=
-      match xs with
-      | nil => pval (vint 0)
-      | vint y :: ys => padd (pval (vint y)) (sum_val ys)
-      | _ :: ys => pval vunit
-      end. *)
-
-    Fixpoint to_int_list (xs:list val) : list int :=
-      match xs with
-      | nil => nil
-      | vint y :: ys => cons y (to_int_list ys)
-      | _ :: _ => nil
-      end.
-
-    (* This isn't actually needed at this point *)
-    Definition uncurried_plus_program :=
-      vfun "x"
-        (plet "a" (pfst (pvar "x"))
-        (plet "b" (psnd (pvar "x"))
-        (padd (pvar "a") (pvar "b")))).
-
-    (* plus((a, b), r) = ens[_] r=a+b *)
-    Definition uncurried_plus_spec : ufun := fun args rr =>
-      match args with
-      | vtup (vint a) (vint b) => ens_ \[rr = vint (a + b)]
-      | _ => empty
-      end.
-
-    Definition foldr_env :=
-      Fmap.update
-         (Fmap.single "foldr" (Some foldr))
-         "f" (Some uncurried_plus_spec).
-
-    (** A re-summarization lemma *)
-    Definition foldr_sum := forall xs res,
-      entails_under foldr_env
-        (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
-        (fex (fun r => ens_ \[res = vint r /\ r = sum (to_int_list xs)])).
-
-    (** Reasoning semantically *)
-    Lemma foldr_sum_semantic:
-      foldr_sum.
-    Proof.
-      { intros xs. induction_wf IH: list_sub xs. intros.
-        unfold entails_under. introv H.
-        funfold foldr_env "foldr" in H. simpl in H.
-        inverts H.
-        { (* base case *)
-          fdestr H5.
-          fexists 0.
-          subst. fintro.
-          intuition. }
-        { (* rec *)
-          (* get at all the facts... *)
-          fdestr H5 as (x&H5).
-          fdestr H5 as (r0&H5).
-          fdestr H5 as (l1&H5).
-          fdestr H5 as (h3&r1&H1&H2).
-          fdestr H1.
-          (* apply induction hypothesis *)
-          specialize (IH l1). forward IH. rewrite H. auto.
-          rewrite IH in H2.
-
-          fdestr H2 as (h0&r2&H0&Hf).
-          fdestr H0 as (v&?H0).
-          fdestr H0.
-
-          (* reason about f *)
-          funfold foldr_env "f" in Hf.
-
-          simpl in Hf. subst r0.
-          fdestr Hf.
-
-          fexists (x + v).
-          subst. fintro.
-          intuition. } }
-    Qed.
-
-    (** Proof using entailment rules *)
-    Lemma foldr_sum_entailment:
-      foldr_sum.
-    Proof.
-      { intros xs. induction_wf IH: list_sub xs. intros.
-        funfold foldr_env "foldr"; simpl.
-        apply ent_disj_left.
-
-        { apply ent_ex_r. exists 0.
-          apply ent_ens_single. intros.
-          intuition. subst. reflexivity. }
-
-        { apply ent_ex_l. intros x.
-          apply ent_ex_l. intros r.
-          apply ent_ex_l. intros l1.
-          apply ent_seq_ens_l. intros H.
-          (* specialize (IH l1). forward IH. rewrite H. auto. *)
-          rewrite IH; [ | subst; auto ].
-          funfold foldr_env "f".
-          apply ent_seq_ex_l. intros r0.
-          apply ent_seq_ens_l. intros (?&?). subst r.
-          simpl.
-          apply ent_ex_r. exists (x + r0).
-          apply ent_ens_single.
-          subst. intuition. } }
-    Qed.
-
-    (* Automated proof *)
-    Lemma foldr_sum_auto:
-      foldr_sum.
-    Proof.
-      intros xs. induction_wf IH: list_sub xs. intros.
-      funfold foldr_env "foldr".
-      simpl.
-      solve_entailment.
-    Qed.
-  End foldr.
-
-End Examples.
-
 (** * Big-step semantics *)
 Inductive eresult : Type :=
   | enorm : val -> eresult.
 
 (** Program environment *)
-Definition penv := fmap ident (option (val -> expr)).
+Definition penv := fmap var (option (val -> expr)).
 Definition empty_prenv : env := Fmap.empty.
 
 Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
