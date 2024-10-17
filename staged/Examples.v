@@ -1,5 +1,5 @@
 
-From Staged Require Import Logic.
+From Staged Require Import Logic Automation.
 Local Open Scope string_scope.
 
 (** * Examples *)
