@@ -5,7 +5,7 @@ From Coq Require Morphisms Program.Basics.
 From SLF Require LibSepFmap.
 Module Fmap := LibSepFmap.
 
-From Staged Require Export Extra HeapF Tactics.
+From Staged Require Export HeapF Extra ExtraTactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
@@ -515,7 +515,7 @@ Proof.
   intros.
   inverts H as H.
   rewrite H in H0.
-  inj H0.
+  injects H0.
   easy.
 Qed.
 
@@ -859,7 +859,7 @@ Proof.
   apply hexists_intro with (x := v0).
 
   apply hstar_intro; auto.
-  subst. inj H2. assumption.
+  subst. injects H2. assumption.
   subst. rew_fmap.
   reflexivity.
 Qed. *)
@@ -1395,7 +1395,7 @@ Module Examples.
     intros.
     inverts H1 as H1.
     (* base case *)
-    { inverts H1 as H1. destr H1. finv H1. destr H1. subst. inj H1.
+    { inverts H1 as H1. destr H1. finv H1. destr H1. subst. injects H1.
       constructor.
       exists v. exists empty_heap.
       intuition.
@@ -1414,13 +1414,13 @@ Module Examples.
 
       unfold sum_env in H2.
       inverts H2 as H4 Hr.
-      rewrite fmap_read_update in H4. inj H4.
+      rewrite fmap_read_update in H4. injects H4.
 
       (* Hr: known call to sum *)
 
       felim H1. destr H1.
       subst.
-      inj H1.
+      injects H1.
 
       specialize (IH (v-1)).
       forward IH. unfold downto. math.
@@ -1429,7 +1429,7 @@ Module Examples.
       forward IH. reflexivity.
       specialize (IH _ _ _ Hr).
 
-      felim IH. destr IH. inj H0.
+      felim IH. destr IH. injects H0.
       rewrite one_plus_minus_one_r in H3.
       exact H3.
       apply fmap_indom_empty. }

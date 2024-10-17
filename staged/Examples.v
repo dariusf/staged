@@ -26,7 +26,7 @@ Proof.
   unfold f1, flow_res.
   intros.
   inverts H as H. destr H.
-  inj H0.
+  injects H0.
   inv H.
   reflexivity.
 Qed.
@@ -286,13 +286,13 @@ Proof.
   (* start going forward *)
   inverts H as H.
   specialize (H _ (hy \u hr) Hx).
-  forward H. fmap_eq.
-  forward H. fmap_disjoint.
+  forward H by fmap_eq.
+  forward H by fmap_disjoint.
 
   inverts H as H12.
   specialize (H12 hy hr Hy).
-  forward H12. fmap_eq.
-  forward H12. fmap_disjoint.
+  forward H12 by fmap_eq.
+  forward H12 by fmap_disjoint.
 
   assumption.
 Qed.
@@ -419,7 +419,7 @@ Proof.
   intros.
   inverts H1 as H1.
   (* base case *)
-  { apply ens_void_pure_inv in H1. destr H1. subst. inj H2.
+  { apply ens_void_pure_inv in H1. destr H1. subst. injects H2.
     apply ens_void_pure_intro.
     f_equal. math. }
   (* recursive case *)
@@ -439,7 +439,7 @@ Proof.
     rewrite hstar_hpure_conj in H1.
     apply ens_void_pure_inv in H1. destr H1. subst.
     fintro.
-    inj H2. inj H1. f_equal. math. }
+    injects H2. injects H1. f_equal. math. }
 Qed.
 
 Module foldr.
@@ -505,7 +505,7 @@ Module foldr.
   Lemma foldr_sum_semantic:
     foldr_sum.
   Proof.
-    { intros xs. induction_wf IH: list_sub xs. intros.
+    { unfold foldr_sum. intros xs. induction_wf IH: list_sub xs. intros.
       unfold entails_under. introv H.
       funfold foldr_env "foldr" in H. simpl in H.
       inverts H.
@@ -544,8 +544,8 @@ Module foldr.
   Lemma foldr_sum_entailment:
     foldr_sum.
   Proof.
-    { intros xs. induction_wf IH: list_sub xs. intros.
-      funfold foldr_env "foldr"; simpl.
+    { unfold foldr_sum. intros xs. induction_wf IH: list_sub xs. intros.
+      funfold foldr_env "foldr". simpl.
       apply ent_disj_left.
 
       { apply ent_ex_r. exists 0.
@@ -571,7 +571,7 @@ Module foldr.
   Lemma foldr_sum_auto:
     foldr_sum.
   Proof.
-    intros xs. induction_wf IH: list_sub xs. intros.
+    unfold foldr_sum. intros xs. induction_wf IH: list_sub xs. intros.
     funfold foldr_env "foldr".
     simpl.
     solve_entailment.

@@ -10,7 +10,7 @@ Set Warnings "-notation-incompatible-prefix".
 From Staged Require Export HeapF.
 Set Warnings "notation-incompatible-prefix".
 
-From Staged Require Export Extra Tactics.
+From Staged Require Export Extra ExtraTactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
@@ -571,7 +571,7 @@ Proof.
   inverts H as H. destr H.
   inverts H.
   inverts H2.
-  inj H0.
+  injects H0.
   intuition.
 Qed.
 
@@ -910,7 +910,7 @@ Proof.
   intros.
   inverts H0 as H0.
   rewrite H in H0.
-  inj H0.
+  injects H0.
   assumption.
 Qed.
 
@@ -1260,7 +1260,7 @@ Proof.
   apply hexists_intro with (x := v0).
 
   apply hstar_intro; auto.
-  subst. inj H2. assumption.
+  subst. injects H2. assumption.
   subst. fmap_eq.
 Qed.
 
@@ -2427,7 +2427,7 @@ Module HistoryTriples.
     intros. subst.
     unfold hist_triple. intros.
     inverts H2 as H2.
-    { inj H2.
+    { injects H2.
       unfold hist_triple in H0.
       specializes H0 H H1 H9. }
     { false. }
@@ -2442,7 +2442,7 @@ Module HistoryTriples.
     unfold hist_triple. intros.
     inverts H2 as H2.
     { false. }
-    { inj H2.
+    { injects H2.
       unfold hist_triple in H0.
       specializes H0 H H1 H9. }
   Qed.
