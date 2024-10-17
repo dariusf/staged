@@ -83,7 +83,7 @@ Module Val.
 End Val.
 
 (** SLF's heap theory as a functor. *)
-Module Export Heap := Heap.HeapSetup Val.
+Module Export Heap := HeapF.HeapSetup Val.
 
 Definition empty_heap : heap := Fmap.empty.
 

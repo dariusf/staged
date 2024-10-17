@@ -5,7 +5,7 @@ From Coq Require Morphisms Program.Basics.
 From SLF Require LibSepFmap.
 Module Fmap := LibSepFmap.
 
-From Staged Require Export Extra Heap Tactics.
+From Staged Require Export Extra HeapF Tactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
@@ -66,7 +66,7 @@ Module Val.
 End Val.
 
 (** SLF's heap theory as a functor. *)
-Module Export Heap := Heap.HeapSetup(Val).
+Module Export Heap := HeapF.HeapSetup(Val).
 
 Inductive eresult : Type :=
   | enorm : val -> eresult.
