@@ -1,4 +1,7 @@
--Q . SLF
+-docroot .
+-Q slf SLF
+-Q staged Staged
 -arg -w 
 -arg -implicit-core-hint-db,-ambiguous-paths
-
+slf
+staged

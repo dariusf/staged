@@ -5,7 +5,7 @@ From Coq Require Morphisms Program.Basics.
 From SLF Require LibSepFmap.
 Module Fmap := LibSepFmap.
 
-From SLF Require Export Extra Heap Tactics.
+From Staged Require Export Extra Heap Tactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
