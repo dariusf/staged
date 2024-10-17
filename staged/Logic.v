@@ -5,7 +5,12 @@ From Coq Require Morphisms Program.Basics.
 From SLF Require LibSepFmap.
 Module Fmap := LibSepFmap.
 
-From Staged Require Export Extra Heap Tactics.
+(* remove when https://github.com/coq/coq/pull/19673 is merged *)
+Set Warnings "-notation-incompatible-prefix".
+From Staged Require Export HeapF.
+Set Warnings "notation-incompatible-prefix".
+
+From Staged Require Export Extra Tactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
