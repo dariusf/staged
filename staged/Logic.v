@@ -132,8 +132,7 @@ Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 Notation "'∃' x1 .. xn , H" :=
   (fex (fun x1 => .. (fex (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
-   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'",
-   only printing) : flow_scope.
+   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : flow_scope.
 
 (* Check (fex (fun x => ens_ \[x = vint 1];; empty)). *)
 (* Check (fex (fun x => ens_ \[x = vint 1]);; empty). *)
@@ -141,8 +140,7 @@ Notation "'∃' x1 .. xn , H" :=
 Notation "'∀' x1 .. xn , H" :=
   (fall (fun x1 => .. (fall (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
-   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'",
-   only printing) : flow_scope.
+   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : flow_scope.
 
 Notation "f '$' '(' x ',' r ')'" := (unk f x r)
   (at level 80, format "f '$' '(' x ','  r ')'", only printing) : flow_scope.
@@ -964,6 +962,40 @@ Proof.
   auto.
 Qed.
 
+Lemma norm_exists : forall (A:Type) f1 f2_ctx,
+  entails
+    (f1;; fex (fun (a:A) => f2_ctx a))
+    (fex (fun (a:A) => f1;; f2_ctx a)).
+Proof.
+  unfold entails.
+  intros.
+  fdestr H.
+  fdestr H1.
+  constructor. exists v.
+  constructor. eexists. eexists.
+  split.
+  exact H0.
+  exact H.
+Qed.
+
+Lemma norm_ens_ens_void_comm : forall H1 H2,
+  entails (ens_ H1;; ens_ H2) (ens_ H2;; ens_ H1).
+Proof.
+  unfold entails. intros.
+  fdestr H.
+  inverts H0 as H0. destr H0.
+  inverts H3 as H3. destr H3.
+  finv H0. finv H0.
+  finv H3. finv H3.
+  constructor.
+  exists (h1 \u x2). exists (norm vunit).
+  split.
+  { constructor. exists vunit. exists x2.
+    intuition. fintro. intuition. }
+  { constructor. exists vunit. exists x0.
+    intuition. subst. reflexivity. fintro. intuition. fmap_eq. }
+Qed.
+
 (** Compaction rule 1 from the paper *)
 Lemma norm_ens_false_l : forall f,
   bientails (ens_ \[False]) (ens_ \[False];; f).
@@ -1162,49 +1194,78 @@ Proof.
 Qed.
 
 (** Splitting and combining [ens_]s *)
-Lemma satisfies_ens_ens_void : forall H1 H2 env h1 h2 r,
-  satisfies env h1 h2 r (ens_ (H1 \* H2)) <->
+Lemma satisfies_ens_ens_void_split : forall H1 H2 env h1 h2 r,
+  satisfies env h1 h2 r (ens_ (H1 \* H2)) ->
   satisfies env h1 h2 r (ens_ H1;; ens_ H2).
 Proof.
   intros.
-  split; intros.
-  { inverts H as H. destruct H as (v&h3&H3&H4&H5&H6).
-    rewrite hstar_hpure_l in H4. destruct H4 as (H4&H7).
-    (* h3 is the heap that H1 and H2 together add *)
-    (* find the intermediate heap *)
-    apply hstar_inv in H7. destruct H7 as (h0&h4&H8&H9&H10&H11).
-    (* H1 h0, H2 h4 *)
-    constructor.
-    exists (h1 \u h0).
-    exists (norm vunit).
-    split.
-    { constructor. exists vunit. exists h0. intuition. rewrite hstar_hpure_l. intuition. }
-    { constructor. exists v. exists h4. intuition. rewrite hstar_hpure_l. intuition. fmap_eq. } }
-  { inverts H as H.
-    destruct H as (h3&r1&H3&H4).
-    (* give up on careful reasoning *)
-    inverts H3 as H5. destr H5. inverts H4 as H8. destr H8.
-    rewrite hstar_hpure_l in H0.
-    rewrite hstar_hpure_l in H5.
-    intuition.
-    constructor.
-    exists v0.
-    exists (h0 \u h4).
-    intuition.
-    subst.
-    rewrite <- hstar_assoc.
-    apply hstar_intro.
-    rewrite hstar_hpure_l.
-    intuition.
-    intuition.
-    fmap_disjoint.
-    fmap_eq. }
+  inverts H as H. destruct H as (v&h3&H3&H4&H5&H6).
+  rewrite hstar_hpure_l in H4. destruct H4 as (H4&H7).
+  (* h3 is the heap that H1 and H2 together add *)
+  (* find the intermediate heap *)
+  apply hstar_inv in H7. destruct H7 as (h0&h4&H8&H9&H10&H11).
+  (* H1 h0, H2 h4 *)
+  constructor.
+  exists (h1 \u h0).
+  exists (norm vunit).
+  split.
+  { constructor. exists vunit. exists h0. intuition. rewrite hstar_hpure_l. intuition. }
+  { constructor. exists v. exists h4. intuition. rewrite hstar_hpure_l. intuition. fmap_eq. }
+Qed.
+
+Lemma satisfies_ens_ens_void_combine : forall H1 H2 env h1 h2 r,
+  satisfies env h1 h2 r (ens_ H1;; ens_ H2) ->
+  satisfies env h1 h2 r (ens_ (H1 \* H2)).
+Proof.
+  intros.
+  inverts H as H.
+  destruct H as (h3&r1&H3&H4).
+  (* give up on careful reasoning *)
+  inverts H3 as H5. destr H5. inverts H4 as H8. destr H8.
+  rewrite hstar_hpure_l in H0.
+  rewrite hstar_hpure_l in H5.
+  intuition.
+  constructor.
+  exists v0.
+  exists (h0 \u h4).
+  intuition.
+  subst.
+  rewrite <- hstar_assoc.
+  apply hstar_intro.
+  rewrite hstar_hpure_l.
+  intuition.
+  intuition.
+  fmap_disjoint.
+  fmap_eq.
+Qed.
+
+Lemma satisfies_ens_ens_void : forall H1 H2 env h1 h2 r,
+  satisfies env h1 h2 r (ens_ H1;; ens_ H2) <->
+  satisfies env h1 h2 r (ens_ (H1 \* H2)).
+Proof.
+  intros. split.
+  - apply satisfies_ens_ens_void_combine.
+  - apply satisfies_ens_ens_void_split.
+Qed.
+
+Lemma norm_ens_ens_void_split : forall H1 H2,
+  entails (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2).
+Proof.
+  unfold entails. apply satisfies_ens_ens_void_split.
+Qed.
+
+Lemma norm_ens_ens_void_combine : forall H1 H2,
+  entails (ens_ H1;; ens_ H2) (ens_ (H1 \* H2)).
+Proof.
+  unfold entails; apply satisfies_ens_ens_void_combine.
 Qed.
 
 Lemma norm_ens_ens_void : forall H1 H2,
   bientails (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2).
 Proof.
-  intros; split; apply satisfies_ens_ens_void.
+  intros; split.
+  - apply norm_ens_ens_void_split.
+  - apply norm_ens_ens_void_combine.
 Qed.
 
 (** Compaction rule 5 from the paper *)
@@ -1647,6 +1708,80 @@ Module BiabductionExamples.
 End BiabductionExamples.
 
 (** * Lemmas about entailment sequents *)
+Lemma ent_all_r : forall f A (fctx:A -> flow) env,
+  (forall x, entails_under env f (fctx x)) ->
+  entails_under env f (fall (fun x => fctx x)).
+Proof.
+  unfold entails_under. intros.
+  constructor. intros x.
+  auto.
+Qed.
+
+Lemma ent_all_l : forall f A (fctx:A -> flow) env,
+  (exists x, entails_under env (fctx x) f) ->
+  entails_under env (fall (fun x => fctx x)) f.
+Proof.
+  unfold entails_under. intros.
+  destr H.
+  apply H1.
+  inverts H0 as H0. specializes H0 x.
+  assumption.
+Qed.
+
+Lemma ent_seq_all_l : forall f f1 A (fctx:A -> flow) env,
+  (exists x, entails_under env (fctx x;; f1) f) ->
+  entails_under env (fall (fun x => fctx x);; f1) f.
+Proof.
+  unfold entails_under. intros.
+  destr H.
+  apply H1.
+  inverts H0 as H0. destr H0.
+  inverts H as H. specializes H x.
+  constructor. eexists. eexists.
+  split. exact H. exact H2.
+Qed.
+
+Lemma ent_req_r : forall f f1 H env,
+  entails_under env (ens_ H;; f) f1 ->
+  entails_under env f (req H f1).
+Proof.
+  unfold entails_under. intros.
+  constructor. intros.
+  apply H0.
+  constructor.
+  exists (hr \+ hp). exists (norm vunit).
+  split.
+  { constructor. exists vunit. exists hp.
+    intuition.
+    rewrite hstar_hpure_l. intuition. }
+  { rewrite <- H3. assumption. }
+Qed.
+
+Lemma ent_req_req : forall f1 f2 H1 H2 env,
+  H2 ==> H1 ->
+  entails_under env f1 f2 ->
+  entails_under env (req H1 f1) (req H2 f2).
+Proof.
+  unfold entails_under. intros.
+  constructor. intros.
+  inverts H3 as H3. specializes H3 H6; auto.
+Qed.
+
+Lemma ent_req_l : forall f f1 P env,
+  P ->
+  entails_under env f1 f ->
+  entails_under env (req \[P] f1) f.
+Proof.
+  unfold entails_under. intros.
+  inverts H1 as H1.
+  apply H0.
+  specializes H1 empty_heap h1.
+  apply H1.
+  fintro.
+  assumption.
+  fmap_eq.
+  fmap_disjoint.
+Qed.
 Lemma ent_ens_l : forall env f P,
   (P -> entails_under env empty f) ->
   entails_under env (ens_ \[P]) f.
@@ -1671,7 +1806,7 @@ Proof.
   auto.
 Qed.
 
-Lemma ent_ens_single : forall env P P1,
+Lemma ent_ens_single_pure : forall env P P1,
   (P1 -> P) ->
   entails_under env (ens_ \[P1]) (ens_ \[P]).
 Proof.
@@ -1685,6 +1820,19 @@ Proof.
   fintro.
   assumption.
   fmap_eq.
+Qed.
+
+Lemma ent_ens_single : forall env H H1,
+  (H1 ==> H) ->
+  entails_under env (ens_ H1) (ens_ H).
+Proof.
+  unfold entails_under. intros.
+  inverts H2 as H2. destr H2.
+  rewrite hstar_hpure_l in H2. destruct H2.
+  apply H0 in H5.
+  constructor. exists v. exists h3.
+  intuition.
+  rewrite hstar_hpure_l. intuition.
 Qed.
 
 Lemma ent_seq_unk : forall fn fn1 f1 f2 env x r,

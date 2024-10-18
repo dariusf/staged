@@ -549,7 +549,7 @@ Module foldr.
       apply ent_disj_left.
 
       { apply ent_ex_r. exists 0.
-        apply ent_ens_single. intros.
+        apply ent_ens_single_pure.
         intuition. subst. reflexivity. }
 
       { apply ent_ex_l. intros x.
@@ -563,7 +563,7 @@ Module foldr.
         apply ent_seq_ens_l. intros (?&?). subst r.
         simpl.
         apply ent_ex_r. exists (x + r0).
-        apply ent_ens_single.
+        apply ent_ens_single_pure.
         subst. intuition. } }
   Qed.
 
@@ -576,4 +576,88 @@ Module foldr.
     simpl.
     solve_entailment.
   Qed.
+
+  Fixpoint length (xs:list int) : int :=
+    match xs with
+    | nil => 0
+    | _ :: ys => 1 + length ys
+    end.
+
+  Definition uncurried_plus_closure_spec : ufun := fun args rr =>
+    match args with
+    | vtup (vint a) (vint b) => fall (fun x => fall (fun c =>
+        req (x~~>vint c) (ens_ (x~~>vint (c+1) \* \[rr = vint (a + b)]))
+      ))
+    | _ => empty
+    end.
+
+  Definition foldr_env1 :=
+    Fmap.update
+        (Fmap.single "foldr" (Some foldr))
+        "f" (Some uncurried_plus_closure_spec).
+
+  Definition foldr_sum_state := forall xs res,
+    entails_under foldr_env1
+      (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
+      (∀ x a, req (x~~>vint a)
+        (∃ r, ens_ (x~~>vint (a+length (to_int_list xs)) \*
+          \[res = vint r /\ r = sum (to_int_list xs)]))).
+
+  Lemma foldr_sum_state_entailment:
+    foldr_sum_state.
+  Proof.
+    unfold foldr_sum. intros xs. induction_wf IH: list_sub xs. intros.
+    funfold foldr_env1 "foldr".
+    simpl.
+    ent_step.
+    { apply ent_all_r. intros x.
+      apply ent_all_r. intros a.
+      apply ent_req_r.
+      apply ent_ex_r. exists 0.
+      rewrite norm_ens_ens_void_combine.
+      apply ent_ens_single.
+      xsimpl.
+      { intros (?&?). subst. f_equal. simpl. math. }
+      { intros (?&?). split. assumption. subst. reflexivity. } }
+    { apply ent_ex_l. intros x.
+      apply ent_ex_l. intros r.
+      apply ent_ex_l. intros l1.
+      apply ent_seq_ens_l. intros H.
+      rewrite IH; [ | subst; auto ].
+      funfold foldr_env1 "f".
+      (* figure out what r is before we simpl *)
+
+      apply ent_all_r. intros x0.
+      apply ent_seq_all_l. exists x0.
+      apply ent_all_r. intros a.
+      apply ent_seq_all_l. exists a.
+
+      rewrite norm_reassoc.
+      apply ent_req_req. xsimpl.
+
+      apply ent_seq_ex_l. intros r0.
+      apply ent_ex_r. exists (x + r0).
+      rewrite norm_ens_ens_void.
+      rewrite norm_ens_ens_void_comm.
+      rewrite <- norm_seq_assoc.
+      apply ent_seq_ens_l. intros (?&?). subst r.
+      simpl.
+      norm.
+      (* rewrite norm_forall. *)
+      apply ent_all_l. exists x0.
+      (* rewrite norm_forall. *)
+      norm.
+      apply ent_all_l. exists (a + length (to_int_list l1)).
+      rewrite norm_ens_req_transpose.
+      2: { instantiate (1:=(fun _ => \[])).
+        simpl.
+        apply b_pts_single. }
+      simpl. rewrite norm_seq_ens_empty.
+
+      apply ent_req_l. reflexivity.
+      apply ent_ens_single.
+      xsimpl; intros; subst. simpl. f_equal. math. split; reflexivity. }
+  Qed.
+
+
 End foldr.
