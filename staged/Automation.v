@@ -20,7 +20,7 @@ Ltac ent_step :=
 
   (* assume things on the left side *)
   | |- entails_under _ (disj _ _) _ =>
-    simple apply ent_disj_left
+    simple apply ent_disj_l
   | |- entails_under _ (fex (fun y => _)) _ =>
     let x := fresh y in
     simple apply ent_ex_l; intros x

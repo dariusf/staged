@@ -546,7 +546,7 @@ Module foldr.
   Proof.
     { unfold foldr_sum. intros xs. induction_wf IH: list_sub xs. intros.
       funfold foldr_env "foldr". simpl.
-      apply ent_disj_left.
+      apply ent_disj_l.
 
       { apply ent_ex_r. exists 0.
         apply ent_ens_single_pure.
@@ -668,5 +668,131 @@ Module foldr.
       xsimpl; intros; subst. simpl. f_equal. math. split; reflexivity. }
   Qed.
 
+  Definition uncurried_plus_assert_spec : ufun := fun args rr =>
+    match args with
+    | vtup (vint x) (vint r) =>
+        req \[x+r>=0] (ens_ \[rr=vint (x+r)])
+    | _ => empty
+    end.
+
+  Fixpoint all_s_pos (xs:list int) : Prop :=
+    match xs with
+    | nil => True
+    | y :: ys => sum xs >= 0 /\ all_s_pos ys
+    end.
+
+  Definition foldr_env2 :=
+    Fmap.update
+        (Fmap.single "foldr" (Some foldr))
+        "f" (Some uncurried_plus_assert_spec).
+
+  Lemma foldr_ex2: forall xs res,
+    entails_under foldr_env2
+      (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
+      (req \[all_s_pos (to_int_list xs)]
+        (ens_ \[res = vint (sum (to_int_list xs))])).
+  Proof.
+    intros xs. induction_wf IH: list_sub xs. intros.
+    funfold foldr_env2 "foldr".
+    simpl.
+    apply ent_disj_l.
+    { apply ent_req_r.
+      rewrite norm_ens_ens_void_combine.
+      apply ent_ens_single.
+      xsimpl. intros ? (?&?). subst. f_equal. }
+    { apply ent_ex_l. intros x.
+      apply ent_ex_l. intros r.
+      apply ent_ex_l. intros l1.
+      apply ent_seq_ens_l. intros H.
+      rewrite IH; [ | subst; auto ].
+      funfold foldr_env2 "f".
+
+      apply ent_req_r.
+      apply ent_seq_ens_l. intros H1.
+      rewrite norm_reassoc.
+      apply ent_req_l.
+      { subst. simpl in H1. destruct H1. assumption. }
+
+      apply ent_seq_ens_l. intros H2. subst r.
+      simpl.
+      apply ent_req_l.
+      { subst xs. simpl in H1. destruct H1. assumption. }
+
+      apply ent_ens_single.
+      xsimpl.
+      intros. subst.
+      simpl. reflexivity. }
+  Qed.
+
+  Definition uncurried_plus_exc_spec : ufun := fun args rr =>
+    match args with
+    | vtup (vint x) (vint r) =>
+      disj (ens_ \[x >= 0 /\ rr = vint (x + r)])
+        (ens_ \[x < 0];; unk "exc" vunit vunit)
+    | _ => empty
+    end.
+
+  Fixpoint all_pos (xs:list int) : Prop :=
+    match xs with
+    | nil => True
+    | y :: ys => y >= 0 /\ all_pos ys
+    end.
+
+  Definition foldr_env3 :=
+    Fmap.update
+        (Fmap.single "foldr" (Some foldr))
+        "f" (Some uncurried_plus_exc_spec).
+
+  Lemma foldr_ex3: forall xs res,
+    entails_under foldr_env3
+      (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
+        (disj
+          (ens_ \[all_pos (to_int_list xs) /\
+            res = vint (sum (to_int_list xs))])
+          (ens_ \[not (all_pos (to_int_list xs))];; unk "exc" vunit vunit)).
+  Proof.
+    intros xs. induction_wf IH: list_sub xs. intros.
+    funfold foldr_env3 "foldr".
+    simpl.
+    apply ent_disj_l.
+    { apply ent_disj_r_l.
+      apply ent_ens_single.
+      xsimpl. intros (?&?). subst. simpl. intuition. }
+    { apply ent_ex_l. intros x.
+      apply ent_ex_l. intros r.
+      apply ent_ex_l. intros l1.
+      apply ent_seq_ens_l. intros H.
+      rewrite IH; [ | subst; auto ].
+      funfold foldr_env3 "f".
+      (* after rewriting with the IH, we have a disj on the left, because it's possible the recursive call raises an exception *)
+      apply ent_seq_disj_l.
+      { (* if the recursive call returns *)
+        apply ent_seq_ens_l. intros (?&?).
+        subst r. simpl.
+        (* now we have 2 cases from the two branches in the call to f *)
+        apply ent_disj_l.
+        { apply ent_disj_r_l.
+          apply ent_ens_single.
+          xsimpl.
+          intros (?&?).
+          subst.
+          split.
+          simpl. intuition math.
+          simpl. reflexivity. }
+        { apply ent_disj_r_r.
+          apply ent_seq_ens_l. intros (?&?).
+          apply ent_seq_ens_r.
+          { unfold not. intros. subst xs. simpl in H3. destr H3. math. }
+          apply ent_unk_single. } }
+      { (* if the recursive call raises *)
+        apply ent_disj_r_r.
+        rewrite <- norm_seq_assoc.
+        apply ent_seq_ens_l. intros H1.
+        apply ent_seq_ens_r.
+        { unfold not. intros. subst xs. simpl in H0. destr H0. false. }
+        (* it seems we can't finish this proof without a semantics for exceptions, as because the recursive call raises, we know nothing about r, and without the aforementioned semantics, we have no way to discard the call to f *)
+        admit.
+      }
+  Abort.
 
 End foldr.

@@ -1739,6 +1739,7 @@ Proof.
   fmap_eq.
   fmap_disjoint.
 Qed.
+
 Lemma ent_ens_l : forall env f P,
   (P -> entails_under env empty f) ->
   entails_under env (ens_ \[P]) f.
@@ -1748,6 +1749,17 @@ Proof.
   apply H.
   assumption.
   fintro.
+Qed.
+
+Lemma ent_ens_r : forall env f P,
+  P -> entails_under env f empty ->
+  entails_under env f (ens_ \[P]).
+Proof.
+  unfold entails_under. intros.
+  specializes H0 H1.
+  apply empty_inv in H0. destr H0. subst.
+  fintro.
+  assumption.
 Qed.
 
 Lemma ent_seq_ens_l : forall env f f1 P,
@@ -1761,6 +1773,18 @@ Proof.
   assumption.
   subst.
   auto.
+Qed.
+
+Lemma ent_seq_ens_r : forall env f f1 P,
+  P -> entails_under env f f1 ->
+  entails_under env f (ens_ \[P];; f1).
+Proof.
+  unfold entails_under. intros.
+  constructor.
+  exists h1. exists (norm vunit).
+  split.
+  apply ens_void_pure_intro. assumption.
+  apply H0. assumption.
 Qed.
 
 Lemma ent_ens_single_pure : forall env P P1,
@@ -1792,6 +1816,12 @@ Proof.
   rewrite hstar_hpure_l. intuition.
 Qed.
 
+Lemma ent_unk_single : forall env f x r,
+  entails_under env (unk f x r) (unk f x r).
+Proof.
+  intros. apply entails_under_refl.
+Qed.
+
 Lemma ent_seq_unk : forall fn fn1 f1 f2 env x r,
   Fmap.read env fn = Some fn1 ->
   entails_under env (fn1 x r;; f1) f2 ->
@@ -1802,7 +1832,7 @@ Proof.
   assumption.
 Qed.
 
-Lemma ent_disj_left : forall f1 f2 f3 env,
+Lemma ent_disj_l : forall f1 f2 f3 env,
   entails_under env f1 f3 ->
   entails_under env f2 f3 ->
   entails_under env (disj f1 f2) f3.
@@ -1811,7 +1841,25 @@ Proof.
   inverts H1 as H1; auto.
 Qed.
 
-Lemma ent_seq_disj : forall f1 f2 f3 f4 env,
+Lemma ent_disj_r_l : forall f1 f2 f3 env,
+  entails_under env f3 f1 ->
+  entails_under env f3 (disj f1 f2).
+Proof.
+  unfold entails_under. intros.
+  apply s_disj_l.
+  auto.
+Qed.
+
+Lemma ent_disj_r_r : forall f1 f2 f3 env,
+  entails_under env f3 f2 ->
+  entails_under env f3 (disj f1 f2).
+Proof.
+  unfold entails_under. intros.
+  apply s_disj_r.
+  auto.
+Qed.
+
+Lemma ent_seq_disj_l : forall f1 f2 f3 f4 env,
   entails_under env (f1;; f3) f4 ->
   entails_under env (f2;; f3) f4 ->
   entails_under env (disj f1 f2;; f3) f4.
