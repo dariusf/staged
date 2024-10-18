@@ -442,6 +442,20 @@ Proof.
     injects H2. injects H1. f_equal. math. }
 Qed.
 
+Module hello.
+
+  Definition hello (f x y res:val) : flow :=
+    match f, x, y with
+    | vstr f, vloc x, vloc y =>
+      ∃ a, req (x~~>vint a) (ens_ (x~~>vint (a+1));;
+      ∃ r, unk f (vloc y) (vint r);;
+      ∃ b b1, req (x~~>vint b \* y~~>vint b1)
+        (ens_ (x~~>vint b \* y~~>res \* \[res = vint (b+r)])))
+    | _, _, _ => empty
+    end.
+
+End hello.
+
 Module foldr.
 
   Definition foldr : ufun := fun (args:val) rr =>
