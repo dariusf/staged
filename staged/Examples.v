@@ -619,7 +619,8 @@ Module foldr.
       xsimpl.
       { intros (?&?). subst. f_equal. simpl. math. }
       { intros (?&?). split. assumption. subst. reflexivity. } }
-    { apply ent_ex_l. intros x.
+    { (* simple rewrites *)
+      apply ent_ex_l. intros x.
       apply ent_ex_l. intros r.
       apply ent_ex_l. intros l1.
       apply ent_seq_ens_l. intros H.
@@ -627,34 +628,42 @@ Module foldr.
       funfold foldr_env1 "f".
       (* figure out what r is before we simpl *)
 
+      (* match locations *)
       apply ent_all_r. intros x0.
       apply ent_seq_all_l. exists x0.
       apply ent_all_r. intros a.
       apply ent_seq_all_l. exists a.
 
+      (* dispatch the req *)
       rewrite norm_reassoc.
       apply ent_req_req. xsimpl.
 
+      (* move the pure constraints on r to the top,
+        as we need them to simpl *)
       apply ent_seq_ex_l. intros r0.
-      apply ent_ex_r. exists (x + r0).
       rewrite norm_ens_ens_void.
       rewrite norm_ens_ens_void_comm.
       rewrite <- norm_seq_assoc.
       apply ent_seq_ens_l. intros (?&?). subst r.
+
+      (* we finally know what r is *)
       simpl.
-      norm.
-      (* rewrite norm_forall. *)
+
+      (* we need the locations to agree to use biab *)
+      rewrite norm_forall.
       apply ent_all_l. exists x0.
-      (* rewrite norm_forall. *)
-      norm.
+      rewrite norm_forall.
       apply ent_all_l. exists (a + length (to_int_list l1)).
       rewrite norm_ens_req_transpose.
       2: { instantiate (1:=(fun _ => \[])).
         simpl.
         apply b_pts_single. }
-      simpl. rewrite norm_seq_ens_empty.
-
+      simpl.
       apply ent_req_l. reflexivity.
+      norm.
+
+      (* this existential is delayed all the way until the end *)
+      apply ent_ex_r. exists (x + r0).
       apply ent_ens_single.
       xsimpl; intros; subst. simpl. f_equal. math. split; reflexivity. }
   Qed.

@@ -500,115 +500,9 @@ Lemma ens_ret_inv : forall env h1 h2 H r,
   r = norm vunit.
 Proof.
   intros.
-  inverts H0 as H0.
-  destruct H0 as (v&h3&H1&H2&H3&H4).
-  rewrite hstar_hpure_l in H2.
-  destruct H2.
-  congruence.
-Qed.
-
-Lemma req_pure_ret_inv : forall env h1 h2 P r,
-  P ->
-  satisfies env h1 h2 r (req_ \[P]) ->
-  r = norm vunit.
-Proof.
-  intros.
-  inverts H0 as H0.
-
-  forwards: H0 empty_heap h1.
-  apply hpure_intro.
-  assumption.
-  fmap_eq.
-  fmap_disjoint.
-
-  inverts H1 as H1. destr H1.
-  rewrite hstar_hpure_l in H1.
-  destruct H1.
-  congruence.
-Qed.
-
-Lemma ens_empty_inv : forall env h1 h2 r,
-  satisfies env h1 h2 r (ens (fun r => \[])) -> h1 = h2.
-Proof.
-  intros.
-  inverts H as H.
-  destr H.
-  apply hempty_inv in H.
-  subst.
-  fmap_eq.
-Qed.
-
-Lemma ens_empty_intro : forall env h1 r,
-  satisfies env h1 h1 r (ens (fun r => \[])).
-Proof.
-  intros.
-  constructor.
-  destruct r.
-  exists v.
-  exists empty_heap.
-  intuition fmap_eq.
-  constructor.
-Qed.
-
-Lemma ens_pure_inv : forall P env h1 h2 r,
-  satisfies env h1 h2 r (ens (fun _ => \[P])) -> P /\ h1 = h2.
-Proof.
-  intros.
-  inverts H as H.
-  destr H.
-  inverts H.
-  inverts H2.
-  intuition.
-Qed.
-
-Lemma ens_pure_inv_dep : forall P env h1 h2 v,
-  satisfies env h1 h2 (norm v) (ens (fun a => \[P a])) ->
-  P v /\ h1 = h2.
-Proof.
-  intros.
-  inverts H as H. destr H.
-  inverts H.
-  inverts H2.
-  injects H0.
-  intuition.
-Qed.
-
-Lemma ens_pure_intro : forall P env h r,
-  P -> satisfies env h h r (ens (fun _ => \[P])).
-Proof.
-  intros.
-  constructor.
-  destruct r.
-  exists v.
-  exists empty_heap.
-  intuition.
-  apply hpure_intro; easy.
-  fmap_eq.
-Qed.
-
-Lemma ens_pure_intro_dep : forall P env h r,
-  P r -> satisfies env h h (norm r) (ens (fun v => \[P v])).
-Proof.
-  intros.
-  constructor.
-  exists r.
-  exists empty_heap.
-  intuition.
-  apply hpure_intro; easy.
-  fmap_eq.
-Qed.
-
-Lemma ens_void_inv : forall env h1 h2 r H,
-  satisfies env h1 h2 r (ens_ H) ->
-  r = norm vunit.
-Proof.
-  unfold empty, ens_.
-  intros.
   inverts H0 as H0. destr H0.
-  rewrite hstar_hpure_l in H0.
-  subst.
-  intuition.
-  f_equal. assumption.
+  rewrite hstar_hpure_l in H0. destruct H0.
+  congruence.
 Qed.
 
 Lemma ens_void_pure_inv : forall P env h1 h2 r,
@@ -619,22 +513,6 @@ Proof.
   rewrite hstar_hpure_l in H. destr H.
   apply hpure_inv in H4. destr H4. subst.
   intuition.
-Qed.
-
-Lemma ens_void_pure_intro : forall P env h,
-  P -> satisfies env h h (norm vunit) (ens_ \[P]).
-Proof.
-  intros.
-  unfold ens_.
-  constructor.
-  exists vunit.
-  exists empty_heap.
-  intuition.
-  rewrite hstar_hpure_r.
-  intuition.
-  apply hpure_intro.
-  reflexivity.
-  fmap_eq.
 Qed.
 
 Lemma empty_inv : forall env h1 h2 r,
@@ -663,6 +541,105 @@ Proof.
   fmap_eq.
 Qed.
 
+Lemma req_pure_ret_inv : forall env h1 h2 P r,
+  P ->
+  satisfies env h1 h2 r (req_ \[P]) ->
+  r = norm vunit.
+Proof.
+  intros.
+  inverts H0 as H0.
+  specializes H0 empty_heap h1 ___.
+  apply hpure_intro.
+  assumption.
+  apply empty_inv in H0.
+  intuition.
+Qed.
+
+Lemma req_empty_inv : forall env h1 h2 r,
+  satisfies env h1 h2 r (req_ \[]) ->
+  h1 = h2 /\ r = norm vunit.
+Proof.
+  intros.
+  inverts H as H. specializes H empty_heap h1 ___.
+  apply hempty_intro.
+  apply empty_inv in H.
+  assumption.
+Qed.
+
+Lemma ens_empty_inv : forall env h1 h2 r,
+  satisfies env h1 h2 r (ens (fun r => \[])) -> h1 = h2.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  apply hempty_inv in H. subst.
+  fmap_eq.
+Qed.
+
+Lemma ens_empty_intro : forall env h1 r,
+  satisfies env h1 h1 r (ens (fun r => \[])).
+Proof.
+  intros.
+  constructor.
+  destruct r.
+  exists v.
+  exists empty_heap.
+  intuition fmap_eq.
+  constructor.
+Qed.
+
+Lemma ens_pure_inv : forall P env h1 h2 v,
+  satisfies env h1 h2 (norm v) (ens (fun a => \[P a])) ->
+  P v /\ h1 = h2.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  inverts H.
+  inverts H2.
+  injects H0.
+  intuition.
+Qed.
+
+Lemma ens_pure_intro : forall P env h r,
+  P r -> satisfies env h h (norm r) (ens (fun v => \[P v])).
+Proof.
+  intros.
+  constructor.
+  exists r.
+  exists empty_heap.
+  intuition.
+  apply hpure_intro; easy.
+  fmap_eq.
+Qed.
+
+Lemma ens_void_inv : forall env h1 h2 r H,
+  satisfies env h1 h2 r (ens_ H) ->
+  r = norm vunit.
+Proof.
+  unfold empty, ens_.
+  intros.
+  inverts H0 as H0. destr H0.
+  rewrite hstar_hpure_l in H0.
+  subst.
+  intuition.
+  f_equal. assumption.
+Qed.
+
+Lemma ens_void_pure_intro : forall P env h,
+  P -> satisfies env h h (norm vunit) (ens_ \[P]).
+Proof.
+  intros.
+  unfold ens_.
+  constructor.
+  exists vunit.
+  exists empty_heap.
+  intuition.
+  rewrite hstar_hpure_r.
+  intuition.
+  apply hpure_intro.
+  reflexivity.
+  fmap_eq.
+Qed.
+
 Lemma req_pure_intro : forall env h1 P,
   satisfies env h1 h1 (norm vunit) (req \[P] empty).
 Proof.
@@ -672,24 +649,14 @@ Proof.
   apply empty_intro.
 Qed.
 
-Lemma seq_ens_pure_inv : forall P env h1 h2 r f,
-  satisfies env h1 h2 r (ens (fun _ => \[P]);; f) ->
-  P /\ satisfies env h1 h2 r f.
-Proof.
-  intros.
-  inverts H as H. destr H.
-  apply ens_pure_inv in H0. destr H0. subst.
-  intuition.
-Qed.
-
-Lemma seq_ens_pure_inv_dep : forall P env h1 h2 v f,
+Lemma seq_ens_pure_inv : forall P env h1 h2 v f,
   satisfies env h1 h2 (norm v) (ens (fun a => \[P a]);; f) ->
   exists v1, P v1 /\ satisfies env h1 h2 (norm v) f.
 Proof.
   intros.
   inverts H as H. destr H.
   destruct r1.
-  lets H2: ens_pure_inv_dep P H0.
+  lets H2: ens_pure_inv P H0.
   exists v0.
   intuition.
   subst.
@@ -1102,11 +1069,14 @@ Proof.
 Qed.
 
 Lemma norm_seq_req_emp : forall f,
-  entails (req \[] f) f.
+  bientails (req \[] f) f.
 Proof.
-  unfold entails. intros.
-  inverts H as H.
-  specializes H empty_heap h1 ___. fintro.
+  unfold entails. split; intros.
+  { inverts H as H.
+    specializes H empty_heap h1 ___. fintro. }
+  { constructor. intros.
+    finv H0. rewrite H0 in H1. rew_fmap *. subst.
+    assumption. }
 Qed.
 
 (** Reassociating req *)
@@ -1502,16 +1472,12 @@ Proof.
 
   (* prove just the first part *)
   rewrite norm_req_req in H4.
-  inverts H4 as H4.
-  specialize (H4 _ (h1 \u x3) H5).
-  forward H4. fmap_eq.
-  forward H4. fmap_disjoint.
+  inverts H4 as H4. specializes H4 (h1 \u x3) H5 ___.
 
   constructor. exists (h1 \u x3). exists r1.
   split.
-  { constructor. eexists. exists x3.
+  { constructor. exists v. exists x3.
     intuition.
-    exact H.
     rewrite hstar_hpure_l. intuition. }
   { assumption. }
 Qed.
@@ -1554,17 +1520,8 @@ Proof.
 
   { (* base case *)
     introv H2.
-    constructor. intros. finv H. subst hp. rew_fmap *. subst hr. clear H3.
-    inverts H2 as H2. destr H2.
-    constructor. exists h3. exists r1.
-    intuition.
-
-    inverts H2 as H2.
-    specialize (H2 empty_heap h3).
-    forward H2. fintro.
-    forward H2. fmap_eq.
-    forward H2. fmap_disjoint.
-
+    rewrite norm_seq_req_emp.
+    rewrite norm_seq_req_emp in H2.
     assumption. }
 
   { (* b_pts_match *)
@@ -2102,7 +2059,7 @@ Module Soundness.
     (* appeal to how e executes to tell us about the heaps *)
     inverts Hb as Hb.
     (* justify that the staged formula describes the heap *)
-    apply ens_pure_intro_dep.
+    apply ens_pure_intro.
     reflexivity.
   Qed.
 
@@ -2577,7 +2534,7 @@ Module ForwardExamples.
     - apply fw_val.
     - unfold flow_res.
       intros.
-      apply ens_pure_inv_dep in H.
+      apply ens_pure_inv in H.
       destruct H.
       exact H.
     - simpl.
