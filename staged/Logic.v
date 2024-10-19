@@ -120,9 +120,9 @@ Notation req_ H := (req H empty).
 
 (** Function environments, for interpreting unknown functions. [ufun] is a HOAS way of substituting into a staged formula, which otherwise doesn't support this due to the shallow embedding that [hprop] uses. *)
 Definition ufun := val -> val -> flow.
-Definition env := fmap var (option ufun).
+Definition senv := Fmap.fmap var (option ufun).
 
-Definition empty_env : env := Fmap.empty.
+Definition empty_env : senv := Fmap.empty.
 
 Declare Scope flow_scope.
 Open Scope flow_scope.
@@ -158,10 +158,10 @@ Check (ens_ \[];; req \[] empty). *)
 
 (** * Interpretation of a staged formula *)
 (** An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
-Inductive satisfies : env -> heap -> heap -> result -> flow -> Prop :=
+Inductive satisfies : senv -> heap -> heap -> result -> flow -> Prop :=
 
   | s_req env p (h1 h2:heap) r f
-    (H: forall hp hr, (* the heap satisfying p, and the remaining heap *)
+    (H: forall (hp hr:heap), (* the heap satisfying p, and the remaining heap *)
       p hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
@@ -898,7 +898,7 @@ Proof.
     injects H0.
     assumption. }
   { pose proof s_unk.
-    lets: s_unk env0 h1 h2 v f.
+    lets: s_unk env h1 h2 v f.
     specializes H2 f1 x H. }
 Qed.
 
@@ -1531,7 +1531,7 @@ Proof.
     rewrite norm_req_req.
     constructor. intros. finv H3. subst. rew_fmap.
 
-    apply (IHHbi env0).
+    apply (IHHbi env).
     apply (biab_single H). }
 
   { (* b_pts_diff *)
@@ -1573,7 +1573,7 @@ Proof.
 
     (* reduce ens on the left *)
     pose proof (ens_reduce_frame) as Hreduce.
-    specializes Hreduce env0 (h5 \u hxa) h7 hyb.
+    specializes Hreduce env (h5 \u hxa) h7 hyb.
     specializes Hreduce r0 H20.
     forward Hreduce. fmap_disjoint.
     asserts_rewrite (h4 = hyb \u h5 \u hxa) in HensH0. fmap_eq.
@@ -1585,7 +1585,7 @@ Proof.
     inverts H4 as H4.
     specializes H4 hyb (h5 \u hxa \u h7) H6 ___.
 
-    lets Hseq: s_seq env0 (ens_ H0) (req H2 f) (h5 \u hxa) h2.
+    lets Hseq: s_seq env (ens_ H0) (req H2 f) (h5 \u hxa) h2.
     forwards: Hseq r.
     { exists (h5 \u hxa \u h7).
       exists r0.
@@ -1594,7 +1594,7 @@ Proof.
       assumption. }
     (* got the seq... now we can use the IH *)
 
-    forwards H21: IHHbi env0 (h5 \u hxa) H18.
+    forwards H21: IHHbi env (h5 \u hxa) H18.
     inverts H21 as H26.
     applys H26 H13.
     fmap_eq.
@@ -1858,7 +1858,7 @@ Lemma ent_seq_unk : forall fn fn1 f1 f2 env x r,
   entails_under env (unk fn x r;; f1) f2.
 Proof.
   intros.
-  rewrites (>> ent_unk env0); [ apply H | ].
+  rewrites (>> ent_unk env); [ apply H | ].
   assumption.
 Qed.
 
@@ -1969,8 +1969,8 @@ Inductive eresult : Type :=
   | enorm : val -> eresult.
 
 (** Program environment *)
-Definition penv := fmap var (option (val -> expr)).
-Definition empty_prenv : env := Fmap.empty.
+Definition penv := Fmap.fmap var (option (val -> expr)).
+Definition empty_penv : penv := Fmap.empty.
 
 Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
   | eval_pval : forall h v env,
@@ -2155,13 +2155,13 @@ Module Soundness.
 
     (* use the semantic tuple we have about e1 *)
     unfold sem_tuple in H.
-    lets H3: H env0 He1. exact Hc. clear H He1. sort.
+    lets H3: H env He1. exact Hc. clear H He1. sort.
 
     (* we need to know that spec value and program value are the same *)
     specializes H0 H3. subst.
 
     (* know about f2 *)
-    specializes H1 env0 h3 h2 v0 He2. clear He2.
+    specializes H1 env h3 h2 v0 He2. clear He2.
 
     constructor. exists h3. exists (norm v).
     intuition.
@@ -2177,11 +2177,11 @@ Module Soundness.
     inverts Hb as Hb.
     { (* true *)
       unfold sem_tuple in Ht.
-      specializes Ht env0 Hb.
+      specializes Ht env Hb.
       now apply s_disj_l. }
     { (* false *)
       unfold sem_tuple in Hf.
-      specializes Hf env0 Hb.
+      specializes Hf env Hb.
       now apply s_disj_r. }
   Qed.
 
@@ -2287,7 +2287,7 @@ Module Soundness.
     { introv H Hb.
       injection H; intros; subst e0 x0; clear H.
       unfold sem_tuple in H0.
-      specializes H0 env0 Hb. }
+      specializes H0 env Hb. }
     { intros. false. }
   Qed.
 
@@ -2302,7 +2302,7 @@ Module Soundness.
     { intros. false. }
     { introv H Hb. injection H; intros; subst e0 x0 fn0; clear H.
       unfold sem_tuple in H0.
-      specializes H0 env0 Hb. }
+      specializes H0 env Hb. }
   Qed.
 
   Lemma sem_papp_unk: forall f va,
@@ -2432,9 +2432,9 @@ Module HistoryTriples.
   Proof.
     unfold hist_triple.
     introv H. intros.
-    pose proof (@s_seq env0 fh empty h0 h1 (norm vunit)) as Hseq.
+    pose proof (@s_seq env fh empty h0 h1 (norm vunit)) as Hseq.
     forward Hseq. { exists h1. exists r. intuition.
-      apply (empty_intro env0 h1). }
+      apply (empty_intro env h1). }
     specializes H Hseq H1 H2.
   Qed.
 

@@ -67,7 +67,7 @@ Proof.
 Qed.
 
 Definition f4 : flow := empty;; fall (fun r => unk "f" (vint 1) r).
-Definition f4_env : env :=
+Definition f4_env : senv :=
   Fmap.update empty_env "f" (Some (fun _ r => ens_ \[r = vint 2])).
 
 (* has to be 2 *)
@@ -297,7 +297,7 @@ Proof.
   assumption.
 Qed.
 
-Definition e6_env : env :=
+Definition e6_env : senv :=
   Fmap.single "f" (Some (fun y r =>
   match y with
   | vloc x => req (x~~>vint 1) (ens_ (x~~>vint 2))
