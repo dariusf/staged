@@ -454,6 +454,146 @@ Module hello.
     | _, _, _ => empty
     end.
 
+  Lemma hello_capture : forall x y,
+    (* note that the ptr value is existentially quantified because
+      we want to instantiate it. the forward rules use universal
+      quantification because the result ends up on the left side of
+      a sequent. *)
+    let env := Fmap.single "f"
+      (Some (fun y r => ∃ b,
+        req (x~~>vint b)
+          (ens (fun res =>
+            (x~~>vint (b+1) \* \[r = vint 0] \* \[r = res])))))
+    in
+    let init_heap :=
+      Fmap.update (Fmap.single x (vint 0)) y (vint 0)
+    in
+    let final_heap :=
+      Fmap.update (Fmap.single x (vint 2)) y (vint 2)
+    in
+    x <> y ->
+    satisfies env init_heap final_heap (norm vunit)
+      (hello (vstr "f") (vloc x) (vloc y) (vint 2)).
+  Proof.
+    intros. unfold hello.
+    constructor. exists 0.
+    constructor. intros. finv H0.
+    constructor. (* seq *)
+      exists (Fmap.update (Fmap.single x (vint 1)) y (vint 0)).
+      exists (norm vunit).
+    split. constructor. exists vunit. exists (Fmap.single x (vint 1)).
+    {
+
+      assert (hr = Fmap.single y (vint 0)).
+      {
+      applys Fmap.union_eq_inv_of_disjoint hp hr (Fmap.single y (vint 0)).
+      fmap_disjoint.
+      subst.
+      apply Fmap.disjoint_single_single.
+      easy.
+      fmap_eq.
+      rewrite <- H1.
+      unfold init_heap.
+      unfold Fmap.update.
+      fmap_eq.
+      reflexivity.
+      }
+      intuition. fintro. intuition. apply hsingle_intro.
+      unfold Fmap.update. fmap_eq.
+
+      subst.
+      apply Fmap.disjoint_single_single. easy.
+    }
+
+    constructor. exists 0.
+
+    lets: ent_unk.
+    specializes H3 env (vint 0) "f" (vloc y) ___.
+    unfold env. resolve_fn_in_env. simpl in H3.
+
+    constructor.
+      exists (Fmap.update (Fmap.single x (vint 2)) y (vint 0)).
+      exists (norm (vint 0)).
+
+    split.
+    lets H4: s_unk.
+    applys H4.
+    { unfold env. resolve_fn_in_env. }
+    { 
+      simpl.
+      constructor. exists 1.
+      constructor. intros. finv H5.
+      constructor. exists (vint 0).
+        exists (Fmap.single x (vint 2)).
+
+      assert (hr0 = Fmap.single y (vint 0)).
+      { applys Fmap.union_eq_inv_of_disjoint hp0 hr0 (Fmap.single y (vint 0)).
+        fmap_disjoint.
+        { subst; apply Fmap.disjoint_single_single; easy. }
+        rewrite <- H6.
+        unfold Fmap.update.
+        fmap_eq.
+        reflexivity.
+        }
+        intuition.
+        rewrite hstar_hpure_conj.
+        rewrite hstar_hpure_r. intuition.
+        apply hsingle_intro.
+        unfold Fmap.update. fmap_eq.
+        subst hr0.
+        apply Fmap.disjoint_single_single; easy. }
+
+    constructor. exists 2.
+    constructor. exists 0.
+
+    constructor. intros.
+
+    assert (hr0 = empty_heap).
+    { unfold Fmap.update in H5. finv H4. finv H7. finv H4. subst x0 x1.
+      change (HeapF.Fmap.single) with (Fmap.single) in H8.
+      rewrite H9 in H5.
+      lets: Fmap.union_eq_inv_of_disjoint
+              (Fmap.single y (vint 0) \u Fmap.single x (vint 2))
+              hr0 empty_heap.
+      apply H4.
+      fmap_disjoint.
+      fmap_disjoint.
+      rew_fmap.
+      symmetry.
+      change (HeapF.Fmap.single) with (Fmap.single) in H5.
+      rewrite H5 at 1.
+      
+      fmap_eq.
+      rewrite Fmap.union_comm_of_disjoint.
+      2: {
+        apply Fmap.disjoint_single_single; easy.
+      }
+      reflexivity.
+    }
+
+    constructor.
+    exists vunit.
+    exists (Fmap.update (Fmap.single x (vint 2)) y (vint 2)).
+    splits; auto.
+    unfold Fmap.update.
+    rewrite hstar_hpure_l.
+    rewrite hstar_comm.
+    split.
+    reflexivity.
+    apply hstar_intro.
+    rewrite hstar_hpure_r.
+    split.
+    apply hsingle_intro.
+    reflexivity.
+    apply hsingle_intro.
+    apply Fmap.disjoint_single_single; easy.
+    unfold final_heap.
+    unfold Fmap.update.
+    fmap_eq.
+  Qed.
+
+  (* TODO hello can be called with a function that captures x *)
+
 End hello.
 
 Module foldr.
@@ -607,7 +747,7 @@ Module foldr.
 
   Definition foldr_env1 :=
     Fmap.update
-        (Fmap.single "foldr" (Some foldr))
+      (Fmap.single "foldr" (Some foldr))
         "f" (Some uncurried_plus_closure_spec).
 
   Definition foldr_sum_state := forall xs res,
@@ -697,7 +837,7 @@ Module foldr.
 
   Definition foldr_env2 :=
     Fmap.update
-        (Fmap.single "foldr" (Some foldr))
+      (Fmap.single "foldr" (Some foldr))
         "f" (Some uncurried_plus_assert_spec).
 
   Lemma foldr_ex2: forall xs res,
@@ -754,7 +894,7 @@ Module foldr.
 
   Definition foldr_env3 :=
     Fmap.update
-        (Fmap.single "foldr" (Some foldr))
+      (Fmap.single "foldr" (Some foldr))
         "f" (Some uncurried_plus_exc_spec).
 
   Lemma foldr_ex3: forall xs res,

@@ -2,10 +2,10 @@
 From Staged Require Import Logic.
 
 Ltac funfold_hyp H env f :=
-  rewrites (>> norm_unk env f) in H; [ unfold env; resolve_fn_in_env | ].
+  rewrites (>> ent_unk env f) in H; [ unfold env; resolve_fn_in_env | ].
 
 Ltac funfold_ env f :=
-  rewrites (>> norm_unk env f); [ unfold env; resolve_fn_in_env | ].
+  rewrites (>> ent_unk env f); [ unfold env; resolve_fn_in_env | ].
 
 Global Hint Rewrite norm_seq_ens_empty norm_exists norm_forall norm_reassoc : norm_db.
 

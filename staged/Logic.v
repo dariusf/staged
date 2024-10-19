@@ -134,9 +134,6 @@ Notation "'∃' x1 .. xn , H" :=
   (at level 39, x1 binder, H at level 50, right associativity,
    format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : flow_scope.
 
-(* Check (fex (fun x => ens_ \[x = vint 1];; empty)). *)
-(* Check (fex (fun x => ens_ \[x = vint 1]);; empty). *)
-
 Notation "'∀' x1 .. xn , H" :=
   (fall (fun x1 => .. (fall (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
@@ -151,6 +148,13 @@ Notation "f '$' '(' x ',' r ')'" := (unk f x r)
 
 Notation "'ens' r '.' Q" := (ens (fun r => Q))
   (at level 80, format "'ens'  r '.'  Q" , only printing) : flow_scope.
+
+(* Some tests *)
+
+(* Check (fex (fun x => ens_ \[x = vint 1];; empty)).
+Check (fex (fun x => ens_ \[x = vint 1]);; empty).
+Check (req \[] (ens_ \[];; empty)).
+Check (ens_ \[];; req \[] empty). *)
 
 (** * Interpretation of a staged formula *)
 (** An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
@@ -224,6 +228,8 @@ Definition has_no_result f :=
 Definition entails_under env f1 f2 :=
   forall h1 h2 r,
     satisfies env h1 h2 r f1 -> satisfies env h1 h2 r f2.
+
+(* see [ent_unk_conv] for why there is no bientails_under *)
 
 (** General entailments which work for arbitrary environments. *)
 Definition entails (f1 f2:flow) : Prop :=
@@ -418,7 +424,8 @@ Section Proprium.
     eauto.
   Qed.
 
-  (* For rewriting forwad in the goal *)
+  (* For rewriting in the goal. Some of the flipped instances are for this purpose.
+     Without them, we can only rewrite in the Coq or the staged context. *)
   #[global]
   Instance entails_entails_under_flip : forall env,
     Proper (entails ====> flip entails ====> flip impl) (entails_under env).
@@ -879,6 +886,22 @@ Proof.
   assumption.
 Qed.
 
+Lemma unk_inv_bi : forall env h1 h2 v x f1 f,
+  Fmap.read env f = Some f1 ->
+  satisfies env h1 h2 (norm v) (unk f x v) <->
+  satisfies env h1 h2 (norm v) (f1 x v).
+Proof.
+  intros.
+  split; intros.
+  { inverts H0 as H0.
+    rewrite H in H0.
+    injects H0.
+    assumption. }
+  { pose proof s_unk.
+    lets: s_unk env0 h1 h2 v f.
+    specializes H2 f1 x H. }
+Qed.
+
 Lemma unk_res_inv : forall env h1 h2 v x f1 f r,
   Fmap.read env f = Some f1 ->
   satisfies env h1 h2 r (unk f x v) ->
@@ -887,29 +910,6 @@ Proof.
   intros.
   inverts H0 as H0.
   reflexivity.
-Qed.
-
-Lemma norm_unk : forall env v f1 f x,
-  Fmap.read env f = Some f1 ->
-  entails_under env (unk f x v) (f1 x v).
-Proof.
-  unfold entails_under.
-  intros.
-  eapply unk_inv.
-  exact H.
-  assumption.
-Qed.
-
-Lemma unk_inv_conv : forall env h1 h2 v f1 f x,
-  Fmap.read env f = Some f1 ->
-  satisfies env h1 h2 (norm v) (f1 x v) ->
-  satisfies env h1 h2 (norm v) (unk f x v).
-Proof.
-  unfold entails_under.
-  intros.
-  apply (@s_unk env0 h1 h2 v f f1 x).
-  assumption.
-  assumption.
 Qed.
 
 Lemma norm_forall : forall (A:Type) f1 f2_ctx,
@@ -1822,13 +1822,43 @@ Proof.
   intros. apply entails_under_refl.
 Qed.
 
+Lemma ent_unk : forall env v f1 f x,
+  Fmap.read env f = Some f1 ->
+  entails_under env (unk f x v) (f1 x v).
+Proof.
+  unfold entails_under.
+  intros.
+  eapply unk_inv.
+  exact H.
+  assumption.
+Qed.
+
+Lemma ent_unk_conv : forall env v f1 f x,
+  Fmap.read env f = Some f1 ->
+  entails_under env (f1 x v) (unk f x v).
+Proof.
+  unfold entails_under. intros.
+  (* the converse is not possible to prove because reduction of a ufun
+    returns an arbitrary flow, which isn't guaranteed to have the same
+    result as [unk f]. the other direction is fine because of the semantics
+    of unk.
+
+    note that this is an implementation issue due to the use of hoas for ufuns;
+    conceptually this is an equivalence.
+
+    at the level of [satisfies], however, it is possible to go
+    backwards if we constrain the result; see [unk_inv_bi]. this is also
+    the reason we don't have bientails_under, as this is the only rule
+    which uses it, and it would have to talk about the result. *)
+Abort.
+
 Lemma ent_seq_unk : forall fn fn1 f1 f2 env x r,
   Fmap.read env fn = Some fn1 ->
   entails_under env (fn1 x r;; f1) f2 ->
   entails_under env (unk fn x r;; f1) f2.
 Proof.
   intros.
-  rewrites (>> norm_unk env0); [ apply H | ].
+  rewrites (>> ent_unk env0); [ apply H | ].
   assumption.
 Qed.
 
