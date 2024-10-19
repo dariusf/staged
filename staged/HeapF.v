@@ -1,6 +1,7 @@
 
 From SLF Require Export LibString LibCore.
-From SLF Require Export LibSepTLCbuffer LibSepFmap.
+From SLF Require Export LibSepTLCbuffer.
+From SLF Require Import LibSepFmap.
 Module Fmap := LibSepFmap.
 From SLF Require LibSepSimpl.
 

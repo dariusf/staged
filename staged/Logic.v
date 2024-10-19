@@ -2,13 +2,14 @@
 From Coq Require Import Classes.RelationClasses.
 From Coq Require Morphisms Program.Basics.
 
-From SLF Require LibSepFmap.
-Module Fmap := LibSepFmap.
-
 (* remove when https://github.com/coq/coq/pull/19673 is merged *)
 Set Warnings "-notation-incompatible-prefix".
 From Staged Require Export HeapF.
 Set Warnings "notation-incompatible-prefix".
+
+From SLF Require LibSepFmap.
+Module Fmap := LibSepFmap.
+Export (ltac.notations, hints, notations) LibSepFmap.
 
 From Staged Require Export Extra ExtraTactics.
 
