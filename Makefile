@@ -5,7 +5,7 @@ docs:
 	# [[ $$OSTYPE == 'darwin'* ]] && open docs/staged.Logic.html || true
 
 alectryon:
-	alectryon -R slf SLF -R staged Staged --frontend coqdoc --backend webpage staged/Staged*.v --output-directory docs
+	alectryon -R slf SLF -R staged Staged --frontend coqdoc --backend webpage staged/*.v --output-directory docs
 
 coqdoc: install-doc
 
