@@ -18,13 +18,14 @@ Local Notation val := V.value.
 Set Implicit Arguments.
 
 Definition loc : Type := nat.
+Definition null : loc := 0%nat.
 Definition heap : Type := fmap loc val.
-
-(* copied from LibSepReference *)
 
 (* this notation is missing for some reason *)
 Notation "h1 \u h2" := (Fmap.union h1 h2)
   (at level 37, right associativity).
+
+(* copied from LibSepReference: Heap Predicates, and first part of Specification of Record Operations *)
 
 (* ################################################################# *)
 (** * Heap Predicates *)
@@ -713,6 +714,32 @@ Ltac xsimpl_hook H ::=
   | |- val_int _ = val_int _ => fequal
   | H: val_int _ = val_int _ |- _ => inverts H
   end. *)
+
+(* ================================================================= *)
+(** ** Specification of Record Operations *)
+
+(** The chapter [Struct] shows how to these specifications may be
+    realized. *)
+
+Implicit Types k : nat.
+
+(* ----------------------------------------------------------------- *)
+(** *** Representation of Records *)
+
+(** A field name is implemented as a natural number *)
+
+Definition field : Type := nat.
+
+(** A record field is described as the pair of a field and a value stored
+    in that field. *)
+
+Definition hrecord_field : Type := (field * val).
+
+(** A record consists of a list of fields. *)
+
+Definition hrecord_fields : Type := list hrecord_field.
+
+Implicit Types kvs : hrecord_fields.
 
 (* end LibSepReference *)
 

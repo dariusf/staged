@@ -474,8 +474,8 @@ Module hello.
     simpl.
     fintro a.
     fintro b.
-    fspec a.
-    fassume H.
+    finst a.
+    fassume.
 
     rewrite (norm_ens_req_transpose).
     2: { 
@@ -499,9 +499,9 @@ Module hello.
     simpl.
 
     (* intro the existential, and specialize the forall *)
-    rewrite norm_seq_ex_reassoc_ctx. fintro v.
+    fintro v.
     rewrite norm_seq_all_reassoc.
-    rewrite norm_seq_all_reassoc_ctx. fspec (a + 1).
+    finst (a + 1).
     rewrite norm_reassoc.
 
     rewrite (norm_ens_req_transpose).
@@ -525,8 +525,8 @@ Module hello.
     fassume H.
 
     (* instantiate before biabduction *)
-    rewrite norm_seq_all_reassoc_ctx. fspec (a + 2).
-    rewrite norm_seq_all_reassoc_ctx. fspec b.
+    finst (a + 2).
+    finst b.
 
     rewrite norm_ens_req_transpose.
     2: {
@@ -579,9 +579,9 @@ Module hello.
     intros.
     fintro a.
     fintro b.
-    fassume H.
+    fassume.
     funfold1 "hello". simpl.
-    rewrite norm_seq_all_reassoc_ctx. fspec a.
+    finst a.
 
     rewrite norm_ens_req_transpose.
     2: {
@@ -598,7 +598,7 @@ Module hello.
     rewrites (>> ent_ex_seq_unk (hello_env1 x y) "f").
     { unfold hello_env1. resolve_fn_in_env. }
     simpl.
-    rewrite norm_seq_ex_reassoc_ctx. fintro v.
+    fintro v.
     (* f cannot capture x *)
   Abort.
 
@@ -827,6 +827,198 @@ Module foldr.
       apply ent_ens_single.
       xsimpl; intros; subst. simpl. f_equal. math. split; reflexivity. }
   Qed.
+
+  (* Examples *)
+
+  (* specialized to int list for simplicity *)
+  Fixpoint IsList (L:list val) (p:loc) : hprop :=
+    match L with
+    | nil => \[p = null]
+    | (vint x)::L' => \[p <> null] \*
+      \exists q, (p ~~> vtup (vint x) (vloc q) \* (IsList L' q))
+    | _ => \[False]
+    end.
+
+  Lemma IsList_nil : forall p,
+    (IsList nil p) = \[p = null].
+  Proof using. auto. Qed.
+
+  Lemma IsList_cons : forall p x L',
+    IsList (vint x::L') p =
+    \[p <> null] \* \exists q, (p ~~> (vtup (vint x) (vloc q))) \* (IsList L' q).
+  Proof using. auto. Qed.
+
+  Lemma IsList_if : forall (p:loc) (L:list val),
+        (IsList L p)
+    ==> (If p = null
+          then \[L = nil]
+          else \[p <> null] \* \exists x q L', \[L = vint x::L']
+              \* (p ~~> (vtup (vint x) (vloc q))) \* (IsList L' q)).
+  Proof.
+    intros p xs.
+    destruct xs.
+    { xchange IsList_nil.
+      intros ->.
+      case_if.
+      xsimpl. reflexivity. }
+    {
+      destruct v;
+        match goal with
+        | |- IsList (vint _ :: _) _ ==> _ => idtac
+        | _ => simpl; xsimpl
+        end.
+      rewrite IsList_cons.
+      xpull. intros H q.
+      case_if. (* absurd case eliminated *)
+      xsimpl. assumption.
+      reflexivity. }
+  Qed.
+
+  (* Instead of taking a pure list, this takes a location *)
+  Definition foldr_mut : ufun := fun (args:val) rr =>
+    match args with
+    | vtup (vstr f) (vtup (vint a) (vloc l) (* list->loc *)) =>
+      disj
+        (ens_ \[rr = vint a /\ l = null (* nil->null *)])
+        (* must know l is not null to work with a shape predicate *)
+        (ens_ \[l <> null];; (
+          ∀ l1, (* to be instantiated from the shape pred, analogous to the ∀ over the argument l in the pure version *)
+          ∃ r, unk "foldr" (vtup (vstr f) (vtup (vint a) (vloc l1))) r;;
+          unk f (vtup (vloc l) r) rr))
+    | _ => empty
+    end.
+
+  Fixpoint mapinc (xs:list int) : list int :=
+    match xs with
+    | nil => nil
+    | y :: ys => (y+1) :: mapinc ys
+    end.
+
+  Definition uncurried_plus_mut_spec : ufun := fun args res =>
+    match args with
+    | vtup (vloc a) (vint b) => ∀ c l,
+        req (a~~>vtup (vint c) (vloc l))
+          (ens_ (a~~>vtup (vint (c+1)) (vloc l) \*
+            \[res = vint (c + b)]))
+    | _ => empty
+    end.
+
+  Definition foldr_env0 :=
+    Fmap.update
+      (Fmap.single "foldr" (Some foldr_mut))
+        "f" (Some uncurried_plus_mut_spec).
+
+  Lemma foldr_ex0: forall xs res l,
+    entails_under foldr_env0
+      (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vloc l))) res)
+      (req (IsList xs l)
+        (∃ ys, ens_ (IsList ys l \*
+          \[res = vint (sum (to_int_list xs)) /\
+            to_int_list ys = mapinc (to_int_list xs)]))).
+  Proof.
+    intros xs. induction_wf IH: list_sub xs. intros.
+    funfold1 "foldr".
+    simpl.
+    apply ent_disj_l.
+    { fassume (?&?).
+      subst.
+      fassume.
+      rewrite norm_ens_empty_r.
+      finst (@nil val).
+      apply ent_ens_single.
+      xchange IsList_if.
+      case_if.
+      xsimpl.
+      intros ->.
+      split.
+      f_equal.
+      reflexivity.
+      simpl.
+      xsimpl.
+      reflexivity. }
+    { fassume.
+      rewrites (>> entails_ens_void IsList_if).
+      case_if.
+      { fassume H1.
+        fassume H2.
+        false. }
+      rewrite norm_ens_ens_void_split.
+      rewrite <- norm_seq_assoc.
+      fassume H1.
+      fintro x.
+      fintro q.
+      fintro L'.
+      rewrite norm_ens_ens_void_split.
+      rewrite <- norm_seq_assoc.
+      fassume H2.
+      rewrite norm_seq_assoc.
+      rewrite norm_ent_ent_pure_comm.
+      rewrite <- norm_seq_assoc.
+      fassume H3.
+      finst q.
+      fintro r.
+      rewrite IH; [ | subst; auto ].
+      rewrite norm_seq_assoc.
+      rewrite (norm_ens_req_transpose).
+      2: {
+        rewrite hstar_comm.
+        rewrite <- (hstar_hempty_r (IsList L' q)) at 2.
+        apply b_any_match.
+        apply b_base_empty.
+      }
+
+      rewrite norm_reassoc.
+      apply ent_req_emp_l.
+      rewrite norm_seq_ex_reassoc_ctx.
+      rewrite norm_seq_ex_reassoc.
+      fintro ys.
+      rewrite norm_ens_ens_void_split.
+      rewrite norm_ens_ens_void_comm.
+      rewrite norm_seq_assoc.
+      rewrite norm_ens_ens_void_comm.
+      rewrite <- norm_seq_assoc.
+      rewrite <- norm_seq_assoc.
+      fassume (?&?).
+      rewrite norm_seq_assoc.
+      rewrite norm_ens_ens_void_combine.
+
+      (* figure out what foldr returns first *)
+      funfold1 "f".
+      subst r.
+      simpl.
+      finst x.
+      finst q.
+
+      rewrite (norm_ens_req_transpose).
+      2: {
+        rewrite <- (hstar_hempty_r (l ~~> vtup (vint x) (vloc q))) at 2.
+        apply b_pts_match.
+        apply b_base_empty.
+      }
+
+      rewrite hstar_hempty_r.
+      apply ent_req_l. reflexivity.
+
+      rewrite norm_ens_ens_void_combine.
+      finst (vint (x+1)::ys).
+      apply ent_ens_single.
+      xsimpl.
+      { intros ->.
+        split.
+        { subst xs.
+          simpl.
+          reflexivity. }
+        { subst xs.
+          simpl.
+          rewrite <- H0.
+          reflexivity. } }
+      { intros ->.
+        xchange <- IsList_cons.
+        assumption. }
+    }
+  Qed.
+
+  (* Example 2 *)
 
   Definition uncurried_plus_assert_spec : ufun := fun args rr =>
     match args with

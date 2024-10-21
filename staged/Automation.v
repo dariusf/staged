@@ -29,17 +29,35 @@ Ltac funfold1 f :=
 (* introduce variables *)
 Ltac fintro x :=
   lazymatch goal with
+  (* base cases *)
   | |- entails_under _ (fex (fun y => _)) _ =>
     (* let x := fresh y in *)
     simple apply ent_ex_l; intros x
   | |- entails_under _ _ (fall (fun y => _)) =>
     (* let x := fresh y in *)
     simple apply ent_all_r; intros x
+
+  (* ex under an ens *)
+  | |- entails_under _ (ens_ _;; ∃ _, _) _ =>
+    rewrite norm_seq_ex_reassoc_ctx; fintro x
+  | |- entails_under _ (ens_ _;; ∃ _, _;; _) _ =>
+    rewrite norm_seq_ex_reassoc_ctx; fintro x
+
+  (* SL exists *)
+  | |- entails_under _ (ens_ (\exists _, _)) _ =>
+    rewrite ent_seq_ens_sl_ex; fintro x
+  | |- entails_under _ (ens_ (\exists _, _);; _) _ =>
+    rewrite ent_seq_ens_sl_ex; fintro x
   end.
 
 (* instantiate an existential or specialize a forall *)
-Ltac fspec a :=
+Ltac finst a :=
   lazymatch goal with
+  | |- entails_under _ (ens_ _;; ∀ _, _) _ =>
+    rewrite norm_seq_all_reassoc_ctx; finst a
+  | |- entails_under _ (ens_ _;; ∀ _, _;; _) _ =>
+    rewrite norm_seq_all_reassoc_ctx; finst a
+
   | |- entails_under _ (fall (fun y => _)) _ =>
     apply ent_all_l; exists a
   | |- entails_under _ _ (fex (fun y => _)) =>
@@ -47,16 +65,24 @@ Ltac fspec a :=
   end.
 
 (* move assumptions to the Coq context *)
-Ltac fassume H :=
+Ltac fassume_ H :=
+  lazymatch goal with
+  | |- entails_under _ (ens_ \[_]) _ =>
+    apply ent_ens_l; intros H
+  | |- entails_under _ (ens_ \[_];; _) _ =>
+    apply ent_seq_ens_l; intros H
+  | |- entails_under _ _ (req \[_] _) =>
+    apply ent_req_r; apply ent_seq_ens_l; intros H
+  end.
+
+Ltac fassume_req :=
   lazymatch goal with
   | |- entails_under _ _ (req _ _) =>
     apply ent_req_r
-  | |- entails_under _ _ (req \[_] _) =>
-    apply ent_req_r; apply ent_seq_ens_l; intros H
-  | |- entails_under _ (ens_ \[_];; _) _ =>
-    apply ent_seq_ens_l; intros H
   end.
 
+Tactic Notation "fassume" simple_intropattern(p) := fassume_ p.
+Tactic Notation "fassume" := fassume_req.
 
 Ltac ent_step :=
   match goal with

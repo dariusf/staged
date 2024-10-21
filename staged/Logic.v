@@ -1481,6 +1481,10 @@ Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
     biab Ha H1 H2 Hf ->
     biab (\[a=b] \* Ha) (x~~>a \* H1) (x~~>b \* H2) Hf
 
+  | b_any_match : forall H H1 H2 Ha Hf,
+    biab Ha H1 H2 Hf ->
+    biab Ha (H \* H1) (H \* H2) Hf
+
   | b_pts_diff : forall a b H1 H2 Ha Hf x y,
     (* x <> y -> *)
     biab Ha H1 H2 Hf ->
@@ -1518,7 +1522,31 @@ Proof.
   induction H.
   { xsimpl. }
   { xsimpl; auto. }
-  { xsimpl; auto. }
+  { xsimpl. assumption. }
+  { xsimpl. assumption. }
+Qed.
+
+Lemma biab_single_h : forall H env h1 h2 r H1 H2 f,
+  satisfies env h1 h2 r (ens_ (H \* H1);; req (H \* H2) f)->
+  satisfies env h1 h2 r (ens_ H1;; req H2 f).
+Proof.
+  intros.
+  inverts H0 as H0. destruct H0 as (h3&r1&H3&H4).
+  (* ens adds a location to the heap *)
+  inverts H3 as H3.
+  (* use that to figure out what is in h3 *)
+  destr H3. hinv H3. hinv H3. hinv H6. subst h0 h3 x0 x. rew_fmap *.
+
+  (* prove just the first part *)
+  rewrite norm_req_req in H4.
+  inverts H4 as H4. specializes H4 x1 (h1 \u x2) ___.
+
+  constructor. exists (h1 \u x2). exists (norm vunit).
+  split.
+  { constructor. exists vunit. exists x2.
+    intuition.
+    rewrite hstar_hpure_l. intuition. }
+  { assumption. }
 Qed.
 
 (** Biabduction for a single location. *)
@@ -1527,22 +1555,7 @@ Lemma biab_single : forall x a env h1 h2 r H1 H2 f,
   satisfies env h1 h2 r (ens_ H1;; req H2 f).
 Proof.
   intros.
-  inverts H as H. destruct H as (h3&r1&H3&H4).
-  (* ens adds a location to the heap *)
-  inverts H3 as H3.
-  (* use that to figure out what is in h3 *)
-  destr H3. hinv H0. hinv H0. hinv H5. subst h3 h0 x0 x1. rew_fmap *.
-
-  (* prove just the first part *)
-  rewrite norm_req_req in H4.
-  inverts H4 as H4. specializes H4 (h1 \u x3) H5 ___.
-
-  constructor. exists (h1 \u x3). exists r1.
-  split.
-  { constructor. exists v. exists x3.
-    intuition.
-    rewrite hstar_hpure_l. intuition. }
-  { assumption. }
+  applys* biab_single_h (x~~>a).
 Qed.
 
 (** We can remove a framing heap [hf] from both sides of a [satisfies] if it is disjoint from the part of the heap satisfying [ens_ H]. *)
@@ -1596,6 +1609,11 @@ Proof.
 
     apply (IHHbi env).
     apply (biab_single H). }
+
+  { (* b_any_match *)
+    intros.
+    apply IHHbi.
+    applys* biab_single_h H. }
 
   { (* b_pts_diff *)
     introv H3.
@@ -2042,6 +2060,34 @@ Proof.
   fdestr H0.
   constructor. exists v.
   auto.
+Qed.
+
+Lemma ent_seq_ens_sl_ex: forall env A (c:A->hprop) f,
+  entails_under env (ens_ (\exists x, c x);; f)
+  (∃ x, ens_ (c x);; f).
+Proof.
+  unfold entails_under. intros.
+  fdestr H.
+  inverts H0 as H0. destr H0.
+  rewrite hstar_hpure_l in H0. destr H0.
+  apply hexists_inv in H5.
+  destr H5. (* get x *)
+  constructor. exists x.
+  constructor. exists h3. exists (norm vunit).
+  split.
+  - constructor. exists vunit. exists h0.
+    intuition.
+    rewrite hstar_hpure_l. intuition.
+  - assumption.
+Qed.
+
+Lemma ent_req_emp_l : forall env f f1,
+  entails_under env f f1 ->
+  entails_under env (req \[] f) f1.
+Proof.
+  unfold entails_under. intros.
+  inverts H0 as H0. specializes H0 empty_heap h1 ___.
+  apply hempty_intro.
 Qed.
 
 (** * Big-step semantics *)
