@@ -499,9 +499,9 @@ Module hello.
     simpl.
 
     (* intro the existential, and specialize the forall *)
-    rewrite norm_seq_ex_reassoc_prefix. fintro v.
+    rewrite norm_seq_ex_reassoc_ctx. fintro v.
     rewrite norm_seq_all_reassoc.
-    rewrite norm_seq_all_reassoc_prefix. fspec (a + 1).
+    rewrite norm_seq_all_reassoc_ctx. fspec (a + 1).
     rewrite norm_reassoc.
 
     rewrite (norm_ens_req_transpose).
@@ -525,8 +525,8 @@ Module hello.
     fassume H.
 
     (* instantiate before biabduction *)
-    rewrite norm_seq_all_reassoc_prefix. fspec (a + 2).
-    rewrite norm_seq_all_reassoc_prefix. fspec b.
+    rewrite norm_seq_all_reassoc_ctx. fspec (a + 2).
+    rewrite norm_seq_all_reassoc_ctx. fspec b.
 
     rewrite norm_ens_req_transpose.
     2: {
@@ -548,7 +548,59 @@ Module hello.
     intros. rewrite H. f_equal. math.
   Qed.
 
-  (* TODO hello can be called with a function that captures x *)
+  (* Suppose we have a hello that does not release x,
+     and it is called with an f that captures x *)
+  Definition hello1 : ufun := fun args res =>
+    match args with
+    | vtup (vstr f) (vtup (vloc x) (vloc y)) =>
+      ∀ a, req (x~~>vint a)
+      (∃ r, unk f (vloc y) (vint r);;
+      ∀ b1, req (y~~>vint b1)
+        (ens_ (x~~>vint (a+1) \* y~~>res \* \[res = vint (a+1+r)])))
+    | _ => empty
+    end.
+
+  (* same as before except for using hello1 *)
+  Definition hello_env1 (x y:loc) :=
+    Fmap.update
+      (Fmap.single "f"
+        (Some (fun y r => ∀ b,
+          req (x~~>vint b)
+            (ens_ ((x~~>vint (b+1) \* \[r = vint 0]))))))
+        "hello" (Some hello1).
+
+  (* the proof should not go through *)
+  Lemma hello_capture1 : forall x y res,
+    entails_under (hello_env1 x y)
+      (unk "hello" (vtup (vstr "f") (vtup (vloc x) (vloc y))) res)
+      (∀ a b, req (x~~>vint a \* y~~>vint b)
+        (ens_ \[True])).
+  Proof.
+    intros.
+    fintro a.
+    fintro b.
+    fassume H.
+    funfold1 "hello". simpl.
+    rewrite norm_seq_all_reassoc_ctx. fspec a.
+
+    rewrite norm_ens_req_transpose.
+    2: {
+      (* rewrite hstar_comm. *)
+      rewrite <- (hstar_hempty_r (x ~~> vint a)) at 2.
+      apply b_pts_match.
+      apply b_base_empty.
+    }
+
+    (* norm *)
+    rewrite hstar_hempty_r.
+    apply ent_req_l. reflexivity.
+
+    rewrites (>> ent_ex_seq_unk (hello_env1 x y) "f").
+    { unfold hello_env1. resolve_fn_in_env. }
+    simpl.
+    rewrite norm_seq_ex_reassoc_ctx. fintro v.
+    (* f cannot capture x *)
+  Abort.
 
 End hello.
 

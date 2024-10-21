@@ -1329,7 +1329,7 @@ Proof.
   apply satisfies_ens_sep_split.
 Qed.
 
-Lemma norm_seq_ex_reassoc_prefix: forall A (f:A->flow) f1,
+Lemma norm_seq_ex_reassoc_ctx: forall A (f:A->flow) f1,
   bientails (f1;; (∃ x : A, f x)) (∃ x : A, f1;; f x).
 Proof.
   intros. split; intros.
@@ -1371,7 +1371,7 @@ Proof.
   intuition.
 Qed.
 
-Lemma norm_seq_all_reassoc_prefix: forall A (f:A->flow) f1,
+Lemma norm_seq_all_reassoc_ctx: forall A (f:A->flow) f1,
   entails (f1;; (∀ x : A, f x)) (∀ x : A, f1;; f x).
 Proof.
   unfold entails. intros.
