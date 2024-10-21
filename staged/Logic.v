@@ -689,9 +689,9 @@ Proof.
   applys ens_void_inv H0.
 Qed.
 
-(** * Tactics for simple introduction/inversion *)
+(** * Some tactics *)
 
-Ltac finv H :=
+Ltac hinv H :=
   match type of H with
   | \[] _ => apply hempty_inv in H
   | \[_] _ => apply hpure_inv in H as (?&?)
@@ -701,25 +701,13 @@ Ltac finv H :=
   | (_ \* \[_]) _ => rewrite hstar_hpure_r
   end.
 
-Ltac fintro :=
+Ltac hintro :=
   match goal with
-  (* | |- satisfies _ _ _ _ (ens (fun _ => \[_])) => apply ens_pure_intro *)
-  (* | |- satisfies _ _ _ _ (ens (fun _ => \[])) => apply ens_empty_intro *)
-  | |- satisfies _ _ _ _ empty => apply empty_intro
-  | |- satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_intro
   | |- \[] _ => apply hempty_intro
   | |- \[_] _ => apply hpure_intro
   | |- (_ \* _) (_ \u _) => apply hstar_intro
-  (* | |- (\[_] \* \[_]) _ => idtac "use rewrite hstar_hpure_l or hstar_hpure_r" *)
   | |- (\[_] \* _) _ => rewrite hstar_hpure_l
   | |- (_ \* \[_]) _ => rewrite hstar_hpure_r
-  (* | |- satisfies _ (req \[]) _ _ _ => apply req_empty_intro *)
-  (* | |- satisfies _ (req \[];; _) _ _ _ => apply seq_req_emp_intro_l *)
-  end.
-
-Ltac fexists v :=
-  match goal with
-  | |- satisfies _ _ _ _ (fex _) => constructor; exists v
   end.
 
 Ltac fdestr_rec H :=
@@ -875,7 +863,7 @@ Proof.
   split; intros; now apply seq_assoc.
 Qed.
 
-Lemma unk_inv : forall env h1 h2 v x f1 f r,
+Lemma unk_inv : forall env h1 h2 r f x v f1,
   Fmap.read env f = Some f1 ->
   satisfies env h1 h2 r (unk f x v) ->
   satisfies env h1 h2 r (f1 x v).
@@ -953,15 +941,15 @@ Proof.
   fdestr H.
   inverts H0 as H0. destr H0.
   inverts H3 as H3. destr H3.
-  finv H0. finv H0.
-  finv H3. finv H3.
+  hinv H0. hinv H0.
+  hinv H3. hinv H3.
   constructor.
   exists (h1 \u x2). exists (norm vunit).
   split.
   { constructor. exists vunit. exists x2.
-    intuition. fintro. intuition. }
+    intuition. hintro. intuition. }
   { constructor. exists vunit. exists x0.
-    intuition. subst. reflexivity. fintro. intuition. fmap_eq. }
+    intuition. subst. reflexivity. hintro. intuition. fmap_eq. }
 Qed.
 
 (** Compaction rule 1 from the paper *)
@@ -1000,7 +988,7 @@ Proof.
   unfold entails. intros.
   inverts H0 as H0.
   specializes H0 empty_heap h1.
-  forward H0. fintro. assumption.
+  forward H0. hintro. assumption.
   rew_fmap *.
 Qed.
 
@@ -1013,7 +1001,7 @@ Proof.
   inverts H as H.
   destr H.
   rew_heap in H.
-  finv H.
+  hinv H.
   subst.
   rew_fmap *.
 Qed.
@@ -1074,9 +1062,9 @@ Lemma norm_seq_req_emp : forall f,
 Proof.
   unfold entails. split; intros.
   { inverts H as H.
-    specializes H empty_heap h1 ___. fintro. }
+    specializes H empty_heap h1 ___. hintro. }
   { constructor. intros.
-    finv H0. rewrite H0 in H1. rew_fmap *. subst.
+    hinv H0. rewrite H0 in H1. rew_fmap *. subst.
     assumption. }
 Qed.
 
@@ -1341,6 +1329,80 @@ Proof.
   apply satisfies_ens_sep_split.
 Qed.
 
+Lemma norm_seq_ex_reassoc_prefix: forall A (f:A->flow) f1,
+  bientails (f1;; (∃ x : A, f x)) (∃ x : A, f1;; f x).
+Proof.
+  intros. split; intros.
+  { inverts H as H. destr H.
+    inverts H1 as H1. destr H1.
+    constructor. exists v.
+    constructor. exists h3. exists r1.
+    intuition. }
+  { inverts H as H. destr H.
+    inverts H0 as H0. destr H0.
+    constructor. exists h3. exists r1.
+    intuition.
+    constructor. exists v.
+    intuition. }
+Qed.  
+
+Lemma norm_seq_ex_reassoc : forall A f f1,
+  bientails (fex (fun (x:A) => f x);; f1) (fex (fun (x:A) => f x;; f1)).
+Proof.
+  intros. split; intros.
+  { fdestr H. fdestr H0.
+    constructor. exists v.
+    constructor. exists h3. exists r1. intuition. }
+  { fdestr H. fdestr H0.
+    constructor. exists h3. exists r1.
+    split.
+    constructor. exists v. assumption. assumption. }
+Qed.
+
+Lemma norm_seq_all_reassoc: forall A (f:A->flow) f1,
+  entails ((∀ x : A, f x);; f1) (∀ x : A, f x;; f1).
+Proof.
+  unfold entails. intros.
+  inverts H as H. destr H.
+  inverts H0 as H0.
+  constructor. intros v.
+  specializes H0 v.
+  constructor. exists h3. exists r1.
+  intuition.
+Qed.
+
+Lemma norm_seq_all_reassoc_prefix: forall A (f:A->flow) f1,
+  entails (f1;; (∀ x : A, f x)) (∀ x : A, f1;; f x).
+Proof.
+  unfold entails. intros.
+  inverts H as H. destr H.
+  inverts H1 as H1.
+  constructor. intros v.
+  specialize (H1 v).
+  constructor. exists h3. exists r1.
+  intuition. 
+Qed.
+
+Lemma norm_ent_ent_pure_comm: forall H P,
+  bientails (ens_ H;; ens_ \[P]) (ens_ \[P];; ens_ H).
+Proof.
+  intros. split; intros.
+  { inverts H0 as H0. destr H0.
+    constructor. exists h1. exists r1.
+    pose proof (ens_no_result H1).
+    fdestr H2. subst.
+    split.
+    { apply ens_void_pure_intro. assumption. }
+    assumption. }
+  { inverts H0 as H0. destr H0.
+    constructor. exists h2. exists r1.
+    pose proof (ens_no_result H2).
+    fdestr H1. subst.
+    split.
+    assumption.
+    { apply ens_void_pure_intro. assumption. } }
+Qed.
+
 (** Rule EntEns from the paper *)
 Lemma entails_ens_seq : forall H1 H2 f1 f2,
   H1 ==> H2 ->
@@ -1469,7 +1531,7 @@ Proof.
   (* ens adds a location to the heap *)
   inverts H3 as H3.
   (* use that to figure out what is in h3 *)
-  destr H3. finv H0. finv H0. finv H5. subst h3 h0 x0 x1. rew_fmap *.
+  destr H3. hinv H0. hinv H0. hinv H5. subst h3 h0 x0 x1. rew_fmap *.
 
   (* prove just the first part *)
   rewrite norm_req_req in H4.
@@ -1510,10 +1572,10 @@ Proof.
 Qed.
 
 (** The [Float Pre] rule (compaction 6) from the paper. *)
-Lemma norm_ens_req_transpose : forall H1 H2 Ha Hf (v:val) f,
-  biab Ha (H1 v) H2 (Hf v) ->
-  entails (ens_ (H1 v);; (req H2 f))
-    (req Ha (ens_ (Hf v);; f)).
+Lemma norm_ens_req_transpose : forall H1 H2 Ha Hf f,
+  biab Ha H1 H2 Hf ->
+  entails (ens_ H1;; (req H2 f))
+    (req Ha (ens_ Hf;; f)).
 Proof.
   unfold entails.
   introv Hbi.
@@ -1530,7 +1592,7 @@ Proof.
 
     (* use the req *)
     rewrite norm_req_req.
-    constructor. intros. finv H3. subst. rew_fmap.
+    constructor. intros. hinv H0. subst. rew_fmap.
 
     apply (IHHbi env).
     apply (biab_single H). }
@@ -1586,7 +1648,7 @@ Proof.
     inverts H4 as H4.
     specializes H4 hyb (h5 \u hxa \u h7) H6 ___.
 
-    lets Hseq: s_seq env (ens_ H0) (req H2 f) (h5 \u hxa) h2.
+    lets Hseq: s_seq env (ens_ H1) (req H2 f) (h5 \u hxa) h2.
     forwards: Hseq r.
     { exists (h5 \u hxa \u h7).
       exists r0.
@@ -1595,7 +1657,7 @@ Proof.
       assumption. }
     (* got the seq... now we can use the IH *)
 
-    forwards H21: IHHbi env (h5 \u hxa) H18.
+    forwards H21: IHHbi env (h5 \u hxa) H17.
     inverts H21 as H26.
     applys H26 H13.
     fmap_eq.
@@ -1735,7 +1797,7 @@ Proof.
   apply H0.
   specializes H1 empty_heap h1.
   apply H1.
-  fintro.
+  hintro.
   assumption.
   fmap_eq.
   fmap_disjoint.
@@ -1749,7 +1811,7 @@ Proof.
   fdestr H0. subst.
   apply H.
   assumption.
-  fintro.
+  apply empty_intro.
 Qed.
 
 Lemma ent_ens_r : forall env f P,
@@ -1759,7 +1821,7 @@ Proof.
   unfold entails_under. intros.
   specializes H0 H1.
   apply empty_inv in H0. destr H0. subst.
-  fintro.
+  apply ens_void_pure_intro.
   assumption.
 Qed.
 
@@ -1797,9 +1859,9 @@ Proof.
   constructor. exists vunit. exists empty_heap.
   apply H in H1.
   intuition.
-  fintro.
+  hintro.
   intuition.
-  fintro.
+  hintro.
   assumption.
   fmap_eq.
 Qed.
@@ -1823,7 +1885,7 @@ Proof.
   intros. apply entails_under_refl.
 Qed.
 
-Lemma ent_unk : forall env v f1 f x,
+Lemma ent_unk : forall env (f:var) x v f1,
   Fmap.read env f = Some f1 ->
   entails_under env (unk f x v) (f1 x v).
 Proof.
@@ -1860,6 +1922,36 @@ Lemma ent_seq_unk : forall fn fn1 f1 f2 env x r,
 Proof.
   intros.
   rewrites (>> ent_unk env); [ apply H | ].
+  assumption.
+Qed.
+
+Lemma ent_unk_ex : forall env f x A (vv:A->val) f1,
+  Fmap.read env f = Some f1 ->
+  entails_under env
+    (fex (fun (v:A) => unk f x (vv v)))
+    (fex (fun (v:A) => f1 x (vv v))).
+Proof.
+  unfold entails_under. intros.
+  inverts H0 as H0. destr H0.
+  constructor. exists v.
+  lets H0: unk_inv env h1 h2 r.
+  specializes H0 f x (vv v) f1.
+Qed.
+
+Lemma ent_ex_seq_unk : forall env f x A (vv:A->val) f1 f2,
+  Fmap.read env f = Some f1 ->
+  entails_under env
+    (fex (fun (v:A) => unk f x (vv v);; f2 v))
+    (fex (fun (v:A) => f1 x (vv v);; f2 v)).
+Proof.
+  unfold entails_under. intros.
+  inverts H0 as H0. destr H0.
+  inverts H1 as H1. destr H1.
+  constructor. exists v.
+  constructor. exists h3. exists r1.
+  split.
+  lets H1: unk_inv env h1 h3 r1.
+  specializes H1 f x (vv v) f1.
   assumption.
 Qed.
 
@@ -1950,19 +2042,6 @@ Proof.
   fdestr H0.
   constructor. exists v.
   auto.
-Qed.
-
-Lemma ent_seq_ex_reassoc : forall A f f1,
-  bientails (fex (fun (x:A) => f x);; f1) (fex (fun (x:A) => f x;; f1)).
-Proof.
-  intros. split; intros.
-  { fdestr H. fdestr H0.
-    constructor. exists v.
-    constructor. exists h3. exists r1. intuition. }
-  { fdestr H. fdestr H0.
-    constructor. exists h3. exists r1.
-    split.
-    constructor. exists v. assumption. assumption. }
 Qed.
 
 (** * Big-step semantics *)

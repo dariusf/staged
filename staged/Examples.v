@@ -166,18 +166,18 @@ Proof.
   (* get the condition in the req from the right *)
   constructor.
   intros.
-  finv H0.
+  hinv H0.
   (* use it to satisfy the req on the left *)
   inverts H as H.
   specialize (H hp hr).
-  forward H. subst hp. fintro. math.
+  forward H. subst hp. hintro. math.
   specialize (H H1 H2).
   (* do the same for ens, but from left to right, as per normal *)
-  inverts H as H. destr H. finv H. finv H. finv H6.
+  inverts H as H. destr H. hinv H. hinv H. hinv H6.
   constructor. exists v. exists empty_heap.
   intuition.
   rewrite hstar_hpure_r.
-  split. fintro; auto. math.
+  split. hintro; auto. math.
   fmap_eq.
 Qed.
 
@@ -378,8 +378,7 @@ Proof.
   inverts H as H. specialize (H 2).
 
   rewrites (>> norm_ens_req_transpose) in H.
-  { instantiate (1 := fun _ => hempty). simpl.
-    rewrite <- (hstar_hempty_r (x ~~> vint 2)).
+  { rewrite <- (hstar_hempty_r (x ~~> vint 2)).
     apply b_pts_match.
     apply b_base_empty. }
 
@@ -438,158 +437,115 @@ Proof.
     rewrite <- norm_ens_ens_void in H1.
     rewrite hstar_hpure_conj in H1.
     apply ens_void_pure_inv in H1. destr H1. subst.
-    fintro.
+    apply ens_void_pure_intro.
     injects H2. injects H1. f_equal. math. }
 Qed.
 
 Module hello.
 
-  Definition hello (f x y res:val) : flow :=
-    match f, x, y with
-    | vstr f, vloc x, vloc y =>
-      ∃ a, req (x~~>vint a) (ens_ (x~~>vint (a+1));;
+  Definition hello : ufun := fun args res =>
+    match args with
+    | vtup (vstr f) (vtup (vloc x) (vloc y)) =>
+      ∀ a, req (x~~>vint a) (ens_ (x~~>vint (a+1));;
       ∃ r, unk f (vloc y) (vint r);;
-      ∃ b b1, req (x~~>vint b \* y~~>vint b1)
+      ∀ b b1, req (x~~>vint b \* y~~>vint b1)
         (ens_ (x~~>vint b \* y~~>res \* \[res = vint (b+r)])))
-    | _, _, _ => empty
+    | _ => empty
     end.
 
-  Lemma hello_capture : forall x y,
-    (* note that the ptr value is existentially quantified because
-      we want to instantiate it. the forward rules use universal
-      quantification because the result ends up on the left side of
-      a sequent. *)
-    let env := Fmap.single "f"
-      (Some (fun y r => ∃ b,
-        req (x~~>vint b)
-          (ens (fun res =>
-            (x~~>vint (b+1) \* \[r = vint 0] \* \[r = res])))))
-    in
-    let init_heap :=
-      Fmap.update (Fmap.single x (vint 0)) y (vint 0)
-    in
-    let final_heap :=
-      Fmap.update (Fmap.single x (vint 2)) y (vint 2)
-    in
-    x <> y ->
-    satisfies env init_heap final_heap (norm vunit)
-      (hello (vstr "f") (vloc x) (vloc y) (vint 2)).
+  Definition hello_env (x y:loc) :=
+    Fmap.update
+      (Fmap.single "f"
+        (Some (fun y r => ∀ b,
+          req (x~~>vint b)
+            (ens_ ((x~~>vint (b+1) \* \[r = vint 0]))))))
+        "hello" (Some hello).
+
+  (* [f] is allowed to capture [x] *)
+  Lemma hello_capture : forall x y res,
+    (* x <> y is implied by the precondition *)
+    entails_under (hello_env x y)
+      (unk "hello" (vtup (vstr "f") (vtup (vloc x) (vloc y))) res)
+      (∀ a b, req (x~~>vint a \* y~~>vint b)
+        (ens_ (x~~>vint (a+2) \* y~~>res \* \[res = vint (a+2)]))).
   Proof.
-    intros. unfold hello.
-    constructor. exists 0.
-    constructor. intros. finv H0.
-    constructor. (* seq *)
-      exists (Fmap.update (Fmap.single x (vint 1)) y (vint 0)).
-      exists (norm vunit).
-    split. constructor. exists vunit. exists (Fmap.single x (vint 1)).
-    {
+    intros x y res.
+    funfold1 "hello".
+    simpl.
+    fintro a.
+    fintro b.
+    fspec a.
+    fassume H.
 
-      assert (hr = Fmap.single y (vint 0)).
-      {
-      applys Fmap.union_eq_inv_of_disjoint hp hr (Fmap.single y (vint 0)).
-      fmap_disjoint.
-      subst.
-      apply Fmap.disjoint_single_single.
-      easy.
-      fmap_eq.
-      rewrite <- H1.
-      unfold init_heap.
-      unfold Fmap.update.
-      fmap_eq.
-      reflexivity.
-      }
-      intuition. fintro. intuition. apply hsingle_intro.
-      unfold Fmap.update. fmap_eq.
-
-      subst.
-      apply Fmap.disjoint_single_single. easy.
+    rewrite (norm_ens_req_transpose).
+    2: { 
+      rewrite <- (hstar_hempty_r (x~~>vint a)) at 2.
+      apply b_pts_match.
+      apply b_base_empty.
     }
 
-    constructor. exists 0.
+    (* norm. *)
+    (* prove trivial reqs *)
+    rewrite hstar_hempty_r.
+    apply ent_req_l. reflexivity.
 
-    lets: ent_unk.
-    specializes H3 env (vint 0) "f" (vloc y) ___.
-    unfold env. resolve_fn_in_env. simpl in H3.
+    (* combine everything into the SL context *)
+    rewrite norm_seq_assoc.
+    rewrite norm_ens_ens_void_combine.
 
-    constructor.
-      exists (Fmap.update (Fmap.single x (vint 2)) y (vint 0)).
-      exists (norm (vint 0)).
+    (* rewrite under the existential *)
+    rewrites (>> ent_ex_seq_unk (hello_env x y)).
+    { unfold hello_env. resolve_fn_in_env. }
+    simpl.
 
-    split.
-    lets H4: s_unk.
-    applys H4.
-    { unfold env. resolve_fn_in_env. }
-    { 
-      simpl.
-      constructor. exists 1.
-      constructor. intros. finv H5.
-      constructor. exists (vint 0).
-        exists (Fmap.single x (vint 2)).
+    (* intro the existential, and specialize the forall *)
+    rewrite norm_seq_ex_reassoc_prefix. fintro v.
+    rewrite norm_seq_all_reassoc.
+    rewrite norm_seq_all_reassoc_prefix. fspec (a + 1).
+    rewrite norm_reassoc.
 
-      assert (hr0 = Fmap.single y (vint 0)).
-      { applys Fmap.union_eq_inv_of_disjoint hp0 hr0 (Fmap.single y (vint 0)).
-        fmap_disjoint.
-        { subst; apply Fmap.disjoint_single_single; easy. }
-        rewrite <- H6.
-        unfold Fmap.update.
-        fmap_eq.
-        reflexivity.
-        }
-        intuition.
-        rewrite hstar_hpure_conj.
-        rewrite hstar_hpure_r. intuition.
-        apply hsingle_intro.
-        unfold Fmap.update. fmap_eq.
-        subst hr0.
-        apply Fmap.disjoint_single_single; easy. }
-
-    constructor. exists 2.
-    constructor. exists 0.
-
-    constructor. intros.
-
-    assert (hr0 = empty_heap).
-    { unfold Fmap.update in H5. finv H4. finv H7. finv H4. subst x0 x1.
-      change (HeapF.Fmap.single) with (Fmap.single) in H8.
-      rewrite H9 in H5.
-      lets: Fmap.union_eq_inv_of_disjoint
-              (Fmap.single y (vint 0) \u Fmap.single x (vint 2))
-              hr0 empty_heap.
-      apply H4.
-      fmap_disjoint.
-      fmap_disjoint.
-      rew_fmap.
-      symmetry.
-      change (HeapF.Fmap.single) with (Fmap.single) in H5.
-      rewrite H5 at 1.
-      
-      fmap_eq.
-      rewrite Fmap.union_comm_of_disjoint.
-      2: {
-        apply Fmap.disjoint_single_single; easy.
-      }
-      reflexivity.
+    rewrite (norm_ens_req_transpose).
+    2: { 
+      rewrite hstar_comm.
+      rewrite <- (hstar_hempty_r (x~~>vint (a + 1))) at 2.
+      apply b_pts_match.
+      apply b_base_empty.
     }
 
-    constructor.
-    exists vunit.
-    exists (Fmap.update (Fmap.single x (vint 2)) y (vint 2)).
-    splits; auto.
-    unfold Fmap.update.
-    rewrite hstar_hpure_l.
-    rewrite hstar_comm.
-    split.
-    reflexivity.
-    apply hstar_intro.
-    rewrite hstar_hpure_r.
-    split.
-    apply hsingle_intro.
-    reflexivity.
-    apply hsingle_intro.
-    apply Fmap.disjoint_single_single; easy.
-    unfold final_heap.
-    unfold Fmap.update.
-    fmap_eq.
+    (* norm *)
+    rewrite hstar_hempty_r. apply ent_req_l. reflexivity.
+
+    (* move the pure assumption up... *)
+    rewrite norm_ens_ens_void_split.
+    rewrite norm_seq_assoc.
+    rewrite norm_seq_assoc.
+    rewrite norm_ens_ens_void_combine.
+    rewrite norm_ent_ent_pure_comm.
+    rewrite <- norm_seq_assoc.
+    fassume H.
+
+    (* instantiate before biabduction *)
+    rewrite norm_seq_all_reassoc_prefix. fspec (a + 2).
+    rewrite norm_seq_all_reassoc_prefix. fspec b.
+
+    rewrite norm_ens_req_transpose.
+    2: {
+      rewrite hstar_comm.
+      apply b_pts_match.
+      apply b_pts_single.
+    }
+
+    (* dispatch trivial req again *)
+    rewrite hstar_hpure_conj.
+    apply ent_req_l.
+    { split. f_equal. math. reflexivity. }
+    rewrite norm_seq_ens_empty.
+
+    (* close *)
+    apply ent_ens_single.
+    injects H.
+    xsimpl.
+    intros. rewrite H. f_equal. math.
   Qed.
 
   (* TODO hello can be called with a function that captures x *)
@@ -665,8 +621,8 @@ Module foldr.
       inverts H.
       { (* base case *)
         fdestr H5.
-        fexists 0.
-        subst. fintro.
+        constructor. exists 0.
+        subst. apply ens_void_pure_intro.
         intuition. }
       { (* rec *)
         (* get at all the facts... *)
@@ -689,8 +645,8 @@ Module foldr.
         simpl in Hf. subst r0.
         fdestr Hf.
 
-        fexists (x + v).
-        subst. fintro.
+        constructor. exists (x + v).
+        subst. apply ens_void_pure_intro.
         intuition. } }
   Qed.
 
@@ -809,9 +765,7 @@ Module foldr.
       rewrite norm_forall.
       apply ent_all_l. exists (a + length (to_int_list l1)).
       rewrite norm_ens_req_transpose.
-      2: { instantiate (1:=(fun _ => \[])).
-        simpl.
-        apply b_pts_single. }
+      2: { apply b_pts_single. }
       simpl.
       apply ent_req_l. reflexivity.
       norm.

@@ -15,6 +15,49 @@ Ltac norm :=
 Tactic Notation "funfold" constr(env) constr(f) := funfold_ env f.
 Tactic Notation "funfold" constr(env) constr(f) "in" constr(H) := funfold_hyp H env f.
 
+(* TODO maybe this should be the interface, for working with sequents especially *)
+Ltac funfold1 f :=
+  lazymatch goal with
+  | |- entails_under (?env ?a ?b) _ _ =>
+    rewrite (@ent_unk (env a b) f); [ | unfold env; resolve_fn_in_env ]
+  | |- entails_under (?env ?a) _ _ =>
+    rewrite (@ent_unk (env a) f); [ | unfold env; resolve_fn_in_env ]
+  | |- entails_under ?env _ _ =>
+    rewrite (@ent_unk env f); [ | unfold env; resolve_fn_in_env ]
+  end.
+
+(* introduce variables *)
+Ltac fintro x :=
+  lazymatch goal with
+  | |- entails_under _ (fex (fun y => _)) _ =>
+    (* let x := fresh y in *)
+    simple apply ent_ex_l; intros x
+  | |- entails_under _ _ (fall (fun y => _)) =>
+    (* let x := fresh y in *)
+    simple apply ent_all_r; intros x
+  end.
+
+(* instantiate an existential or specialize a forall *)
+Ltac fspec a :=
+  lazymatch goal with
+  | |- entails_under _ (fall (fun y => _)) _ =>
+    apply ent_all_l; exists a
+  | |- entails_under _ _ (fex (fun y => _)) =>
+    apply ent_ex_r; exists a
+  end.
+
+(* move assumptions to the Coq context *)
+Ltac fassume H :=
+  lazymatch goal with
+  | |- entails_under _ _ (req _ _) =>
+    apply ent_req_r
+  | |- entails_under _ _ (req \[_] _) =>
+    apply ent_req_r; apply ent_seq_ens_l; intros H
+  | |- entails_under _ (ens_ \[_];; _) _ =>
+    apply ent_seq_ens_l; intros H
+  end.
+
+
 Ltac ent_step :=
   match goal with
 
@@ -25,7 +68,7 @@ Ltac ent_step :=
     let x := fresh y in
     simple apply ent_ex_l; intros x
   | |- entails_under _ (fex (fun _ => _);; _) _ =>
-    rewrite ent_seq_ex_reassoc
+    rewrite norm_seq_ex_reassoc
   | |- entails_under _ (ens_ \[_];; _) _ =>
     let H := fresh "H" in
     simple apply ent_seq_ens_l; intros H; destr H
