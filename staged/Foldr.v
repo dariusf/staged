@@ -2,6 +2,7 @@
 From Staged Require Import Logic Automation.
 Local Open Scope string_scope.
 
+(** * Specification of foldr *)
 Definition foldr : ufun := fun (args:val) rr =>
   match args with
   | vtup (vstr f) (vtup (vint a) (vlist l)) =>
@@ -14,6 +15,7 @@ Definition foldr : ufun := fun (args:val) rr =>
   | _ => empty
   end.
 
+(** * [foldr_sum] *)
 Fixpoint sum (xs:list int) : int :=
   match xs with
   | nil => 0
@@ -135,6 +137,7 @@ Proof.
   solve_entailment.
 Qed.
 
+(** * [foldr_sum_state] *)
 Fixpoint length (xs:list int) : int :=
   match xs with
   | nil => 0
@@ -149,13 +152,13 @@ Definition uncurried_plus_closure_spec : ufun := fun args rr =>
   | _ => empty
   end.
 
-Definition foldr_env1 :=
+Definition foldr_env0 :=
   Fmap.update
     (Fmap.single "foldr" (Some foldr))
       "f" (Some uncurried_plus_closure_spec).
 
 Definition foldr_sum_state := forall xs res,
-  entails_under foldr_env1
+  entails_under foldr_env0
     (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
     (∀ x a, req (x~~>vint a)
       (∃ r, ens_ (x~~>vint (a+length (to_int_list xs)) \*
@@ -165,7 +168,7 @@ Lemma foldr_sum_state_entailment:
   foldr_sum_state.
 Proof.
   unfold foldr_sum. intros xs. induction_wf IH: list_sub xs. intros.
-  funfold foldr_env1 "foldr".
+  funfold foldr_env0 "foldr".
   simpl.
   ent_step.
   { apply ent_all_r. intros x.
@@ -183,7 +186,7 @@ Proof.
     apply ent_ex_l. intros l1.
     apply ent_seq_ens_l. intros H.
     rewrite IH; [ | subst; auto ].
-    funfold foldr_env1 "f".
+    funfold foldr_env0 "f".
     (* figure out what r is before we simpl *)
 
     (* match locations *)
@@ -224,8 +227,7 @@ Proof.
     xsimpl; intros; subst. simpl. f_equal. math. split; reflexivity. }
 Qed.
 
-(* Examples *)
-
+(** * Problem 1: mutating the list *)
 (* specialized to int list for simplicity *)
 Fixpoint IsList (L:list val) (p:loc) : hprop :=
   match L with
@@ -237,12 +239,12 @@ Fixpoint IsList (L:list val) (p:loc) : hprop :=
 
 Lemma IsList_nil : forall p,
   (IsList nil p) = \[p = null].
-Proof using. auto. Qed.
+Proof. auto. Qed.
 
 Lemma IsList_cons : forall p x L',
   IsList (vint x::L') p =
   \[p <> null] \* \exists q, (p ~~> (vtup (vint x) (vloc q))) \* (IsList L' q).
-Proof using. auto. Qed.
+Proof. auto. Qed.
 
 Lemma IsList_if : forall (p:loc) (L:list val),
       (IsList L p)
@@ -299,13 +301,13 @@ Definition uncurried_plus_mut_spec : ufun := fun args res =>
   | _ => empty
   end.
 
-Definition foldr_env0 :=
+Definition foldr_env1 :=
   Fmap.update
     (Fmap.single "foldr" (Some foldr_mut))
       "f" (Some uncurried_plus_mut_spec).
 
-Lemma foldr_ex0: forall xs res l,
-  entails_under foldr_env0
+Lemma foldr_ex1: forall xs res l,
+  entails_under foldr_env1
     (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vloc l))) res)
     (req (IsList xs l)
       (∃ ys, ens_ (IsList ys l \*
@@ -414,8 +416,7 @@ Proof.
   }
 Qed.
 
-(* Example 2 *)
-
+(** * Problem 2: stronger precondition *)
 Definition uncurried_plus_assert_spec : ufun := fun args rr =>
   match args with
   | vtup (vint x) (vint r) =>
@@ -472,6 +473,7 @@ Proof.
     simpl. reflexivity. }
 Qed.
 
+(** * Problem 3: effects outside metalogic *)
 Definition uncurried_plus_exc_spec : ufun := fun args rr =>
   match args with
   | vtup (vint x) (vint r) =>

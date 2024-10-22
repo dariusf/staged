@@ -2,6 +2,7 @@
 From Staged Require Import Logic Automation.
 Local Open Scope string_scope.
 
+(** * Basic example *)
 Definition hello : ufun := fun args res =>
   match args with
   | vtup (vstr f) (vtup (vloc x) (vloc y)) =>
@@ -107,6 +108,7 @@ Proof.
   intros. rewrite H. f_equal. math.
 Qed.
 
+(** * Preventing the use of an [f] that captures [x] *)
 (* Suppose we have a hello that does not release x,
     and it is called with an f that captures x *)
 Definition hello1 : ufun := fun args res =>

@@ -111,9 +111,10 @@ Inductive flow :=
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow.
 
-(** An [ens] which doesn't have a useful return value.*)
+(** An [ens] which doesn't have a useful return value. This carries more information than [ens (fun _ => H)], which has an #<i>arbitrary</i># return value. *)
+(** In practice, it is much easier to use this to talk about results which are universally quantified externally; the result of a staged formula is mainly useful only for defining its semantics and in triples. *)
+(** Consequently, key lemmas like [norm_ens_req_transpose] are defined using this. This can to some extent be considered an implementation deficiency around the use of HOAS. *)
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
-(** This carries more information than [ens (fun _ => H)], which has an #<i>arbitrary</i># return value. *)
 
 Definition empty := ens_ \[True].
 
@@ -2748,6 +2749,12 @@ Module ForwardExamples.
 End ForwardExamples.
 
 (** * Correspondence with the paper *)
+(** ** Section 2.1. A Simple Example *)
+(** In the file #<a href="staged.Hello.html">Hello.v</a>#. An additional example, which demonstrates preventing the use of a function argument which captures one of the input pointers, is included. *)
+(** ** Section 2.2. [foldr] *)
+(** In the file #<a href="staged.Foldr.html">Foldr.v</a>#. Entailments [foldr_sum] and [foldr_sum_state] are both proved, as are those of the three examples which are difficult to handle with the conventional [foldr] specification from the introduction. *)
+(** The first one does require a separate heap-manipulating definition of [foldr]; the others can be adapted to use it as well, at the cost of clarity and brevity of proofs. *)
+(** The proof of the third one cannot be finished without a semantics for exceptions, which we do not cover in this paper. *)
 (** ** Section 3.1. Semantics of staged formulae *)
 (** The semantics of staged formulae is given as #<a href="&num;satisfies">satisfies</a>#. *)
 (** There are a number of differences from the paper:
@@ -2784,7 +2791,7 @@ End ForwardExamples.
 - #<a href="&num;entails_disj_right_r">entails_disj_right_r</a>#
 - #<a href="&num;entails_disj_left">entails_disj_left</a># *)
 (** are shown to be sound. The separation logic rules are the standard ones from SLF. *)
-(** In practice, entailment proofs of interesting (higher-order/recursive) programs involve giving unknown functions specific interpretations using an environment. They will thus involve the #<a href="&num;entails_under">entails_under</a># sequent and use lemmas with the [ent_] prefix instead. *)
+(** In practice, entailment proofs of interesting (higher-order/recursive) programs involve giving unknown functions specific interpretations using an environment. They thus involve the #<a href="&num;entails_under">entails_under</a># sequent and use lemmas with the [ent_] prefix instead. Manipulating such sequents neccessitates a significant number of new lemmas. *)
 (** ** Appendix D. Intersection *)
 (** This section is really about the completeness of biabduction. The main paper elides the case where two locations may not be known to be equal. A more complete definition is given as b_pts_diff/#<a href="&num;b_pts_diff_single">b_pts_diff_single</a>#, which works even without a known disquality between [x] and [y]. *)
 (** Intersection (conjunction lifted to staged formulae) is an orthogonal concern. The example from the paper is proved correct using it in #<a href="&num;ex3_intersection">ex3_intersection</a>#. *)

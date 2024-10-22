@@ -64,7 +64,9 @@ Ltac finst a :=
     apply ent_ex_r; exists a
   end.
 
-(* move assumptions to the Coq context *)
+(** Move assumptions to the Coq context.
+  This is the rough eqiuvalent of xpull from SLF.
+  While we're comparing, xchange is replaced with rewriting and the use of lemmas around the covariance of [ens_]. *)
 Ltac fassume_ H :=
   lazymatch goal with
   | |- entails_under _ (ens_ \[_]) _ =>
