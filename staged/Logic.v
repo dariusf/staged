@@ -159,15 +159,15 @@ Check (ens_ \[];; req \[] empty). *)
 (** An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
 Inductive satisfies : senv -> heap -> heap -> result -> flow -> Prop :=
 
-  | s_req env p (h1 h2:heap) r f
+  | s_req env p (h1 h2:heap) v f
     (H: forall (hp hr:heap), (* the heap satisfying p, and the remaining heap *)
       p hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies env hr h2 r f) :
-    satisfies env h1 h2 r (req p f)
+      satisfies env hr h2 (norm v) f) :
+    satisfies env h1 h2 (norm v) (req p f)
   
-  | s_req_err env p (h1 h2:heap) r f
+  | s_req_err env p (h1 h2:heap) f
     (H: 
       (* forall hp hr, p hp -> union -> disjoint -> sat
          = forall hp hr, p hp /\ union /\ disjoint -> sat
@@ -180,10 +180,10 @@ Inductive satisfies : senv -> heap -> heap -> result -> flow -> Prop :=
       ~ (exists hp hr,
             p hp 
             /\ h1 = Fmap.union hp hr
-            /\ Fmap.disjoint hp hr) ->
-      r = err
+            /\ Fmap.disjoint hp hr)
+      (* r = err *)
     ) :
-    satisfies env h1 h2 r (req p f)
+    satisfies env h1 h2 err (req p f)
 
   | s_ens env q h1 h2 r
     (H: exists v h3,
@@ -252,7 +252,7 @@ Definition entails_under env f1 f2 :=
 Definition entails (f1 f2:flow) : Prop :=
   forall env h1 h2,
     (forall v, satisfies env h1 h2 (norm v) f1 -> satisfies env h1 h2 (norm v) f2) /\
-    (satisfies env h1 h2 err f2 -> satisfies env h1 h2 err f1).
+    (satisfies env h1 h2 err f1 -> satisfies env h1 h2 err f2).
 
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 r env,
@@ -281,7 +281,9 @@ Proof.
     apply H in H3.
     specialize (H0 _ hr H3).
     intuition. }
-  { (*
+Qed.
+
+  (* { (*
     apply s_req.
     intros.
     specialize (H _ H3).
@@ -290,21 +292,40 @@ Proof.
     apply H6.
     apply H0.
      *)
+    apply s_req.
+    intros.
+    apply H in H3.
+
+    (* Search (~ exists _, _). *)
+    Check forall_of_not_exists.
+    pose proof (forall_of_not_exists H0).
+
+
     apply s_req_err.
     intros H_not.
     apply H0. clear H0.
     intros H_absurd.
     apply H_not.
     admit.
-Admitted.
+Admitted. *)
 
-Lemma satisfies_req_err : forall env h1 h2 H1 H2 f,
+(* Lemma satisfies_req_err : forall env h1 h2 H1 H2 f,
     H2 ==> H1 ->
     satisfies env h1 h2 err (req H2 f) ->
     satisfies env h1 h2 err (req H1 f).
 Proof.
-  intros.
-  
+    intros.
+    constructor. intros.
+
+    inverts H0 as H0.
+    unfold not in *.
+    intros.
+    apply H0. clear H0.
+    destr H3.
+    apply H in H0.
+    exists hp. exists hr.
+    intuition.
+Qed. *)
 
 
 Lemma satisfies_req : forall H1 H2 f,
@@ -314,7 +335,33 @@ Proof.
   unfold entails.
   intros.
   split.
-  { apply s_req.
+  { intros.
+    constructor. intros.
+    apply H in H3.
+    inverts H0 as H0.
+    specializes H0 hp hr H3.
+  }
+  {
+    intros.
+    constructor. intros.
+
+    inverts H0 as H0.
+    unfold not in *.
+    intros.
+    apply H0.
+    clear H0.
+    destr H3.
+    apply H in H0.
+    exists hp. exists hr.
+    intuition.
+  }
+  Qed.
+
+
+
+
+
+  apply s_req.
     intros hH1 hr H3.
     (* hH1 is the heap that satisfies H1 *)
     (* hr is the starting heap of the continuation *)
