@@ -1,9 +1,9 @@
 
 From SLF Require Export LibString LibCore.
 From SLF Require Export LibSepTLCbuffer.
-From SLF Require Import LibSepFmap.
-Module Fmap := LibSepFmap.
 From SLF Require LibSepSimpl.
+
+From Staged Require Import LibFmap.
 
 Module Type Params.
 
@@ -13,8 +13,10 @@ End Params.
 
 
 Module HeapSetup (V : Params).
+
 Import V.
 Local Notation val := V.value.
+
 Set Implicit Arguments.
 
 Definition loc : Type := nat.
