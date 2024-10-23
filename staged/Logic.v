@@ -93,7 +93,8 @@ Definition precond := hprop.
 Definition postcond := val -> hprop.
 
 Inductive result : Type :=
-  | norm : val -> result.
+  | norm : val -> result
+  | err : result.
 
 (** * Staged formulae *)
 (** Deeply embedded due to uninterpreted functions, which cannot immediately be given a semantics without an environment. *)
@@ -165,6 +166,24 @@ Inductive satisfies : senv -> heap -> heap -> result -> flow -> Prop :=
       Fmap.disjoint hr hp ->
       satisfies env hr h2 r f) :
     satisfies env h1 h2 r (req p f)
+  
+  | s_req_err env p (h1 h2:heap) r f
+    (H: 
+      (* forall hp hr, p hp -> union -> disjoint -> sat
+         = forall hp hr, p hp /\ union /\ disjoint -> sat
+         = (exists hp hr, p hp /\ union /\ disjoint) -> sat
+       *)
+      (* negate the LHS:
+         = ~ (exists hp hr, p hp /\ union /\ disjoint)
+         = forall hp hr, ~ p hp \/ ~ union /\ ~ disjoint)?
+       *)
+      ~ (exists hp hr,
+            p hp 
+            /\ h1 = Fmap.union hp hr
+            /\ Fmap.disjoint hp hr) ->
+      r = err
+    ) :
+    satisfies env h1 h2 r (req p f)
 
   | s_ens env q h1 h2 r
     (H: exists v h3,
@@ -231,7 +250,9 @@ Definition entails_under env f1 f2 :=
 
 (** General entailments which work for arbitrary environments. *)
 Definition entails (f1 f2:flow) : Prop :=
-  forall env h1 h2 r, satisfies env h1 h2 r f1 -> satisfies env h1 h2 r f2.
+  forall env h1 h2,
+    (forall v, satisfies env h1 h2 (norm v) f1 -> satisfies env h1 h2 (norm v) f2) /\
+    (satisfies env h1 h2 err f2 -> satisfies env h1 h2 err f1).
 
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 r env,
@@ -241,6 +262,82 @@ Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
 Notation "env '⊢' f1 '⊑' f2" :=
   (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
+
+Require Import Coq.Program.Equality.
+
+(** Contravariance of req *)
+Lemma satisfies_req_norm : forall env h1 h2 v H1 H2 f,
+    H2 ==> H1 ->
+    satisfies env h1 h2 (norm v) (req H1 f) ->
+    satisfies env h1 h2 (norm v) (req H2 f).
+Proof.
+  intros.
+  sort.
+  inverts H0 as H0.
+  { apply s_req.
+    intros hH1 hr H3.
+    (* hH1 is the heap that satisfies H1 *)
+    (* hr is the starting heap of the continuation *)
+    apply H in H3.
+    specialize (H0 _ hr H3).
+    intuition. }
+  { (*
+    apply s_req.
+    intros.
+    specialize (H _ H3).
+    assert (norm v = err -> False) by discriminate.
+    exfalso.
+    apply H6.
+    apply H0.
+     *)
+    apply s_req_err.
+    intros H_not.
+    apply H0. clear H0.
+    intros H_absurd.
+    apply H_not.
+    admit.
+Admitted.
+
+Lemma satisfies_req_err : forall env h1 h2 H1 H2 f,
+    H2 ==> H1 ->
+    satisfies env h1 h2 err (req H2 f) ->
+    satisfies env h1 h2 err (req H1 f).
+Proof.
+  intros.
+  
+
+
+Lemma satisfies_req : forall H1 H2 f,
+    H2 ==> H1 ->
+    entails (req H1 f) (req H2 f).
+Proof.
+  unfold entails.
+  intros.
+  split.
+  { apply s_req.
+    intros hH1 hr H3.
+    (* hH1 is the heap that satisfies H1 *)
+    (* hr is the starting heap of the continuation *)
+    apply H in H3.
+    specialize (H0 _ hr H3).
+    intuition. }
+  { apply s_req_err.
+    (* here we must have that (exists hp hr : Fmap loc ...) *)
+    assert ((exists hp hr : Fmap.fmap loc Val.value,
+                H1 hp /\ h1 = hp \u hr /\ Fmap.disjoint hp hr)). admit.
+    destr H3.
+    intros. unfold not in *.
+    exfalso.
+    apply H5.
+    intros H_absurd.
+    
+    { intros H_absurd'.
+    unfold not in H3.
+    apply H3.
+    destr H_absurd.
+    unfold "==>" in H.
+    (* from H2 to H1, but we need to go from H1 to H2 here. Abort... *)
+Abort.
 
 (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 (* Check (forall f1 f2 f3, f1 ;; f3 ⊑ f2). *)
@@ -791,23 +888,6 @@ Proof.
   unfold entails.
   intros.
   applys* satisfies_ens_void H.
-Qed.
-
-(** Contravariance of req *)
-Lemma satisfies_req : forall H1 H2 env h1 h2 r f,
-  H2 ==> H1 ->
-  satisfies env h1 h2 r (req H1 f) ->
-  satisfies env h1 h2 r (req H2 f).
-Proof.
-  intros.
-  inverts H0 as H0.
-  apply s_req.
-  intros hH1 hr H3.
-  (* hH1 is the heap that satisfies H1 *)
-  (* hr is the starting heap of the continuation *)
-  apply H in H3.
-  specialize (H0 _ hr H3).
-  intuition.
 Qed.
 
 Lemma entails_req : forall H1 H2 f,
