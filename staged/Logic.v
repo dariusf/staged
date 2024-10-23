@@ -6,12 +6,8 @@ From Coq Require Morphisms Program.Basics.
 Set Warnings "-notation-incompatible-prefix".
 From Staged Require Export HeapF.
 Set Warnings "notation-incompatible-prefix".
-
-From SLF Require LibSepFmap.
-Module Fmap := LibSepFmap.
-Export (ltac.notations, hints, notations) LibSepFmap.
-
-From Staged Require Export Extra ExtraTactics.
+From Staged Require Export LibFmap.
+From Staged Require Export ExtraTactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
@@ -1085,7 +1081,7 @@ Proof.
   specialize (H1 hp hr H0).
   forward H1. fmap_eq.
   forward H1. fmap_disjoint.
-  
+
   constructor.
   exists h3.
   exists r1.
@@ -1345,7 +1341,7 @@ Proof.
     intuition.
     constructor. exists v.
     intuition. }
-Qed.  
+Qed.
 
 Lemma norm_seq_ex_reassoc : forall A f f1,
   bientails (fex (fun (x:A) => f x);; f1) (fex (fun (x:A) => f x;; f1)).
@@ -1381,7 +1377,7 @@ Proof.
   constructor. intros v.
   specialize (H1 v).
   constructor. exists h3. exists r1.
-  intuition. 
+  intuition.
 Qed.
 
 Lemma norm_ent_ent_pure_comm: forall H P,

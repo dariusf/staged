@@ -11,3 +11,5 @@ docs/*.js
 docs/*.css
 html
 mlihtml
+
+.vscode

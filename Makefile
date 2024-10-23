@@ -14,7 +14,7 @@ build: Makefile.coq
 
 clean::
 	if [ -e Makefile.coq ]; then $(MAKE) -f Makefile.coq cleanall; fi
-	$(RM) $(wildcard Makefile.coq Makefile.coq.conf) 
+	$(RM) $(wildcard Makefile.coq Makefile.coq.conf)
 
 Makefile.coq:
 	coq_makefile -f _CoqProject -o Makefile.coq
