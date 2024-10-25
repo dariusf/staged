@@ -1,7 +1,7 @@
 
 docs:
 	coq2html -short-names -no-css -d docs staged/*.glob staged/*.v
-	perl -pi -e 's@/title>@/title><script src="coq2html.js"></script>@' docs/staged.Logic.html docs/staged.Foldr.html docs/staged.Hello.html
+	perl -pi -e 's@/title>@/title><script src="coq2html.js"></script>@' docs/staged.ShiftReset.html docs/staged.Logic.html docs/staged.Foldr.html docs/staged.Hello.html
 	# [[ $$OSTYPE == 'darwin'* ]] && open docs/staged.Logic.html || true
 
 alectryon:

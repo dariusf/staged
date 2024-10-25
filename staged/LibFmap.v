@@ -5,7 +5,7 @@ From SLF Require Export LibSepFmap.
 Module Fmap := LibSepFmap.
 
 Lemma fmap_disjoint_indom : forall (A B: Type) (h1 h2 : fmap A B) x,
-  disjoint h1 h2 -> indom h1 x -> not (indom h2 x).
+  disjoint h1 h2 -> indom h1 x -> ~ indom h2 x.
 Proof.
   unfold not; intros.
   apply (disjoint_inv_not_indom_both H H0).
