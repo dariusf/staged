@@ -2,14 +2,30 @@
 From Staged Require Import Logic Automation.
 Local Open Scope string_scope.
 
-(** * Examples *)
-(** Examples of everything defined so far, which is enough for entailments to be defined and proved. *)
+Example ex0:
+  satisfies empty_env empty_heap empty_heap (norm (vint 1)) (req_ \[False]).
+Proof.
+  constructor. intros.
+  hinv H.
+  contradiction.
+Qed.
+
+Example ex0_heap: forall x,
+  satisfies empty_env empty_heap empty_heap (norm (vint 1)) (req_ (x~~>vunit)).
+Proof.
+  constructor. intros.
+  hinv H.
+  symmetry in H0.
+  pose proof (Fmap.union_eq_empty_inv_r H0).
+  subst hp.
+  (* H2 is false, but no lemmas to prove it *)
+Abort.
 
 Definition f1 : flow := ens (fun r => \[r=vint 1]).
 Definition f2 : flow := fall (fun x => req_ (\[x = vint 1])).
 Definition f3 : flow := f1 ;; f2.
 
-Example ex1: satisfies empty_env Fmap.empty Fmap.empty (norm (vint 1)) f1.
+Example ex1: satisfies empty_env empty_heap empty_heap (norm (vint 1)) f1.
 Proof.
   intros.
   unfold f1.
