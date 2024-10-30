@@ -688,25 +688,6 @@ Qed.
 
 (** * Some tactics *)
 
-Ltac hinv H :=
-  match type of H with
-  | \[] _ => apply hempty_inv in H
-  | \[_] _ => apply hpure_inv in H as (?&?)
-  | (_~~>_) _ => apply hsingle_inv in H
-  | (_ \* _) _ => apply hstar_inv in H as (?&?&?&?&?&?)
-  | (\[_] \* _) _ => rewrite hstar_hpure_l
-  | (_ \* \[_]) _ => rewrite hstar_hpure_r
-  end.
-
-Ltac hintro :=
-  match goal with
-  | |- \[] _ => apply hempty_intro
-  | |- \[_] _ => apply hpure_intro
-  | |- (_ \* _) (_ \u _) => apply hstar_intro
-  | |- (\[_] \* _) _ => rewrite hstar_hpure_l
-  | |- (_ \* \[_]) _ => rewrite hstar_hpure_r
-  end.
-
 Ltac fdestr_rec H :=
   match type of H with
   | satisfies _ _ _ _ (fex (fun x => _)) => inverts H as H; destr H
@@ -724,26 +705,6 @@ Ltac fdestr_pat H pat :=
 (** Use these on product-like things like sequencing, existentials, and ens *)
 Tactic Notation "fdestr" constr(H) := fdestr_rec H.
 Tactic Notation "fdestr" constr(H) "as" simple_intropattern(pat) := fdestr_pat H pat.
-
-Ltac solve_trivial_not_indom :=
-  match goal with
-  | |- ~ Fmap.indom _ _ => unfold not; rewrite Fmap.indom_single_eq; intros; false
-  end.
-
-Ltac resolve_fn_in_env :=
-  match goal with
-  | |- Fmap.read (Fmap.update _ ?k (Some _)) ?k = _ =>
-    rewrite fmap_read_update; [reflexivity | solve_trivial_not_indom]
-  | |- Fmap.read (Fmap.update _ _ _) _ = _ =>
-    unfold Fmap.update;
-    first [
-      rewrite Fmap.read_union_l; [resolve_fn_in_env | apply Fmap.indom_single] |
-        rewrite Fmap.read_union_r; [resolve_fn_in_env | solve_trivial_not_indom]
-    ]
-  | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
-    rewrite Fmap.read_single; reflexivity
-  (* | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g *)
-  end.
 
 (** * Entailment and normalization rules *)
 (** Covariance of ens *)

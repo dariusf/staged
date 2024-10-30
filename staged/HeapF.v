@@ -757,4 +757,23 @@ Proof.
   { apply hpure_inv in H. destruct H as ((?&?)&?). subst. intuition. now apply hpure_intro. }
 Qed.
 
+Ltac hinv H :=
+  match type of H with
+  | \[] _ => apply hempty_inv in H
+  | \[_] _ => apply hpure_inv in H as (?&?)
+  | (_~~>_) _ => apply hsingle_inv in H
+  | (_ \* _) _ => apply hstar_inv in H as (?&?&?&?&?&?)
+  | (\[_] \* _) _ => rewrite hstar_hpure_l
+  | (_ \* \[_]) _ => rewrite hstar_hpure_r
+  end.
+
+Ltac hintro :=
+  match goal with
+  | |- \[] _ => apply hempty_intro
+  | |- \[_] _ => apply hpure_intro
+  | |- (_ \* _) (_ \u _) => apply hstar_intro
+  | |- (\[_] \* _) _ => rewrite hstar_hpure_l
+  | |- (_ \* \[_]) _ => rewrite hstar_hpure_r
+  end.
+
 End HeapSetup.

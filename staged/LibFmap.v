@@ -37,3 +37,23 @@ Qed.
 
 #[global]
 Hint Rewrite fmap_read_update : rew_fmap rew_fmap_for_fmap_eq.
+
+Ltac solve_trivial_not_indom :=
+  match goal with
+  | |- ~ Fmap.indom _ _ => unfold not; rewrite Fmap.indom_single_eq; intros; false
+  end.
+
+Ltac resolve_fn_in_env :=
+  match goal with
+  | |- Fmap.read (Fmap.update _ ?k (Some _)) ?k = _ =>
+    rewrite fmap_read_update; [reflexivity | solve_trivial_not_indom]
+  | |- Fmap.read (Fmap.update _ _ _) _ = _ =>
+    unfold Fmap.update;
+    first [
+      rewrite Fmap.read_union_l; [resolve_fn_in_env | apply Fmap.indom_single] |
+        rewrite Fmap.read_union_r; [resolve_fn_in_env | solve_trivial_not_indom]
+    ]
+  | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
+    rewrite Fmap.read_single; reflexivity
+  (* | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g *)
+  end.
