@@ -38,6 +38,15 @@ Qed.
 #[global]
 Hint Rewrite fmap_read_update : rew_fmap rew_fmap_for_fmap_eq.
 
+Lemma fmap_not_indom_of_neq : forall (A B:Type) (a b:A) (v:B),
+  a <> b -> ~ Fmap.indom (Fmap.single a v) b.
+Proof.
+  intros.
+  unfold not. intros.
+  rewrite (Fmap.indom_single_eq a b v) in H0.
+  contradiction.
+Qed.
+
 Ltac solve_trivial_not_indom :=
   match goal with
   | |- ~ Fmap.indom _ _ => unfold not; rewrite Fmap.indom_single_eq; intros; false

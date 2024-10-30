@@ -585,32 +585,6 @@ Proof.
   fmap_eq.
 Qed.
 
-Ltac solve_trivial_not_indom :=
-  match goal with
-  | |- ~ Fmap.indom _ _ => unfold not; rewrite Fmap.indom_single_eq; intros; false
-  end.
-
-Ltac resolve_fn_in_env :=
-  match goal with
-  | |- Fmap.read (Fmap.update _ ?k (Some _)) ?k = _ =>
-    rewrite fmap_read_update; [reflexivity | solve_trivial_not_indom]
-  | |- Fmap.read (Fmap.update _ _ _) _ = _ =>
-    unfold Fmap.update;
-    first [
-      rewrite Fmap.read_union_l; [resolve_fn_in_env | apply Fmap.indom_single] |
-        rewrite Fmap.read_union_r; [resolve_fn_in_env | solve_trivial_not_indom]
-    ]
-  | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
-    rewrite Fmap.read_single; reflexivity
-  (* | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g *)
-  end.
-
-Ltac exs :=
-  lazymatch goal with
-  | |- ex _ => eexists; exs
-  | _ => idtac
-  end.
-
 Module Examples.
 
   Example e1_undelimited : forall x, exists r,
@@ -712,15 +686,6 @@ Module Examples.
       apply s_seq. exs. split.
       apply ens_pure_intro. intuition reflexivity.
       apply ens_pure_intro. reflexivity. }
-  Qed.
-
-  Lemma fmap_not_indom_of_neq : forall (A B:Type) (a b:A) (v:B),
-    a <> b -> ~ Fmap.indom (Fmap.single a v) b.
-  Proof.
-    intros.
-    unfold not. intros.
-    rewrite (Fmap.indom_single_eq a b v) in H0.
-    contradiction.
   Qed.
 
 (** [(reset (shift k (fun x -> k x))) 4 ==> 4]
