@@ -239,7 +239,7 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     (** [v] may be thought of a prophecy variable for the result of a [sh]ift, which may be depended upon by anything sequenced after it (i.e. its continuation). *)
     (** A [sh] on its own reduces to a [shft] outcome an identity continuation, which is in CPS instead of having the prophecy variable. [y] is the eventual result of this [shft] once it encounters a [rs] and will be depended upon by its continuation, which is just [v]. The result [r] at this point is also [v]. *)
 
-  | s_sh_seq s1 s2 f1 (f2k k1:val->flow) h1 h2 shb x (v:val)
+  | s_seq_sh s1 s2 f1 (f2k k1:val->flow) h1 h2 shb x (v:val)
       (H: exists k,
           satisfies s1 s2 h1 h2 (shft x shb k) f1 /\
             k1 = (fun x => ∃ r, k r;; f2k x)) :
@@ -433,7 +433,7 @@ Section Proprium.
     inverts H1 as H1; destr H1.
     { apply s_seq. exists s3. exists h3. exists r1.
     subst. intuition. }
-    { pose proof s_sh_seq.
+    { pose proof s_seq_sh.
       specializes H0 f2k v. }
   Qed.
 
@@ -445,7 +445,7 @@ Section Proprium.
     inverts H1 as H1; destr H1.
     { apply s_seq. exists s3. exists h3. exists r1.
     eauto. }
-    { lets H2: s_sh_seq f2k v.
+    { lets H2: s_seq_sh f2k v.
       applys_eq H2. clear H2.
       2: {
         eexists.
@@ -469,7 +469,7 @@ Section Proprium.
     inverts H1 as H1; destr H1.
     { apply s_seq. exists s3. exists h3. exists r1.
       split; auto. }
-    { apply s_sh_seq.
+    { apply s_seq_sh.
       eexists.
       intuition eauto. }
   Qed.
@@ -693,7 +693,7 @@ Module Examples.
 
       change (ens (fun r => \[r = f ?sr])) with
         ((fun x => ens (fun r => \[r = f x])) sr).
-      apply s_sh_seq.
+      apply s_seq_sh.
 
       eexists.
       split.
@@ -811,7 +811,7 @@ Module Examples.
         (* eta-expand the right side to make it clear what the continuation is *)
         change (ens (fun r => \[r = vplus (vint 1) ?sr])) with
           ((fun x => ens (fun r => \[r = vplus (vint 1) x])) sr).
-        apply s_sh_seq. (* this moves the ens into the continuation *)
+        apply s_seq_sh. (* this moves the ens into the continuation *)
         eexists.
         split.
         apply s_sh.
