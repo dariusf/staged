@@ -419,28 +419,60 @@ Section Proprium.
     auto.
   Qed.
 
-  (* #[global] *)
-  (* Instance Proper_seq : Proper (entails ====> entails ====> entails) seq. *)
-  (* Proof. *)
-  (*   unfold Proper, entails, respectful. *)
-  (*   intros. *)
-  (*   inverts H1 as H1; destr H1. *)
-  (*   { constructor. exists h3. exists r1. *)
-  (*   eauto. } *)
-  (*   { constructor. exists h3. exists r1. *)
-  (*   eauto. } *)
-  (* Qed. *)
+  (* A weaker Proper instance that only allows rewriting in the left
+     side of a seq. Intuitively, we can no longer rely on the right side
+     being weaker because it may change entirely, if we rewrite to a
+     [shft] on the left which then consumes the right side into its
+     continuation. *)
+  #[global]
+  Instance Proper_seq_left : Proper (entails ====> eq ====> entails) seq.
+  Proof.
+    unfold Proper, entails, respectful.
+    intros.
+    subst.
+    inverts H1 as H1; destr H1.
+    { apply s_seq. exists s3. exists h3. exists r1.
+    subst. intuition. }
+    { pose proof s_sh_seq.
+      specializes H0 f2k v. }
+  Qed.
 
-  (* #[global] *)
-  (* Instance Proper_seq_entails_under : forall env, *)
-  (*   Proper (entails_under env ====> entails_under env ====> entails_under env) seq. *)
-  (* Proof. *)
-  (*   unfold Proper, entails_under, respectful. *)
-  (*   intros. *)
-  (*   inverts H1 as H1; destr H1. *)
-  (*   constructor. exists h3. exists r1. *)
-  (*   split; auto. *)
-  (* Qed. *)
+  #[global]
+  Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
+  Proof.
+    unfold Proper, entails, respectful.
+    intros.
+    inverts H1 as H1; destr H1.
+    { apply s_seq. exists s3. exists h3. exists r1.
+    eauto. }
+    { lets H2: s_sh_seq f2k v.
+      applys_eq H2. clear H2.
+      2: {
+        eexists.
+        split.
+        apply H. exact H1.
+        assumption. }
+      (* the proof is stuck here because f2k v and f2 are related by
+         something weaker than equality, but the rule in the semantics
+         requires them to be equal *)
+      admit.
+    }
+  Abort.
+
+  #[global]
+  Instance Proper_seq_entails_under_left : forall env,
+    Proper (entails_under env ====> eq ====> entails_under env) seq.
+  Proof.
+    unfold Proper, entails_under, respectful.
+    intros.
+    subst.
+    inverts H1 as H1; destr H1.
+    { apply s_seq. exists s3. exists h3. exists r1.
+      split; auto. }
+    { apply s_sh_seq.
+      eexists.
+      intuition eauto. }
+  Qed.
 
   #[global]
   Instance fex_entails_under_morphism (A : Type) : forall env,
@@ -492,23 +524,25 @@ Section Proprium.
     assumption.
   Qed.
 
-  (* #[global] *)
-  (* Instance Proper_seq_bi : Proper (bientails ====> bientails ====> bientails) seq. *)
-  (* Proof. *)
-  (*   unfold Proper, bientails, respectful. *)
-  (*   intros. *)
-  (*   split; intros. *)
-  (*   { inverts H1 as H1; destr H1. *)
-  (*     constructor. exists h3. exists r1. *)
-  (*     split. *)
-  (*     apply H; auto. *)
-  (*     apply H0; auto. } *)
-  (*   { inverts H1 as H1; destr H1. *)
-  (*     constructor. exists h3. exists r1. *)
-  (*     split. *)
-  (*     apply H; auto. *)
-  (*     apply H0; auto. } *)
-  (* Qed. *)
+  #[global]
+  Instance Proper_seq_bi_left : Proper (bientails ====> eq ====> bientails) seq.
+  Proof.
+    unfold Proper, bientails, respectful.
+    intros.
+    split; intros.
+
+    { pose proof Proper_seq_left.
+      unfold Proper, entails, respectful in H2.
+      applys H2 H1; auto.
+      intros.
+      apply H; intuition auto. }
+
+    { pose proof Proper_seq_left.
+      unfold Proper, entails, respectful in H2.
+      applys H2 H1; auto.
+      intros.
+      apply H; intuition auto. }
+  Qed.
 
   #[global]
   Instance Proper_req_entails : Proper (eq ====> entails ====> entails) req.
