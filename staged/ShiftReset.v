@@ -29,6 +29,7 @@ Inductive val :=
   | vbool : bool -> val
   | vlist : list val -> val
   | vfptr : var -> val
+(** A deeply-embedded function pointer, referring to a [ufun] in the environment. *)
 
 with expr : Type :=
   | pvar (x: var)
@@ -106,9 +107,15 @@ with flow : Type :=
   | unk : var -> val -> val -> flow
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
+(** The following are new: *)
   | sh : var -> flow -> val -> flow
+(** [sh x b r] is a shift with body [b]. *)
+(** [x] names the continuation delimited by an enclosing [rs], and may occur in [b] as an [unk] or [vfptr]. *)
+(** [r] is the #<i>result</i># of the shift, which is the value a shift evaluates to #<i>when under a reset</i>#. [r] will be equal to the value that the continuation will be resumed with, and can be depended on in anything sequenced after a [sh]. *)
   | rs : flow -> val -> flow
+(** [rs f r] is a reset with body [f]. [r] is the value the reset eventually returns. *)
   | defun : var -> (val -> val -> flow) -> flow.
+(** [defun x uf] is basically [ens_ (x=(λ x r. uf x r))], where [x] can reside in the environment. *)
 
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
 
