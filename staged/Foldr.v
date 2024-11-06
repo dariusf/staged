@@ -8,10 +8,9 @@ Definition foldr : ufun := fun (args:val) rr =>
   | vtup (vstr f) (vtup (vint a) (vlist l)) =>
     disj
       (ens_ \[rr = vint a /\ l = nil])
-      (fex (fun x => fex (fun r => fex (fun l1 =>
-        ens_ \[l = cons (vint x) l1];;
-        unk "foldr" (vtup (vstr f) (vtup (vint a) (vlist l1))) r;;
-        unk f (vtup (vint x) r) rr))))
+      (∃ x l1, ens_ \[l = cons (vint x) l1];;
+       ∃ r, unk "foldr" (vtup (vstr f) (vtup (vint a) (vlist l1))) r;;
+        unk f (vtup (vint x) r) rr)
   | _ => empty
   end.
 
@@ -59,7 +58,7 @@ Definition foldr_env :=
 Definition foldr_sum := forall xs res,
   entails_under foldr_env
     (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
-    (fex (fun r => ens_ \[res = vint r /\ r = sum (to_int_list xs)])).
+    (ens_ \[res = vint (sum (to_int_list xs))]).
 
 (** Reasoning semantically *)
 Lemma foldr_sum_semantic:
@@ -70,16 +69,15 @@ Proof.
     funfold foldr_env "foldr" in H. simpl in H.
     inverts H.
     { (* base case *)
-      fdestr H5.
-      constructor. exists 0.
-      subst. apply ens_void_pure_intro.
+      fdestr H5. subst.
+      apply ens_void_pure_intro.
       intuition. }
     { (* rec *)
       (* get at all the facts... *)
       fdestr H5 as (x&H5).
-      fdestr H5 as (r0&H5).
       fdestr H5 as (l1&H5).
       fdestr H5 as (h3&r1&H1&H2).
+      fdestr H2 as (r0&H2).
       fdestr H1.
       (* apply induction hypothesis *)
       specialize (IH l1). forward IH. rewrite H. auto.
@@ -87,7 +85,7 @@ Proof.
 
       fdestr H2 as (h0&r2&H0&Hf).
       fdestr H0 as (v&?H0).
-      fdestr H0.
+      destr H0.
 
       (* reason about f *)
       funfold foldr_env "f" in Hf.
@@ -95,8 +93,8 @@ Proof.
       simpl in Hf. subst r0.
       fdestr Hf.
 
-      constructor. exists (x + v).
-      subst. apply ens_void_pure_intro.
+      subst.
+      apply ens_void_pure_intro.
       intuition. } }
 Qed.
 
@@ -108,21 +106,18 @@ Proof.
     funfold foldr_env "foldr". simpl.
     apply ent_disj_l.
 
-    { apply ent_ex_r. exists 0.
-      apply ent_ens_single_pure.
+    { apply ent_ens_single_pure.
       intuition. subst. reflexivity. }
 
     { apply ent_ex_l. intros x.
-      apply ent_ex_l. intros r.
       apply ent_ex_l. intros l1.
       apply ent_seq_ens_l. intros H.
       (* specialize (IH l1). forward IH. rewrite H. auto. *)
+      apply ent_ex_l. intros r.
       rewrite IH; [ | subst; auto ].
       funfold foldr_env "f".
-      apply ent_seq_ex_l. intros r0.
-      apply ent_seq_ens_l. intros (?&?). subst r.
+      apply ent_seq_ens_l. intros. subst r.
       simpl.
-      apply ent_ex_r. exists (x + r0).
       apply ent_ens_single_pure.
       subst. intuition. } }
 Qed.
@@ -182,9 +177,9 @@ Proof.
     { intros (?&?). split. assumption. subst. reflexivity. } }
   { (* simple rewrites *)
     apply ent_ex_l. intros x.
-    apply ent_ex_l. intros r.
     apply ent_ex_l. intros l1.
     apply ent_seq_ens_l. intros H.
+    apply ent_ex_l. intros r.
     rewrite IH; [ | subst; auto ].
     funfold foldr_env0 "f".
     (* figure out what r is before we simpl *)
@@ -450,9 +445,9 @@ Proof.
     apply ent_ens_single.
     xsimpl. intros ? (?&?). subst. f_equal. }
   { apply ent_ex_l. intros x.
-    apply ent_ex_l. intros r.
     apply ent_ex_l. intros l1.
     apply ent_seq_ens_l. intros H.
+    apply ent_ex_l. intros r.
     rewrite IH; [ | subst; auto ].
     funfold foldr_env2 "f".
 
@@ -509,9 +504,9 @@ Proof.
     apply ent_ens_single.
     xsimpl. intros (?&?). subst. simpl. intuition. }
   { apply ent_ex_l. intros x.
-    apply ent_ex_l. intros r.
     apply ent_ex_l. intros l1.
     apply ent_seq_ens_l. intros H.
+    apply ent_ex_l. intros r.
     rewrite IH; [ | subst; auto ].
     funfold foldr_env3 "f".
     (* after rewriting with the IH, we have a disj on the left, because it's possible the recursive call raises an exception *)
@@ -590,9 +585,9 @@ Proof.
     xsimpl.
     intuition. }
   { fintro x.
-    fintro r.
     fintro l1.
     fassume H.
+    fintro r.
     rewrite IH; [ | subst; auto ].
     funfold foldr_env "f".
     fintro x0. finst x0.
