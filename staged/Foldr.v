@@ -569,8 +569,8 @@ Definition foldr_sum_rev := forall xs res,
   entails_under foldr_env
     (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
     (∀ x a, req (x~~>vlist a)
-      (∃ r, ens_ (x~~>vlist (xs ++ a) \*
-        \[res = vint r /\ r = sum (to_int_list xs)]))).
+      (ens_ (x~~>vlist (xs ++ a) \*
+        \[exists r, res = vint r /\ r = sum (to_int_list xs)]))).
 
 Lemma foldr_sum_rev_entailment:
   foldr_sum_rev.
@@ -582,13 +582,13 @@ Proof.
   { fintro x.
     fintro a.
     apply ent_req_r.
-    finst 0.
     rewrite norm_ens_ens_void_comm.
     fassume (?&?).
     subst.
     simpl.
     apply ent_ens_single.
     xsimpl.
+    eexists.
     intuition. }
   { fintro x.
     fintro r.
@@ -600,14 +600,11 @@ Proof.
     fintro a. finst a.
     rewrite norm_reassoc.
     apply ent_req_req. xsimpl.
-    rewrite norm_seq_ex_reassoc.
-    fintro x1.
-    finst (x + sum (to_int_list l1)). (* this is the only instantiation that is hard *)
     (* extract the pure part *)
     rewrite norm_ens_ens_void_split.
     rewrite norm_ens_ens_void_comm.
     rewrite <- norm_seq_assoc.
-    fassume (?&?). subst r.
+    fassume (?&?&?). subst r.
     simpl.
     finst x0.
     finst (app l1 a).
@@ -618,6 +615,8 @@ Proof.
     apply ent_ens_single.
     subst.
     xsimpl.
+    intros ->.
+    eexists.
     intuition math. }
 Qed.
 
