@@ -570,7 +570,7 @@ Definition foldr_sum_rev := forall xs res,
     (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
     (∀ x a, req (x~~>vlist a)
       (ens_ (x~~>vlist (xs ++ a) \*
-        \[exists r, res = vint r /\ r = sum (to_int_list xs)]))).
+        \[res = vint (sum (to_int_list xs))]))).
 
 Lemma foldr_sum_rev_entailment:
   foldr_sum_rev.
@@ -588,7 +588,6 @@ Proof.
     simpl.
     apply ent_ens_single.
     xsimpl.
-    eexists.
     intuition. }
   { fintro x.
     fintro r.
@@ -604,7 +603,7 @@ Proof.
     rewrite norm_ens_ens_void_split.
     rewrite norm_ens_ens_void_comm.
     rewrite <- norm_seq_assoc.
-    fassume (?&?&?). subst r.
+    fassume H1. subst r.
     simpl.
     finst x0.
     finst (app l1 a).
@@ -615,8 +614,6 @@ Proof.
     apply ent_ens_single.
     subst.
     xsimpl.
-    intros ->.
-    eexists.
     intuition math. }
 Qed.
 
