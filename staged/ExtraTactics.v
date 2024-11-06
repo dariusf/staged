@@ -24,3 +24,9 @@ Ltac forward_gen H tac :=
 
 Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
 Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
+
+Ltac exs :=
+  lazymatch goal with
+  | |- ex _ => eexists; exs
+  | _ => idtac
+  end.

@@ -779,14 +779,27 @@ Proof.
   applys* satisfies_req H1.
 Qed.
 
-Lemma disj_comm : forall env h1 h2 r f1 f2,
-  satisfies env h1 h2 r (disj f2 f1) ->
-  satisfies env h1 h2 r (disj f1 f2).
+Lemma disj_comm : forall f1 f2,
+  bientails (disj f2 f1) (disj f1 f2).
 Proof.
-  intros.
-  inverts H as H.
-  apply s_disj_r. assumption.
-  apply s_disj_l. assumption.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H.
+    apply s_disj_r. assumption.
+    apply s_disj_l. assumption. }
+  { inverts H as H.
+    apply s_disj_r. assumption.
+    apply s_disj_l. assumption. }
+Qed.
+
+Lemma seq_disj_distr : forall f1 f2 f3,
+  entails ((disj f1 f2) ;; f3) (disj (f1;; f3) (f2;; f3)).
+Proof.
+  unfold entails. intros.
+  inverts H as H. destr H.
+  inverts H0 as H0.
+  - apply s_disj_l. constructor. exs. intuition eauto.
+  - apply s_disj_r. constructor. exs. intuition eauto.
 Qed.
 
 (** seq is associative *)
