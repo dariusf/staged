@@ -30,10 +30,10 @@ Ltac funfold1 f :=
 Ltac fintro x :=
   lazymatch goal with
   (* base cases *)
-  | |- entails_under _ (fex (fun y => _)) _ =>
+  | |- entails_under _ (∃ _, _) _ =>
     (* let x := fresh y in *)
     simple apply ent_ex_l; intros x
-  | |- entails_under _ _ (fall (fun y => _)) =>
+  | |- entails_under _ _ (∀ _, _) =>
     (* let x := fresh y in *)
     simple apply ent_all_r; intros x
 
@@ -58,9 +58,12 @@ Ltac finst a :=
   | |- entails_under _ (ens_ _;; ∀ _, _;; _) _ =>
     rewrite norm_seq_all_reassoc_ctx; finst a
 
-  | |- entails_under _ (fall (fun y => _)) _ =>
+  | |- entails_under _ ((∀ _, _);; _) _ =>
+    apply ent_seq_all_l; exists a
+
+  | |- entails_under _ (∀ _, _) _ =>
     apply ent_all_l; exists a
-  | |- entails_under _ _ (fex (fun y => _)) =>
+  | |- entails_under _ _ (∃ _, _) =>
     apply ent_ex_r; exists a
   end.
 

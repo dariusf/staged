@@ -544,3 +544,81 @@ Proof.
       admit.
     }
 Abort.
+
+Module Rev.
+
+(**
+  let a = ref [] in
+  foldr (fun c t -> a := c :: !a; c + t) xs 0
+*)
+
+Definition g : ufun := fun args rr =>
+  match args with
+  | vtup (vint c) (vint t) => ∀ x a,
+      req (x~~>vlist a)
+        (ens_ (x~~>vlist (vint c :: a) \* \[rr = vint (c + t)]))
+  | _ => empty
+  end.
+
+Definition foldr_env :=
+  Fmap.update
+    (Fmap.single "foldr" (Some foldr))
+      "f" (Some g).
+
+Definition foldr_sum_rev := forall xs res,
+  entails_under foldr_env
+    (unk "foldr" (vtup (vstr "f") (vtup (vint 0) (vlist xs))) res)
+    (∀ x a, req (x~~>vlist a)
+      (∃ r, ens_ (x~~>vlist (xs ++ a) \*
+        \[res = vint r /\ r = sum (to_int_list xs)]))).
+
+Lemma foldr_sum_rev_entailment:
+  foldr_sum_rev.
+Proof.
+  unfold foldr_sum_rev. intros xs. induction_wf IH: list_sub xs. intros.
+  funfold1 "foldr".
+  simpl.
+  apply ent_disj_l.
+  { fintro x.
+    fintro a.
+    apply ent_req_r.
+    finst 0.
+    rewrite norm_ens_ens_void_comm.
+    fassume (?&?).
+    subst.
+    simpl.
+    apply ent_ens_single.
+    xsimpl.
+    intuition. }
+  { fintro x.
+    fintro r.
+    fintro l1.
+    fassume H.
+    rewrite IH; [ | subst; auto ].
+    funfold foldr_env "f".
+    fintro x0. finst x0.
+    fintro a. finst a.
+    rewrite norm_reassoc.
+    apply ent_req_req. xsimpl.
+    rewrite norm_seq_ex_reassoc.
+    fintro x1.
+    finst (x + sum (to_int_list l1)). (* this is the only instantiation that is hard *)
+    (* extract the pure part *)
+    rewrite norm_ens_ens_void_split.
+    rewrite norm_ens_ens_void_comm.
+    rewrite <- norm_seq_assoc.
+    fassume (?&?). subst r.
+    simpl.
+    finst x0.
+    finst (app l1 a).
+    rewrite norm_ens_req_transpose.
+    2: { apply b_pts_single. }
+    rewrite norm_req_pure. 2: reflexivity.
+    rewrite norm_seq_ens_empty.
+    apply ent_ens_single.
+    subst.
+    xsimpl.
+    intuition math. }
+Qed.
+
+End Rev.
