@@ -96,7 +96,7 @@ Inductive result : Type :=
   | norm : val -> result.
 
 (** * Staged formulae *)
-(** Deeply embedded due to uninterpreted functions, which cannot immediately be given a semantics without an environment. *)
+(** Deeply embedded due to uninterpreted functions, which cannot immediately be given a semantics without an environment. If we make [flow] a function of an [senv], the type of [flow] will be [flow : (var -> (val -> val -> flow)) -> ... -> Prop], which cannot be defined. *)
 Inductive flow :=
   | req : precond -> flow -> flow
   | ens : postcond -> flow
