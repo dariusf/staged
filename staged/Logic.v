@@ -44,11 +44,11 @@ with expr : Type :=
   | pfst (t: expr)
   | psnd (t: expr)
   | pminus (x y: expr)
-  | passert (b: val)
-  | pref (v: val)
-  | pderef (v: val)
-  | passign (x: val) (v: val)
-  | pif (x: val) (e1: expr) (e2: expr)
+  | passert (b: expr)
+  | pref (v: expr)
+  | pderef (v: expr)
+  | passign (x: expr) (v: expr)
+  | pif (b: expr) (e1: expr) (e2: expr)
   | papp (x: expr) (a: expr).
 
 #[global]
@@ -2109,26 +2109,26 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
 
   | eval_pif_true : forall h1 h2 r e1 e2 env,
     bigstep env h1 e1 h2 r ->
-    bigstep env h1 (pif (vbool true) e1 e2) h2 r
+    bigstep env h1 (pif (pval (vbool true)) e1 e2) h2 r
 
   | eval_pif_false : forall h1 h2 r e1 e2 env,
     bigstep env h1 e2 h2 r ->
-    bigstep env h1 (pif (vbool false) e1 e2) h2 r
+    bigstep env h1 (pif (pval (vbool false)) e1 e2) h2 r
 
   | eval_pref : forall h v p env,
     ~ Fmap.indom h p ->
-    bigstep env h (pref v) (Fmap.update h p v) (enorm (vloc p))
+    bigstep env h (pref (pval v)) (Fmap.update h p v) (enorm (vloc p))
 
   | eval_pderef : forall h p env,
     Fmap.indom h p ->
-    bigstep env h (pderef (vloc p)) h (enorm (Fmap.read h p))
+    bigstep env h (pderef (pval (vloc p))) h (enorm (Fmap.read h p))
 
   | eval_passign : forall h p v env,
     Fmap.indom h p ->
-    bigstep env h (passign (vloc p) v) (Fmap.update h p v) (enorm vunit)
+    bigstep env h (passign (pval (vloc p)) (pval v)) (Fmap.update h p v) (enorm vunit)
 
   | eval_passert : forall h env,
-    bigstep env h (passert (vbool true)) h (enorm vunit).
+    bigstep env h (passert (pval (vbool true))) h (enorm vunit).
 
 (* Definition compatible r1 r2 :=
   match (r1, r2) with
@@ -2154,20 +2154,20 @@ Inductive forward : expr -> flow -> Prop :=
     forward (pif b e1 e2) (disj f1 f2)
 
   | fw_deref: forall x,
-    forward (pderef (vloc x))
+    forward (pderef (pval (vloc x)))
       (fall (fun y => (req (x~~>y)
         (ens (fun res => \[res = y] \* x~~>y)))))
 
   | fw_ref: forall v,
-    forward (pref v) (fex (fun y =>
+    forward (pref (pval v)) (fex (fun y =>
       (ens (fun r => \[r = vloc y] \* y~~>v))))
 
   | fw_assign: forall x y v,
-    forward (passign (vloc x) y)
+    forward (passign (pval (vloc x)) (pval y))
       (req (x~~>v) (ens_ (x~~>y)))
 
   | fw_assert: forall b,
-    forward (passert (vbool b)) (req_ \[b = true])
+    forward (passert (pval (vbool b))) (req_ \[b = true])
 
   | fw_app_fun: forall vf x e va f,
     vf = vfun x e ->
@@ -2283,7 +2283,7 @@ Module Soundness.
   Qed.
 
   Lemma sem_pderef: forall x,
-    sem_tuple (pderef (vloc x))
+    sem_tuple (pderef (pval (vloc x)))
       (fall (fun y => (req (x~~>y)
         (ens (fun res => \[res = y] \* x~~>y))))).
   Proof.
@@ -2306,7 +2306,7 @@ Module Soundness.
   Qed.
 
   Lemma sem_pref: forall v,
-    sem_tuple (pref v) (fex (fun y =>
+    sem_tuple (pref (pval v)) (fex (fun y =>
       (ens (fun r => \[r = vloc y] \* y~~>v)))).
   Proof.
     intros.
@@ -2326,7 +2326,7 @@ Module Soundness.
   Qed.
 
   Lemma sem_passign: forall x y v,
-    sem_tuple (passign (vloc x) y)
+    sem_tuple (passign (pval (vloc x)) (pval y))
       (req (x~~>v) (ens_ (x~~>y))).
   Proof.
     intros.
@@ -2362,7 +2362,7 @@ Module Soundness.
   Qed.
 
   Lemma sem_passert: forall b,
-    sem_tuple (passert (vbool b)) (req_ \[b = true]).
+    sem_tuple (passert (pval (vbool b))) (req_ \[b = true]).
   Proof.
     intros.
     unfold sem_tuple. introv Hc Hb.
@@ -2567,7 +2567,7 @@ Module HistoryTriples.
   Qed.
 
   Lemma hist_pref: forall v fh,
-    hist_triple fh (pref v)
+    hist_triple fh (pref (pval v))
       (fh;; fex (fun y =>(ens (fun r => \[r = vloc y] \* y ~~> v)))).
   Proof.
     intros.
@@ -2575,7 +2575,7 @@ Module HistoryTriples.
   Qed.
 
   Lemma hist_pderef: forall x fh,
-    hist_triple fh (pderef (vloc x))
+    hist_triple fh (pderef (pval (vloc x)))
       (fh;; fall (fun y =>
         req (x ~~> y) (ens (fun res => \[res = y] \* x ~~> y)))).
   Proof.
@@ -2584,7 +2584,7 @@ Module HistoryTriples.
   Qed.
 
   Lemma hist_passign: forall x y v fh,
-    hist_triple fh (passign (vloc x) y)
+    hist_triple fh (passign (pval (vloc x)) (pval y))
       (fh;; req (x ~~> v) (ens_ (x ~~> y))).
   Proof.
     intros.
@@ -2592,7 +2592,7 @@ Module HistoryTriples.
   Qed.
 
   Lemma hist_passert: forall fh b,
-    hist_triple fh (passert (vbool b)) (fh;; req_ \[b = true]).
+    hist_triple fh (passert (pval (vbool b))) (fh;; req_ \[b = true]).
   Proof.
     intros.
     applys hist_frame_sem (@sem_passert b).
@@ -2601,7 +2601,7 @@ Module HistoryTriples.
   Lemma hist_pif: forall fh b e1 e2 f1 f2,
     hist_triple (fh;; ens_ \[b = true]) e1 f1 ->
     hist_triple (fh;; ens_ \[b = false]) e2 f2 ->
-    hist_triple fh (pif (vbool b) e1 e2) (disj f1 f2).
+    hist_triple fh (pif (pval (vbool b)) e1 e2) (disj f1 f2).
   Proof.
     introv He1 He2.
     unfold hist_triple. intros.
