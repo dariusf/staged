@@ -25,7 +25,6 @@ Proof.
 Qed.
 
 Lemma fmap_read_update : forall A B {IB:Inhab B} (k:A) (v:B) m,
-  ~ indom m k ->
   read (update m k v) k = v.
 Proof.
   intros.
@@ -54,7 +53,7 @@ Ltac solve_trivial_not_indom :=
 
 Ltac resolve_fn_in_env :=
   match goal with
-  | |- Fmap.read (Fmap.update _ ?k (Some _)) ?k = _ =>
+  | |- Fmap.read (Fmap.update _ ?k _) ?k = _ =>
     rewrite fmap_read_update; [reflexivity | solve_trivial_not_indom]
   | |- Fmap.read (Fmap.update _ _ _) _ = _ =>
     unfold Fmap.update;
@@ -62,7 +61,7 @@ Ltac resolve_fn_in_env :=
       rewrite Fmap.read_union_l; [resolve_fn_in_env | apply Fmap.indom_single] |
         rewrite Fmap.read_union_r; [resolve_fn_in_env | solve_trivial_not_indom]
     ]
-  | |- Fmap.read (Fmap.single ?k (Some _)) ?k = _ =>
+  | |- Fmap.read (Fmap.single ?k _) ?k = _ =>
     rewrite Fmap.read_single; reflexivity
   (* | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g *)
   end.

@@ -30,3 +30,14 @@ Ltac exs :=
   | |- ex _ => eexists; exs
   | _ => idtac
   end.
+
+(* Extensible notion of vacuity *)
+Ltac vacuity := false.
+
+(* Ltac vacuous H := solve [inversion H]. *)
+Tactic Notation "vacuous" :=
+  vacuity;
+  match goal with
+  | H: _ |- _ => solve [inversion H]
+  | _ => fail
+  end.
