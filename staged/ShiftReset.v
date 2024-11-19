@@ -208,10 +208,9 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
       Fmap.disjoint h1 h3) :
     satisfies s1 s1 h1 h2 r (ens q)
 
-  | s_seq s1 s2 f1 f2 h1 h2 r
-    (H: exists s3 h3 r1,
-      satisfies s1 s3 h1 h3 (norm r1) f1 /\
-      satisfies s3 s2 h3 h2 r f2) :
+  | s_seq s1 s2 f1 f2 h1 h2 r r1 h3 s3 :
+    satisfies s1 s3 h1 h3 (norm r1) f1 ->
+    satisfies s3 s2 h3 h2 r f2 ->
     satisfies s1 s2 h1 h2 r (seq f1 f2)
   (** seq is changed to require a value from the first flow *)
 
@@ -464,8 +463,7 @@ Section Propriety.
     intros.
     subst.
     inverts H1 as H1; destr H1.
-    { apply s_seq. exists s3. exists h3. exists r1.
-    subst. jauto. }
+    { applys* s_seq. }
     { apply s_seq_sh.
       apply H. assumption. }
   Qed.
@@ -476,8 +474,7 @@ Section Propriety.
     unfold Proper, entails, respectful.
     intros.
     inverts H1 as H1; destr H1.
-    { apply s_seq. exists s3. exists h3. exists r1.
-    eauto. }
+    { eapply s_seq; eauto. }
     { apply H in H1.
       pose proof s_seq_sh.
       specializes H2 H1.
@@ -499,10 +496,8 @@ Section Propriety.
     intros.
     subst.
     inverts H1 as H1; destr H1.
-    { apply s_seq. exists s3. exists h3. exists r1.
-      split; auto. }
-    { apply s_seq_sh.
-      jauto. }
+    { applys* s_seq. }
+    { eapply s_seq_sh. jauto. }
   Qed.
 
   #[global]
@@ -846,14 +841,14 @@ eapply s_rs_sh.
 
   apply s_rs_val.
 
-  apply s_seq. exs. split.
+  eapply s_seq.
 
   { apply ens_void_pure_intro. jauto. }
 
-  apply s_seq. exs. split.
-  apply ens_pure_intro. intuition reflexivity.
-  apply ens_pure_intro. reflexivity.
-  }
+  { eapply s_seq.
+    apply ens_pure_intro. intuition reflexivity.
+    apply ens_pure_intro. reflexivity. }
+}
 Qed.
 
 (** [(reset (shift k (fun x -> k x))) 4 ==> 4]
@@ -870,16 +865,14 @@ Example e5_shift_k : forall k f, k <> f -> exists s,
 Proof.
   intros.
   eexists.
-  apply s_seq.
-  exs.
-  split.
+  eapply s_seq.
   { (* show that reset produces a function *)
     eapply s_rs_sh.
     (* handle the shift *)
     apply s_sh.
     (* show how the shift body goes through the reset to produce the function *)
     { apply s_rs_val.
-      apply s_seq. do 3 eexists. split.
+      eapply s_seq.
       apply s_defun. reflexivity.
       apply ens_pure_intro. reflexivity. }
   }
@@ -899,7 +892,7 @@ Proof.
     simpl.
     
     apply s_rs_val.
-    apply s_seq. do 3 eexists. split.
+    eapply s_seq.
     apply~ ens_void_pure_intro.
     apply~ ens_pure_intro.
   }
@@ -919,9 +912,7 @@ Example e6_shift_k : forall k f, k <> f -> exists s,
 Proof.
   intros.
   eexists.
-  apply s_seq.
-  exs.
-  split.
+  eapply s_seq.
   { (* reset *)
     (* the shift is still "handled", but produces a lambda without
       applying the continuation *)
@@ -935,9 +926,7 @@ Proof.
 
       apply s_sh. }
     { apply s_rs_val.
-      apply s_seq.
-      do 3 eexists.
-      split.
+      eapply s_seq.
       apply s_defun. reflexivity.
       apply ens_pure_intro. reflexivity. }
   }
@@ -958,11 +947,11 @@ Proof.
 
     apply s_rs_val.
 
-    apply s_seq. exs. split.
+    eapply s_seq.
     apply ens_void_pure_intro.
     jauto.
 
-    apply s_seq. do 3 eexists. split.
+    eapply s_seq.
     (* TODO ens_pure_info has more info, empty heaps? *)
     apply ens_pure_intro. intuition reflexivity.
     apply ens_pure_intro. reflexivity.
@@ -1089,7 +1078,7 @@ Lemma sf_seq : forall f1 f2,
 Proof.
   unfold shift_free, not. intros.
   inverts H1 as H1; destr H1.
-  { specializes~ H0 H3. }
+  { specializes~ H0 H9. }
   { specializes~ H H1. }
 Qed.
 
@@ -1113,8 +1102,7 @@ Proof.
     apply s_seq_sh.
     eassumption. }
   { eapply H.
-    apply s_seq. exs.
-    split.
+    eapply s_seq.
     2: eassumption.
     (* TODO need to know that shift-free means
       f1 goes to norm, possible to add *)
@@ -1178,8 +1166,7 @@ Ltac elim_shs H :=
 Ltac intro_shs :=
   lazymatch goal with
   | |- satisfies _ _ _ _ _ (shs _ _ _ _) =>
-    constructor; exs; split;
-    [ apply ens_void_pure_intro | ]
+    eapply s_seq; [ apply ens_void_pure_intro | ]
   | _ => fail
   end.
 
@@ -1207,19 +1194,17 @@ Proof.
   { (* if either f1 or f2 produce a shift *)
     inverts H as H. destr H.
     { (* f2 produces a shift *)
-      constructor. exs.
-      split.
+      eapply s_seq.
       exact H.
       eapply s_rs_sh.
-      exact H1.
+      exact H8.
       exact H7. }
     { (* f1 cannot produce a shift as it is shift-free *)
       apply Hsf in H.
       false. } }
   { (* if f1 returns *)
     inverts H as H. destr H.
-    constructor. exs.
-    split.
+    eapply s_seq.
     exact H.
     apply s_rs_val.
     assumption. }
@@ -1233,6 +1218,7 @@ Proof.
   inverts H as H.
   (* note that the application of this rule is very sensitive
     to the precise terms appearing in the equality... *)
+    (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
   intro_shs. intros. shiftfree.
   apply s_shc. 
 Qed.
@@ -1247,7 +1233,7 @@ Proof.
   { destr H. elim_shs H. vacuous. }
   { elim_shs H.
     intro_shs. intros r2. specializes H0 r2. apply~ sf_rs.
-    inverts H1 as H1.
+    inverts H7 as H7.
     cont_eq.
     apply s_shc. }
 Qed.
@@ -1276,7 +1262,7 @@ Proof.
     (* we know that the shs is what produces a shift *)
     (* f2 goes in the continuation and under a reset *)
     (* now start reasoning backwards *)
-    inverts H1 as H1.
+    inverts H8 as H8.
     cont_eq.
     eapply s_rs_sh.
     intro_shs. apply sf_rs.
@@ -1293,10 +1279,9 @@ Proof.
   unfold entails. intros.
   inverts H as H. 2: { inverts H as H. destr H. vacuous. }
   elim_shs H. clear H0.
-  inverts H1 as H1.
+  inverts H8 as H8.
   cont_eq.
-  apply s_seq. exs.
-  split.
+  eapply s_seq.
   apply s_defun. reflexivity.
   applys_eq H7.
 Qed.
@@ -1309,11 +1294,10 @@ Proof.
   inverts H as H; [ | vacuous ]. destr H.
   pose proof H.
   inverts H as H.
-  inverts H1 as H1. destr H1.
-  rewrite fmap_read_update in H1.
-  (* injects H1. *)
-  apply s_seq. exs.
-  intuition eauto.
+  inverts H7 as H7. destr H7.
+  rewrite fmap_read_update in H7.
+  (* injects H7. *)
+  applys* s_seq.
 Qed.
 
 Lemma ent_seq_defun : forall s x uf f2 f1,
@@ -1324,10 +1308,8 @@ Proof.
   inverts H0 as H0; [ | vacuous ]. destr H0.
   pose proof H0.
   inverts H0 as H0.
-  apply H in H2.
-  apply s_seq.
-  exs.
-  intuition eauto.
+  apply H in H8.
+  applys* s_seq.
 Qed.
 
 Lemma unk_inv : forall s1 s2 h1 h2 r f x v f1,
@@ -1369,19 +1351,17 @@ Proof.
   intros.
   split; intros.
   { inverts H1 as H1. 2: { apply H in H1; false. } destr H1.
-    inverts H3 as H3. 2: { apply H0 in H3; false. } destr H3.
-    constructor. exs.
-    split; eauto.
-    constructor. exs.
-    split; eauto. }
+    inverts H9 as H9. 2: { apply H0 in H9; false. } destr H9.
+    applys* s_seq.
+    applys* s_seq. }
   { inverts H1 as H1.
     { destr H1.
       inverts H1 as H1.
       destr H1.
-      constructor. exs. split; eauto.
-      constructor. exs. split; eauto. }
+      applys* s_seq.
+      applys* s_seq. }
     inverts H1 as H1. destr H1.
-    apply H0 in H3. false.
+    apply H0 in H9. false.
     apply H in H1. false. }
 Qed.
 
@@ -1409,7 +1389,7 @@ Lemma norm_ens_true : forall f,
 Proof.
   unfold entails. intros.
   inverts H as H; [ | no_shift ]. destr H.
-  inverts H as H. destr H. hinv H. hinv H. hinv H3. injects H0. subst.
+  inverts H as H. destr H. hinv H. hinv H. hinv H2. injects H0. subst.
   rew_fmap *.
 Qed.
 
@@ -1418,7 +1398,7 @@ Lemma norm_ens_eq : forall f (a:val),
 Proof.
   unfold entails. intros.
   inverts H as H; [ | no_shift ]. destr H.
-  inverts H as H. destr H. hinv H. hinv H. hinv H3. injects H0. subst.
+  inverts H as H. destr H. hinv H. hinv H. hinv H2. injects H0. subst.
   rew_fmap *.
 Qed.
 
@@ -1429,7 +1409,7 @@ Proof.
   unfold entails_under. intros.
   inverts H0 as H0; no_shift. destr H0.
   inverts H0 as H0. destr H0.
-  hinv H0. hinv H4. hinv H0. subst. injects H1.
+  hinv H0. hinv H3. hinv H0. subst. injects H1.
   rew_fmap *.
 Qed.
 
@@ -1450,32 +1430,20 @@ Proof.
   unfold entails.
   iff H0.
   { inverts H0 as H1; destr H1; no_shift.
-    inverts H1 as H1; destr H1; no_shift.
-    inverts H2 as H2; destr H2; no_shift.
+    inverts H1 as H1; destr H1; no_shift. injects H0. hinv H1. hinv H0.
+    inverts H8 as H8; destr H8; no_shift.
     constructor.
-    exists v0.
-    exists (h0 \u h4).
-    intuition.
-    rewrite hstar_hpure_l in H1.
-    rewrite hstar_comm.
+    exists v0 (h0 \u x0).
+    splits*.
     apply* hstar_intro. }
-  { inverts H0 as H0. destr H0.
-    apply hstar_inv in H0. destr H0.
+  { inverts H0 as H0. destr H0. hinv H0.
+    eapply s_seq.
     constructor.
-    exists s2.
-    exists (h1 \u h4).
     exists vunit.
-    split.
-    { constructor.
-      exists vunit.
-      exists h4.
-      intuition.
-      rewrite hstar_hpure_l.
-      intuition. }
-    { constructor.
-      exists v.
-      exists h0.
-      intuition. } }
+    exists x0.
+    splits*.
+    { hintro. jauto. }
+    { constructor. exists v x. jauto. } }
 Qed.
 
 (** * Reduction example *)
@@ -1530,7 +1498,7 @@ Qed.
 (** ** Differences *)
 (** #<!-- this space is needed!!-->#
 - Function pointer values [vfptr] enable arbitrary higher-order staged formulae. A [defun] staged formula (conceptually just an [ens] which binds a function value) and an output [senv] added to [satisfies] complete this, allowing shift bodies to return continuations.
-- The semantics guarantees that [shft] continuations are #<i>shift-free by construction</i>#, by having a [rs] as their topmost form. This significantly simplifies the proofs of the reduction rules. *)
+- The semantics guarantees that [shft]/[Sh#] continuations are #<i>shift-free by construction</i>#, by having a [rs] as their topmost form. This significantly simplifies the proofs of the reduction rules. *)
 (** ** Section 4.3. Shift/Reset Reduction *)
 (** The reduction rules are proved as lemmas.
 - #<a href="&num;red_skip">red_skip</a>#
