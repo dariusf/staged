@@ -39,19 +39,19 @@ with expr : Type :=
   | pvar (x: var)
   | pval (v: val)
   | plet (x: var) (e1 e2: expr)
-  | pfix (f: var) (x: var) (e: expr)
+  | pfix (xf: var) (x: var) (e: expr)
   | pfun (x: var) (e: expr)
-  | padd (x y: expr)
-  | pfst (t: expr)
-  | psnd (t: expr)
-  | pminus (x y: expr)
-  | passert (b: val)
+  | padd (e1 e2: expr)
+  | pfst (e: expr)
+  | psnd (e: expr)
+  | pminus (e1 e2: expr)
+  | passert (v: val)
   | pref (v: val)
   | pderef (v: val)
-  | passign (x: val) (v: val)
-  | pif (x: val) (e1: expr) (e2: expr)
-  | papp (x: expr) (a: expr)
-  | pshift (k: expr) (e: expr)
+  | passign (e1: val) (e2: val)
+  | pif (v: val) (e1: expr) (e2: expr)
+  | papp (e1: expr) (e2: expr)
+  | pshift (k: var) (e: expr)
   | preset (e: expr).
 
 #[global]
@@ -62,19 +62,19 @@ Proof.
   constructor.
 Qed.
 
-Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
-  let aux t := subst y w t in
+Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
+  let aux t := subst y v t in
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
-  | padd x y => padd x y
-  | pminus x y => pminus x y
+  | padd x z => padd x z
+  | pminus x z => pminus x z
   | pfst x => pfst x
   | psnd x => psnd x
-  | pvar x => if_y_eq x (pval w) e
+  | pvar x => if_y_eq x (pval v) e
   | passert b => passert b
   | pderef r => pderef r
-  | passign x y => passign x y
+  | passign x z => passign x z
   | pref v => pref v
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
@@ -181,66 +181,66 @@ Implicit Types s : senv.
 Implicit Types h : heap.
 Implicit Types H : hprop.
 Implicit Types Q : postcond.
-Implicit Types uf : ufun.
+Implicit Types uf fn : ufun.
 Implicit Types c : val -> flow.
-(* TODO enforce these *)
-(* Implicit Types f : flow. *)
-(* Implicit Types x y k : var. *)
-(* Implicit Types a v : val. *)
-(* Implicit Types r : result. *)
+Implicit Types f : flow.
+Implicit Types x y z k : var.
+Implicit Types a v r : val.
+Implicit Types R : result.
+Implicit Types e : expr.
 
 (** * Interpretation of a staged formula *)
 Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
 
-  | s_req (s1 s2:senv) p (h1 h2:heap) r f
+  | s_req (s1 s2:senv) p (h1 h2:heap) R f
     (H: forall (hp hr:heap),
       p hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies s1 s2 hr h2 r f) :
-    satisfies s1 s2 h1 h2 r (req p f)
+      satisfies s1 s2 hr h2 R f) :
+    satisfies s1 s2 h1 h2 R (req p f)
 
-  | s_ens s1 q h1 h2 r
+  | s_ens s1 q h1 h2 R
     (H: exists v h3,
-      r = norm v /\
+      R = norm v /\
       q v h3 /\
       h2 = Fmap.union h1 h3 /\
       Fmap.disjoint h1 h3) :
-    satisfies s1 s1 h1 h2 r (ens q)
+    satisfies s1 s1 h1 h2 R (ens q)
 
-  | s_seq s1 s2 f1 f2 h1 h2 r r1 h3 s3 :
+  | s_seq s1 s2 f1 f2 h1 h2 R r1 h3 s3 :
     satisfies s1 s3 h1 h3 (norm r1) f1 ->
-    satisfies s3 s2 h3 h2 r f2 ->
-    satisfies s1 s2 h1 h2 r (seq f1 f2)
+    satisfies s3 s2 h3 h2 R f2 ->
+    satisfies s1 s2 h1 h2 R (seq f1 f2)
   (** seq is changed to require a value from the first flow *)
 
-  | s_fex s1 s2 h1 h2 r (A:Type) (f:A->flow)
-    (H: exists v,
-      satisfies s1 s2 h1 h2 r (f v)) :
-    satisfies s1 s2 h1 h2 r (@fex A f)
+  | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
+    (H: exists b,
+      satisfies s1 s2 h1 h2 R (f b)) :
+    satisfies s1 s2 h1 h2 R (@fex A f)
 
-  | s_fall s1 s2 h1 h2 r (A:Type) (f:A->flow)
-    (H: forall v,
-      satisfies s1 s2 h1 h2 r (f v)) :
-    satisfies s1 s2 h1 h2 r (@fall A f)
+  | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow)
+    (H: forall b,
+      satisfies s1 s2 h1 h2 R (f b)) :
+    satisfies s1 s2 h1 h2 R (@fall A f)
 
-  | s_unk s1 s2 h1 h2 r fn f x
-    (He: Fmap.read s1 fn = f)
-    (Hr: satisfies s1 s2 h1 h2 (norm r) (f x r)) :
-    satisfies s1 s2 h1 h2 (norm r) (unk fn x r)
+  | s_unk s1 s2 h1 h2 r xf uf a
+    (He: Fmap.read s1 xf = uf)
+    (Hr: satisfies s1 s2 h1 h2 (norm r) (uf a r)) :
+    satisfies s1 s2 h1 h2 (norm r) (unk xf a r)
 
-  | s_intersect s1 s2 h1 h2 r f1 f2
-    (H1: satisfies s1 s2 h1 h2 r f1)
-    (H2: satisfies s1 s2 h1 h2 r f2) :
-    satisfies s1 s2 h1 h2 r (intersect f1 f2)
+  | s_intersect s1 s2 h1 h2 R f1 f2
+    (H1: satisfies s1 s2 h1 h2 R f1)
+    (H2: satisfies s1 s2 h1 h2 R f2) :
+    satisfies s1 s2 h1 h2 R (intersect f1 f2)
 
-  | s_disj_l s1 s2 h1 h2 r f1 f2
-    (H: satisfies s1 s2 h1 h2 r f1) :
-    satisfies s1 s2 h1 h2 r (disj f1 f2)
+  | s_disj_l s1 s2 h1 h2 R f1 f2
+    (H: satisfies s1 s2 h1 h2 R f1) :
+    satisfies s1 s2 h1 h2 R (disj f1 f2)
 
-  | s_disj_r s1 s2 h1 h2 r f1 f2
-    (H: satisfies s1 s2 h1 h2 r f2) :
-    satisfies s1 s2 h1 h2 r (disj f1 f2)
+  | s_disj_r s1 s2 h1 h2 R f1 f2
+    (H: satisfies s1 s2 h1 h2 R f2) :
+    satisfies s1 s2 h1 h2 R (disj f1 f2)
 
     (** The new rules for shift/reset are as follows. *)
 
@@ -256,16 +256,16 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
       (shc x shb v (fun r2 => rs fk r2))
     (** [shc] corresponds directly to [shft]. *)
 
-  | s_seq_sh s1 s2 f1 f2 fk h1 h2 shb x (v:val) :
-    satisfies s1 s2 h1 h2 (shft x shb v (fun r1 => rs fk r1)) f1 ->
-    satisfies s1 s2 h1 h2 (shft x shb v (fun r1 => rs (fk;; f2) r1)) (f1;; f2)
+  | s_seq_sh s1 s2 f1 f2 fk h1 h2 shb k (v:val) :
+    satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs fk r1)) f1 ->
+    satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs (fk;; f2) r1)) (f1;; f2)
     (** This rule extends the continuation in a [shft] on the left side of a [seq]. Notably, it moves whatever comes next #<i>under the reset</i>#, preserving shift-freedom by constructon. *)
 
   | s_rs_sh s1 s2 f h1 h2 r rf s3 h3 fb fk k v1
     (H: satisfies s1 s3 h1 h3 (shft k fb v1 (fun r2 => rs fk r2)) f)
-    (H1: satisfies (* TODO x is fresh/not already in s3? *)
-        (Fmap.update s3 k (fun x r =>
-          rs (ens_ \[v1 = x];; fk) r)) s2
+    (H1: satisfies (* TODO k is fresh/not already in s3? *)
+        (Fmap.update s3 k (fun a r =>
+          rs (ens_ \[v1 = a];; fk) r)) s2
       h3 h2 rf (rs fb r)) :
     satisfies s1 s2 h1 h2 rf (rs f r)
 
@@ -304,16 +304,16 @@ Ltac cont_eq :=
 
 (** * Entailment *)
 Definition entails_under s1 f1 f2 :=
-  forall h1 h2 s2 r,
-    satisfies s1 s2 h1 h2 r f1 -> satisfies s1 s2 h1 h2 r f2.
+  forall h1 h2 s2 R,
+    satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
 
 Definition entails (f1 f2:flow) : Prop :=
-  forall s1 s2 h1 h2 r,
-    satisfies s1 s2 h1 h2 r f1 -> satisfies s1 s2 h1 h2 r f2.
+  forall s1 s2 h1 h2 R,
+    satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
 
 Definition bientails (f1 f2:flow) : Prop :=
-  forall h1 h2 r s1 s2,
-    satisfies s1 s2 h1 h2 r f1 <-> satisfies s1 s2 h1 h2 r f2.
+  forall h1 h2 R s1 s2,
+    satisfies s1 s2 h1 h2 R f1 <-> satisfies s1 s2 h1 h2 R f2.
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
@@ -548,7 +548,7 @@ Section Propriety.
     intros.
     inverts H0 as H0. destr H0.
     constructor.
-    exists v.
+    exists b.
     apply H.
     assumption.
   Qed.
@@ -669,8 +669,8 @@ Proof.
 Qed.
 
 Example e1: env_entails
-  (Fmap.single "x" (fun x r => ens_ \[r = vint 0]))
-  (Fmap.single "x" (fun x r => ens_ \[r = vint 0 \/ r = vint 1])).
+  (Fmap.single "x" (fun a r => ens_ \[r = vint 0]))
+  (Fmap.single "x" (fun a r => ens_ \[r = vint 0 \/ r = vint 1])).
 Proof.
   unfold env_entails.
   intros.
@@ -688,10 +688,10 @@ Proof.
 Qed.
 
 Definition entails1 (f1 f2:flow) : Prop :=
-  forall s1 s1' s2 s2' h1 h2 r,
+  forall s1 s1' s2 s2' h1 h2 R,
     env_entails s1 s1' ->
     env_entails s2 s2' ->
-  satisfies s1 s2 h1 h2 r f1 -> satisfies s1' s2' h1 h2 r f2.
+  satisfies s1 s2 h1 h2 R f1 -> satisfies s1' s2' h1 h2 R f2.
 
 Instance env_entails_refl : Reflexive env_entails.
 Proof.
@@ -754,9 +754,9 @@ Proof.
   splits*.
 Qed.
 
-Lemma ens_void_pure_inv : forall P s1 s2 h1 h2 r,
-  satisfies s1 s2 h1 h2 r (ens_ \[P]) ->
-  P /\ h1 = h2 /\ s1 = s2 /\ r = norm vunit.
+Lemma ens_void_pure_inv : forall P s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R (ens_ \[P]) ->
+  P /\ h1 = h2 /\ s1 = s2 /\ R = norm vunit.
 Proof.
   intros.
   inverts H as H. destr H.
@@ -765,9 +765,9 @@ Proof.
   intuition.
 Qed.
 
-Lemma ens_store_frame : forall s1 s2 h1 h2 r x v Q,
-  satisfies s1 s2 h1 h2 r (ens Q) ->
-  satisfies (Fmap.update s1 x v) (Fmap.update s2 x v) h1 h2 r (ens Q).
+Lemma ens_store_frame : forall s1 s2 h1 h2 R x uf Q,
+  satisfies s1 s2 h1 h2 R (ens Q) ->
+  satisfies (Fmap.update s1 x uf) (Fmap.update s2 x uf) h1 h2 R (ens Q).
 Proof.
   intros.
   inverts H as H. destr H.
@@ -779,8 +779,8 @@ Qed.
 (** * Examples for semantics *)
 Module Examples.
 
-Example e1_undelimited : forall x, exists r,
-  satisfies empty_env empty_env empty_heap empty_heap r
+Example e1_undelimited : forall x, exists R,
+  satisfies empty_env empty_env empty_heap empty_heap R
     (sh x (ens (fun r2 => \[r2 = vint 1])) (vint 1)).
 Proof.
   intros.
@@ -851,17 +851,17 @@ eapply s_rs_sh.
 }
 Qed.
 
-(** [(reset (shift k (fun x -> k x))) 4 ==> 4]
+(** [(reset (shift k (fun a -> k a))) 4 ==> 4]
 - The whole thing returns what the application of f/k returns
 - The result of the shift is 4 due to the identity k
 - The result of the reset is a function; 4 is the result of an inner reset that appears in the course of reduction *)
-Example e5_shift_k : forall k f, k <> f -> exists s,
+Example e5_shift_k : forall k xf, k <> xf -> exists s,
   satisfies empty_env s empty_heap empty_heap (norm (vint 4))
-    (rs (sh k (defun f (fun x r => unk k x r);;
-                ens (fun r => \[r = vfptr f]))
+    (rs (sh k (defun xf (fun a r => unk k a r);;
+                ens (fun r => \[r = vfptr xf]))
             (vint 4))
-        (vfptr f);;
-      unk f (vint 4) (vint 4)).
+        (vfptr xf);;
+      unk xf (vint 4) (vint 4)).
 Proof.
   intros.
   eexists.
@@ -898,17 +898,17 @@ Proof.
   }
 Qed.
 
-(** [(reset 1 + (shift k (fun x -> k x))) 4 ==> 5]
+(** [(reset 1 + (shift k (fun a -> k a))) 4 ==> 5]
 - res of shift = arg of k = 4
 - res of reset = res of shift body = fptr
 - final res is that of the inner reset, which doesn't occur syntacically in the code as it is produced by the "handling" of the shift. *)
-Example e6_shift_k : forall k f, k <> f -> exists s,
+Example e6_shift_k : forall k xf, k <> xf -> exists s,
   satisfies empty_env s empty_heap empty_heap (norm (vint 5))
-    (rs (∃ sr, sh k (defun f (fun x r => unk k x r);;
-                ens (fun r => \[r = vfptr f]))
+    (rs (∃ sr, sh k (defun xf (fun a r => unk k a r);;
+                ens (fun r => \[r = vfptr xf]))
             sr;; ens (fun r => \[r = vplus (vint 1) sr]))
-        (vfptr f);;
-      ∃ fr, unk f (vint 4) (vint fr)).
+        (vfptr xf);;
+      ∃ fr, unk xf (vint 4) (vint fr)).
 Proof.
   intros.
   eexists.
@@ -921,7 +921,7 @@ Proof.
       apply s_fex. eexists.
       (* eta-expand the right side to make it clear what the continuation is *)
       change (ens (fun r => \[r = vplus (vint 1) ?sr])) with
-        ((fun x => ens (fun r => \[r = vplus (vint 1) x])) sr).
+        ((fun a => ens (fun r => \[r = vplus (vint 1) a])) sr).
       apply s_seq_sh. (* this moves the ens into the continuation *)
 
       apply s_sh. }
@@ -967,8 +967,8 @@ Fixpoint syn_shift_free (f:flow) : Prop :=
   | req _ f => syn_shift_free f
   | ens q => True
   | seq f1 f2 => syn_shift_free f1 /\ syn_shift_free f2
-  | fex f => exists a, syn_shift_free (f a)
-  | fall f => forall a, syn_shift_free (f a)
+  | fex f => exists b, syn_shift_free (f b)
+  | fall f => forall b, syn_shift_free (f b)
   | unk _ _ r => False
   | intersect f1 f2 => syn_shift_free f1 /\ syn_shift_free f2
   | disj f1 f2 => syn_shift_free f1 /\ syn_shift_free f2
@@ -998,10 +998,10 @@ Qed.
 
 (** Semantic definition of shift-freedom. *)
 Definition shift_free (f:flow) : Prop :=
-  forall s1 s2 h1 h2 x k r b,
+  forall s1 s2 h1 h2 k fk r b,
   (* exists v, *)
     (* satisfies s1 s2 h1 h2 (norm v) f /\ *)
-      not (satisfies s1 s2 h1 h2 (shft x k r (fun r2 => rs b r2)) f).
+      not (satisfies s1 s2 h1 h2 (shft k fk r (fun r2 => rs b r2)) f).
 
 (** [Sh#], the syntactic analogue of [shft], or a CPS version of [Sh], where the continuation is shift-free. *)
 Definition shs x fb vr c : flow :=
@@ -1019,8 +1019,8 @@ Proof.
 Qed.
 (* #[local] Hint Resolve sf_ens : core. *)
 
-Lemma sf_defun : forall x f,
-  shift_free (defun x f).
+Lemma sf_defun : forall x uf,
+  shift_free (defun x uf).
 Proof.
   unfold shift_free, not. intros.
   inverts H as H.
@@ -1082,9 +1082,9 @@ Proof.
   { specializes~ H H1. }
 Qed.
 
-Lemma sf_fex : forall A f,
-  (forall v, shift_free (f v)) ->
-  shift_free (@fex A f).
+Lemma sf_fex : forall A (p:A->flow),
+  (forall b, shift_free (p b)) ->
+  shift_free (@fex A p).
 Proof.
   unfold shift_free, not. intros.
   inverts H0 as H0. destr H0.
@@ -1273,8 +1273,8 @@ Qed.
 
 Lemma red_shift_elim : forall x v r fk fb,
   entails (rs (shs x fb v (fun r2 => rs fk r2)) r)
-    (defun x (fun y r =>
-      rs (ens_ \[v = y];; fk) r);; rs fb r).
+    (defun x (fun a r =>
+      rs (ens_ \[v = a];; fk) r);; rs fb r).
 Proof.
   unfold entails. intros.
   inverts H as H. 2: { inverts H as H. destr H. vacuous. }
@@ -1312,10 +1312,10 @@ Proof.
   applys* s_seq.
 Qed.
 
-Lemma unk_inv : forall s1 s2 h1 h2 r f x v f1,
-  Fmap.read s1 f = f1 ->
-  satisfies s1 s2 h1 h2 r (unk f x v) ->
-  satisfies s1 s2 h1 h2 r (f1 x v).
+Lemma unk_inv : forall s1 s2 h1 h2 R x a v uf,
+  Fmap.read s1 x = uf ->
+  satisfies s1 s2 h1 h2 R (unk x a v) ->
+  satisfies s1 s2 h1 h2 R (uf a v).
 Proof.
   intros.
   inverts H0 as H0.
@@ -1323,9 +1323,9 @@ Proof.
   assumption.
 Qed.
 
-Lemma ent_unk : forall s (f:var) x v f1,
-  Fmap.read s f = f1 ->
-  entails_under s (unk f x v) (f1 x v).
+Lemma ent_unk : forall s (x:var) a v uf,
+  Fmap.read s x = uf ->
+  entails_under s (unk x a v) (uf a v).
 Proof.
   unfold entails_under. intros.
   eapply unk_inv.
@@ -1342,11 +1342,11 @@ Proof.
   { assumption. }
 Qed.
 
-Lemma seq_assoc : forall s1 s2 h1 h2 r f1 f2 f3,
+Lemma seq_assoc : forall s1 s2 h1 h2 R f1 f2 f3,
   shift_free f1 ->
   shift_free f2 ->
-  satisfies s1 s2 h1 h2 r (f1;; f2;; f3) <->
-  satisfies s1 s2 h1 h2 r ((f1;; f2);; f3).
+  satisfies s1 s2 h1 h2 R (f1;; f2;; f3) <->
+  satisfies s1 s2 h1 h2 R ((f1;; f2);; f3).
 Proof.
   intros.
   split; intros.
@@ -1448,17 +1448,17 @@ Qed.
 
 (** * Reduction example *)
 (**
-  < (shift k. k r1) + (shift k1. k1 r2) >
+  < (shift k. k i1) + (shift k1. k1 i2) >
   assuming left-to-right evaluation
-  k1 takes r1, result is r1 + r2
-  k2 takes r2, result is also r1 + r2
+  k1 takes i1, result is i1 + i2
+  k2 takes i2, result is also i1 + i2
 *)
-Example e1_red : forall x1 x2 r1 r2 r3, exists f,
+Example e1_red : forall x1 x2 i1 i2 r3, exists f,
   entails_under empty_env
     (rs
-      (sh x1 (unk x1 (vint r1) (vint (r1 + r2))) (vint r1);;
-        sh x2 (unk x2 (vint r2) (vint (r1 + r2))) (vint r2);;
-        ens (fun r => \[r = vint (r1 + r2)])) r3) f.
+      (sh x1 (unk x1 (vint i1) (vint (i1 + i2))) (vint i1);;
+        sh x2 (unk x2 (vint i2) (vint (i1 + i2))) (vint i2);;
+        ens (fun r => \[r = vint (i1 + i2)])) r3) f.
 Proof.
   intros.
   eexists.
@@ -1473,7 +1473,7 @@ Proof.
   simpl.
 
   rewrite norm_ens_eq.
-  rewrite (norm_seq_pure_l (fun r0 => r0 = vint r1)).
+  rewrite (norm_seq_pure_l (fun r0 => r0 = vint i1)).
 
   rewrite red_init.
   rewrite red_acc.
@@ -1490,7 +1490,7 @@ Proof.
   rewrite red_normal; shiftfree.
   rewrite red_normal; shiftfree.
 
-  rewrite (norm_seq_pure_l (fun r4 => r4 = vint r2)).
+  rewrite (norm_seq_pure_l (fun r4 => r4 = vint i2)).
   apply entails_under_refl.
 Qed.
 
