@@ -114,6 +114,11 @@ Definition ens_ H := ens (fun r => \[r = vunit] \* H).
 
 Definition empty := ens_ \[True].
 
+Definition top := req \[False] (ens_ \[True]).
+Definition bot := req \[True] (ens_ \[False]).
+Definition error := req \[False] (ens_ \[False]).
+Definition okay P Q := req P (ens Q). (* where Q is sat *)
+
 Notation req_ H := (req H empty).
 
 (** Function environments, for interpreting unknown functions. [ufun] is a HOAS way of substituting into a staged formula, which otherwise doesn't support this due to the shallow embedding that [hprop] uses. *)
@@ -707,6 +712,25 @@ Tactic Notation "fdestr" constr(H) := fdestr_rec H.
 Tactic Notation "fdestr" constr(H) "as" simple_intropattern(pat) := fdestr_pat H pat.
 
 (** * Entailment and normalization rules *)
+Lemma entails_bot: forall f, entails bot f.
+Proof.
+  unfold entails. intros.
+  inverts H as H.
+  specializes H empty_heap h1 ___.
+  hintro. auto.
+  inverts H as H. destr H.
+  hinv H. hinv H2.
+  false.
+Qed.
+
+Lemma entails_top: forall f, entails f top.
+Proof.
+  unfold entails. intros.
+  constructor. intros.
+  hinv H0.
+  false.
+Qed.
+
 (** Covariance of ens *)
 Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
   (forall v, Q1 v ==> Q2 v) ->

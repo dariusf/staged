@@ -456,3 +456,21 @@ Proof.
     apply ens_void_pure_intro.
     injects H2. injects H1. f_equal. math. }
 Qed.
+
+Lemma ex1_req_ens_duality:
+  entails (req_ \[False]) (ens_ \[False]).
+Proof.
+  unfold entails. intros.
+  (* This is not provable *)
+  inverts H as H.
+  constructor.
+Abort.
+
+Lemma ex2_req_ens_duality:
+  entails (ens_ \[False]) (req_ \[False]).
+Proof.
+  unfold entails. intros.
+  constructor. intros.
+  inverts H as H. destr H. hinv H0. hinv H. hinv H. hinv H7. subst. rew_fmap.
+  apply empty_intro.
+Abort.
