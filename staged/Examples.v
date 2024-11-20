@@ -34,7 +34,6 @@ Proof.
   apply hpure_intro_hempty.
   apply hempty_intro.
   reflexivity.
-  fmap_eq.
 Qed.
 
 Example ex2_ret: flow_res f1 (vint 1).
@@ -66,8 +65,7 @@ Proof.
   { constructor.
     exists (vint 1). exists empty_heap.
     intuition.
-    apply hpure_intro. reflexivity.
-    fmap_eq. }
+    apply hpure_intro. reflexivity. }
     congruence.
 Qed.
 
@@ -109,7 +107,7 @@ Proof.
   intros.
   inverts H as H2.
   destruct H2 as (v & h3 & H1 & H2 & H3 & H4).
-  subst r.
+  subst R.
   constructor.
   exists h1.
   exists (norm (vint 1)).
@@ -123,7 +121,6 @@ Proof.
     apply hpure_intro_hempty.
     apply hempty_intro.
     intuition.
-    fmap_eq.
   -
     constructor.
     eexists.
@@ -135,7 +132,6 @@ Proof.
     intuition.
     apply hpure_inv in H2.
     intuition.
-    fmap_eq.
 Qed.
 
 Example ex7_rewrite : f5 ⊑ f6.
@@ -194,7 +190,6 @@ Proof.
   intuition.
   rewrite hstar_hpure_r.
   split. hintro; auto. math.
-  fmap_eq.
 Qed.
 
 Example e1 : forall x,
@@ -232,7 +227,6 @@ Proof.
   intuition.
   { rewrite hstar_hpure_l; split; auto.
   apply hsingle_intro. }
-  { subst. assumption. }
 Qed.
 
 Example e3 : forall x,
@@ -248,8 +242,7 @@ Proof.
     exists (Fmap.single x (vint 1)).
     intuition.
     rewrite hstar_hpure_l; split; auto.
-    apply hsingle_intro.
-    fmap_eq. }
+    apply hsingle_intro. }
   {
     apply s_req.
     intros.

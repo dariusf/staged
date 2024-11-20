@@ -14,7 +14,7 @@ Require Import Coq.Program.Equality.
 Require Import Coq.Logic.FunctionalExtensionality.
 
 Set Implicit Arguments.
-Ltac auto_star ::= try solve [ auto | fmap_eq | eauto | intuition eauto ].
+(* Ltac auto_star ::= try solve [ auto | fmap_eq | eauto | intuition eauto ]. *)
 
 (** * Programs *)
 Definition var : Type := string.
