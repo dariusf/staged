@@ -2371,31 +2371,30 @@ Inductive forward : expr -> flow -> Prop :=
 
 Module Soundness.
 
-  (** * Semantic tuples *)
-  (** A #<i>semantic tuple</i># is our equivalent of a Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
-  (** The use of "tuple" alludes to the fact that we may constrain the program with an arbitrary number of pre- and postconditions. *)
-  Definition tuple_valid_under penv env e f : Prop :=
+  (** * Semantic pairs *)
+  (** A #<i>semantic pair</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
+  Definition pair_valid_under penv env e f : Prop :=
     forall h1 h2 v,
       bigstep penv h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
 
-  (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid semantic tuple. *)
+  (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid semantic pair. *)
   Definition env_compatible penv env :=
     forall pfn xf x,
       Fmap.read penv xf = Some pfn ->
       exists sfn, Fmap.read env xf = Some sfn /\
-      forall v, tuple_valid_under penv env (pfn x) (sfn x v).
+      forall v, pair_valid_under penv env (pfn x) (sfn x v).
 
   (** The full definition requires compatible environments. *)
-  Definition sem_tuple (e: expr) (f: flow) : Prop :=
+  Definition sem_pair (e: expr) (f: flow) : Prop :=
     forall penv env,
-      env_compatible penv env -> tuple_valid_under penv env e f.
+      env_compatible penv env -> pair_valid_under penv env e f.
 
   #[global]
-  Instance Proper_sem_tuple : Proper
+  Instance Proper_sem_pair : Proper
     (eq ====> entails ====> impl)
-    sem_tuple.
+    sem_pair.
   Proof.
-    unfold entails, Proper, respectful, impl, sem_tuple, tuple_valid_under.
+    unfold entails, Proper, respectful, impl, sem_pair, pair_valid_under.
     intros. subst.
     eauto.
   Qed.
@@ -2403,20 +2402,20 @@ Module Soundness.
   (** Structural rules *)
   Lemma sem_consequence : forall f1 f2 e,
     entails f2 f1 ->
-    sem_tuple e f2 ->
-    sem_tuple e f1.
+    sem_pair e f2 ->
+    sem_pair e f1.
   Proof.
     introv He H.
-    unfold sem_tuple. intros.
+    unfold sem_pair. intros.
     rewrite He in H.
     eauto.
   Qed.
 
   (** Rules for program constructs *)
   Lemma sem_pval: forall n,
-    sem_tuple (pval n) (ens (fun res => \[res = n])).
+    sem_pair (pval n) (ens (fun res => \[res = n])).
   Proof.
-    unfold sem_tuple. introv Hc Hb.
+    unfold sem_pair. introv Hc Hb.
     (* appeal to how e executes to tell us about the heaps *)
     inverts Hb as Hb.
     (* justify that the staged formula describes the heap *)
@@ -2425,19 +2424,19 @@ Module Soundness.
   Qed.
 
   Lemma sem_plet: forall x e1 e2 f1 f2 v,
-    sem_tuple e1 f1 ->
+    sem_pair e1 f1 ->
     flow_res f1 v ->
-    sem_tuple (subst x v e2) f2 ->
-    sem_tuple (plet x e1 e2) (f1;; f2).
+    sem_pair (subst x v e2) f2 ->
+    sem_pair (plet x e1 e2) (f1;; f2).
   Proof.
     intros.
-    unfold sem_tuple, tuple_valid_under. introv Hc Hb.
+    unfold sem_pair, pair_valid_under. introv Hc Hb.
 
     (* reason about how the let executes *)
     inverts Hb as. introv He1 He2.
 
-    (* use the semantic tuple we have about e1 *)
-    unfold sem_tuple in H.
+    (* use the semantic pair we have about e1 *)
+    unfold sem_pair in H.
     lets H3: H env He1. exact Hc. clear H He1. sort.
 
     (* we need to know that spec value and program value are the same *)
@@ -2451,29 +2450,29 @@ Module Soundness.
   Qed.
 
   Lemma sem_pif: forall b e1 e2 f1 f2,
-    sem_tuple e1 f1 ->
-    sem_tuple e2 f2 ->
-    sem_tuple (pif b e1 e2) (disj f1 f2).
+    sem_pair e1 f1 ->
+    sem_pair e2 f2 ->
+    sem_pair (pif b e1 e2) (disj f1 f2).
   Proof.
     introv Ht Hf.
-    unfold sem_tuple. introv Hc Hb.
+    unfold sem_pair. introv Hc Hb.
     inverts Hb as Hb.
     { (* true *)
-      unfold sem_tuple in Ht.
+      unfold sem_pair in Ht.
       specializes Ht env Hb.
       now apply s_disj_l. }
     { (* false *)
-      unfold sem_tuple in Hf.
+      unfold sem_pair in Hf.
       specializes Hf env Hb.
       now apply s_disj_r. }
   Qed.
 
   Lemma sem_pderef: forall x,
-    sem_tuple (pderef (pval (vloc x)))
+    sem_pair (pderef (pval (vloc x)))
       (fall (fun y => (req (x~~>y)
         (ens (fun res => \[res = y] \* x~~>y))))).
   Proof.
-    intros. unfold sem_tuple. introv Hc Hb.
+    intros. unfold sem_pair. introv Hc Hb.
     inverts Hb as Hb.
     constructor. intros v.
     constructor. intros.
@@ -2492,11 +2491,11 @@ Module Soundness.
   Qed.
 
   Lemma sem_pref: forall v,
-    sem_tuple (pref (pval v)) (fex (fun y =>
+    sem_pair (pref (pval v)) (fex (fun y =>
       (ens (fun r => \[r = vloc y] \* y~~>v)))).
   Proof.
     intros.
-    unfold sem_tuple. introv Hc Hb.
+    unfold sem_pair. introv Hc Hb.
     inverts Hb as Hb.
     constructor. exists p.
     constructor. exists (vloc p). exists (Fmap.single p v).
@@ -2512,11 +2511,11 @@ Module Soundness.
   Qed.
 
   Lemma sem_passign: forall x y v,
-    sem_tuple (passign (pval (vloc x)) (pval y))
+    sem_pair (passign (pval (vloc x)) (pval y))
       (req (x~~>v) (ens_ (x~~>y))).
   Proof.
     intros.
-    unfold sem_tuple. introv Hc Hb.
+    unfold sem_pair. introv Hc Hb.
     inverts Hb as Hb.
     constructor. intros.
     constructor. exists vunit. exists (Fmap.update hp x y).
@@ -2548,10 +2547,10 @@ Module Soundness.
   Qed.
 
   Lemma sem_passert: forall b,
-    sem_tuple (passert (pval (vbool b))) (req_ \[b = true]).
+    sem_pair (passert (pval (vbool b))) (req_ \[b = true]).
   Proof.
     intros.
-    unfold sem_tuple. introv Hc Hb.
+    unfold sem_pair. introv Hc Hb.
     inverts Hb as Hb.
     constructor.
     intros.
@@ -2561,38 +2560,38 @@ Module Soundness.
 
   Lemma sem_papp_fun: forall vf x e va f,
     vf = vfun x e ->
-    sem_tuple (subst x va e) f ->
-    sem_tuple (papp (pval vf) (pval va)) f.
+    sem_pair (subst x va e) f ->
+    sem_pair (papp (pval vf) (pval va)) f.
   Proof.
     intros. subst.
-    unfold sem_tuple. introv Hc Hb.
+    unfold sem_pair. introv Hc Hb.
     inverts Hb as.
     { introv H Hb.
       injection H; intros; subst e0 x0; clear H.
-      unfold sem_tuple in H0.
+      unfold sem_pair in H0.
       specializes H0 env Hb. }
     { intros. false. }
   Qed.
 
   Lemma sem_papp_fix: forall vf x e va f xf,
     vf = vfix xf x e ->
-    sem_tuple (subst x va (subst xf vf e)) f ->
-    sem_tuple (papp (pval vf) (pval va)) f.
+    sem_pair (subst x va (subst xf vf e)) f ->
+    sem_pair (papp (pval vf) (pval va)) f.
   Proof.
     intros. subst.
-    unfold sem_tuple. introv Hc Hb.
+    unfold sem_pair. introv Hc Hb.
     inverts Hb as.
     { intros. false. }
     { introv H Hb. injection H; intros; subst e0 x0 xf0; clear H.
-      unfold sem_tuple in H0.
+      unfold sem_pair in H0.
       specializes H0 env Hb. }
   Qed.
 
   Lemma sem_papp_unk: forall xf va,
-    sem_tuple (papp (pvar xf) (pval va)) (fex (fun r => unk xf va r)).
+    sem_pair (papp (pvar xf) (pval va)) (fex (fun r => unk xf va r)).
   Proof.
     intros.
-    unfold sem_tuple. introv Hc Hb.
+    unfold sem_pair. introv Hc Hb.
     inverts Hb as. introv Henv Hb.
     constructor. exists v.
     unfold env_compatible in Hc. specializes Hc va Henv. destr Hc.
@@ -2602,7 +2601,7 @@ Module Soundness.
   Qed.
 
   Local Notation derivable := forward.
-  Local Notation valid := sem_tuple.
+  Local Notation valid := sem_pair.
 
   (** * Soundness *)
   Theorem soundness : forall e f,
@@ -2630,6 +2629,11 @@ Module HistoryTriples.
 
   (** * History triples *)
   (** A #<i>history triple</i># (i.e. not just a "triple", which typically refers to a Hoare triple) also constrains the history of a program. *)
+  (* 
+      h0 ╶─[fh]──▶ h1 ╶─[e]──▶ h2
+      ╷                        ▲
+      └───────────[f]──────────┘
+  *)
   Definition hist_triple fh e f :=
     forall penv env h0 h1 h2 v R,
       satisfies env h0 h1 R fh ->
@@ -2692,15 +2696,15 @@ Module HistoryTriples.
   Qed.
 
   Lemma hist_sem : forall f e,
-    sem_tuple e f <->
+    sem_pair e f <->
     hist_triple empty e f.
   Proof.
     iff H.
     { unfold hist_triple. intros.
       apply empty_inv in H0. destruct H0. subst h0.
-      unfold sem_tuple, tuple_valid_under in H.
+      unfold sem_pair, pair_valid_under in H.
       specializes H H1 H2. }
-    { unfold sem_tuple, tuple_valid_under. intros.
+    { unfold sem_pair, pair_valid_under. intros.
       unfold hist_triple in H.
       applys H.
       apply empty_intro.
@@ -2723,7 +2727,7 @@ Module HistoryTriples.
 
   (** History triples which only append to history can be derived directly from the history-frame rule. *)
   Lemma hist_frame_sem: forall fh e f,
-    sem_tuple e f ->
+    sem_pair e f ->
     hist_triple fh e (fh;; f).
   Proof.
     intros.
@@ -2741,7 +2745,7 @@ Module HistoryTriples.
     constructor. exists h1. exists R.
     intuition.
     lets H: sem_pval n Hc.
-    unfold tuple_valid_under, sem_tuple in H.
+    unfold pair_valid_under, sem_pair in H.
     apply H; auto.
   Qed.
 
@@ -2929,8 +2933,8 @@ End ForwardExamples.
 - #<a href="&num;norm_ens_req_transpose">norm_ens_req_transpose</a># *)
 (** A definition of #<a href="&num;biabduction">biabduction</a># is given and proved sound with respect to heap entailment. *)
 (** ** Section 4. Forward rules *)
-(** The reasoning rules for programs are first presented as a more primitive relation #<a href="&num;forward">forward</a># between programs and staged formulae, without history. The validity of these rules for each program construct is defined as a collection of #<i>semantic tuples</i># #<a href="&num;sem_tuple">sem_tuple</a># (analogous to semantic triples), and soundness (Theorem 2) is #<a href="&num;soundness">explicitly proved</a>#, under a new #<a href="&num;env_compatible">env_compatible</a># condition. *)
-(** #<a href="&num;hist_triple"><i>History triples</i></a># (Fig 8) are then defined. Many of the resulting rules can be derived from semantic tuples using the structural #<i>history-frame rule</i># #<a href="&num;hist_frame">hist_frame</a>#. History triples are also defined semantically and are hence sound by construction. *)
+(** The reasoning rules for programs are first presented as a more primitive relation #<a href="&num;forward">forward</a># between programs and staged formulae, without history. The validity of these rules for each program construct is defined as a collection of #<i>semantic pairs</i># #<a href="&num;sem_pair">sem_pair</a># (analogous to semantic triples), and soundness (Theorem 2) is #<a href="&num;soundness">explicitly proved</a>#, under a new #<a href="&num;env_compatible">env_compatible</a># condition. *)
+(** #<a href="&num;hist_triple"><i>History triples</i></a># (Fig 8) are then defined. Many of the resulting rules can be derived from semantic pairs using the structural #<i>history-frame rule</i># #<a href="&num;hist_frame">hist_frame</a>#. History triples are also defined semantically and are hence sound by construction. *)
 (** Other differences from the paper:
 - The #<a href="&num;sem_passert">assert</a># rule takes a value (or expression, under ANF), not a heap formula. No expressiveness is lost as it's still possible to assert things about the content of heap locations by first reading them.
 - The #<a href="&num;sem_papp_fun">fun</a>#/#<a href="&num;sem_papp_fun">fix</a># rules require function specifications to be given via triples, instead of via annotations in the syntax. An annotation can still be given by proving a lemma giving the function body a specification beforehand.
