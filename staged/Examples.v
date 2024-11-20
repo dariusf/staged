@@ -82,7 +82,7 @@ Qed.
 
 Definition f4 : flow := empty;; fall (fun r => unk "f" (vint 1) r).
 Definition f4_env : senv :=
-  Fmap.update empty_env "f" (Some (fun _ r => ens_ \[r = vint 2])).
+  Fmap.update empty_env "f" (fun _ r => ens_ \[r = vint 2]).
 
 (* has to be 2 *)
 Example ex5_f_ret:
@@ -307,11 +307,11 @@ Proof.
 Qed.
 
 Definition e6_env : senv :=
-  Fmap.single "f" (Some (fun y r =>
+  Fmap.single "f" (fun y r =>
   match y with
   | vloc x => req (x~~>vint 1) (ens_ (x~~>vint 2))
   | _ => empty
-  end)).
+  end).
 
 Example e6_fn_reassoc : forall x,
   entails_under e6_env
@@ -410,7 +410,7 @@ Definition sum n res :=
       (unk "sum" (vint (n1-1)) (vint r1);;
         ens_ \[res = vint (1 + r1)])))).
 
-Definition sum_env := (Fmap.update empty_env "sum" (Some sum)).
+Definition sum_env := (Fmap.update empty_env "sum" sum).
 Definition sum_property (n res:val) := ens_ \[res = n].
 
 (* Close Scope flow_scope. *)

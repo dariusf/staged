@@ -16,10 +16,10 @@ Definition hello : ufun := fun args res =>
 Definition hello_env (x y:loc) :=
   Fmap.update
     (Fmap.single "f"
-      (Some (fun y r => ∀ b,
+      (fun y r => ∀ b,
         req (x~~>vint b)
-          (ens_ ((x~~>vint (b+1) \* \[r = vint 0]))))))
-      "hello" (Some hello).
+          (ens_ ((x~~>vint (b+1) \* \[r = vint 0])))))
+      "hello" hello.
 
 (* [f] is allowed to capture [x] *)
 Lemma hello_capture : forall x y res,
@@ -125,10 +125,10 @@ Definition hello1 : ufun := fun args res =>
 Definition hello_env1 (x y:loc) :=
   Fmap.update
     (Fmap.single "f"
-      (Some (fun y r => ∀ b,
+      (fun y r => ∀ b,
         req (x~~>vint b)
-          (ens_ ((x~~>vint (b+1) \* \[r = vint 0]))))))
-      "hello" (Some hello1).
+          (ens_ ((x~~>vint (b+1) \* \[r = vint 0])))))
+      "hello" hello1.
 
 (* the proof should not go through *)
 Lemma hello_capture1 : forall x y res,

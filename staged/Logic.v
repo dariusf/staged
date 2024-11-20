@@ -118,7 +118,16 @@ Notation req_ H := (req H empty).
 
 (** Function environments, for interpreting unknown functions. [ufun] is a HOAS way of substituting into a staged formula, which otherwise doesn't support this due to the shallow embedding that [hprop] uses. *)
 Definition ufun := val -> val -> flow.
-Definition senv := Fmap.fmap var (option ufun).
+
+#[global]
+Instance Inhab_ufun : Inhab ufun.
+Proof.
+  constructor.
+  exists (fun (r v:val) => ens_ \[r = v]).
+  constructor.
+Qed.
+
+Definition senv := Fmap.fmap var ufun.
 
 Definition empty_env : senv := Fmap.empty.
 
@@ -203,7 +212,7 @@ Inductive satisfies : senv -> heap -> heap -> result -> flow -> Prop :=
     satisfies s h1 h2 R (@fall A f)
 
   | s_unk s h1 h2 r xf fn a
-    (He: Fmap.read s xf = Some fn)
+    (He: Fmap.read s xf = fn)
     (Hr: satisfies s h1 h2 (norm r) (fn a r)) :
     satisfies s h1 h2 (norm r) (unk xf a r)
 
@@ -898,19 +907,18 @@ Proof.
 Qed.
 
 Lemma unk_inv : forall s h1 h2 R xf a v fn,
-  Fmap.read s xf = Some fn ->
+  Fmap.read s xf = fn ->
   satisfies s h1 h2 R (unk xf a v) ->
   satisfies s h1 h2 R (fn a v).
 Proof.
   intros.
   inverts H0 as H0.
   rewrite H in H0.
-  injects H0.
   assumption.
 Qed.
 
 Lemma unk_inv_bi : forall s h1 h2 r a fn xf,
-  Fmap.read s xf = Some fn ->
+  Fmap.read s xf = fn ->
   satisfies s h1 h2 (norm r) (unk xf a r) <->
   satisfies s h1 h2 (norm r) (fn a r).
 Proof.
@@ -918,7 +926,6 @@ Proof.
   split; intros.
   { inverts H0 as H0.
     rewrite H in H0.
-    injects H0.
     assumption. }
   { pose proof s_unk.
     lets: s_unk s h1 h2 r xf.
@@ -926,7 +933,7 @@ Proof.
 Qed.
 
 Lemma unk_res_inv : forall s h1 h2 r a fn xf R,
-  Fmap.read s xf = Some fn ->
+  Fmap.read s xf = fn ->
   satisfies s h1 h2 R (unk xf a r) ->
   R = norm r.
 Proof.
@@ -2058,7 +2065,7 @@ Proof.
 Qed.
 
 Lemma ent_unk : forall s xf x v fn,
-  Fmap.read s xf = Some fn ->
+  Fmap.read s xf = fn ->
   entails_under s (unk xf x v) (fn x v).
 Proof.
   unfold entails_under.
@@ -2069,7 +2076,7 @@ Proof.
 Qed.
 
 Lemma ent_unk_conv : forall s v fn xf x,
-  Fmap.read s xf = Some fn ->
+  Fmap.read s xf = fn ->
   entails_under s (fn x v) (unk xf x v).
 Proof.
   unfold entails_under. intros.
@@ -2088,7 +2095,7 @@ Proof.
 Abort.
 
 Lemma ent_seq_unk : forall xf fn f1 f2 s x r,
-  Fmap.read s xf = Some fn ->
+  Fmap.read s xf = fn ->
   entails_under s (fn x r;; f1) f2 ->
   entails_under s (unk xf x r;; f1) f2.
 Proof.
@@ -2098,7 +2105,7 @@ Proof.
 Qed.
 
 Lemma ent_unk_ex : forall s xf x A (vv:A->val) fn,
-  Fmap.read s xf = Some fn ->
+  Fmap.read s xf = fn ->
   entails_under s
     (fex (fun (v:A) => unk xf x (vv v)))
     (fex (fun (v:A) => fn x (vv v))).
@@ -2111,7 +2118,7 @@ Proof.
 Qed.
 
 Lemma ent_ex_seq_unk : forall s xf x A (vv:A->val) fn ctx,
-  Fmap.read s xf = Some fn ->
+  Fmap.read s xf = fn ->
   entails_under s
     (fex (fun (b:A) => unk xf x (vv b);; ctx b))
     (fex (fun (b:A) => fn x (vv b);; ctx b)).
@@ -2249,7 +2256,15 @@ Inductive eresult : Type :=
   | enorm : val -> eresult.
 
 (** Program environment *)
-Definition penv := Fmap.fmap var (option (val -> expr)).
+#[global]
+Instance Inhab_val_expr : Inhab (val -> expr).
+Proof.
+  constructor.
+  exists (fun v => pval v).
+  constructor.
+Qed.
+
+Definition penv := Fmap.fmap var (val -> expr).
 Definition empty_penv : penv := Fmap.empty.
 
 Implicit Types Re : eresult.
@@ -2289,7 +2304,7 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
     bigstep env h (papp (pval v1) (pval v2)) h Re
 
   | eval_app_unk : forall va h Re efn xf env,
-    Fmap.read env xf = Some efn ->
+    Fmap.read env xf = efn ->
     bigstep env h (efn va) h Re ->
     bigstep env h (papp (pvar xf) (pval va)) h Re
 
@@ -2380,8 +2395,8 @@ Module Soundness.
   (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid semantic pair. *)
   Definition env_compatible penv env :=
     forall pfn xf x,
-      Fmap.read penv xf = Some pfn ->
-      exists sfn, Fmap.read env xf = Some sfn /\
+      Fmap.read penv xf = pfn ->
+      exists sfn, Fmap.read env xf = sfn /\
       forall v, pair_valid_under penv env (pfn x) (sfn x v).
 
   (** The full definition requires compatible environments. *)
@@ -2592,12 +2607,11 @@ Module Soundness.
   Proof.
     intros.
     unfold sem_pair. introv Hc Hb.
-    inverts Hb as. introv Henv Hb.
+    inverts Hb.
     constructor. exists v.
-    unfold env_compatible in Hc. specializes Hc va Henv. destr Hc.
+    unfold env_compatible in Hc. specializes Hc va ___. destr Hc.
     eapply s_unk. { exact H0. }
-    specializes H1 Hb.
-    exact H1.
+    specializes H1 v H6.
   Qed.
 
   Local Notation derivable := forward.

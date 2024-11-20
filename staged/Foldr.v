@@ -51,8 +51,8 @@ Definition uncurried_plus_spec : ufun := fun args rr =>
 
 Definition foldr_env :=
   Fmap.update
-      (Fmap.single "foldr" (Some foldr))
-      "f" (Some uncurried_plus_spec).
+      (Fmap.single "foldr" foldr)
+      "f" uncurried_plus_spec.
 
 (** A re-summarization lemma *)
 Definition foldr_sum := forall xs res,
@@ -149,8 +149,8 @@ Definition uncurried_plus_closure_spec : ufun := fun args rr =>
 
 Definition foldr_env0 :=
   Fmap.update
-    (Fmap.single "foldr" (Some foldr))
-      "f" (Some uncurried_plus_closure_spec).
+    (Fmap.single "foldr" foldr)
+      "f" uncurried_plus_closure_spec.
 
 Definition foldr_sum_state := forall xs res,
   entails_under foldr_env0
@@ -298,8 +298,8 @@ Definition uncurried_plus_mut_spec : ufun := fun args res =>
 
 Definition foldr_env1 :=
   Fmap.update
-    (Fmap.single "foldr" (Some foldr_mut))
-      "f" (Some uncurried_plus_mut_spec).
+    (Fmap.single "foldr" foldr_mut)
+      "f" uncurried_plus_mut_spec.
 
 Lemma foldr_ex1: forall xs res l,
   entails_under foldr_env1
@@ -427,8 +427,8 @@ Fixpoint all_s_pos (xs:list int) : Prop :=
 
 Definition foldr_env2 :=
   Fmap.update
-    (Fmap.single "foldr" (Some foldr))
-      "f" (Some uncurried_plus_assert_spec).
+    (Fmap.single "foldr" foldr)
+      "f" uncurried_plus_assert_spec.
 
 Lemma foldr_ex2: forall xs res,
   entails_under foldr_env2
@@ -485,8 +485,8 @@ Fixpoint all_pos (xs:list int) : Prop :=
 
 Definition foldr_env3 :=
   Fmap.update
-    (Fmap.single "foldr" (Some foldr))
-      "f" (Some uncurried_plus_exc_spec).
+    (Fmap.single "foldr" foldr)
+      "f" uncurried_plus_exc_spec.
 
 Lemma foldr_ex3: forall xs res,
   entails_under foldr_env3
@@ -557,8 +557,8 @@ Definition g : ufun := fun args rr =>
 
 Definition foldr_env :=
   Fmap.update
-    (Fmap.single "foldr" (Some foldr))
-      "f" (Some g).
+    (Fmap.single "foldr" foldr)
+      "f" g.
 
 Definition foldr_sum_rev := forall xs res,
   entails_under foldr_env
