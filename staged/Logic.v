@@ -195,10 +195,9 @@ Inductive satisfies : senv -> heap -> heap -> result -> flow -> Prop :=
       Fmap.disjoint h1 h3) :
     satisfies s h1 h2 R (ens q)
 
-  | s_seq s f1 f2 h1 h2 R
-    (H: exists h3 R1,
-      satisfies s h1 h3 R1 f1 /\
-      satisfies s h3 h2 R f2) :
+  | s_seq h3 R1 s f1 f2 h1 h2 R :
+    satisfies s h1 h3 R1 f1 ->
+    satisfies s h3 h2 R f2 ->
     satisfies s h1 h2 R (seq f1 f2)
 
   | s_fex s h1 h2 R (A:Type) (f:A->flow)
@@ -414,8 +413,7 @@ Section Proprium.
     unfold Proper, entails, respectful.
     intros.
     inverts H1 as H1; destr H1.
-    constructor. exists h3. exists R1.
-    eauto.
+    applys* s_seq.
   Qed.
 
   #[global]
@@ -425,8 +423,7 @@ Section Proprium.
     unfold Proper, entails_under, respectful.
     intros.
     inverts H1 as H1; destr H1.
-    constructor. exists h3. exists R1.
-    split; auto.
+    applys* s_seq.
   Qed.
 
   #[global]
@@ -486,15 +483,13 @@ Section Proprium.
     intros.
     split; intros.
     { inverts H1 as H1; destr H1.
-      constructor. exists h3. exists R1.
-      split.
-      apply H; auto.
-      apply H0; auto. }
+      econstructor.
+      apply* H.
+      apply* H0. }
     { inverts H1 as H1; destr H1.
-      constructor. exists h3. exists R1.
-      split.
-      apply H; auto.
-      apply H0; auto. }
+      econstructor.
+      apply* H.
+      apply* H0. }
   Qed.
 
   #[global]
@@ -698,7 +693,7 @@ Proof.
   intros.
   inverts H as H. destr H.
   destruct R1.
-  lets H2: ens_pure_inv P H0.
+  lets H2: ens_pure_inv P H.
   exists v0.
   intuition.
   subst.
@@ -711,7 +706,7 @@ Lemma seq_ens_void_pure_inv : forall P env h1 h2 R f,
 Proof.
   intros.
   inverts H as H. destr H.
-  apply ens_void_pure_inv in H0. destr H0. subst.
+  apply ens_void_pure_inv in H. destr H. subst.
   intuition.
 Qed.
 
@@ -775,7 +770,7 @@ Lemma disentails_error_okay: forall P Q,
   entails error (okay P Q).
 Proof.
   unfold entails. intros.
-  constructor. exists h1 (norm vunit).
+  applys s_seq h1 (norm vunit).
   (* we need to prove Q, but error is useless for this *)
 Abort.
 
@@ -869,9 +864,9 @@ Lemma seq_disj_distr : forall f1 f2 f3,
 Proof.
   unfold entails. intros.
   inverts H as H. destr H.
-  inverts H0 as H0.
-  - apply s_disj_l. constructor. exs. intuition eauto.
-  - apply s_disj_r. constructor. exs. intuition eauto.
+  inverts H as H.
+  - apply s_disj_l. econstructor; jauto.
+  - apply s_disj_r. econstructor; jauto.
 Qed.
 
 (** seq is associative *)
@@ -881,22 +876,14 @@ Lemma seq_assoc : forall env h1 h2 R f1 f2 f3,
 Proof.
   intros.
   split; intros H.
-  { inverts H as H. destruct H as (h3&r1&H1&H2).
-    inverts H2 as H2. destruct H2 as (h0&r0&H3&H4).
-    constructor.
-    exists h0. exists r0.
-    split; auto.
-    constructor.
-    exists h3. exists r1.
-    intuition. }
-  { inverts H as H. destruct H as (h3&r1&H1&H2).
-    inverts H1 as H1. destruct H1 as (h0&r0&H3&H4).
-    constructor.
-    exists h0. exists r0.
-    split; auto.
-    constructor.
-    exists h3. exists r1.
-    intuition. }
+  { inverts H as H. destr H.
+    inverts H6 as H6. destr H6.
+    econstructor; jauto.
+    econstructor; jauto. }
+  { inverts H as H. destr H.
+    inverts H as H. destr H.
+    econstructor; jauto.
+    econstructor; jauto. }
 Qed.
 
 Lemma norm_seq_assoc : forall f1 f2 f3,
@@ -950,13 +937,10 @@ Proof.
   unfold entails.
   intros.
   constructor. intros v.
-  inverts H as H. destruct H as (h3&r1&?&?).
-  constructor.
-  exists h3. exists r1.
-  intuition.
-  inverts H0 as H0.
-  specializes H0 v.
-  auto.
+  inverts H as H. destr H.
+  econstructor; jauto.
+  inverts H6 as H6.
+  specializes~ H6 v.
 Qed.
 
 Lemma norm_exists : forall (A:Type) f1 ctx,
@@ -967,12 +951,9 @@ Proof.
   unfold entails.
   intros.
   fdestr H.
-  fdestr H1.
+  fdestr H6.
   constructor. exists b.
-  constructor. eexists. eexists.
-  split.
-  exact H0.
-  exact H.
+  econstructor; jauto.
 Qed.
 
 Lemma norm_ens_ens_void_comm : forall H1 H2,
@@ -980,13 +961,9 @@ Lemma norm_ens_ens_void_comm : forall H1 H2,
 Proof.
   unfold entails. intros.
   fdestr H.
-  inverts H0 as H0. destr H0.
-  inverts H3 as H3. destr H3.
-  hinv H0. hinv H0.
-  hinv H3. hinv H3.
-  constructor.
-  exists (h1 \u x2). exists (norm vunit).
-  split.
+  inverts H as H. destr H. hinv H. hinv H.
+  inverts H8 as H8. destr H8. hinv H8. hinv H8.
+  applys s_seq (h1 \u x2) (norm vunit).
   { constructor. exists vunit. exists x2.
     intuition. hintro. intuition. }
   { constructor. exists vunit. exists x0.
@@ -1000,10 +977,10 @@ Proof.
   unfold bientails.
   iff H.
   { apply ens_void_pure_inv in H.
-    intuition. }
+    destr H. false. }
   { inverts H as H. destr H.
-    apply ens_void_pure_inv in H0.
-    intuition. }
+    apply ens_void_pure_inv in H.
+    destr H. false. }
 Qed.
 
 Lemma norm_ens_false : forall f,
@@ -1038,7 +1015,7 @@ Lemma norm_seq_ens_empty : forall f,
   entails (ens_ \[];; f) f.
 Proof.
   unfold entails. intros.
-  inverts H as H. destruct H as (h3&r1&?&?).
+  inverts H as H. destr H.
   inverts H as H.
   destr H.
   rew_heap in H.
@@ -1054,12 +1031,11 @@ Proof.
   unfold bientails, empty.
   iff H.
   { inverts H as H. destr H.
-    apply ens_void_pure_inv in H0. destr H0. subst.
+    apply ens_void_pure_inv in H. destr H. subst.
     assumption. }
-  { constructor.
-    exists h1. exists (norm vunit).
-    intuition.
-    apply ens_void_pure_intro; constructor. }
+  { applys s_seq h1 (norm vunit).
+    apply ens_void_pure_intro; constructor.
+    assumption. }
 Qed.
 
 Lemma norm_ens_no_result_r : forall f,
@@ -1068,13 +1044,12 @@ Lemma norm_ens_no_result_r : forall f,
 Proof.
   iff H1.
   { inverts H1 as H1. destr H1.
-    specializes H H0. subst.
-    apply empty_inv in H2. destr H2. subst.
-    assumption. }
-  { constructor.
-    exists h2. exists R.
-    intuition.
     specializes H H1. subst.
+    apply empty_inv in H7. destr H7. subst.
+    assumption. }
+  { specializes H H1. subst.
+    applys s_seq h2 (norm vunit).
+    assumption.
     apply empty_intro. }
 Qed.
 
@@ -1121,15 +1096,9 @@ Proof.
   constructor. intros hp hr. intros.
 
   (* prove the req *)
-  inverts H1 as H1.
-  specialize (H1 hp hr H0).
-  forward H1. fmap_eq.
-  forward H1. fmap_disjoint.
-
-  constructor.
-  exists h3.
-  exists R1.
-  split; auto.
+  inverts H0 as H0.
+  specializes H0 hp hr H1 ___.
+  applys~ s_seq h3 R1.
 Qed.
 
 Lemma norm_reassoc : forall H f1 f2,
@@ -1205,10 +1174,7 @@ Proof.
   (* find the intermediate heap *)
   apply hstar_inv in H7. destruct H7 as (h0&h4&H8&H9&H10&H11).
   (* H1 h0, H2 h4 *)
-  constructor.
-  exists (h1 \u h0).
-  exists (norm vunit).
-  split.
+  applys s_seq (h1 \u h0) (norm vunit).
   { constructor. exists vunit. exists h0. intuition. rewrite hstar_hpure_l. intuition. }
   { constructor. exists v. exists h4. intuition. rewrite hstar_hpure_l. intuition. }
 Qed.
@@ -1218,24 +1184,17 @@ Lemma satisfies_ens_ens_void_combine : forall H1 H2 env h1 h2 R,
   satisfies env h1 h2 R (ens_ (H1 \* H2)).
 Proof.
   intros.
-  inverts H as H.
-  destruct H as (h3&r1&H3&H4).
+  inverts H as H. destr H.
   (* give up on careful reasoning *)
-  inverts H3 as H5. destr H5. inverts H4 as H8. destr H8.
-  rewrite hstar_hpure_l in H0.
-  rewrite hstar_hpure_l in H5.
-  intuition.
-  constructor.
-  exists v0.
-  exists (h0 \u h4).
-  intuition.
-  subst.
+  inverts H as H. destr H.
+  inverts H8 as H8. destr H8.
+  hinv H. hinv H. hinv H6. hinv H6.
+  constructor. exists v0. exists (h0 \u h4).
+  splits*.
   rewrite <- hstar_assoc.
-  apply hstar_intro.
-  rewrite hstar_hpure_l.
-  intuition.
-  intuition.
-  fmap_disjoint.
+  subst. rew_fmap *.
+  hintro; jauto.
+  hintro; jauto.
 Qed.
 
 Lemma satisfies_ens_ens_void : forall H1 H2 env h1 h2 R,
@@ -1274,31 +1233,23 @@ Proof.
   unfold entails.
   split; intros.
   { inverts H0 as H0. destr H0.
-    inverts H1 as H1. destr H1.
-    inverts H2 as H2. destr H2.
-    constructor.
-    exists v0.
-    exists (h0 \u h4).
-    intuition.
-    rewrite hstar_hpure_l in H1.
+    inverts H0 as H0. destr H0.
+    inverts H7 as H7. destr H7.
+    hinv H0. hinv H0.
+    constructor. exists v0. exists (h0 \u h4).
+    subst.
+    splits*.
     rewrite hstar_comm.
-    apply hstar_intro; intuition auto. }
+    hintro; jauto.
+    rew_fmap *. }
   { inverts H0 as H0. destr H0.
-    apply hstar_inv in H0. destr H0.
-    constructor.
-    exists (h1 \u h4).
-    exists (norm vunit).
-    split.
-    { constructor.
-      exists vunit.
-      exists h4.
-      intuition.
-      rewrite hstar_hpure_l.
-      intuition. }
-    { constructor.
-      exists v.
-      exists h0.
-      intuition. } }
+    hinv H0.
+    applys s_seq (h1 \u x0) (norm vunit).
+    { constructor. exists vunit. exists x0.
+      splits*.
+      hintro; jauto. }
+    { constructor. exists v. exists x.
+      jauto. } }
 Qed.
 
 (** Splitting and combining [ens] with results is more complex, and there does not seem to be a single equivalence. *)
@@ -1307,12 +1258,12 @@ Lemma satisfies_ens_sep_combine : forall Q1 Q2 env h1 h2 R,
   satisfies env h1 h2 R (ens (fun r0 : val => \exists r1 : val, Q1 r1 \* Q2 r0)).
 Proof.
   intros.
-  fdestr H as (h3&r1&H1&H2).
+  fdestr H.
 
   constructor. destruct R.
   exists v.
-  inverts H1 as H1. destruct H1 as (v0&h0&?&?&?&?).
-  inverts H2 as H2. destruct H2 as (v1&h4&?&?&?&?).
+  inverts H as H. destr H.
+  inverts H6 as H6. destr H6.
   exists (h0 \u h4).
   intuition.
   apply hexists_intro with (x := v0).
@@ -1340,21 +1291,9 @@ Proof.
   destruct H2 as (h0 & h4 & ? & ? & ? & ?).
   (* h0 is the part satisfying Q, h4 H *)
 
-  constructor.
-  exists (h1 \u h4).
-  exists (norm v). (* anything? *)
-  split.
-
-  constructor.
-  eexists.
-  eexists.
-  intuition.
-  auto.
-
-  constructor.
-  exists v.
-  exists h0.
-  intuition.
+  applys s_seq (h1 \u h4) (norm v). (* anything? *)
+  econstructor; jauto.
+  econstructor; jauto.
 Qed.
 
 Lemma norm_ens_split : forall H Q,
@@ -1369,29 +1308,25 @@ Lemma norm_seq_ex_reassoc_ctx: forall A (f:A->flow) f1,
 Proof.
   intros. split; intros.
   { inverts H as H. destr H.
-    inverts H1 as H1. destr H1.
+    inverts H6 as H6. destr H6.
     constructor. exists b.
-    constructor. exists h3. exists R1.
-    intuition. }
+    applys~ s_seq h3 R1. }
   { inverts H as H. destr H.
     inverts H0 as H0. destr H0.
-    constructor. exists h3. exists R1.
-    intuition.
-    constructor. exists b.
-    intuition. }
+    applys~ s_seq h3 R1.
+    constructor. now exists b. }
 Qed.
 
 Lemma norm_seq_ex_reassoc : forall A p f1,
   bientails (fex (fun (x:A) => p x);; f1) (fex (fun (x:A) => p x;; f1)).
 Proof.
   intros. split; intros.
-  { fdestr H. fdestr H0.
+  { fdestr H. fdestr H.
     constructor. exists b.
-    constructor. exists h3. exists R1. intuition. }
+    applys~ s_seq h3 R1. }
   { fdestr H. fdestr H0.
-    constructor. exists h3. exists R1.
-    split.
-    constructor. exists b. assumption. assumption. }
+    applys~ s_seq h3 R1.
+    constructor. exists b. assumption. }
 Qed.
 
 Lemma norm_seq_all_reassoc: forall A (f:A->flow) f1,
@@ -1399,11 +1334,10 @@ Lemma norm_seq_all_reassoc: forall A (f:A->flow) f1,
 Proof.
   unfold entails. intros.
   inverts H as H. destr H.
-  inverts H0 as H0.
+  inverts H as H.
   constructor. intros v.
-  specializes H0 v.
-  constructor. exists h3. exists R1.
-  intuition.
+  specializes H v.
+  applys* s_seq.
 Qed.
 
 Lemma norm_seq_all_reassoc_ctx: forall A (f:A->flow) f1,
@@ -1411,11 +1345,10 @@ Lemma norm_seq_all_reassoc_ctx: forall A (f:A->flow) f1,
 Proof.
   unfold entails. intros.
   inverts H as H. destr H.
-  inverts H1 as H1.
+  inverts H6 as H6.
   constructor. intros v.
-  specialize (H1 v).
-  constructor. exists h3. exists R1.
-  intuition.
+  specialize (H6 v).
+  applys* s_seq.
 Qed.
 
 Lemma norm_ent_ent_pure_comm: forall H P,
@@ -1423,19 +1356,17 @@ Lemma norm_ent_ent_pure_comm: forall H P,
 Proof.
   intros. split; intros.
   { inverts H0 as H0. destr H0.
-    constructor. exists h1. exists R1.
-    pose proof (ens_no_result H1).
-    fdestr H2. subst.
-    split.
-    { apply ens_void_pure_intro. assumption. }
+    pose proof (ens_no_result H0).
+    fdestr H7. subst.
+    applys s_seq h1 (norm vunit).
+    apply ens_void_pure_intro. assumption. 
     assumption. }
   { inverts H0 as H0. destr H0.
-    constructor. exists h2. exists R1.
-    pose proof (ens_no_result H2).
-    fdestr H1. subst.
-    split.
+    pose proof (ens_no_result H7).
+    fdestr H0. subst.
+    applys s_seq h2 (norm vunit).
     assumption.
-    { apply ens_void_pure_intro. assumption. } }
+    apply ens_void_pure_intro. assumption. }
 Qed.
 
 (** Rule EntEns from the paper *)
@@ -1447,9 +1378,8 @@ Proof.
   unfold entails.
   intros.
   inverts H3 as H3. destr H3.
-  apply (satisfies_ens_void H) in H4.
-  constructor. exists h3. exists R1.
-  intuition.
+  apply (satisfies_ens_void H) in H3.
+  applys* s_seq h3 R1.
 Qed.
 
 (** Rule EntReq from the paper *)
@@ -1566,21 +1496,19 @@ Lemma biab_single_h : forall H env h1 h2 R H1 H2 f,
   satisfies env h1 h2 R (ens_ H1;; req H2 f).
 Proof.
   intros.
-  inverts H0 as H0. destruct H0 as (h3&r1&H3&H4).
+  inverts H0 as H0. destr H0.
   (* ens adds a location to the heap *)
-  inverts H3 as H3.
+  inverts H0 as H0.
   (* use that to figure out what is in h3 *)
-  destr H3. hinv H3. hinv H3. hinv H6. subst h0 h3 x0 x. rew_fmap *.
+  destr H0. hinv H0. hinv H0. hinv H5. subst h0 h3 x0 x. rew_fmap *.
 
   (* prove just the first part *)
-  rewrite norm_req_req in H4.
-  inverts H4 as H4. specializes H4 x1 (h1 \u x2) ___.
+  rewrite norm_req_req in H9.
+  inverts H9 as H9. specializes H9 x1 (h1 \u x2) ___.
 
-  constructor. exists (h1 \u x2). exists (norm vunit).
-  split.
+  applys s_seq (h1 \u x2) (norm vunit).
   { constructor. exists vunit. exists x2.
-    intuition.
-    rewrite hstar_hpure_l. intuition. }
+    splits*. hintro; jauto. }
   { assumption. }
 Qed.
 
@@ -1660,22 +1588,21 @@ Proof.
                 = (h5+hyb+hxa)+h7 *)
 
     (* extract x~~>a *)
-    inverts H3 as H3. destruct H3 as (h3&r0&H3&H4).
+    inverts H3 as H3. rename H8 into H4, R1 into r0.
     rewrite norm_ens_ens_void in H3.
-    inverts H3 as H3. destruct H3 as (h4&r1&H3&H5).
-    inverts H3 as H3. destruct H3 as (v0&hxa&?&H6&?&?).
-    rewrite hstar_hpure_l in H6. destr H6.
+    inverts H3 as H3. rename H9 into H5, h0 into h4.
+    inverts H3 as H3. destr H3.
+    hinv H0. hinv H0. rename x1 into hxa.
 
     (* extract y~~>b *)
     rewrite norm_req_req.
     constructor; intros hyb h5. intros.
-    constructor; intros hHa h6. intros H13. intros.
+    constructor; intros hHa h6. intros H14. intros.
 
     (* supply x~~>a *)
     rewrite norm_ens_ens_void.
     rewrite <- norm_seq_assoc.
-    constructor. exists (h6 \u hxa). exists (norm vunit).
-    split.
+    applys s_seq (h6 \u hxa) (norm vunit).
     { constructor. exists vunit. exists hxa.
       intuition. rewrite hstar_hpure_l. intuition. }
 
@@ -1684,8 +1611,8 @@ Proof.
 
     (* find out about the heap we need *)
     pose proof H5 as HensH0. (* copy, as we're about to invert and destroy this *)
-    inverts H5 as H5; destruct H5 as (v1&h7&?&H16&?&?).
-    rewrite hstar_hpure_l in H16. destruct H16 as (?&H20).
+    inverts H5 as H5. destr H5.
+    rewrite hstar_hpure_l in H5. rename H20 into H21. destruct H5 as (?&H20).
 
     (* reduce ens on the left *)
     pose proof (ens_reduce_frame) as Hreduce.
@@ -1695,24 +1622,23 @@ Proof.
     asserts_rewrite (h4 = hyb \u h5 \u hxa) in HensH0. fmap_eq.
     asserts_rewrite (h3 = hyb \u (h5 \u hxa) \u h7) in HensH0. fmap_eq.
     apply Hreduce in HensH0.
+    clear Hreduce.
 
     (* provide the heap for y~~>b *)
     rewrite norm_req_req in H4.
     inverts H4 as H4.
-    specializes H4 hyb (h5 \u hxa \u h7) H6 ___.
+    specializes H4 hyb (h5 \u hxa \u h7) H11 ___.
 
     lets Hseq: s_seq env (ens_ H1) (req H2 f) (h5 \u hxa) h2.
     forwards: Hseq R.
-    { exists (h5 \u hxa \u h7).
-      exists r0.
-      split.
-      applys_eq HensH0. fmap_eq.
-      assumption. }
+    applys HensH0.
+    applys_eq H4. fmap_eq.
     (* got the seq... now we can use the IH *)
+    clear Hseq.
 
-    forwards H21: IHHbi env (h5 \u hxa) H17.
-    inverts H21 as H26.
-    applys H26 H13.
+    forwards H22: IHHbi env (h5 \u hxa) H19.
+    inverts H22 as H26.
+    applys H26 H14.
     fmap_eq.
     fmap_disjoint. }
 Qed.
@@ -1935,10 +1861,9 @@ Proof.
   unfold entails_under. intros.
   destr H.
   apply H1.
-  inverts H0 as H0. destr H0.
-  inverts H as H. specializes H x.
-  constructor. eexists. eexists.
-  split. exact H. exact H2.
+  inverts H0 as H0.
+  inverts H0 as H0. specializes H0 x.
+  applys* s_seq.
 Qed.
 
 Lemma ent_req_r : forall f f1 H env,
@@ -1948,9 +1873,7 @@ Proof.
   unfold entails_under. intros.
   constructor. intros.
   apply H0.
-  constructor.
-  exists (hr \+ hp). exists (norm vunit).
-  split.
+  applys s_seq (hr \+ hp) (norm vunit).
   { constructor. exists vunit. exists hp.
     intuition.
     rewrite hstar_hpure_l. intuition. }
@@ -2011,7 +1934,7 @@ Lemma ent_seq_ens_l : forall env f f1 P,
 Proof.
   unfold entails_under. intros.
   fdestr H0.
-  fdestr H1.
+  fdestr H0.
   apply H.
   assumption.
   subst.
@@ -2023,9 +1946,7 @@ Lemma ent_seq_ens_r : forall env f f1 P,
   entails_under env f (ens_ \[P];; f1).
 Proof.
   unfold entails_under. intros.
-  constructor.
-  exists h1. exists (norm vunit).
-  split.
+  applys s_seq h1 (norm vunit).
   apply ens_void_pure_intro. assumption.
   apply H0. assumption.
 Qed.
@@ -2127,10 +2048,9 @@ Proof.
   inverts H0 as H0. destr H0.
   inverts H1 as H1. destr H1.
   constructor. exists b.
-  constructor. exists h3. exists R1.
-  split.
-  lets H1: unk_inv s h1 h3 R1.
-  specializes H1 xf x (vv b) fn.
+  applys s_seq h3 R1.
+  lets H2: unk_inv s h1 h3 R1.
+  specializes H2 xf x (vv b) fn.
   assumption.
 Qed.
 
@@ -2168,13 +2088,9 @@ Lemma ent_seq_disj_l : forall f1 f2 f3 f4 env,
 Proof.
   unfold entails_under. intros.
   fdestr H1.
-  inverts H2 as H2.
-  { apply H.
-    constructor. eexists. eexists.
-    split. apply H2. apply H3. }
-  { apply H0.
-    constructor. eexists. eexists.
-    split. apply H2. apply H3. }
+  inverts H1 as H1.
+  { apply H. applys* s_seq. }
+  { apply H0. applys* s_seq. }
 Qed.
 
 Lemma ent_seq_ex_l : forall A (f1: A -> flow) f2 f3 env,
@@ -2183,14 +2099,9 @@ Lemma ent_seq_ex_l : forall A (f1: A -> flow) f2 f3 env,
 Proof.
   unfold entails_under. intros.
   fdestr H0.
-  fdestr H1.
+  fdestr H0.
   applys H b.
-  constructor.
-  eexists.
-  eexists.
-  split.
-  apply H0.
-  apply H2.
+  applys* s_seq.
 Qed.
 
 Lemma ent_ex_l : forall f A (fctx:A -> flow) env,
@@ -2229,16 +2140,15 @@ Lemma ent_seq_ens_sl_ex: forall env A (c:A->hprop) f,
 Proof.
   unfold entails_under. intros.
   fdestr H.
-  inverts H0 as H0. destr H0.
-  rewrite hstar_hpure_l in H0. destr H0.
-  apply hexists_inv in H5.
-  destr H5. (* get x *)
+  inverts H as H. destr H.
+  rewrite hstar_hpure_l in H. destr H.
+  apply hexists_inv in H4.
+  destr H4. (* get x *)
   constructor. exists x.
-  constructor. exists h3. exists (norm vunit).
-  split.
+  applys s_seq h3 (norm vunit).
   - constructor. exists vunit. exists h0.
-    intuition.
-    rewrite hstar_hpure_l. intuition.
+    splits*.
+    rewrite* hstar_hpure_l.
   - assumption.
 Qed.
 
@@ -2460,8 +2370,7 @@ Module Soundness.
     (* know about f2 *)
     specializes H1 env h3 h2 v0 He2. clear He2.
 
-    constructor. exists h3. exists (norm v).
-    intuition.
+    applys* s_seq h3 (norm v).
   Qed.
 
   Lemma sem_pif: forall b e1 e2 f1 f2,
@@ -2704,9 +2613,7 @@ Module HistoryTriples.
   Proof.
     unfold hist_triple. introv H. intros.
     inverts H0 as H0. destr H0.
-    constructor. exists h3. exists R1.
-    intuition.
-    specializes H H4 H1.
+    applys* s_seq.
   Qed.
 
   Lemma hist_sem : forall f e,
@@ -2733,10 +2640,10 @@ Module HistoryTriples.
   Proof.
     unfold hist_triple.
     introv H. intros.
-    pose proof (@s_seq env fh empty h0 h1 (norm vunit)) as Hseq.
-    forward Hseq. { exists h1. exists R. intuition.
-      apply (empty_intro env h1). }
-    specializes H Hseq H1 H2.
+    eapply H.
+    - applys s_seq. eassumption. apply empty_intro.
+    - eassumption.
+    - assumption.
   Qed.
 
   (** History triples which only append to history can be derived directly from the history-frame rule. *)
@@ -2756,8 +2663,8 @@ Module HistoryTriples.
     hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
   Proof.
     unfold hist_triple. introv Hh Hc Hb.
-    constructor. exists h1. exists R.
-    intuition.
+    applys s_seq h1 R.
+    assumption.
     lets H: sem_pval n Hc.
     unfold pair_valid_under, sem_pair in H.
     apply H; auto.
@@ -2811,9 +2718,8 @@ Module HistoryTriples.
     unfold hist_triple. intros.
     destruct b.
     { forwards: He1.
-      { constructor.
-        exists h1. exists R.
-        split. exact H.
+      { applys s_seq h1 R.
+        exact H.
         pose proof (ens_void_pure_intro).
         apply ens_void_pure_intro.
         reflexivity. }
@@ -2822,9 +2728,8 @@ Module HistoryTriples.
       apply s_disj_l. assumption. }
 
     { forwards: He2.
-      { constructor.
-        exists h1. exists R.
-        split. exact H.
+      { applys s_seq h1 R.
+        exact H.
         pose proof (ens_void_pure_intro).
         apply ens_void_pure_intro.
         reflexivity. }

@@ -74,23 +74,23 @@ Proof.
       intuition. }
     { (* rec *)
       (* get at all the facts... *)
-      fdestr H5 as (x&H5).
-      fdestr H5 as (l1&H5).
-      fdestr H5 as (h3&r1&H1&H2).
-      fdestr H2 as (r0&H2).
-      fdestr H1.
+      fdestr H5.
+      fdestr H.
+      fdestr H0.
+      fdestr H0.
+      fdestr H6.
       (* apply induction hypothesis *)
-      specialize (IH l1). forward IH. rewrite H. auto.
-      rewrite IH in H2.
+      specialize (IH b0). forward IH. rewrite H. auto.
+      rewrite IH in H1.
 
-      fdestr H2 as (h0&r2&H0&Hf).
-      fdestr H0 as (v&?H0).
+      fdestr H1. rename H9 into Hf.
+      fdestr H1.
       destr H0.
 
       (* reason about f *)
       funfold foldr_env "f" in Hf.
 
-      simpl in Hf. subst r0.
+      simpl in Hf. subst b1.
       fdestr Hf.
 
       subst.

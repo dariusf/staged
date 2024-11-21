@@ -108,9 +108,7 @@ Proof.
   inverts H as H2.
   destruct H2 as (v & h3 & H1 & H2 & H3 & H4).
   subst R.
-  constructor.
-  exists h1.
-  exists (norm (vint 1)).
+  applys s_seq h1 (norm (vint 1)).
   intuition.
 
   - unfold f1.
@@ -233,10 +231,7 @@ Example e3 : forall x,
   satisfies empty_env empty_heap empty_heap (norm vunit) ((ens_ (x~~>vint 1)) ;; req_ (x~~>vint 1)).
 Proof.
   intros.
-  constructor.
-  exists (Fmap.single x (vint 1)).
-  exists (norm vunit).
-  split.
+  applys s_seq (Fmap.single x (vint 1)) (norm vunit).
   { constructor.
     exists vunit.
     exists (Fmap.single x (vint 1)).
@@ -329,12 +324,13 @@ Proof.
   (* the function is unknown, so use its definition,
     make it known, then build back up into a sequence *)
   pose proof H as G.
-  inverts G as G. destruct G as (h3&r1&Hf&Hr).
+  inverts G as G.
+  rename G into Hf, H10 into Hr.
   (* resolve the function *)
   unfold e6_env in Hf;
   eapply unk_inv in Hf; only 2: resolve_fn_in_env; simpl;
   fold e6_env in Hf; simpl in Hf.
-  pose proof (@s_seq e6_env _ _ h1 h2 r (ex_intro (fun h3 => _) h3 (ex_intro (fun x => _) r1 (conj Hf Hr)))) as G.
+  pose proof (@s_seq h3 R1 e6_env _ _ h1 h2 r Hf Hr) as G.
   clear Hr. clear Hf.
 
   (* this is quite inconvenient compared to rewriting, however *)
@@ -358,7 +354,7 @@ Proof.
   dup.
   (* a semantic proof *)
   { (* seq *)
-    inverts H as H. destruct H as (h0&r2&He&Hr).
+    inverts H as H. rename H into He, H6 into Hr.
 
     (* assume the ens *)
     inverts He as He. destruct He as (?&h4&?&H3&H4&?).
