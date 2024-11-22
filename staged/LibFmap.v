@@ -47,8 +47,9 @@ Proof.
 Qed.
 
 Ltac solve_trivial_not_indom :=
-  match goal with
-  | |- ~ Fmap.indom _ _ => unfold not; rewrite Fmap.indom_single_eq; intros; false
+  rew_fmap; lazymatch goal with
+  | |- ~ Fmap.indom (Fmap.update _ _ _) _ => unfold Fmap.update; solve_trivial_not_indom
+  | |- ~ Fmap.indom (Fmap.single _ _ ) _ => unfold not; rewrite Fmap.indom_single_eq; intros; false
   end.
 
 Ltac resolve_fn_in_env :=
