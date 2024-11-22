@@ -114,11 +114,6 @@ Definition ens_ H := ens (fun r => \[r = vunit] \* H).
 
 Definition empty := ens_ \[True].
 
-Definition top := req \[False] (ens_ \[True]).
-Definition bot := req \[True] (ens_ \[False]).
-Definition error := req \[False] (ens_ \[False]).
-Definition okay P Q := req P (ens Q). (* where Q is sat *)
-
 Notation req_ H := (req H empty).
 
 (** Function environments, for interpreting unknown functions. [ufun] is a HOAS way of substituting into a staged formula, which otherwise doesn't support this due to the shallow embedding that [hprop] uses. *)
@@ -246,6 +241,14 @@ Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
 Notation "env '⊢' f1 '⊑' f2" :=
   (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
+
+(** * Top and bottom *)
+Definition top := req \[False] (ens_ \[True]).
+Definition bot := req \[True] (ens_ \[False]).
+Definition error := req \[False] (ens_ \[False]).
+Definition post_sat (Q:postcond) := exists v h, Q v h.
+Definition flow_sat f := exists s h1 h2 r, satisfies s h1 h2 r f.
+Definition okay P Q := ens_ \[post_sat Q];; req P (ens Q).
 
 (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 (* Check (forall f1 f2 f3, f1 ;; f3 ⊑ f2). *)
@@ -730,6 +733,22 @@ Proof.
   hinv H0.
   false.
 Qed.
+
+Lemma disentails_okay_error: forall P Q,
+  entails (okay P Q) error.
+Proof.
+  unfold entails. intros.
+  unfold error.
+  constructor. intros. hinv H0. false.
+Qed.
+
+Lemma disentails_error_okay: forall P Q,
+  entails error (okay P Q).
+Proof.
+  unfold entails. intros.
+  constructor. exists h1 (norm vunit).
+  (* we need to prove Q, but error is useless for this *)
+Abort.
 
 (** Covariance of ens *)
 Lemma satisfies_ens : forall Q1 Q2 env h1 h2 r,
