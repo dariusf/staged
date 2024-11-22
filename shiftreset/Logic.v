@@ -1591,6 +1591,36 @@ Proof.
   rew_fmap *.
 Qed.
 
+Lemma norm_rs_ex : forall A ctx r,
+  entails (rs (∃ (x:A), ctx x) r) (∃ (x:A), rs (ctx x) r).
+Proof.
+  unfold entails. intros.
+  inverts H as H.
+  {
+    inverts H as H. destr H.
+    constructor. exists b.
+    eapply s_rs_sh; jauto. }
+  { inverts H as H. destr H.
+    constructor. exists b.
+    apply s_rs_val.
+    assumption. }
+Qed.
+
+Lemma norm_rs_all : forall A ctx r,
+  entails (rs (∀ (x:A), ctx x) r) (∀ (x:A), rs (ctx x) r).
+Proof.
+  unfold entails. intros.
+  inverts H as H.
+  {
+    constructor. intros b.
+    inverts H as H. specializes H b.
+    eapply s_rs_sh; jauto. }
+  { constructor. intros b.
+    inverts H as H. specializes H b.
+    apply s_rs_val.
+    assumption. }
+Qed.
+
 (** * Reduction example *)
 (**
   < (shift k. k i1) + (shift k1. k1 i2) >
