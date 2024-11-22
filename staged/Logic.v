@@ -2221,22 +2221,22 @@ Proof.
 Qed.
 
 Lemma ent_all_r : forall f A (fctx:A -> flow) env,
-  (forall x, entails_under env f (fctx x)) ->
-  entails_under env f (fall (fun x => fctx x)).
+  (forall b, entails_under env f (fctx b)) ->
+  entails_under env f (fall (fun b => fctx b)).
 Proof.
   unfold entails_under. intros.
-  constructor. intros x.
+  constructor. intros b.
   auto.
 Qed.
 
 Lemma ent_all_l : forall f A (fctx:A -> flow) env,
-  (exists x, entails_under env (fctx x) f) ->
-  entails_under env (fall (fun x => fctx x)) f.
+  (exists b, entails_under env (fctx b) f) ->
+  entails_under env (fall (fun b => fctx b)) f.
 Proof.
   unfold entails_under. intros.
   destr H.
   apply H1.
-  inverts H0 as H0. specializes H0 x.
+  inverts H0 as H0. specializes H0 b.
   assumption.
 Qed.
 
@@ -2505,8 +2505,8 @@ Proof.
 Qed.
 
 Lemma ent_seq_ex_l : forall A (f1: A -> flow) f2 f3 env,
-  (forall x, entails_under env (f1 x;; f2) f3) ->
-  entails_under env (fex (fun x => f1 x);; f2) f3.
+  (forall b, entails_under env (f1 b;; f2) f3) ->
+  entails_under env (fex (fun b => f1 b);; f2) f3.
 Proof.
   unfold entails_under. intros.
   fdestr H0.
@@ -2516,8 +2516,8 @@ Proof.
 Qed.
 
 Lemma ent_ex_l : forall f A (fctx:A -> flow) env,
-  (forall x, entails_under env (fctx x) f) ->
-  entails_under env (fex (fun x => fctx x)) f.
+  (forall b, entails_under env (fctx b) f) ->
+  entails_under env (fex (fun b => fctx b)) f.
 Proof.
   unfold entails_under. intros.
   fdestr H0.
@@ -2526,18 +2526,18 @@ Proof.
 Qed.
 
 Lemma ent_ex_r : forall f A (fctx:A -> flow) env,
-  (exists x, entails_under env f (fctx x)) ->
-  entails_under env f (fex (fun x => fctx x)).
+  (exists b, entails_under env f (fctx b)) ->
+  entails_under env f (fex (fun b => fctx b)).
 Proof.
   unfold entails_under. intros.
   destr H.
-  constructor. exists x.
+  constructor. exists b.
   auto.
 Qed.
 
 Lemma ent_ex : forall A (fctx fctx1:A -> flow) env,
-  (forall x, entails_under env (fctx x) (fctx1 x)) ->
-  entails_under env (fex (fun x => fctx x)) (fex (fun y => fctx1 y)).
+  (forall b, entails_under env (fctx b) (fctx1 b)) ->
+  entails_under env (fex (fun b => fctx b)) (fex (fun y => fctx1 y)).
 Proof.
   unfold entails_under. intros.
   fdestr H0.

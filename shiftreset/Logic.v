@@ -182,7 +182,7 @@ Implicit Types h : heap.
 Implicit Types H : hprop.
 Implicit Types Q : postcond.
 Implicit Types uf fn : ufun.
-Implicit Types c : val -> flow.
+(* Implicit Types c : val -> flow. *)
 Implicit Types f : flow.
 Implicit Types x y z k : var.
 Implicit Types a v r : val.
@@ -208,7 +208,7 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
       Fmap.disjoint h1 h3) :
     satisfies s1 s1 h1 h2 R (ens q)
 
-  | s_seq s1 s2 f1 f2 h1 h2 R r1 h3 s3 :
+  | s_seq s3 h3 r1 s1 s2 f1 f2 h1 h2 R :
     satisfies s1 s3 h1 h3 (norm r1) f1 ->
     satisfies s3 s2 h3 h2 R f2 ->
     satisfies s1 s2 h1 h2 R (seq f1 f2)
@@ -1433,8 +1433,9 @@ Proof.
     inverts H1 as H1; destr H1; no_shift. injects H0. hinv H1. hinv H0.
     inverts H8 as H8; destr H8; no_shift.
     constructor.
-    exists v0 (h0 \u x0).
+    exists v0 (h4 \u x0).
     splits*.
+    subst. rew_fmap *.
     apply* hstar_intro. }
   { inverts H0 as H0. destr H0. hinv H0.
     eapply s_seq.
@@ -1444,6 +1445,150 @@ Proof.
     splits*.
     { hintro. jauto. }
     { constructor. exists v x. jauto. } }
+Qed.
+
+Lemma ent_seq_ens_sl_ex: forall env A (c:A->hprop) f,
+  entails_under env (ens_ (\exists b, c b);; f)
+  (∃ b, ens_ (c b);; f).
+Proof.
+  unfold entails_under. intros.
+  inverts H as H. 2: vacuous.
+  inverts H as H. destr H.
+  hinv H. hinv H.
+  apply hexists_inv in H2. destr H2.
+  constructor. exists x1.
+  applys* s_seq s3 (h1 \u x0) vunit.
+  - constructor. exs. splits*. hintro; jauto.
+  - subst. rew_fmap *.
+Qed.
+
+Lemma ent_all_r : forall f A (fctx:A -> flow) env,
+  (forall b, entails_under env f (fctx b)) ->
+  entails_under env f (fall (fun b => fctx b)).
+Proof.
+  unfold entails_under. intros.
+  constructor. intros b.
+  auto.
+Qed.
+
+Lemma ent_all_l : forall f A (fctx:A -> flow) env,
+  (exists b, entails_under env (fctx b) f) ->
+  entails_under env (fall (fun b => fctx b)) f.
+Proof.
+  unfold entails_under. intros.
+  destr H.
+  apply H1.
+  inverts H0 as H0. specializes H0 b.
+  assumption.
+Qed.
+
+Lemma ent_ex_l : forall f A (fctx:A -> flow) env,
+  (forall b, entails_under env (fctx b) f) ->
+  entails_under env (fex (fun b => fctx b)) f.
+Proof.
+  unfold entails_under. intros.
+  inverts H0 as H0. destr H0.
+  specializes H H1.
+  auto.
+Qed.
+
+Lemma ent_ex_r : forall f A (fctx:A -> flow) env,
+  (exists b, entails_under env f (fctx b)) ->
+  entails_under env f (fex (fun b => fctx b)).
+Proof.
+  unfold entails_under. intros.
+  destr H.
+  constructor. exists b.
+  auto.
+Qed.
+
+Lemma ent_seq_all_l : forall f f1 A (fctx:A -> flow) env,
+  (exists b, entails_under env (fctx b;; f1) f) ->
+  entails_under env (fall (fun b => fctx b);; f1) f.
+Proof.
+  unfold entails_under. intros.
+  destr H.
+  apply H1.
+  inverts H0 as H0.
+  { inverts H0 as H0. specializes H0 b.
+    applys* s_seq. }
+  { inverts H0 as H0. specializes H0 b.
+    apply* s_seq_sh. }
+Qed.
+
+Lemma ent_req_r : forall f f1 H env,
+  entails_under env (ens_ H;; f) f1 ->
+  entails_under env f (req H f1).
+Proof.
+  unfold entails_under. intros.
+  constructor. intros.
+  apply H0.
+  applys s_seq (hr \+ hp) (vunit).
+  { constructor. exists vunit. exists hp.
+    intuition.
+    rewrite hstar_hpure_l. intuition. }
+  { rewrite <- H3. assumption. }
+Qed.
+
+Lemma ent_ens_l : forall env f P,
+  (P -> entails_under env empty f) ->
+  entails_under env (ens_ \[P]) f.
+Proof.
+  unfold entails_under. intros.
+  inverts H0 as H0. destr H0.
+  hinv H0. hinv H0. hinv H3.
+  apply H.
+  assumption.
+  subst. rew_fmap. apply empty_intro.
+Qed.
+
+Lemma ent_ens_single_pure : forall env P P1,
+  (P1 -> P) ->
+  entails_under env (ens_ \[P1]) (ens_ \[P]).
+Proof.
+  unfold entails_under. intros.
+  inverts H0 as H0. destr H0. hinv H0. hinv H3. hinv H0.
+  constructor. exists vunit. exists empty_heap.
+  splits*.
+  subst*.
+  hintro.
+  split*.
+  hintro. auto.
+Qed.
+
+Lemma ent_ens_single : forall env H H1,
+  (H1 ==> H) ->
+  entails_under env (ens_ H1) (ens_ H).
+Proof.
+  unfold entails_under. intros.
+  inverts H2 as H2. destr H2.
+  rewrite hstar_hpure_l in H2. destruct H2.
+  apply H0 in H5.
+  constructor. exists v. exists h3.
+  intuition.
+  rewrite hstar_hpure_l. intuition.
+Qed.
+
+Lemma ent_disj_l : forall f1 f2 f3 env,
+  entails_under env f1 f3 ->
+  entails_under env f2 f3 ->
+  entails_under env (disj f1 f2) f3.
+Proof.
+  unfold entails_under. intros.
+  inverts H1 as H1; auto.
+Qed.
+
+Lemma norm_seq_ens_empty : forall f,
+  entails (ens_ \[];; f) f.
+Proof.
+  unfold entails. intros.
+  inverts H as H. 2: vacuous. destr H.
+  inverts H as H.
+  destr H.
+  rew_heap in H.
+  hinv H.
+  subst.
+  rew_fmap *.
 Qed.
 
 (** * Reduction example *)
