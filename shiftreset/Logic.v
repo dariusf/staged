@@ -115,8 +115,9 @@ Inductive flow : Type :=
 (** Example: the continuation [(λ vr. < fc >)] is represented as a tuple [(vr, fun r => rs fc r)]. *)
   | rs : flow -> val -> flow
 (** [rs f vr] is a reset with body [f] and return value [vr]. *)
-  | defun : var -> (val -> val -> flow) -> flow.
+  | defun : var -> (val -> val -> flow) -> flow
 (** [defun x uf] is equivalent to [ens_ (x=(λ x r. uf x r))], where [x] can reside in the environment (which regular [ens_] cannot access). *)
+  | discard : flow -> var -> flow.
 
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
 
@@ -277,9 +278,15 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     (H: satisfies s1 s2 h1 h2 (norm v) f) :
     satisfies s1 s2 h1 h2 (norm v) (rs f v)
 
-  | s_defun s1 s2 h1 x uf
-    (H: s2 = Fmap.update s1 x uf) :
-    satisfies s1 s2 h1 h1 (norm vunit) (defun x uf).
+  | s_defun s1 s2 h1 x uf :
+    (* ~ Fmap.indom s1 x -> *)
+    s2 = Fmap.update s1 x uf ->
+    satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
+
+  | s_discard s1 s2 s3 h x R f :
+    satisfies s1 s2 h h R f ->
+    s3 = Fmap.remove s2 x ->
+    satisfies s1 s3 h h R (discard f x).
 
 Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f" :=
   (satisfies s1 s2 h1 h2 r f) (at level 30, only printing).
@@ -976,6 +983,7 @@ Fixpoint syn_shift_free (f:flow) : Prop :=
   | shc _ _ _ _ => False
   | rs _ r => True
   | defun _ _ => True
+  | discard f _ => syn_shift_free f
   end.
 
 (* This counterexample shows that the same stores, heaps, and [f] do not necessarily give rise to the same result. This is what makes proving shift-freedom annoying: knowing that the result is [norm] is not enough to know that the result cannot be [shft], given an arbitrary [f]. *)
@@ -1311,6 +1319,31 @@ Proof.
   apply H in H8.
   applys* s_seq.
 Qed.
+
+Lemma ent_seq_defun_discard :
+forall x uf f2 f1,
+(* forall x, *)
+  (* ~ Fmap.indom s x -> *)
+  (* entails_under (Fmap.update s x uf) (discard f1 x) (discard f2 x) -> *)
+  (* entails_under s (defun x uf;; f1) f2. *)
+  (* entails_under s f1 f2 -> *)
+  (* entails_under s (defun x uf;; discard f1 x) f2 -> *)
+  (* entails_under s f1 f2 *)
+  entails (defun x uf;; discard f2 x) f2.
+   (* -> *)
+  (* entails f1 f2 *)
+  (* entails f1 f2 ->
+  entails (defun x uf;; discard f1 x) f2 *)
+  (* entails_under empty_env (defun x arbitrary;; discard empty x) empty. *)
+Proof.
+  (* intros. *)
+  (* unfold entails_under. intros. *)
+  unfold entails. intros.
+  (* apply H.
+  applys s_seq.
+  constructor. reflexivity. *)
+
+Abort.
 
 Lemma unk_inv : forall s1 s2 h1 h2 R x a v uf,
   Fmap.read s1 x = uf ->
