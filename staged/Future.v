@@ -311,12 +311,29 @@ Inductive inclusion : theta -> theta -> bool -> Prop :=
 Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop := 
   | futureCondEntail_empty : forall t1 t2, 
     inclusion t1 t2 true -> 
-    futureCondEntail (fc_singleton t1) (fc_singleton t2)  (fc_singleton (kleene any)).
+    futureCondEntail (fc_singleton t1) (fc_singleton t2)  (fc_singleton (kleene any))
+  | futureCondEntail_conj_right : forall f f1 f2 fR1 fR2, 
+    futureCondEntail f f1 fR1 -> 
+    futureCondEntail f f2 fR2 -> 
+    futureCondEntail f (fc_conj f1 f2) (fc_conj fR1 fR2) 
+
+  | futureCondEntail_conj_left : forall f f1 f2 fR1 fR2, 
+    futureCondEntail f1 f fR1 -> 
+    futureCondEntail f2 f fR2 -> 
+    futureCondEntail (fc_conj f1 f2) f  (fc_singleton (kleene any))
+  .
 
 Lemma futureCondEntail_exact : forall f, 
   futureCondEntail f f (fc_singleton(kleene any)).
 Proof.
+  intros.
+  induction f.
+  constructor.
+  constructor.
+  
 Admitted.
+
+
 
 Theorem soundness : forall e P t1 t2 Q f1 f2 v h1 h2 rho1 rho2 f',
   forward P t1 f1 e Q t2 f2 ->  
@@ -328,7 +345,7 @@ Theorem soundness : forall e P t1 t2 Q f1 f2 v h1 h2 rho1 rho2 f',
 Proof. 
   intros.
   induction H.
-  invert H0. 
+  invert H0.
   intros.
   split.
   rewrite hstar_hpure_r.
@@ -347,6 +364,10 @@ Qed.
 
 
 
+
+
+ (*
+    
 
 
 
@@ -369,25 +390,6 @@ Fixpoint inclusion_ranking (hypos:list (theta * theta) ) : nat :=
   end.
 
 Definition measure_test (hypos:list (theta * theta) ) : nat := 100 - (inclusion_ranking hypos). 
-
-
-
-Inductive future_condition_entailment : futureCond -> futureCond -> futureCond -> Prop := 
-  | fce_emp : forall t1 t2,
-    inclusion t1 t2 -> 
-    future_condition_entailment (fc_singleton t1) (fc_singleton t2) (fc_singleton (kleene any))
-
-  | fce_frame : forall f f1 f2 fr,
-    future_condition_entailment f1 f2 fr -> 
-    future_condition_entailment (conj f f1) f2 (conj fr f)
-
-  | fce_conj : forall f f1 f2 fr1 fr2, 
-    future_condition_entailment f f1 fr1 -> 
-    future_condition_entailment f f2 fr2 -> 
-    future_condition_entailment f (conj f1 f2) (conj fr1 fr2)
-  .
- (*
-    
 
 
 Function inclusion (t1:theta) (t2:theta) (hypos: list (theta * theta) ) {measure measure_test hypos} : (bool) := 
