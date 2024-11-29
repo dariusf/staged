@@ -73,7 +73,11 @@ with expr : Type :=
   | pevent  (ev:event) 
   | passume (f:futureCond)
   | pif (b: expr) (e1: expr) (e2: expr)
-  | papp (x: var) (a: val).
+  | papp (x: var) (a: val)
+  | pref (v: val)
+  | pderef (l: loc)
+  | passign (x: loc) (v: val). 
+
 
 
 Definition compare_event (ev1:event) (ev2:event) : bool := 
@@ -131,34 +135,55 @@ Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2)
   | pevent _ => e 
   | passume _ => e
+  | pderef _ => e
+  | passign _ _ => e
+  | pref _ => e
   end.
 
+(** SLF's heap theory as a functor. *)
+Module Export Heap := HeapF.HeapSetup Val.
+
+Definition empty_heap : heap := Fmap.empty.
+
+Definition precond := hprop.
+Definition postcond := val -> hprop.
 
 
 
-Inductive bigstep : rho -> futureCond -> expr -> rho -> futureCond  -> val -> Prop :=
-  | eval_const : forall r f v, 
-    bigstep r f (pval v) r f v
+Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCond  -> val -> Prop :=
+  | eval_const : forall h r f v, 
+    bigstep h r f (pval v) h r f v
   
+  | eval_let : forall h r f h1 r1 f1 v1 h2 r2 f2 v2 x e1 e2,
+    bigstep h r f e1 h1 r1 f1 v1 ->
+    bigstep h1 r1 f1 (subst x v1 e2) h2 r2 f2 v2 ->
+    bigstep h r f (plet x e1 e2) h2 r2 f2 v2
 
-  | eval_let : forall r f r1 f1 v1 r2 f2 v2 x e1 e2,
-    bigstep r f e1 r1 f1 v1 ->
-    bigstep r1 f1 (subst x v1 e2) r2 f2 v2 ->
-    bigstep r f  (plet x e1 e2) r2 f2 v2
+  | eval_if_true : forall h r f e1 e2 h' r' f' v, 
+    bigstep h r f e1 h' r' f' v -> 
+    bigstep h r f (pif (pval (vbool true)) e1 e2) h' r' f' v
 
-  | eval_if_true : forall r f e1 e2 r' f' v, 
-    bigstep r f e1 r' f' v -> 
-    bigstep r f (pif (pval (vbool true)) e1 e2) r' f' v
+  | eval_if_false : forall h r f e1 e2 h' r' f' v, 
+    bigstep h r f e2 h' r' f' v -> 
+    bigstep h r f (pif (pval (vbool false)) e1 e2) h' r' f' v
 
-  | eval_if_false : forall r f e1 e2 r' f' v, 
-    bigstep r f e2 r' f' v -> 
-    bigstep r f (pif (pval (vbool false)) e1 e2) r' f' v
+  | eval_assume : forall h r f f_assume, 
+    bigstep h r f (passume f_assume) h r (fc_conj f f_assume) vunit
 
-  | eval_assume : forall r f f_assume, 
-    bigstep r f (passume f_assume) r (fc_conj f f_assume) vunit
+  | eval_event : forall h r f ev, 
+    bigstep h r f (pevent ev) h (r ++ (ev::nil)) f vunit
 
-  | eval_event : forall r f ev, 
-    bigstep r f (pevent ev) (r ++ (ev::nil)) f vunit
+  | eval_pref : forall h r f loc v,
+    ~ Fmap.indom h loc ->
+    bigstep h r f (pref v) (Fmap.update h loc v) r f (vloc loc)
+
+  | eval_pderef : forall h r f loc,
+    Fmap.indom h loc ->
+    bigstep h r f (pderef loc) h r f (Fmap.read h loc)
+
+  | eval_passign : forall h r f loc v,
+    Fmap.indom h loc ->
+    bigstep h r f (passign loc v) (Fmap.update h loc v) r f vunit
   .
 
 Inductive trace_model : rho -> theta -> Prop :=
@@ -206,16 +231,21 @@ Inductive fc_model : rho -> futureCond -> Prop :=
     .
 
 
-Inductive forward : theta -> futureCond -> expr -> theta -> futureCond -> val -> Prop := 
-  | fw_val: forall t f v,
-    forward t f (pval v) t f v. 
+
+
+Definition pre_state  : Type := (hprop * futureCond).
+Definition post_state : Type := (postcond * theta * futureCond).
+
+
+Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
+  | fw_val: forall t f v h ,
+    forward h t f (pval v) (fun res => \[res = v]) t f. 
 
 
 
-
-
-Example ex1 : forward emp (fc_singleton emp) (pval (vint 1)) emp (fc_singleton emp) (vint 1).
+Example ex1 : exists Q, forward \[] emp (fc_singleton emp) (pval (vint 1)) Q emp (fc_singleton emp).
 Proof.
+  eexists.
   constructor.
 Qed.
 
@@ -288,38 +318,31 @@ Lemma futureCondEntail_exact : forall f,
 Proof.
 Admitted.
 
-Theorem soundness : forall e t1 t2 f1 f2 v v' rho1 rho2 f',
-  forward t1 f1 e t2 f2 v ->  
-  bigstep rho1 f1 e rho2 f' v' -> 
+Theorem soundness : forall e P t1 t2 Q f1 f2 v h1 h2 rho1 rho2 f',
+  forward P t1 f1 e Q t2 f2 ->  
+  bigstep h1 rho1 f1 e h2 rho2 f' v -> 
+  P h1 -> 
   trace_model rho1 t1 -> 
-  trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res. 
+  Q v h2 /\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  
+  
 Proof. 
   intros. 
   induction H.
   inverts H0. 
+  split.
+  reflexivity.
   split.
   exact H1.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
 Qed. 
 
-  
-  
 
 
 
-(** SLF's heap theory as a functor. *)
-Module Export Heap := HeapF.HeapSetup Val.
 
-Definition empty_heap : heap := Fmap.empty.
 
-Definition precond := hprop.
-Definition postcond := val -> hprop. 
 
-Definition pre_state  : Type := (hprop * futureCond).
-Definition post_state : Type := (postcond * theta * futureCond).
-
-Definition rho : Type := (list fstEv).
 
 
 
