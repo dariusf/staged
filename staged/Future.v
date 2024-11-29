@@ -58,7 +58,6 @@ with theta :=
   | emp : theta
   | any : theta
   | theta_singleton : event -> theta
-  | not_event : event -> theta
   | seq : theta -> theta -> theta
   | disj : theta -> theta -> theta
   | kleene : theta -> theta
@@ -100,6 +99,9 @@ End Val.
 
 Definition rho : Type := list (event).
 
+Definition fstEvs : Type := list (event).
+
+
 (*
 Fixpoint update_stack  (s:stack) (str:var) (c:constant): stack := 
   match s with 
@@ -138,9 +140,6 @@ Inductive bigstep : rho -> futureCond -> expr -> rho -> futureCond  -> val -> Pr
   | eval_const : forall r f v, 
     bigstep r f (pval v) r f v
   
-  | eval_var : forall r f x v, 
-    x = v -> 
-    bigstep r f (pval x) r f v
 
   | eval_let : forall r f r1 f1 v1 r2 f2 v2 x e1 e2,
     bigstep r f e1 r1 f1 v1 ->
@@ -168,11 +167,6 @@ Inductive trace_model : rho -> theta -> Prop :=
   | tm_singleton : forall ev1 ev, 
     compare_event ev ev1 = true -> 
     trace_model (ev1::nil) (theta_singleton ev)
-
-  | tm_notevent : forall ev1 ev, 
-    compare_event ev ev1 = false -> 
-    trace_model (ev1::nil) (not_event ev)
-
 
   | tm_any : forall ev, 
     trace_model (ev::nil) (any)
@@ -212,7 +206,105 @@ Inductive fc_model : rho -> futureCond -> Prop :=
     .
 
 
+Inductive forward : theta -> futureCond -> expr -> theta -> futureCond -> val -> Prop := 
+  | fw_val: forall t f v,
+    forward t f (pval v) t f v. 
 
+
+
+
+
+Example ex1 : forward emp (fc_singleton emp) (pval (vint 1)) emp (fc_singleton emp) (vint 1).
+Proof.
+  constructor.
+Qed.
+
+Print ex1.
+
+
+Fixpoint nullable (t: theta): bool :=
+  match t with
+  | bot => false 
+  | any => false
+  | emp => true 
+  | theta_singleton _ => false
+  | seq t1 t2 =>  andb (nullable t1) (nullable t2 )
+  | disj t1 t2 => orb (nullable t1) (nullable t2)
+  | kleene _ => true 
+  end.
+
+Fixpoint fst (t: theta): fstEvs :=
+  match t with
+  | bot => nil
+  | emp => nil
+  | any => (ev "_" vunit) :: nil
+  | theta_singleton (ev e v) => (ev e v) :: nil
+  | seq t1 t2 => if (nullable t1) then fst t1 ++ fst t2 else fst t1 
+  | disj t1 t2 => fst t1 ++ fst t2
+  | kleene t1 => fst t1 
+  end. 
+
+
+Fixpoint theta_der (t:theta) (ev:event) : theta := 
+  match t with 
+  | bot => bot
+  | emp => bot
+  | any => emp 
+  | theta_singleton ev1 => 
+    if compare_event ev ev1 then emp else bot  
+  | seq t1 t2 => 
+    let temp := seq (theta_der t1 ev) t2 in 
+    if (nullable t1) then disj temp (theta_der t2 ev) else temp
+  | disj t1 t2 => disj (theta_der t1 ev) (theta_der t2 ev)
+  | kleene t1 => seq (theta_der t1 ev) t 
+  end.
+
+
+
+Inductive inclusion : theta -> theta -> bool -> Prop := 
+  | inc_emp: forall t1 t2, 
+    nullable t1 -> 
+    not (nullable t2) -> 
+    inclusion t1 t2 false 
+  | inc_exact: forall t, 
+    inclusion t t true
+  | inc_singleton: forall t1 t2, 
+    fst t1 = nil -> 
+    inclusion t1 t2 true 
+  | inc_rec: forall t1 t2 ev,
+    let deriv1 := theta_der t1 ev in 
+    let deriv2 := theta_der t2 ev in 
+    inclusion deriv1 deriv2 true -> 
+    inclusion t1 t2 true. 
+ 
+
+Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop := 
+  | futureCondEntail_empty : forall t1 t2, 
+    inclusion t1 t2 true -> 
+    futureCondEntail (fc_singleton t1) (fc_singleton t2)  (fc_singleton (kleene any)).
+
+Lemma futureCondEntail_exact : forall f, 
+  futureCondEntail f f (fc_singleton(kleene any)).
+Proof.
+Admitted.
+
+Theorem soundness : forall e t1 t2 f1 f2 v v' rho1 rho2 f',
+  forward t1 f1 e t2 f2 v ->  
+  bigstep rho1 f1 e rho2 f' v' -> 
+  trace_model rho1 t1 -> 
+  trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res. 
+Proof. 
+  intros. 
+  induction H.
+  inverts H0. 
+  split.
+  exact H1.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
+Qed. 
+
+  
+  
 
 
 
@@ -231,42 +323,6 @@ Definition rho : Type := (list fstEv).
 
 
 
-Fixpoint nullable (t: theta): bool :=
-  match t with
-  | bot => false 
-  | any => false
-  | emp => true 
-  | theta_singleton ev => false
-  | seq t1 t2 =>  andb (nullable t1) (nullable t2 )
-  | disj t1 t2 => orb (nullable t1) (nullable t2)
-  | kleene _ => true 
-  end.
-
-Fixpoint fst (t: theta): list fstEv :=
-  match t with
-  | bot => nil
-  | emp => nil
-  | any => ("_") :: nil
-  | theta_singleton ev => (ev) :: nil
-  | seq t1 t2 => if (nullable t1) then fst t1 ++ fst t2 else fst t1 
-  | disj t1 t2 => fst t1 ++ fst t2
-  | kleene t1 => fst t1 
-  end. 
-
-
-Fixpoint theta_der (t:theta) (f:fstEv) : theta := 
-  match t with 
-  | bot => bot
-  | emp => bot
-  | any => emp 
-  | theta_singleton ev1 => 
-    if (String.eqb f ev1) then emp else bot  
-  | seq t1 t2 => 
-    let temp := seq (theta_der t1 f) t2 in 
-    if (nullable t1) then disj temp (theta_der t2 f) else temp
-  | disj t1 t2 => disj (theta_der t1 f) (theta_der t2 f)
-  | kleene t1 => seq (theta_der t1 f) t 
-  end.
 
 
 
@@ -289,20 +345,7 @@ Fixpoint inclusion_ranking (hypos:list (theta * theta) ) : nat :=
 
 Definition measure_test (hypos:list (theta * theta) ) : nat := 100 - (inclusion_ranking hypos). 
 
-Inductive inclusion : theta -> theta -> bool -> Prop := 
-  | inc_emp: forall t1 t2, 
-    nullable t1 -> 
-    not (nullable t2) -> 
-    inclusion t1 t2 false 
-  | inc_singleton: forall t1 t2, 
-    fst t1 = nil -> 
-    inclusion t1 t2 true 
-  | inc_rec: forall t1 t2 ev,
-    let deriv1 := theta_der t1 ev in 
-    let deriv2 := theta_der t2 ev in 
-    inclusion deriv1 deriv2 true -> 
-    inclusion t1 t2 true. 
- 
+
 
 Inductive future_condition_entailment : futureCond -> futureCond -> futureCond -> Prop := 
   | fce_emp : forall t1 t2,
