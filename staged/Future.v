@@ -39,32 +39,21 @@ Defined.
 Definition var : Type := string.
 Definition var_eq := String.string_dec.
 
-Inductive constant := 
-  | cunit : constant
-  | cbool : bool -> constant
-  | cint  : Z -> constant.
-
+Definition loc := nat.
 Inductive val :=
-  | vconst : constant -> val
-  | vint : Z -> val.
+  | vunit : val
+  | vint : Z -> val
+  | vfun : var -> expr -> val
+  | vfix : var -> var -> expr -> val
+  | vloc : loc -> val
+  | vtup : val -> val -> val
+  | vstr : string -> val
+  | vbool : bool -> val
+  | vlist : list val -> val
 
-Definition event : Type := (var * val).
+with event : Type := ev (s:var) (v:val)
 
-Definition constant_eqb (c1:constant) (c2:constant) : bool := 
-  match c1, c2 with 
-  | cunit, cunit => true 
-  | cbool b1, cbool b2 => Bool.eqb b1 b2
-  | cint i1, cint i2 => Z.eqb i1 i2
-  | _, _ => false 
-  end. 
-  
-
-Definition compare_event (ev1:event) (ev2:event) : bool := 
-  let (s1, v1) := ev1 in 
-  let (s2, v2) := ev1 in 
-  andb (String.eqb s1 s2) (String.eqb s1 s2).
-
-Inductive theta :=
+with theta :=
   | bot : theta
   | emp : theta
   | any : theta
@@ -72,25 +61,34 @@ Inductive theta :=
   | not_event : event -> theta
   | seq : theta -> theta -> theta
   | disj : theta -> theta -> theta
-  | kleene : theta -> theta.
+  | kleene : theta -> theta
 
-Inductive futureCond :=
+with futureCond :=
   | fc_singleton : theta -> futureCond
-  | fc_conj : futureCond -> futureCond -> futureCond.
+  | fc_conj : futureCond -> futureCond -> futureCond
 
-Inductive expr : Type :=
+with expr : Type :=
+  | pvar (x: var)
   | pval (v: val)
   | plet (x: var) (e1 e2: expr)
   | pevent  (ev:event) 
   | passume (f:futureCond)
-  | pif (b: var) (e1: expr) (e2: expr)
+  | pif (b: expr) (e1: expr) (e2: expr)
   | papp (x: var) (a: val).
+
+
+Definition compare_event (ev1:event) (ev2:event) : bool := 
+  let (s1, v1) := ev1 in 
+  let (s2, v2) := ev1 in 
+  andb (String.eqb s1 s2) (String.eqb s1 s2).
+
+
 
 #[global]
 Instance Inhab_val : Inhab val.
 Proof.
   constructor.
-  exists (vconst cunit).
+  exists (vunit).
   constructor.
 Qed.
 
@@ -100,12 +98,9 @@ Module Val.
 End Val.
 
 
-Definition stack : Type := list (var * constant).
-
 Definition rho : Type := list (event).
 
-Definition env : Type := (stack * rho * futureCond).
-
+(*
 Fixpoint update_stack  (s:stack) (str:var) (c:constant): stack := 
   match s with 
   | nil => (str, c)::nil 
@@ -122,35 +117,49 @@ Fixpoint read_stack  (s:stack) (str:var) : constant :=
     if (String.eqb str str1) then c1
     else (read_stack s' str)
   end. 
+*)
+Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
+  let aux t := subst y w t in
+  let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
+  match e with
+  | pval v => pval v
+  | pvar x => if_y_eq x (pval w) e
+  | papp e v => papp e v
+  | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
+  | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2)
+  | pevent _ => e 
+  | passume _ => e
+  end.
 
-Inductive bigstep : stack -> rho -> futureCond -> expr -> stack -> rho -> futureCond  -> constant -> Prop :=
-  | bigstep_const : forall s s' r f c, 
-    bigstep s r f (pval (vconst c)) s' r f c 
+
+
+
+Inductive bigstep : rho -> futureCond -> expr -> rho -> futureCond  -> val -> Prop :=
+  | eval_const : forall r f v, 
+    bigstep r f (pval v) r f v
   
-  | bigstep_var : forall s s' c r f x, 
-    c = read_stack s x -> 
-    bigstep s r f (pval (vconst c)) s' r f c
+  | eval_var : forall r f x v, 
+    x = v -> 
+    bigstep r f (pval x) r f v
 
-  | bigstep_let : forall s r f s1 r1 f1 s2 r2 f2 x e1 e2 c1 c2, 
-    bigstep s r f e1 s1 r1 f1 c1 -> 
-    bigstep ((x, c1)::s1) r1 f1 e2 s2 r2 f2 c2 -> 
-    bigstep s r f (plet x e1 e2) s2 r2 f2 c2
+  | eval_let : forall r f r1 f1 v1 r2 f2 v2 x e1 e2,
+    bigstep r f e1 r1 f1 v1 ->
+    bigstep r1 f1 (subst x v1 e2) r2 f2 v2 ->
+    bigstep r f  (plet x e1 e2) r2 f2 v2
 
-  | bigstep_if_true : forall s r f b e1 e2 s' r' f' c, 
-    (cbool true) = read_stack s b -> 
-    bigstep s r f e1 s' r' f' c -> 
-    bigstep s r f (pif b e1 e2) s' r' f' c
+  | eval_if_true : forall r f e1 e2 r' f' v, 
+    bigstep r f e1 r' f' v -> 
+    bigstep r f (pif (pval (vbool true)) e1 e2) r' f' v
 
-  | bigstep_if_false : forall s r f b e1 e2 s' r' f' c, 
-    (cbool false) = read_stack s b -> 
-    bigstep s r f e2 s' r' f' c -> 
-    bigstep s r f (pif b e1 e2) s' r' f' c
+  | eval_if_false : forall r f e1 e2 r' f' v, 
+    bigstep r f e2 r' f' v -> 
+    bigstep r f (pif (pval (vbool false)) e1 e2) r' f' v
 
-  | bigstep_assume : forall s r f f_assume, 
-    bigstep s r f (passume f_assume) s r (fc_conj f f_assume) cunit
+  | eval_assume : forall r f f_assume, 
+    bigstep r f (passume f_assume) r (fc_conj f f_assume) vunit
 
-  | bigstep_event : forall s r f ev, 
-    bigstep s r f (pevent ev) s (r ++ (ev::nil)) f cunit
+  | eval_event : forall r f ev, 
+    bigstep r f (pevent ev) (r ++ (ev::nil)) f vunit
   .
 
 Inductive trace_model : rho -> theta -> Prop :=
@@ -204,7 +213,7 @@ Inductive fc_model : rho -> futureCond -> Prop :=
 
 
 
-Definition fstEv : Type := (var).
+
 
 
 (** SLF's heap theory as a functor. *)
