@@ -18,10 +18,9 @@ Set Implicit Arguments.
 
 From Coq Require Recdef.
 
+(*
 Definition sum_len {A} (ls : (list A * list A)) : nat :=
   length (fst ls) + length (snd ls).
-
-
 
 Function interleave3 {A} (ls : (list A * list A))
   {measure sum_len ls} : list A :=
@@ -32,6 +31,7 @@ Function interleave3 {A} (ls : (list A * list A))
 Proof.
   intros A ls l1 l2 h t -> ->; unfold sum_len; simpl; rewrite Nat.add_comm; trivial with arith.
 Defined.
+*)
 
 
 (** * Programs *)
@@ -39,58 +39,107 @@ Defined.
 Definition var : Type := string.
 Definition var_eq := String.string_dec.
 
+Inductive constant := 
+  | cunit : constant
+  | cbool : bool -> constant
+  | clist : list constant -> constant
+  | cint  : Z -> constant.
+
 Inductive val :=
-  | vunit : val
-  | vint : Z -> val
-  | vval : string -> val
-  | vbool : bool -> val
-  | vlist : list val -> val
+  | vconst : constant -> val
+  | vint : Z -> val.
 
-with expr : Type :=
-  | pval (v: val)
-  | plet (x: var) (e1 e2: expr)
-  | pev  (x:var) 
-  | passign (x: expr) (v: expr)
-  | pif (b: expr) (e1: expr) (e2: expr)
-  | papp (x: expr) (a: expr).
+Definition event : Type := (var * val).
 
-#[global]
-Instance Inhab_val : Inhab val.
-Proof.
-  constructor.
-  exists vunit.
-  constructor.
-Qed.
-
-Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
-  let aux t := subst y w t in
-  let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
-  match e with
-  | pval (vval x) => if_y_eq x (pval (w)) e
-  | pval v => pval v
-  | pev x  =>  pev x  
-  | passign x y => passign x y
-  | papp e v => papp e v
-  | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
-  | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
-  end.
-
-Module Val.
-  Definition value := val.
-End Val.
 
 Inductive theta :=
   | bot : theta
   | emp : theta
   | any 
-  | theta_singleton :  var -> theta
+  | theta_singleton : event -> theta
   | seq : theta -> theta -> theta
   | disj : theta -> theta -> theta
   | kleene : theta -> theta.
 
-Inductive future_condition :=
-  | fc_singleton : theta -> future_condition
-  | conj : future_condition -> future_condition -> future_condition.
+Inductive futureCond :=
+  | fc_singleton : theta -> futureCond
+  | fc_conj : futureCond -> futureCond -> futureCond.
+
+Inductive expr : Type :=
+  | pval (v: val)
+  | plet (x: var) (e1 e2: expr)
+  | pevent  (ev:event) 
+  | passume (f:futureCond)
+  | pif (b: var) (e1: expr) (e2: expr)
+  | papp (x: var) (a: val).
+
+#[global]
+Instance Inhab_val : Inhab val.
+Proof.
+  constructor.
+  exists (vconst cunit).
+  constructor.
+Qed.
+
+
+Module Val.
+  Definition value := val.
+End Val.
+
+
+Definition stack : Type := list (var * constant).
+
+Definition rho : Type := list (event).
+
+Definition env : Type := (stack * rho * futureCond).
+
+Fixpoint update_stack  (s:stack) (str:var) (c:constant): stack := 
+  match s with 
+  | nil => (str, c)::nil 
+  | (str1, c1) :: s' => 
+    if (String.eqb str str1) 
+    then (str, c) :: s'
+    else (str1, c1) :: (update_stack s' str c)
+  end. 
+
+Fixpoint read_stack  (s:stack) (str:var) : constant := 
+  match s with 
+  | nil => cint 0 
+  | (str1, c1) :: s' => 
+    if (String.eqb str str1) then c1
+    else (read_stack s' str)
+  end. 
+
+Inductive bigstep : stack -> rho -> futureCond -> expr -> stack -> rho -> futureCond  -> constant -> Prop :=
+  | bigstep_const : forall s s' r f c, 
+    bigstep s r f (pval (vconst c)) s' r f c 
+  
+  | bigstep_var : forall s s' c r f x, 
+    c = read_stack s x -> 
+    bigstep s r f (pval (vconst c)) s' r f c
+
+  | bigstep_let : forall s r f s1 r1 f1 s2 r2 f2 x e1 e2 c1 c2, 
+    bigstep s r f e1 s1 r1 f1 c1 -> 
+    bigstep ((x, c1)::s1) r1 f1 e2 s2 r2 f2 c2 -> 
+    bigstep s r f (plet x e1 e2) s2 r2 f2 c2
+
+  | bigstep_if_true : forall s r f b e1 e2 s' r' f' c, 
+    (cbool true) = read_stack s b -> 
+    bigstep s r f e1 s' r' f' c -> 
+    bigstep s r f (pif b e1 e2) s' r' f' c
+
+  | bigstep_if_false : forall s r f b e1 e2 s' r' f' c, 
+    (cbool false) = read_stack s b -> 
+    bigstep s r f e2 s' r' f' c -> 
+    bigstep s r f (pif b e1 e2) s' r' f' c
+
+  | bigstep_assume : forall s r f f_assume, 
+    bigstep s r f (passume f_assume) s r (fc_conj f f_assume) cunit
+
+  | bigstep_event : forall s r f ev, 
+    bigstep s r f (pevent ev) s (r ++ (ev::nil)) f cunit
+  .
+    
 
 
 Definition fstEv : Type := (var).
@@ -104,8 +153,8 @@ Definition empty_heap : heap := Fmap.empty.
 Definition precond := hprop.
 Definition postcond := val -> hprop. 
 
-Definition pre_state  : Type := (hprop * future_condition).
-Definition post_state : Type := (postcond * theta * future_condition).
+Definition pre_state  : Type := (hprop * futureCond).
+Definition post_state : Type := (postcond * theta * futureCond).
 
 Definition rho : Type := (list fstEv).
 
@@ -169,23 +218,22 @@ Fixpoint inclusion_ranking (hypos:list (theta * theta) ) : nat :=
 
 Definition measure_test (hypos:list (theta * theta) ) : nat := 100 - (inclusion_ranking hypos). 
 
-Inductive inclusion : theta -> theta -> Prop := 
-  | inc_bot: forall t, 
-    inclusion bot t 
-  | inc_emp: forall t, 
-    nullable t -> 
-    inclusion emp t
-  | inc_singleton: forall ev1 ev2, 
-    (String.eqb ev1 ev2) -> 
-    inclusion (theta_singleton ev1) (theta_singleton ev2)
+Inductive inclusion : theta -> theta -> bool -> Prop := 
+  | inc_emp: forall t1 t2, 
+    nullable t1 -> 
+    not (nullable t2) -> 
+    inclusion t1 t2 false 
+  | inc_singleton: forall t1 t2, 
+    fst t1 = nil -> 
+    inclusion t1 t2 true 
   | inc_rec: forall t1 t2 ev,
     let deriv1 := theta_der t1 ev in 
     let deriv2 := theta_der t2 ev in 
-    inclusion deriv1 deriv2 -> 
-    inclusion t1 t2. 
+    inclusion deriv1 deriv2 true -> 
+    inclusion t1 t2 true. 
  
 
-Inductive future_condition_entailment : future_condition -> future_condition -> future_condition -> Prop := 
+Inductive future_condition_entailment : futureCond -> futureCond -> futureCond -> Prop := 
   | fce_emp : forall t1 t2,
     inclusion t1 t2 -> 
     future_condition_entailment (fc_singleton t1) (fc_singleton t2) (fc_singleton (kleene any))
@@ -199,6 +247,7 @@ Inductive future_condition_entailment : future_condition -> future_condition -> 
     future_condition_entailment f f2 fr2 -> 
     future_condition_entailment f (conj f1 f2) (conj fr1 fr2)
   .
+ (*
     
 
 
@@ -261,7 +310,7 @@ A   <:  A \/ B ~~~>
 
 
 
-Fixpoint subtract_trace_from_future (st:future_condition) (t:theta) : future_condition := 
+Fixpoint subtract_trace_from_future (st:futureCond) (t:theta) : futureCond := 
   let fstSet := fst t in 
 
   A.B.C - (A \/ B) = B.C \/ Bot = B.C 
@@ -274,7 +323,7 @@ if  st - t = st' :  t . st'  <:  st
 for all rho |= t, there exist rho' |= st' such that rho ++ rho' |= st 
 *)
 
-Fixpoint future_condition_der (st:future_condition) (ev: fstEv): future_condition :=
+Fixpoint future_condition_der (st:futureCond) (ev: fstEv): futureCond :=
   match st with
   | fc_singleton theta => fc_singleton (theta_der theta ev)
   | conj f1 f2 => conj (future_condition_der f1 ev) (future_condition_der f2 ev)
@@ -294,14 +343,6 @@ Inductive forward : pre_state -> expr -> post_state -> Prop :=
 
 
 
-Inductive bigstep : rho -> expr -> rho -> Prop :=
-  | eval_pval : forall his v,
-    bigstep his (pval v) his
-    
-  | eval_pev : forall his ev,
-    bigstep his (pev ev) (his++(ev::nil))
-  
-  .
 
 Inductive satisfies : rho -> theta -> Prop :=
   | ts_emp : satisfies nil (emp)
@@ -318,3 +359,5 @@ Notation valid := sem_tuple.
 
 Theorem soundness : forall e f,
   derivable e f -> valid e f.
+
+ *)
