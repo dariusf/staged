@@ -42,7 +42,6 @@ Definition var_eq := String.string_dec.
 Inductive constant := 
   | cunit : constant
   | cbool : bool -> constant
-  | clist : list constant -> constant
   | cint  : Z -> constant.
 
 Inductive val :=
@@ -51,12 +50,26 @@ Inductive val :=
 
 Definition event : Type := (var * val).
 
+Definition constant_eqb (c1:constant) (c2:constant) : bool := 
+  match c1, c2 with 
+  | cunit, cunit => true 
+  | cbool b1, cbool b2 => Bool.eqb b1 b2
+  | cint i1, cint i2 => Z.eqb i1 i2
+  | _, _ => false 
+  end. 
+  
+
+Definition compare_event (ev1:event) (ev2:event) : bool := 
+  let (s1, v1) := ev1 in 
+  let (s2, v2) := ev1 in 
+  andb (String.eqb s1 s2) (String.eqb s1 s2).
 
 Inductive theta :=
   | bot : theta
   | emp : theta
-  | any 
+  | any : theta
   | theta_singleton : event -> theta
+  | not_event : event -> theta
   | seq : theta -> theta -> theta
   | disj : theta -> theta -> theta
   | kleene : theta -> theta.
@@ -139,7 +152,56 @@ Inductive bigstep : stack -> rho -> futureCond -> expr -> stack -> rho -> future
   | bigstep_event : forall s r f ev, 
     bigstep s r f (pevent ev) s (r ++ (ev::nil)) f cunit
   .
+
+Inductive trace_model : rho -> theta -> Prop :=
+  | tm_emp : trace_model nil emp
+
+  | tm_singleton : forall ev1 ev, 
+    compare_event ev ev1 = true -> 
+    trace_model (ev1::nil) (theta_singleton ev)
+
+  | tm_notevent : forall ev1 ev, 
+    compare_event ev ev1 = false -> 
+    trace_model (ev1::nil) (not_event ev)
+
+
+  | tm_any : forall ev, 
+    trace_model (ev::nil) (any)
+
+  | tm_seq : forall rho rho1 rho2 t1 t2, 
+    rho1 ++ rho2 = rho ->
+    trace_model rho1 t1 -> 
+    trace_model rho2 t2 -> 
+    trace_model rho (seq t1 t2)
+
+  | tm_disj_left : forall rho t1 t2, 
+    trace_model rho t1 -> 
+    trace_model rho (disj t1 t2)
+
+  | tm_disj_right : forall rho t1 t2, 
+    trace_model rho t2 -> 
+    trace_model rho (disj t1 t2)
+
+  | tm_kleene_emp : forall rho t, 
+    trace_model rho emp -> 
+    trace_model rho (kleene t)
+
+  | tm_kleene_rec : forall rho t, 
+    trace_model rho (seq t (kleene t)) -> 
+    trace_model rho (kleene t)
+  . 
     
+Inductive fc_model : rho -> futureCond -> Prop :=
+  | fc_model_singleton : forall rho t, 
+    trace_model rho t -> 
+    fc_model rho (fc_singleton t)
+
+  | fc_model_conj : forall rho f1 f2, 
+    fc_model rho f1 -> 
+    fc_model rho f2 -> 
+    fc_model rho (fc_conj f1 f2)
+    .
+
 
 
 Definition fstEv : Type := (var).
