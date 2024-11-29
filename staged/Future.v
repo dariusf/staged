@@ -239,7 +239,7 @@ Definition post_state : Type := (postcond * theta * futureCond).
 
 Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
   | fw_val: forall t f v h ,
-    forward h t f (pval v) (fun res => \[res = v]) t f. 
+    forward h t f (pval v) (fun res => h \* \[res = v]) t f. 
 
 
 
@@ -326,13 +326,15 @@ Theorem soundness : forall e P t1 t2 Q f1 f2 v h1 h2 rho1 rho2 f',
   Q v h2 /\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  
   
 Proof. 
-  intros. 
+  intros.
   induction H.
-  inverts H0. 
+  invert H0. 
+  intros.
   split.
+  rewrite hstar_hpure_r.
+  split. subst. auto.
   reflexivity.
-  split.
-  exact H1.
+  split. subst. auto.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
 Qed. 
