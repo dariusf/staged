@@ -80,10 +80,6 @@ with expr : Type :=
 
 
 
-Definition compare_event (ev1:event) (ev2:event) : bool := 
-  let (s1, v1) := ev1 in 
-  let (s2, v2) := ev1 in 
-  andb (String.eqb s1 s2) (String.eqb s1 s2).
 
 
 
@@ -99,6 +95,14 @@ Qed.
 Module Val.
   Definition value := val.
 End Val.
+
+
+Definition compare_event (ev1:event) (ev2:event) : bool := 
+  let (s1, v1) := ev1 in 
+  let (s2, v2) := ev2 in 
+  (String.eqb s1 s2).
+
+
 
 
 Definition rho : Type := list (event).
@@ -190,7 +194,7 @@ Inductive trace_model : rho -> theta -> Prop :=
   | tm_emp : trace_model nil emp
 
   | tm_singleton : forall ev1 ev, 
-    compare_event ev ev1 = true -> 
+    ev = ev1 -> 
     trace_model (ev1::nil) (theta_singleton ev)
 
   | tm_any : forall ev, 
@@ -238,8 +242,21 @@ Definition post_state : Type := (postcond * theta * futureCond).
 
 
 Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
-  | fw_val: forall t f v h ,
-    forward h t f (pval v) (fun res => h \* \[res = v]) t f. 
+  | fw_val: forall t f v P ,
+    forward P t f (pval v) (fun res => P \* \[res = v]) t f
+
+  | fw_cond : forall (b:bool) e1 e2 t t1 f f1 P Q, 
+    forward P t f (if b then e1 else e2) Q t1 f1 -> 
+    forward P t f (pif (pval (vbool b)) e1 e2) Q t1 f1
+
+  | fw_event: forall t f P (ev:event) ,
+    forward P t f (pevent ev) (fun res => P \* \[res = vunit]) (seq t (theta_singleton ev)) f
+
+  | fw_let : forall x e1 e2 P t f t1 f1 Q v t2 f2 Q', 
+    forward P t f e1 Q t1 f1  -> 
+    forward (Q v) t1 f1 (subst x v e2) Q' t2 f2 -> 
+    forward P t f (plet x e1 e2) Q' t2 f2.
+
 
 
 
@@ -333,6 +350,13 @@ Proof.
   
 Admitted.
 
+Lemma trace_model_prefix : forall rho t rho1 t1, 
+  trace_model rho t -> 
+  trace_model rho1 t1 -> 
+  trace_model (rho++rho1) (seq t t1).
+Proof.
+Admitted.
+
 
 
 Theorem soundness : forall e P t1 t2 Q f1 f2 v h1 h2 rho1 rho2 f',
@@ -345,6 +369,7 @@ Theorem soundness : forall e P t1 t2 Q f1 f2 v h1 h2 rho1 rho2 f',
 Proof. 
   intros.
   induction H.
+  -
   invert H0.
   intros.
   split.
@@ -354,6 +379,59 @@ Proof.
   split. subst. auto.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
+
+  - 
+  invert H0.
+  intros.
+  apply IHforward. 
+  induction b.
+  exact H13.   
+  lia.
+  exact H1.
+  exact H2.
+  intros.
+  apply IHforward. 
+  induction b.
+  lia.
+  exact H13.   
+  exact H1.
+  exact H2.
+
+  - 
+  invert H0.
+  intros.
+  split.
+  rewrite hstar_hpure_r.
+  split. subst. auto.
+  reflexivity.
+  split.
+  apply trace_model_prefix.
+  exact H2.
+  constructor. reflexivity.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
+
+  -
+  
+
+
+
+  
+  
+
+
+
+
+
+  apply IHforward2.
+  invert H0. invert H3.
+  intros. subst.
+  rewrite H7.
+  rewrite IHforward2. 
+
+  constructor. 
+  unfold bigstep.
+  exact H0. 
 Qed. 
 
 
