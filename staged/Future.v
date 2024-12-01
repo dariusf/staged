@@ -74,9 +74,9 @@ with expr : Type :=
   | passume (f:futureCond)
   | pif (b: expr) (e1: expr) (e2: expr)
   | papp (x: var) (a: val)
-  | pref (v: val)
-  | pderef (l: loc)
-  | passign (x: loc) (v: val). 
+  | pref (v: expr)
+  | pderef (v: expr)
+  | passign (x: expr) (v: expr). 
 
 
 
@@ -139,9 +139,9 @@ Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2)
   | pevent _ => e 
   | passume _ => e
-  | pderef _ => e
-  | passign _ _ => e
-  | pref _ => e
+  | pderef t1 => pderef (aux t1)
+  | passign t1 t2 =>  passign (aux t1) (aux t2)
+  | pref t1 => pref (aux t1)
   end.
 
 (** SLF's heap theory as a functor. *)
@@ -179,15 +179,15 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
 
   | eval_pref : forall h r f loc v,
     ~ Fmap.indom h loc ->
-    bigstep h r f (pref v) (Fmap.update h loc v) r f (vloc loc)
+    bigstep h r f (pref (pval v)) (Fmap.update h loc v) r f (vloc loc)
 
   | eval_pderef : forall h r f loc,
     Fmap.indom h loc ->
-    bigstep h r f (pderef loc) h r f (Fmap.read h loc)
+    bigstep h r f (pderef (pval (vloc loc))) h r f (Fmap.read h loc)
 
   | eval_passign : forall h r f loc v,
     Fmap.indom h loc ->
-    bigstep h r f (passign loc v) (Fmap.update h loc v) r f vunit
+    bigstep h r f (passign (pval (vloc loc)) (pval v)) (Fmap.update h loc v) r f vunit
   .
 
 Inductive trace_model : rho -> theta -> Prop :=
@@ -252,10 +252,19 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
   | fw_event: forall t f P (ev:event) ,
     forward P t f (pevent ev) (fun res => P \* \[res = vunit]) (seq t (theta_singleton ev)) f
 
-  | fw_let : forall x e1 e2 P t f t1 f1 Q v t2 f2 Q', 
+  | fw_ref : forall t f v, 
+    forward \[] t f (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) t f
+  
+  | fw_deref : forall t f loc v, 
+    forward (loc ~~> v) t f (pderef (pval(vloc loc))) (fun res => (loc ~~> v) \* \[res = v])  t f
+
+  | fw_assign : forall t f loc v v', 
+    forward (loc ~~> v') t f (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  t f
+
+  | fw_let : forall x e1 e2 P t f t1 f1 Q t2 f2 Q', 
     forward P t f e1 Q t1 f1  -> 
-    forward (Q v) t1 f1 (subst x v e2) Q' t2 f2 -> 
-    forward P t f (plet x e1 e2) Q' t2 f2.
+    forall v, forward (Q v) t1 f1 (subst x v e2) Q' t2 f2 -> 
+    forward P t f (plet x e1 e2) Q' t2 f2. 
 
 
 
@@ -410,31 +419,73 @@ Proof.
   constructor. reflexivity.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
+  -  
+  invert H0.
+  intros.
+  split. 
+  exists loc0.  
+  rewrite H7.
+  rewrite H10.
+  rewrite hstar_hpure_l.
+  split.
+  reflexivity.
+  rewrite H1 in H7.
+  rewrite Fmap.update_empty in H7. 
+  apply Logic.eq_sym in H7.
+  rewrite H7. 
+  apply hsingle_intro.
+  split.
+  subst. exact H2.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
+
+  - 
+  invert H0.
+  intros.
+  split.
+  rewrite H10.
+  subst. 
+  rewrite hstar_hpure_r. 
+  split. exact H1. 
+  apply hsingle_inv in H1.
+  rewrite H1.
+  apply Fmap.read_single. 
+  split. subst. 
+  exact H2.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
 
   -
-  
+  invert H0.
+  intros.
+  split. 
+  rewrite H6.
+  rewrite hstar_hpure_r. subst.
+  split. 
+  apply hsingle_inv in H1.
+  rewrite H1.
+  rewrite Fmap.update_single.
+  Search (Fmap.single _ _ ). 
+  apply hsingle_intro. 
+  reflexivity. 
+  split. subst.  exact H2.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
 
 
 
-  
-  
 
 
+   
 
 
-
+  -
+  invert H0.
+  intros.  subst. 
   apply IHforward2.
-  invert H0. invert H3.
-  intros. subst.
-  rewrite H7.
-  rewrite IHforward2. 
-
-  constructor. 
-  unfold bigstep.
-  exact H0. 
-Qed. 
-
-
+  induction e2.
+  invert H3.
+  intros.  
 
 
 
@@ -447,6 +498,14 @@ Qed.
  (*
     
 
+  
+  
+  rewrite H7.
+  rewrite IHforward2. 
+
+  constructor. 
+  unfold bigstep.
+  exact H0. 
 
 
 
