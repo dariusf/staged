@@ -360,6 +360,11 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     futureSubtraction fR t1 fR' -> 
     forward P t f' (papp (pval vf) (pval actual_arg)) Q t1 (fc_conj fR' f1) 
 
+
+  | fw_let_var : forall x e2 P t f t1 f1 Q v, 
+    forward P t f (subst x v e2) Q t1 f1 -> 
+    forward P t f (plet x (pval v) e2) Q t1 f1 
+
   | fw_seq : forall e1 e2 P t f t1 f1 Q t2 f2 Q', 
     forward P t f e1 (fun res => Q) t1 f1  -> 
     forward Q t1 f1 e2 Q' t2 f2 -> 
@@ -518,10 +523,21 @@ Proof.
   - (* fun call *)
   invert H0.
 
-  -
+  - (* x=v in e *)
+  invert H0.  intros.  subst. 
+  apply IHforward.
+  invert H13.  intros.  subst.
+  exact H14.
+  exact H1.
+  exact H2.
+
+  
+  - 
   split.
   invert H0.  intros.  subst. 
   (* Stopped here: why this steps hypo so wired ? *)
+
+  invert H9.  
   check (soundness e1)
   eapply H9 in IHforward1. 
   check(). 
