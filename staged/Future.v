@@ -75,8 +75,7 @@ with expr : Type :=
   | pderef (v: expr)
   | passign (x: expr) (v: expr)
   | passume (f:futureCond)
-
-  | papp (x: var) (a: val)
+  | papp (f: expr) (e: expr)
   | plet (x: var) (e1 e2: expr). 
 
 
@@ -111,31 +110,13 @@ Definition rho : Type := list (event).
 Definition fstEvs : Type := list (event).
 
 
-(*
-Fixpoint update_stack  (s:stack) (str:var) (c:constant): stack := 
-  match s with 
-  | nil => (str, c)::nil 
-  | (str1, c1) :: s' => 
-    if (String.eqb str str1) 
-    then (str, c) :: s'
-    else (str1, c1) :: (update_stack s' str c)
-  end. 
-
-Fixpoint read_stack  (s:stack) (str:var) : constant := 
-  match s with 
-  | nil => cint 0 
-  | (str1, c1) :: s' => 
-    if (String.eqb str str1) then c1
-    else (read_stack s' str)
-  end. 
-*)
 Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   let aux t := subst y w t in
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
   | pvar x => if_y_eq x (pval w) e
-  | papp e v => papp e v
+  | papp t1 t2 => papp (aux t1) (aux t2)
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
   | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2)
   | pevent _ => e 
@@ -241,48 +222,6 @@ Inductive fc_model : rho -> futureCond -> Prop :=
 Definition pre_state  : Type := (hprop * futureCond).
 Definition post_state : Type := (postcond * theta * futureCond).
 
-
-Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
-  | fw_val: forall t f v P ,
-    forward P t f (pval v) (fun res => P \* \[res = v]) t f
-
-  | fw_cond : forall (b:bool) e1 e2 t t1 f f1 P Q, 
-    forward P t f (if b then e1 else e2) Q t1 f1 -> 
-    forward P t f (pif (pval (vbool b)) e1 e2) Q t1 f1
-
-  | fw_event: forall t f P (ev:event) ,
-    forward P t f (pevent ev) (fun res => P \* \[res = vunit]) (seq t (theta_singleton ev)) f
-
-  | fw_ref : forall t f v, 
-    forward \[] t f (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) t f
-  
-  | fw_deref : forall t f loc v, 
-    forward (loc ~~> v) t f (pderef (pval(vloc loc))) (fun res => (loc ~~> v) \* \[res = v])  t f
-
-  | fw_assign : forall t f loc v v', 
-    forward (loc ~~> v') t f (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  t f
-
-  | fw_assume : forall P t f f1, 
-    forward P t f (passume f1) (fun res => P \* \[res = vunit])  t (fc_conj f f1) 
-
-
-  | fw_let : forall x e1 e2 P t f t1 f1 Q t2 f2 Q', 
-    forward P t f e1 Q t1 f1  -> 
-    forall v, forward (Q v) t1 f1 (subst x v e2) Q' t2 f2 -> 
-    forward P t f (plet x e1 e2) Q' t2 f2. 
-
-
-
-
-Example ex1 : exists Q, forward \[] emp (fc_singleton emp) (pval (vint 1)) Q emp (fc_singleton emp).
-Proof.
-  eexists.
-  constructor.
-Qed.
-
-Print ex1.
-
-
 Fixpoint nullable (t: theta): bool :=
   match t with
   | bot => false 
@@ -339,6 +278,17 @@ Inductive inclusion : theta -> theta -> bool -> Prop :=
     inclusion t1 t2 true. 
  
 
+
+
+Lemma trace_model_prefix : forall rho t rho1 t1, 
+  trace_model rho t -> 
+  trace_model rho1 t1 -> 
+  trace_model (rho++rho1) (seq t t1).
+Proof.
+Admitted.
+
+
+
 Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop := 
   | futureCondEntail_empty : forall t1 t2, 
     inclusion t1 t2 true -> 
@@ -364,12 +314,62 @@ Proof.
   
 Admitted.
 
-Lemma trace_model_prefix : forall rho t rho1 t1, 
-  trace_model rho t -> 
-  trace_model rho1 t1 -> 
-  trace_model (rho++rho1) (seq t t1).
+Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=  
+  | futureSubtraction_empty : forall f, 
+    futureSubtraction f emp f.  
+
+
+
+
+
+
+Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
+  | fw_val: forall t f v P ,
+    forward P t f (pval v) (fun res => P \* \[res = v]) t f
+
+  | fw_cond : forall (b:bool) e1 e2 t t1 f f1 P Q, 
+    forward P t f (if b then e1 else e2) Q t1 f1 -> 
+    forward P t f (pif (pval (vbool b)) e1 e2) Q t1 f1
+
+  | fw_event: forall t f P (ev:event) ,
+    forward P t f (pevent ev) (fun res => P \* \[res = vunit]) (seq t (theta_singleton ev)) f
+
+  | fw_ref : forall t f v, 
+    forward \[] t f (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) t f
+  
+  | fw_deref : forall t f loc v, 
+    forward (loc ~~> v) t f (pderef (pval(vloc loc))) (fun res => (loc ~~> v) \* \[res = v])  t f
+
+  | fw_assign : forall t f loc v v', 
+    forward (loc ~~> v') t f (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  t f
+
+  | fw_assume : forall P t f f1, 
+    forward P t f (passume f1) (fun res => P \* \[res = vunit])  t (fc_conj f f1) 
+
+  | fw_app : forall vf fromal_arg e actual_arg P t f Q t1 f1 f' fR fR', 
+    vf = vfun fromal_arg e  ->
+    forward P emp f (subst fromal_arg actual_arg e) Q t1 f1  -> 
+    futureCondEntail f' f fR -> 
+    futureSubtraction fR t1 fR' -> 
+    forward P t f' (papp (pval vf) (pval actual_arg)) Q t1 (fc_conj fR' f1) 
+
+  | fw_let : forall x e1 e2 P t f t1 f1 Q t2 f2 Q', 
+    forward P t f e1 Q t1 f1  -> 
+    forall v, forward (Q v) t1 f1 (subst x v e2) Q' t2 f2 -> 
+    forward P t f (plet x e1 e2) Q' t2 f2. 
+
+
+
+
+Example ex1 : exists Q, forward \[] emp (fc_singleton emp) (pval (vint 1)) Q emp (fc_singleton emp).
 Proof.
-Admitted.
+  eexists.
+  constructor.
+Qed.
+
+Print ex1.
+
+
 
 
 
@@ -383,7 +383,7 @@ Theorem soundness : forall e P t1 t2 Q f1 f2 v h1 h2 rho1 rho2 f',
 Proof. 
   intros.
   induction H.
-  -
+  - (* val *)
   invert H0.
   intros.
   split.
@@ -394,7 +394,7 @@ Proof.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
 
-  - 
+  - (* if-else *)
   invert H0.
   intros.
   apply IHforward. 
@@ -411,7 +411,7 @@ Proof.
   exact H1.
   exact H2.
 
-  - 
+  - (* event *)
   invert H0.
   intros.
   split.
@@ -424,7 +424,7 @@ Proof.
   constructor. reflexivity.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
-  -  
+  -  (* ref *)
   invert H0.
   intros.
   split. 
@@ -444,7 +444,7 @@ Proof.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
 
-  - 
+  - (* deref *) 
   invert H0.
   intros.
   split.
@@ -460,7 +460,7 @@ Proof.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
 
-  -
+  - (* assign *) 
   invert H0.
   intros.
   split. 
@@ -477,7 +477,7 @@ Proof.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
 
-  - 
+  - (*assume*)
   invert H0.
   intros.
   split. 
@@ -492,7 +492,8 @@ Proof.
 
   
 
-
+  - (* fun call *)
+  
 
 
    
