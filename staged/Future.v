@@ -76,6 +76,7 @@ with expr : Type :=
   | passign (x: expr) (v: expr)
   | passume (f:futureCond)
   | papp (f: expr) (e: expr)
+  | pseq (e1:expr) (e2:expr)
   | plet (x: var) (e1 e2: expr). 
 
 
@@ -123,6 +124,7 @@ Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   | passume _ => e
   | pderef t1 => pderef (aux t1)
   | passign t1 t2 =>  passign (aux t1) (aux t2)
+  | pseq t1 t2 =>  pseq (aux t1) (aux t2)
   | pref t1 => pref (aux t1)
   end.
 
@@ -144,6 +146,11 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
     bigstep h r f e1 h1 r1 f1 v1 ->
     bigstep h1 r1 f1 (subst x v1 e2) h2 r2 f2 v2 ->
     bigstep h r f (plet x e1 e2) h2 r2 f2 v2
+
+  | eval_seq : forall h r f h1 r1 f1 v1 h2 r2 f2 v2 e1 e2,
+    bigstep h r f e1 h1 r1 f1 v1 ->
+    bigstep h1 r1 f1 e2 h2 r2 f2 v2 ->
+    bigstep h r f (pseq e1 e2) h2 r2 f2 v2
 
   | eval_if_true : forall h r f e1 e2 h' r' f' v, 
     bigstep h r f e1 h' r' f' v -> 
@@ -353,10 +360,18 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     futureSubtraction fR t1 fR' -> 
     forward P t f' (papp (pval vf) (pval actual_arg)) Q t1 (fc_conj fR' f1) 
 
-  | fw_let : forall x e1 e2 P t f t1 f1 Q t2 f2 Q', 
+  | fw_seq : forall e1 e2 P t f t1 f1 Q t2 f2 Q', 
+    forward P t f e1 (fun res => Q) t1 f1  -> 
+    forward Q t1 f1 e2 Q' t2 f2 -> 
+    forward P t f (pseq e1 e2) Q' t2 f2
+
+  
+  | fw_let : forall x e1 e2 P t f t1 f1 Q t2 f2 Q' v, 
     forward P t f e1 Q t1 f1  -> 
-    forall v, forward (Q v) t1 f1 (subst x v e2) Q' t2 f2 -> 
-    forward P t f (plet x e1 e2) Q' t2 f2. 
+    forward (Q v) t1 f1 (subst x v e2) Q' t2 f2 -> 
+    forward P t f (plet x e1 e2) Q' t2 f2
+  
+  . 
 
 
 
@@ -369,7 +384,17 @@ Qed.
 
 Print ex1.
 
-
+Lemma bigstepSeq : forall h1 rho1 f1 v0 h0 r1 f4 v1 e2 h2 rho2 f' v, 
+  bigstep h1 rho1 f1 (pval v0) h0 r1 f4 v1 -> 
+  bigstep h0 r1 f4 e2 h2 rho2 f' v -> 
+  bigstep h1 rho1 f1 e2 h2 rho2 f' v.
+Proof.
+  intros.
+  invert H.
+  intros.
+  subst.
+  exact H0.   
+Qed. 
 
 
 
@@ -490,26 +515,42 @@ Proof.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
 
-  
-
   - (* fun call *)
-  
-
-
-   
-
+  invert H0.
 
   -
-  invert H0.
-  intros.  subst. 
+  split.
+  invert H0.  intros.  subst. 
+  (* Stopped here: why this steps hypo so wired ? *)
+  check (soundness e1)
+  eapply H9 in IHforward1. 
+  check(). 
+  invert H9.  intros.  subst.
+  invert H0.  intros.  subst.
+
+
   apply IHforward2.
+  invert H0. intros.  subst. 
+  eapply bigstepSeq.
+  constructor. 
+  exact H14. 
+  
+  invert H. intros.  subst.   
+  invert H10.
+  intros.  subst. exact H14.
+  intros. subst. invert H11. intros. subst. 
+  invert H0.   intros. subst. 
+  
+  exact H14.
+
+   
   induction e2.
   invert H3.
   intros.  
 
 
 
-
+Qed.
 
 
 
