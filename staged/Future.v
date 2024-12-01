@@ -69,14 +69,15 @@ with futureCond :=
 with expr : Type :=
   | pvar (x: var)
   | pval (v: val)
-  | plet (x: var) (e1 e2: expr)
   | pevent  (ev:event) 
-  | passume (f:futureCond)
   | pif (b: expr) (e1: expr) (e2: expr)
-  | papp (x: var) (a: val)
   | pref (v: expr)
   | pderef (v: expr)
-  | passign (x: expr) (v: expr). 
+  | passign (x: expr) (v: expr)
+  | passume (f:futureCond)
+
+  | papp (x: var) (a: val)
+  | plet (x: var) (e1 e2: expr). 
 
 
 
@@ -260,6 +261,10 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
 
   | fw_assign : forall t f loc v v', 
     forward (loc ~~> v') t f (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  t f
+
+  | fw_assume : forall P t f f1, 
+    forward P t f (passume f1) (fun res => P \* \[res = vunit])  t (fc_conj f f1) 
+
 
   | fw_let : forall x e1 e2 P t f t1 f1 Q t2 f2 Q', 
     forward P t f e1 Q t1 f1  -> 
@@ -472,6 +477,20 @@ Proof.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
 
+  - 
+  invert H0.
+  intros.
+  split. 
+  rewrite hstar_hpure_r. subst.
+  split. exact H1. 
+  reflexivity.
+  split.
+  subst.
+  exact H2.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
+
+  
 
 
 
