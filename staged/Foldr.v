@@ -593,6 +593,9 @@ Proof.
     fintro x0. finst x0.
     fintro a. finst a.
     rewrite norm_reassoc.
+    (* dup. *)
+    (* apply ent_req_r. *)
+
     apply ent_req_req. xsimpl.
     (* extract the pure part *)
     rewrite norm_ens_ens_void_split.
