@@ -1721,7 +1721,16 @@ Lemma triple_let : forall x t1 t2 Q1 H Q,
   triple t1 H Q1 ->
   (forall v1, triple (subst x v1 t2) (Q1 v1) Q) ->
   triple (trm_let x t1 t2) H Q.
-Proof using. introv M1 M2 Hs. applys* eval_let. Qed.
+Proof using. introv M1 M2 Hs.  
+  (*The following repalces: applys* eval_let.*)
+  pose proof (eval_let).
+  unfold triple in M1. 
+  unfold triple in M2.
+  eapply H0.
+  eapply M1.
+  exact Hs.
+  exact M2. 
+Qed.
 
 Lemma triple_let_val : forall x v1 t2 H Q,
   triple (subst x v1 t2) H Q ->

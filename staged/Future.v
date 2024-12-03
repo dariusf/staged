@@ -18,20 +18,6 @@ Set Implicit Arguments.
 
 From Coq Require Recdef.
 
-(*
-Definition sum_len {A} (ls : (list A * list A)) : nat :=
-  length (fst ls) + length (snd ls).
-
-Function interleave3 {A} (ls : (list A * list A))
-  {measure sum_len ls} : list A :=
-  match ls with
-  | (nil, _) => nil
-  | (h :: t, l2) => h :: interleave3 (l2, t)
-  end.
-Proof.
-  intros A ls l1 l2 h t -> ->; unfold sum_len; simpl; rewrite Nat.add_comm; trivial with arith.
-Defined.
-*)
 
 
 (** * Programs *)
@@ -136,49 +122,6 @@ Definition empty_heap : heap := Fmap.empty.
 Definition precond := hprop.
 Definition postcond := val -> hprop.
 
-
-
-Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCond  -> val -> Prop :=
-  | eval_const : forall h r f v, 
-    bigstep h r f (pval v) h r f v
-  
-  | eval_let : forall h r f h1 r1 f1 v1 h2 r2 f2 v2 x e1 e2,
-    bigstep h r f e1 h1 r1 f1 v1 ->
-    bigstep h1 r1 f1 (subst x v1 e2) h2 r2 f2 v2 ->
-    bigstep h r f (plet x e1 e2) h2 r2 f2 v2
-
-  | eval_seq : forall h r f h1 r1 f1 v1 h2 r2 f2 v2 e1 e2,
-    bigstep h r f e1 h1 r1 f1 v1 ->
-    bigstep h1 r1 f1 e2 h2 r2 f2 v2 ->
-    bigstep h r f (pseq e1 e2) h2 r2 f2 v2
-
-  | eval_if_true : forall h r f e1 e2 h' r' f' v, 
-    bigstep h r f e1 h' r' f' v -> 
-    bigstep h r f (pif (pval (vbool true)) e1 e2) h' r' f' v
-
-  | eval_if_false : forall h r f e1 e2 h' r' f' v, 
-    bigstep h r f e2 h' r' f' v -> 
-    bigstep h r f (pif (pval (vbool false)) e1 e2) h' r' f' v
-
-  | eval_assume : forall h r f f_assume, 
-    bigstep h r f (passume f_assume) h r (fc_conj f f_assume) vunit
-
-  | eval_event : forall h r f ev, 
-    bigstep h r f (pevent ev) h (r ++ (ev::nil)) f vunit
-
-  | eval_pref : forall h r f loc v,
-    ~ Fmap.indom h loc ->
-    bigstep h r f (pref (pval v)) (Fmap.update h loc v) r f (vloc loc)
-
-  | eval_pderef : forall h r f loc,
-    Fmap.indom h loc ->
-    bigstep h r f (pderef (pval (vloc loc))) h r f (Fmap.read h loc)
-
-  | eval_passign : forall h r f loc v,
-    Fmap.indom h loc ->
-    bigstep h r f (passign (pval (vloc loc)) (pval v)) (Fmap.update h loc v) r f vunit
-  .
-
 Inductive trace_model : rho -> theta -> Prop :=
   | tm_emp : trace_model nil emp
 
@@ -212,6 +155,124 @@ Inductive trace_model : rho -> theta -> Prop :=
     trace_model rho (kleene t)
   . 
     
+
+(*
+Inductive bigstep : heap -> rho -> expr -> heap -> rho -> val -> Prop :=
+  | eval_plet : forall h1 h3 h2 x e1 e2 v r rho rho1 rho2,
+    bigstep h1 rho e1 h3 rho2 v ->
+    bigstep h3 rho1 (subst x v e2) h2 rho2 r ->
+    bigstep h1 rho (plet x e1 e2) h2 rho2 r. 
+*)
+
+Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
+  | eval_plet : forall h1 h3 h2 x e1 e2 v r,
+    bigstep h1  e1 h3  v ->
+    bigstep h3  (subst x v e2) h2  r ->
+    bigstep h1  (plet x e1 e2) h2  r. 
+
+Inductive forward : hprop -> expr -> (val -> hprop) -> Prop := 
+  | fw_let : forall x e1 e2 P Q Q1, 
+    forward P e1 Q   -> 
+    (forall v, forward (Q v) (subst x v e2) Q1 ) -> 
+    forward P (plet x e1 e2) Q1.
+
+Theorem soundness : forall P e Q,
+  forward P e Q ->  
+  forall h1 v h2, 
+  P h1 -> 
+  bigstep h1 e h2 v ->  
+  Q v h2 . (*/\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  *)
+Proof.
+  introv.
+  intros. 
+  gen h1 v h2.
+  induction H.
+  -
+  intros.
+  invert H3. intros. subst.
+  specialize (IHforward h1).
+  specialize (IHforward H2).
+  specialize (IHforward v0 h3).
+  specialize (IHforward H10).
+  eapply H1.
+  exact  IHforward.
+  exact H11.
+Qed.   
+
+
+
+Definition triple (H:hprop) (t1:theta) (e:expr) (t2: theta) (H:hprop) (Q:val->hprop) : Prop :=
+  forall s rho1 rho2, H s -> trace_model rho1 t1 -> 
+  eval s rho1 e Q rho2 /\ trace_model rho2 . 
+
+Lemma triple_let : forall x e1 e2 Q1 H Q rho1 rho2,
+  triple H e1 t1 H Q1 t1 ->
+
+  (forall v1, triple (subst x v1 e2) (Q1 v1) Q) ->
+  triple (plet x e1 e2) H Q.
+Proof using.
+  intros.
+  pose proof (eval_let).
+  unfold triple in H1.
+  unfold triple in H0.
+  unfold triple.
+  intros.
+  eapply H2.
+  eapply H0.
+  exact H3.
+  exact H1.
+Qed.       
+
+  
+
+  (*
+  Inductive bigstep : heap -> rho -> futureCond -> expr -> (val->heap->Prop) -> rho -> futureCond  -> Prop := 
+  | eval_const : forall h r f Q v, 
+    Q v h -> 
+    bigstep h r f (pval v) Q r f
+  
+  | eval_let : forall h r f Q1 Q2 r1 f1 r2 f2 x e1 e2,
+    bigstep h r f e1 Q1 r1 f1 ->
+    (forall v h1, 
+    Q1 v h1 -> 
+    bigstep h1 r1 f1 (subst x v e2) Q2 r2 f2) ->
+    bigstep h r f (plet x e1 e2) Q2 r2 f2.
+
+| eval_seq : forall h r f h1 r1 f1 v1 h2 r2 f2 v2 e1 e2,
+    bigstep h r f e1 h1 r1 f1 v1 ->
+    bigstep h1 r1 f1 e2 h2 r2 f2 v2 ->
+    bigstep h r f (pseq e1 e2) h2 r2 f2 v2
+
+  | eval_if_true : forall h r f e1 e2 h' r' f' v, 
+    bigstep h r f e1 h' r' f' v -> 
+    bigstep h r f (pif (pval (vbool true)) e1 e2) h' r' f' v
+
+  | eval_if_false : forall h r f e1 e2 h' r' f' v, 
+    bigstep h r f e2 h' r' f' v -> 
+    bigstep h r f (pif (pval (vbool false)) e1 e2) h' r' f' v
+
+  | eval_assume : forall h r f f_assume, 
+    bigstep h r f (passume f_assume) h r (fc_conj f f_assume) vunit
+
+  | eval_event : forall h r f ev, 
+    bigstep h r f (pevent ev) h (r ++ (ev::nil)) f vunit
+
+  | eval_pref : forall h r f loc v,
+    ~ Fmap.indom h loc ->
+    bigstep h r f (pref (pval v)) (Fmap.update h loc v) r f (vloc loc)
+
+  | eval_pderef : forall h r f loc,
+    Fmap.indom h loc ->
+    bigstep h r f (pderef (pval (vloc loc))) h r f (Fmap.read h loc)
+
+  | eval_passign : forall h r f loc v,
+    Fmap.indom h loc ->
+    bigstep h r f (passign (pval (vloc loc)) (pval v)) (Fmap.update h loc v) r f vunit
+  .
+*)
+
+
+
 Inductive fc_model : rho -> futureCond -> Prop :=
   | fc_model_singleton : forall rho t, 
     trace_model rho t -> 
@@ -326,11 +387,23 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
     futureSubtraction f emp f.  
 
 
+Inductive forward : hprop -> expr -> (val -> hprop) -> Prop := 
+
+  | fw_let : forall x e1 e2 P  Q Q1, 
+    forward P e1 Q   -> 
+    (forall v, forward (Q v) (subst x v e2) Q1 ) -> 
+    forward P (plet x e1 e2) Q1.
 
 
 
-
+(*
 Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
+
+  | fw_let : forall x e1 e2 P t f t1 f1 Q t2 f2 Q', 
+    forward P t f e1 Q t1 f1  -> 
+    (forall v, forward (Q v) t1 f1 (subst x v e2) Q' t2 f2) -> 
+    forward P t f (plet x e1 e2) Q' t2 f2
+
   | fw_val: forall t f v P ,
     forward P t f (pval v) (fun res => P \* \[res = v]) t f
 
@@ -370,16 +443,6 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     forward Q t1 f1 e2 Q' t2 f2 -> 
     forward P t f (pseq e1 e2) Q' t2 f2
 
-  
-  | fw_let : forall x e1 e2 P t f t1 f1 Q t2 f2 Q' v, 
-    forward P t f e1 Q t1 f1  -> 
-    forward (Q v) t1 f1 (subst x v e2) Q' t2 f2 -> 
-    forward P t f (plet x e1 e2) Q' t2 f2
-  
-  . 
-
-
-
 
 Example ex1 : exists Q, forward \[] emp (fc_singleton emp) (pval (vint 1)) Q emp (fc_singleton emp).
 Proof.
@@ -388,31 +451,87 @@ Proof.
 Qed.
 
 Print ex1.
+  . 
+*)
 
-Lemma bigstepSeq : forall h1 rho1 f1 v0 h0 r1 f4 v1 e2 h2 rho2 f' v, 
-  bigstep h1 rho1 f1 (pval v0) h0 r1 f4 v1 -> 
-  bigstep h0 r1 f4 e2 h2 rho2 f' v -> 
-  bigstep h1 rho1 f1 e2 h2 rho2 f' v.
+
+
+
+
+
+(*Lemma bigstepSeq : forall h1 rho1 f1 v0 Q0 r1 f4 e2 Q2 rho2 f', 
+  bigstep h1 rho1 f1 (pval v0) Q0 r1 f4 -> 
+  forall v h0, 
+  Q0 v h0 -> 
+  bigstep h0 r1 f4 e2 Q2 rho2 f' -> 
+  bigstep h1 rho1 f1 e2 Q2 rho2 f'.
 Proof.
-  intros.
+  intros. 
+  gen v h0.   
   invert H.
   intros.
   subst.
   exact H0.   
-Qed. 
+Qed.
 
-
-
-Theorem soundness : forall e P t1 t2 Q f1 f2 v h1 h2 rho1 rho2 f',
+Theorem soundness : forall P t1 f1 e Q t2 f2 h1 hQ v h2 f' rho1 rho2 ,
   forward P t1 f1 e Q t2 f2 ->  
-  bigstep h1 rho1 f1 e h2 rho2 f' v -> 
   P h1 -> 
-  trace_model rho1 t1 -> 
-  Q v h2 /\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  
+  (*trace_model rho1 t1 -> *)
+  hQ v h2 -> 
+  bigstep h1 rho1 f1 e hQ rho2 f' -> 
+  Q v h2. (*/\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  *)
   
-Proof. 
-  intros.
+ *)
+
+
+Theorem soundness : forall P e Q h1 hQ v h2,
+  forward P e Q ->  
+  P h1 -> 
+  (*trace_model rho1 t1 -> *)
+  bigstep h1 e hQ -> 
+  hQ v h2 -> 
+  Q v h2. (*/\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  *)
+  
+Proof.
+  introv H.
+  gen h1 hQ h2.  
   induction H.
+  intros.
+  -
+
+  invert H3. intros. subst.
+  specialize (H0 v).
+  specialize (H1 v h2).
+  specialize (H11 v h2).
+  specialize (IHforward h1 Q0 h2).
+  specialize (IHforward H2 H10).
+  specialize (H1 Q0 h2).
+  invert H0. intros. subst.
+  apply H1.
+  
+  h1 Q1 v h2 rho1 r1 f3). 
+  specialize (IHforward2 h0 hQ v0 h2 r1 rho2 f'). 
+
+    specialize (IHforward1 H1 H14 H10).
+
+
+  apply (IHforward2 h0 hQ r1 rho2 f' v1 h2).
+  exact H1. 
+
+    destr IHforward1.
+
+
+  split.
+  exact  H2. 
+
+  check (IHforward1 h1 Q1 rho1 r1 f3). 
+
+
+  invert H0.
+  
+
+
   - (* val *)
   invert H0.
   intros.
@@ -716,3 +835,13 @@ Theorem soundness : forall e f,
   derivable e f -> valid e f.
 
  *)
+
+(*
+
+$ opam pin add coq 8.18.0
+$ opam install vscoq-language-server
+
+$ which vscoqtop
+
+opam pin add vscoq-language-server.2.2.1  https://github.com/coq/vscoq/releases/download/v2.2.1/vscoq-language-server-2.2.1.tar.gz
+*)
