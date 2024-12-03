@@ -152,126 +152,7 @@ Inductive trace_model : rho -> theta -> Prop :=
 
   | tm_kleene_rec : forall rho t, 
     trace_model rho (seq t (kleene t)) -> 
-    trace_model rho (kleene t)
-  . 
-    
-
-(*
-Inductive bigstep : heap -> rho -> expr -> heap -> rho -> val -> Prop :=
-  | eval_plet : forall h1 h3 h2 x e1 e2 v r rho rho1 rho2,
-    bigstep h1 rho e1 h3 rho2 v ->
-    bigstep h3 rho1 (subst x v e2) h2 rho2 r ->
-    bigstep h1 rho (plet x e1 e2) h2 rho2 r. 
-*)
-
-Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
-  | eval_plet : forall h1 h3 h2 x e1 e2 v r,
-    bigstep h1  e1 h3  v ->
-    bigstep h3  (subst x v e2) h2  r ->
-    bigstep h1  (plet x e1 e2) h2  r. 
-
-Inductive forward : hprop -> expr -> (val -> hprop) -> Prop := 
-  | fw_let : forall x e1 e2 P Q Q1, 
-    forward P e1 Q   -> 
-    (forall v, forward (Q v) (subst x v e2) Q1 ) -> 
-    forward P (plet x e1 e2) Q1.
-
-Theorem soundness : forall P e Q,
-  forward P e Q ->  
-  forall h1 v h2, 
-  P h1 -> 
-  bigstep h1 e h2 v ->  
-  Q v h2 . (*/\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  *)
-Proof.
-  introv.
-  intros. 
-  gen h1 v h2.
-  induction H.
-  -
-  intros.
-  invert H3. intros. subst.
-  specialize (IHforward h1).
-  specialize (IHforward H2).
-  specialize (IHforward v0 h3).
-  specialize (IHforward H10).
-  eapply H1.
-  exact  IHforward.
-  exact H11.
-Qed.   
-
-
-
-Definition triple (H:hprop) (t1:theta) (e:expr) (t2: theta) (H:hprop) (Q:val->hprop) : Prop :=
-  forall s rho1 rho2, H s -> trace_model rho1 t1 -> 
-  eval s rho1 e Q rho2 /\ trace_model rho2 . 
-
-Lemma triple_let : forall x e1 e2 Q1 H Q rho1 rho2,
-  triple H e1 t1 H Q1 t1 ->
-
-  (forall v1, triple (subst x v1 e2) (Q1 v1) Q) ->
-  triple (plet x e1 e2) H Q.
-Proof using.
-  intros.
-  pose proof (eval_let).
-  unfold triple in H1.
-  unfold triple in H0.
-  unfold triple.
-  intros.
-  eapply H2.
-  eapply H0.
-  exact H3.
-  exact H1.
-Qed.       
-
-  
-
-  (*
-  Inductive bigstep : heap -> rho -> futureCond -> expr -> (val->heap->Prop) -> rho -> futureCond  -> Prop := 
-  | eval_const : forall h r f Q v, 
-    Q v h -> 
-    bigstep h r f (pval v) Q r f
-  
-  | eval_let : forall h r f Q1 Q2 r1 f1 r2 f2 x e1 e2,
-    bigstep h r f e1 Q1 r1 f1 ->
-    (forall v h1, 
-    Q1 v h1 -> 
-    bigstep h1 r1 f1 (subst x v e2) Q2 r2 f2) ->
-    bigstep h r f (plet x e1 e2) Q2 r2 f2.
-
-| eval_seq : forall h r f h1 r1 f1 v1 h2 r2 f2 v2 e1 e2,
-    bigstep h r f e1 h1 r1 f1 v1 ->
-    bigstep h1 r1 f1 e2 h2 r2 f2 v2 ->
-    bigstep h r f (pseq e1 e2) h2 r2 f2 v2
-
-  | eval_if_true : forall h r f e1 e2 h' r' f' v, 
-    bigstep h r f e1 h' r' f' v -> 
-    bigstep h r f (pif (pval (vbool true)) e1 e2) h' r' f' v
-
-  | eval_if_false : forall h r f e1 e2 h' r' f' v, 
-    bigstep h r f e2 h' r' f' v -> 
-    bigstep h r f (pif (pval (vbool false)) e1 e2) h' r' f' v
-
-  | eval_assume : forall h r f f_assume, 
-    bigstep h r f (passume f_assume) h r (fc_conj f f_assume) vunit
-
-  | eval_event : forall h r f ev, 
-    bigstep h r f (pevent ev) h (r ++ (ev::nil)) f vunit
-
-  | eval_pref : forall h r f loc v,
-    ~ Fmap.indom h loc ->
-    bigstep h r f (pref (pval v)) (Fmap.update h loc v) r f (vloc loc)
-
-  | eval_pderef : forall h r f loc,
-    Fmap.indom h loc ->
-    bigstep h r f (pderef (pval (vloc loc))) h r f (Fmap.read h loc)
-
-  | eval_passign : forall h r f loc v,
-    Fmap.indom h loc ->
-    bigstep h r f (passign (pval (vloc loc)) (pval v)) (Fmap.update h loc v) r f vunit
-  .
-*)
-
-
+    trace_model rho (kleene t).
 
 Inductive fc_model : rho -> futureCond -> Prop :=
   | fc_model_singleton : forall rho t, 
@@ -284,11 +165,6 @@ Inductive fc_model : rho -> futureCond -> Prop :=
     fc_model rho (fc_conj f1 f2)
     .
 
-
-
-
-Definition pre_state  : Type := (hprop * futureCond).
-Definition post_state : Type := (postcond * theta * futureCond).
 
 Fixpoint nullable (t: theta): bool :=
   match t with
@@ -387,6 +263,108 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
     futureSubtraction f emp f.  
 
 
+
+
+
+Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCond -> val -> Prop :=
+  | eval_plet : forall h1 h2 h3 x e1 e2 v r rho1 rho2 rho3 f1 f2 f3,
+    bigstep h1 rho1 f1 e1 h2 rho2 f2 v ->
+    bigstep h2 rho2 f2 (subst x v e2) h3 rho3 f3 r ->
+    bigstep h1 rho1 f1 (plet x e1 e2) h3 rho3 f3 r. 
+
+Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
+  | fw_let : forall x e1 e2 P Q Q1 t1 t2 t3 f1 f2 f3, 
+    forward P t1 f1 e1 Q t2 f2  -> 
+    (forall v, forward (Q v) t2 f2 (subst x v e2) Q1 t3 f3 ) -> 
+    forward P t1 f1 (plet x e1 e2) Q1 t3 f3.
+
+Lemma strengthening_futureCond_from_pre: forall f1 f2 fR h1 rho1 e h2 rho2 f v, 
+  futureCondEntail f1 f2 fR -> 
+  bigstep h1 rho1 f2 e h2 rho2 f v -> 
+  bigstep h1 rho1 f1 e h2 rho2 f v. 
+Proof. Admitted. 
+
+Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
+  forward P t1 f1 e Q t2 f2 ->  
+  P h1 -> 
+  trace_model rho1 t1 -> 
+  bigstep h1 rho1 f1 e h2 rho2 f3 v ->  
+  Q v h2 /\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f3 f_Res.  
+Proof. 
+  introv.
+  intros. 
+  gen h1 v h2 rho1 rho2 f3.
+  induction H.
+  -
+  intros.
+  invert H4. intros. subst.
+  specialize (IHforward h1).
+  specialize (IHforward H2).
+  specialize (IHforward v0 h3 rho1).
+  specialize (IHforward H3).
+  specialize (IHforward rho3 f5).
+  specialize (IHforward H15).
+  destr IHforward.
+
+  eapply H1.
+  exact  H4.
+  exact H6.
+  eapply strengthening_futureCond_from_pre. 
+  exact H5.
+  exact H16.
+Qed.   
+
+
+
+
+  (*
+  Inductive bigstep : heap -> rho -> futureCond -> expr -> (val->heap->Prop) -> rho -> futureCond  -> Prop := 
+  | eval_const : forall h r f Q v, 
+    Q v h -> 
+    bigstep h r f (pval v) Q r f
+  
+  | eval_let : forall h r f Q1 Q2 r1 f1 r2 f2 x e1 e2,
+    bigstep h r f e1 Q1 r1 f1 ->
+    (forall v h1, 
+    Q1 v h1 -> 
+    bigstep h1 r1 f1 (subst x v e2) Q2 r2 f2) ->
+    bigstep h r f (plet x e1 e2) Q2 r2 f2.
+
+| eval_seq : forall h r f h1 r1 f1 v1 h2 r2 f2 v2 e1 e2,
+    bigstep h r f e1 h1 r1 f1 v1 ->
+    bigstep h1 r1 f1 e2 h2 r2 f2 v2 ->
+    bigstep h r f (pseq e1 e2) h2 r2 f2 v2
+
+  | eval_if_true : forall h r f e1 e2 h' r' f' v, 
+    bigstep h r f e1 h' r' f' v -> 
+    bigstep h r f (pif (pval (vbool true)) e1 e2) h' r' f' v
+
+  | eval_if_false : forall h r f e1 e2 h' r' f' v, 
+    bigstep h r f e2 h' r' f' v -> 
+    bigstep h r f (pif (pval (vbool false)) e1 e2) h' r' f' v
+
+  | eval_assume : forall h r f f_assume, 
+    bigstep h r f (passume f_assume) h r (fc_conj f f_assume) vunit
+
+  | eval_event : forall h r f ev, 
+    bigstep h r f (pevent ev) h (r ++ (ev::nil)) f vunit
+
+  | eval_pref : forall h r f loc v,
+    ~ Fmap.indom h loc ->
+    bigstep h r f (pref (pval v)) (Fmap.update h loc v) r f (vloc loc)
+
+  | eval_pderef : forall h r f loc,
+    Fmap.indom h loc ->
+    bigstep h r f (pderef (pval (vloc loc))) h r f (Fmap.read h loc)
+
+  | eval_passign : forall h r f loc v,
+    Fmap.indom h loc ->
+    bigstep h r f (passign (pval (vloc loc)) (pval v)) (Fmap.update h loc v) r f vunit
+  .
+*)
+
+
+
 Inductive forward : hprop -> expr -> (val -> hprop) -> Prop := 
 
   | fw_let : forall x e1 e2 P  Q Q1, 
@@ -483,211 +461,6 @@ Theorem soundness : forall P t1 f1 e Q t2 f2 h1 hQ v h2 f' rho1 rho2 ,
   Q v h2. (*/\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  *)
   
  *)
-
-
-Theorem soundness : forall P e Q h1 hQ v h2,
-  forward P e Q ->  
-  P h1 -> 
-  (*trace_model rho1 t1 -> *)
-  bigstep h1 e hQ -> 
-  hQ v h2 -> 
-  Q v h2. (*/\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  *)
-  
-Proof.
-  introv H.
-  gen h1 hQ h2.  
-  induction H.
-  intros.
-  -
-
-  invert H3. intros. subst.
-  specialize (H0 v).
-  specialize (H1 v h2).
-  specialize (H11 v h2).
-  specialize (IHforward h1 Q0 h2).
-  specialize (IHforward H2 H10).
-  specialize (H1 Q0 h2).
-  invert H0. intros. subst.
-  apply H1.
-  
-  h1 Q1 v h2 rho1 r1 f3). 
-  specialize (IHforward2 h0 hQ v0 h2 r1 rho2 f'). 
-
-    specialize (IHforward1 H1 H14 H10).
-
-
-  apply (IHforward2 h0 hQ r1 rho2 f' v1 h2).
-  exact H1. 
-
-    destr IHforward1.
-
-
-  split.
-  exact  H2. 
-
-  check (IHforward1 h1 Q1 rho1 r1 f3). 
-
-
-  invert H0.
-  
-
-
-  - (* val *)
-  invert H0.
-  intros.
-  split.
-  rewrite hstar_hpure_r.
-  split. subst. auto.
-  reflexivity.
-  split. subst. auto.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
-
-  - (* if-else *)
-  invert H0.
-  intros.
-  apply IHforward. 
-  induction b.
-  exact H13.   
-  lia.
-  exact H1.
-  exact H2.
-  intros.
-  apply IHforward. 
-  induction b.
-  lia.
-  exact H13.   
-  exact H1.
-  exact H2.
-
-  - (* event *)
-  invert H0.
-  intros.
-  split.
-  rewrite hstar_hpure_r.
-  split. subst. auto.
-  reflexivity.
-  split.
-  apply trace_model_prefix.
-  exact H2.
-  constructor. reflexivity.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
-  -  (* ref *)
-  invert H0.
-  intros.
-  split. 
-  exists loc0.  
-  rewrite H7.
-  rewrite H10.
-  rewrite hstar_hpure_l.
-  split.
-  reflexivity.
-  rewrite H1 in H7.
-  rewrite Fmap.update_empty in H7. 
-  apply Logic.eq_sym in H7.
-  rewrite H7. 
-  apply hsingle_intro.
-  split.
-  subst. exact H2.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
-
-  - (* deref *) 
-  invert H0.
-  intros.
-  split.
-  rewrite H10.
-  subst. 
-  rewrite hstar_hpure_r. 
-  split. exact H1. 
-  apply hsingle_inv in H1.
-  rewrite H1.
-  apply Fmap.read_single. 
-  split. subst. 
-  exact H2.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
-
-  - (* assign *) 
-  invert H0.
-  intros.
-  split. 
-  rewrite H6.
-  rewrite hstar_hpure_r. subst.
-  split. 
-  apply hsingle_inv in H1.
-  rewrite H1.
-  rewrite Fmap.update_single.
-  Search (Fmap.single _ _ ). 
-  apply hsingle_intro. 
-  reflexivity. 
-  split. subst.  exact H2.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
-
-  - (*assume*)
-  invert H0.
-  intros.
-  split. 
-  rewrite hstar_hpure_r. subst.
-  split. exact H1. 
-  reflexivity.
-  split.
-  subst.
-  exact H2.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
-
-  - (* fun call *)
-  invert H0.
-
-  - (* x=v in e *)
-  invert H0.  intros.  subst. 
-  apply IHforward.
-  invert H13.  intros.  subst.
-  exact H14.
-  exact H1.
-  exact H2.
-
-  
-  - 
-  split.
-  invert H0.  intros.  subst. 
-  (* Stopped here: why this steps hypo so wired ? *)
-
-  invert H9.  
-  check (soundness e1)
-  eapply H9 in IHforward1. 
-  check(). 
-  invert H9.  intros.  subst.
-  invert H0.  intros.  subst.
-
-
-  apply IHforward2.
-  invert H0. intros.  subst. 
-  eapply bigstepSeq.
-  constructor. 
-  exact H14. 
-  
-  invert H. intros.  subst.   
-  invert H10.
-  intros.  subst. exact H14.
-  intros. subst. invert H11. intros. subst. 
-  invert H0.   intros. subst. 
-  
-  exact H14.
-
-   
-  induction e2.
-  invert H3.
-  intros.  
-
-
-
-Qed.
-
-
 
 
 
