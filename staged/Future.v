@@ -270,71 +270,11 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
   | eval_plet : forall h1 h2 h3 x e1 e2 v r rho1 rho2 rho3 f1 f2 f3,
     bigstep h1 rho1 f1 e1 h2 rho2 f2 v ->
     bigstep h2 rho2 f2 (subst x v e2) h3 rho3 f3 r ->
-    bigstep h1 rho1 f1 (plet x e1 e2) h3 rho3 f3 r. 
-
-Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
-  | fw_let : forall x e1 e2 P Q Q1 t1 t2 t3 f1 f2 f3, 
-    forward P t1 f1 e1 Q t2 f2  -> 
-    (forall v, forward (Q v) t2 f2 (subst x v e2) Q1 t3 f3 ) -> 
-    forward P t1 f1 (plet x e1 e2) Q1 t3 f3.
-
-Lemma strengthening_futureCond_from_pre: forall f1 f2 fR h1 rho1 e h2 rho2 f v, 
-  futureCondEntail f1 f2 fR -> 
-  bigstep h1 rho1 f2 e h2 rho2 f v -> 
-  bigstep h1 rho1 f1 e h2 rho2 f v. 
-Proof. Admitted. 
-
-Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
-  forward P t1 f1 e Q t2 f2 ->  
-  P h1 -> 
-  trace_model rho1 t1 -> 
-  bigstep h1 rho1 f1 e h2 rho2 f3 v ->  
-  Q v h2 /\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f3 f_Res.  
-Proof. 
-  introv.
-  intros. 
-  gen h1 v h2 rho1 rho2 f3.
-  induction H.
-  -
-  intros.
-  invert H4. intros. subst.
-  specialize (IHforward h1).
-  specialize (IHforward H2).
-  specialize (IHforward v0 h3 rho1).
-  specialize (IHforward H3).
-  specialize (IHforward rho3 f5).
-  specialize (IHforward H15).
-  destr IHforward.
-
-  eapply H1.
-  exact  H4.
-  exact H6.
-  eapply strengthening_futureCond_from_pre. 
-  exact H5.
-  exact H16.
-Qed.   
-
-
-
-
-  (*
-  Inductive bigstep : heap -> rho -> futureCond -> expr -> (val->heap->Prop) -> rho -> futureCond  -> Prop := 
-  | eval_const : forall h r f Q v, 
-    Q v h -> 
-    bigstep h r f (pval v) Q r f
+    bigstep h1 rho1 f1 (plet x e1 e2) h3 rho3 f3 r
+    
+  | eval_const : forall h r f v, 
+    bigstep h r f (pval v) h r f v 
   
-  | eval_let : forall h r f Q1 Q2 r1 f1 r2 f2 x e1 e2,
-    bigstep h r f e1 Q1 r1 f1 ->
-    (forall v h1, 
-    Q1 v h1 -> 
-    bigstep h1 r1 f1 (subst x v e2) Q2 r2 f2) ->
-    bigstep h r f (plet x e1 e2) Q2 r2 f2.
-
-| eval_seq : forall h r f h1 r1 f1 v1 h2 r2 f2 v2 e1 e2,
-    bigstep h r f e1 h1 r1 f1 v1 ->
-    bigstep h1 r1 f1 e2 h2 r2 f2 v2 ->
-    bigstep h r f (pseq e1 e2) h2 r2 f2 v2
-
   | eval_if_true : forall h r f e1 e2 h' r' f' v, 
     bigstep h r f e1 h' r' f' v -> 
     bigstep h r f (pif (pval (vbool true)) e1 e2) h' r' f' v
@@ -346,8 +286,9 @@ Qed.
   | eval_assume : forall h r f f_assume, 
     bigstep h r f (passume f_assume) h r (fc_conj f f_assume) vunit
 
-  | eval_event : forall h r f ev, 
-    bigstep h r f (pevent ev) h (r ++ (ev::nil)) f vunit
+  | eval_event : forall h r f ev f', 
+    futureSubtraction f (theta_singleton ev) f' -> 
+    bigstep h r f (pevent ev) h (r ++ (ev::nil)) f' vunit
 
   | eval_pref : forall h r f loc v,
     ~ Fmap.indom h loc ->
@@ -360,28 +301,14 @@ Qed.
   | eval_passign : forall h r f loc v,
     Fmap.indom h loc ->
     bigstep h r f (passign (pval (vloc loc)) (pval v)) (Fmap.update h loc v) r f vunit
-  .
-*)
+. 
 
-
-
-Inductive forward : hprop -> expr -> (val -> hprop) -> Prop := 
-
-  | fw_let : forall x e1 e2 P  Q Q1, 
-    forward P e1 Q   -> 
-    (forall v, forward (Q v) (subst x v e2) Q1 ) -> 
-    forward P (plet x e1 e2) Q1.
-
-
-
-(*
 Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
-
-  | fw_let : forall x e1 e2 P t f t1 f1 Q t2 f2 Q', 
-    forward P t f e1 Q t1 f1  -> 
-    (forall v, forward (Q v) t1 f1 (subst x v e2) Q' t2 f2) -> 
-    forward P t f (plet x e1 e2) Q' t2 f2
-
+  | fw_let : forall x e1 e2 P Q Q1 t1 t2 t3 f1 f2 f3, 
+    forward P t1 f1 e1 Q t2 f2  -> 
+    (forall v, forward (Q v) t2 f2 (subst x v e2) Q1 t3 f3 ) -> 
+    forward P t1 f1 (plet x e1 e2) Q1 t3 f3
+  
   | fw_val: forall t f v P ,
     forward P t f (pval v) (fun res => P \* \[res = v]) t f
 
@@ -389,8 +316,9 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     forward P t f (if b then e1 else e2) Q t1 f1 -> 
     forward P t f (pif (pval (vbool b)) e1 e2) Q t1 f1
 
-  | fw_event: forall t f P (ev:event) ,
-    forward P t f (pevent ev) (fun res => P \* \[res = vunit]) (seq t (theta_singleton ev)) f
+  | fw_event: forall t f P (ev:event) f',
+    futureSubtraction f (theta_singleton ev) f' -> 
+    forward P t f (pevent ev) (fun res => P \* \[res = vunit]) (seq t (theta_singleton ev)) f'
 
   | fw_ref : forall t f v, 
     forward \[] t f (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) t f
@@ -410,211 +338,164 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     futureCondEntail f' f fR -> 
     futureSubtraction fR t1 fR' -> 
     forward P t f' (papp (pval vf) (pval actual_arg)) Q t1 (fc_conj fR' f1) 
-
-
-  | fw_let_var : forall x e2 P t f t1 f1 Q v, 
-    forward P t f (subst x v e2) Q t1 f1 -> 
-    forward P t f (plet x (pval v) e2) Q t1 f1 
-
-  | fw_seq : forall e1 e2 P t f t1 f1 Q t2 f2 Q', 
-    forward P t f e1 (fun res => Q) t1 f1  -> 
-    forward Q t1 f1 e2 Q' t2 f2 -> 
-    forward P t f (pseq e1 e2) Q' t2 f2
-
-
-Example ex1 : exists Q, forward \[] emp (fc_singleton emp) (pval (vint 1)) Q emp (fc_singleton emp).
-Proof.
-  eexists.
-  constructor.
-Qed.
-
-Print ex1.
-  . 
-*)
-
-
-
-
-
-
-(*Lemma bigstepSeq : forall h1 rho1 f1 v0 Q0 r1 f4 e2 Q2 rho2 f', 
-  bigstep h1 rho1 f1 (pval v0) Q0 r1 f4 -> 
-  forall v h0, 
-  Q0 v h0 -> 
-  bigstep h0 r1 f4 e2 Q2 rho2 f' -> 
-  bigstep h1 rho1 f1 e2 Q2 rho2 f'.
-Proof.
-  intros. 
-  gen v h0.   
-  invert H.
-  intros.
-  subst.
-  exact H0.   
-Qed.
-
-Theorem soundness : forall P t1 f1 e Q t2 f2 h1 hQ v h2 f' rho1 rho2 ,
-  forward P t1 f1 e Q t2 f2 ->  
-  P h1 -> 
-  (*trace_model rho1 t1 -> *)
-  hQ v h2 -> 
-  bigstep h1 rho1 f1 e hQ rho2 f' -> 
-  Q v h2. (*/\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f' f_Res.  *)
-  
- *)
-
-
-
- (*
-    
-
-  
-  
-  rewrite H7.
-  rewrite IHforward2. 
-
-  constructor. 
-  unfold bigstep.
-  exact H0. 
-
-
-
-Fixpoint sum_theta (t:theta) : nat :=
-  match t with
-  | bot => 0
-  | emp => 0
-  | any => 1
-  | theta_singleton ev1 => 1 
-  | seq t1 t2 => sum_theta t1 + sum_theta t2
-  | disj t1 t2 => sum_theta t1 + sum_theta t2
-  | kleene t1 => sum_theta t1
-  end.
-
-Fixpoint inclusion_ranking (hypos:list (theta * theta) ) : nat := 
-  match hypos with 
-  | nil => 0 
-  | x :: xs => 1 + inclusion_ranking xs
-  end.
-
-Definition measure_test (hypos:list (theta * theta) ) : nat := 100 - (inclusion_ranking hypos). 
-
-
-Function inclusion (t1:theta) (t2:theta) (hypos: list (theta * theta) ) {measure measure_test hypos} : (bool) := 
-  if Nat.eqb (inclusion_ranking hypos) 0 then false 
-  else 
-    let (fstSet) := fst t1 in 
-    fold_right (fun (a:fstEv) (acc:(bool)) => 
-      let bres := inclusion t1 t2 ((t1, t2)::hypos) in 
-      (andb acc bres)
-    
-    ) true fstSet
-  .
-Proof.
-  intros.
-  unfold measure_test.
-  unfold inclusion_ranking.
-  fold inclusion_ranking.
-  check (Nat.add_comm).
-  rewrite Nat.add_comm.
-  Search(_ - _ < _ - _).
-  Admitted.
-Defined.
-
-Function inclusion (t1:theta) (t2:theta) (hypos: list (theta * theta) ) {measure inclusion_ranking hypos} : (bool) := 
-  if andb (nullable t1) (negb (nullable t2)) then false
-  else if Nat.eqb (inclusion_ranking hypos) 0 then false 
-  else 
-    let fstSet := fst t1 in 
-    fold_right (fun (a:fstEv)  (acc:(bool)) => 
-      let hypos' := ((t1, t2)::nil ) ++ hypos in 
-      let bres := inclusion t1 t2 hypos' in 
-      (andb acc bres)
-    
-    ) true fstSet.
-Proof.
-  intros A ls l1 l2 h t -> ->; unfold sum_len; simpl; rewrite Nat.add_comm; trivial with arith.
-Defined.
-
-Fixpoint inclusion (t1:theta) (t2:theta) (hypo: list (theta * theta) ): (bool) := 
-  if andb (nullable t1) (negb (nullable t2)) then false
-  else 
-    let fstSet := fst t1 in 
-    fold_right (fun (a:fstEv)  (acc:(bool)) => 
-      let deriv1 := theta_der t1 a in 
-      let deriv2 := theta_der t2 a in 
-      let hypo' := ((t1, t2)::nil ) ++ hypo in 
-      let bres := inclusion deriv1 deriv2 hypo' in 
-      (andb acc bres)
-    
-    ) true fstSet. 
-
-(*
-T1  <:  T2 ~~~ T_residue
-
-T1  <:  T2 . T_residue 
-
-A   <:  A \/ B ~~~> 
-*)
-
-
-
-Fixpoint subtract_trace_from_future (st:futureCond) (t:theta) : futureCond := 
-  let fstSet := fst t in 
-
-  A.B.C - (A \/ B) = B.C \/ Bot = B.C 
-
-  A.B.C /\ _^*.C   - (A \/ C) = (B.C /\ _^*.C) 
 .
 
-(*
-if  st - t = st' :  t . st'  <:  st 
-for all rho |= t, there exist rho' |= st' such that rho ++ rho' |= st 
-*)
+Lemma strengthening_futureCond_from_pre: forall f1 f2 fR h1 rho1 e h2 rho2 f v, 
+  futureCondEntail f1 f2 fR -> 
+  bigstep h1 rho1 f2 e h2 rho2 f v -> 
+  bigstep h1 rho1 f1 e h2 rho2 f v. 
+Proof. Admitted. 
 
-Fixpoint future_condition_der (st:futureCond) (ev: fstEv): futureCond :=
-  match st with
-  | fc_singleton theta => fc_singleton (theta_der theta ev)
-  | conj f1 f2 => conj (future_condition_der f1 ev) (future_condition_der f2 ev)
-  end.
-
-
-
-Inductive forward : pre_state -> expr -> post_state -> Prop :=
-| fw_val: forall sigma st v,
-  forward (sigma, st) 
-  (pval v) 
-  (fun res => sigma \* \[res = v], emp, st)
-| fw_ev : forall ev sigma st, 
-  forward (sigma, st) 
-  (pev ev) 
-  (fun res => sigma \* \[res = vunit], theta_singleton ev, future_condition_der st (ev)).
+Lemma subtractTheSame: forall f t f1 f2, 
+  futureSubtraction f t f1 -> 
+  futureSubtraction f t f2 -> 
+  f1 = f2. 
+Proof. Admitted. 
 
 
+Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
+  forward P t1 f1 e Q t2 f2 ->  
+  P h1 -> 
+  trace_model rho1 t1 -> 
+  bigstep h1 rho1 f1 e h2 rho2 f3 v ->  
+  Q v h2 /\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f3 f_Res.  
+Proof. 
+  introv.
+  intros. 
+  gen h1 v h2 rho1 rho2 f3.
+  induction H.
+  - (* let *)
+  intros.
+  invert H4. intros. subst.
+  specialize (IHforward h1).
+  specialize (IHforward H2).
+  specialize (IHforward v0 h3 rho1).
+  specialize (IHforward H3).
+  specialize (IHforward rho3 f5).
+  specialize (IHforward H15).
+  destr IHforward.
+  eapply H1.
+  exact  H4.
+  exact H6.
+  eapply strengthening_futureCond_from_pre. 
+  exact H5.
+  exact H16.
+  - (* val *)
+  intros.
+  invert H2.
+  intros. subst.
+  split.
+  rewrite hstar_hpure_r.
+  split. subst. auto.
+  reflexivity.
+  split. subst. auto.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
+
+  - (* if-else *)
+  intros.
+  invert H2.
+  intros. subst.
+  eapply IHforward.
+  eapply H0.
+  eapply H1.
+  exact H13.
+  intros. subst.
+  eapply IHforward.
+  eapply H0.
+  eapply H1.
+  exact H13.
+
+  - (* event *)
+  intros.
+  invert H2.
+  intros. subst.
+  split.
+  rewrite hstar_hpure_r.
+  split.
+  exact H0. 
+  reflexivity.
+  split.
+  apply trace_model_prefix.
+  exact H1.
+  constructor. reflexivity.
+  exists (fc_singleton(kleene any)).
+  pose proof (subtractTheSame).
+  specialize (H2 f (theta_singleton ev0) f' f3).
+  specialize (H2 H H7).
+  subst. 
+  apply futureCondEntail_exact.
+  -  (* ref *)
+  intros.
+  invert H2.
+  intros. 
+  split. 
+  exists loc0. subst.  
+  rewrite hstar_hpure_l.
+  split.
+  reflexivity.
+  Search (\[]).
+  apply hempty_inv in H0. 
+  rewrite H0.
+  Search (Fmap.update).
+  rewrite (update_empty).
+  apply hsingle_intro.
+  split.
+  subst. exact H1.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
+
+  - (* deref *) 
+  intros.
+  invert H2.
+  intros. subst.
+  split.
+  rewrite hstar_hpure_r. 
+  split. exact H0. 
+  apply hsingle_inv in H0.
+  rewrite H0.
+  apply Fmap.read_single. 
+  split. 
+  exact H1.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
+
+  - (* assign *) 
+  intros.
+  invert H2.
+  intros. subst.
+  split.
+  rewrite hstar_hpure_r.
+  split. 
+  apply hsingle_inv in H0.
+  rewrite H0.
+  rewrite Fmap.update_single.
+  Search (Fmap.single _ _ ). 
+  apply hsingle_intro. 
+  reflexivity. 
+  split.  exact H1.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
+
+  - (*assume*)
+  intros.
+  invert H2.
+  intros. subst.
+  split. 
+  rewrite hstar_hpure_r. subst.
+  split. exact H0.
+  reflexivity.
+  split.
+  exact H1.
+  exists (fc_singleton(kleene any)).
+  apply futureCondEntail_exact.
+
+  - (* fun call *)
+  intros.
+  invert H2.
+  intros. subst.
+  invert H5.
+Qed.   
 
 
-Inductive satisfies : rho -> theta -> Prop :=
-  | ts_emp : satisfies nil (emp)
-  | ts_ev: forall ev, satisfies (ev::nil) (theta_singleton ev)
-  .
 
-
-Definition sem_tuple (e: expr) (f: theta) : Prop :=
-  bigstep rho e rho' -> satisfies env h1 h2 (norm v) f.
-
-
-Notation derivable := forward.
-Notation valid := sem_tuple.
-
-Theorem soundness : forall e f,
-  derivable e f -> valid e f.
-
- *)
-
-(*
-
-$ opam pin add coq 8.18.0
-$ opam install vscoq-language-server
-
-$ which vscoqtop
-
-opam pin add vscoq-language-server.2.2.1  https://github.com/coq/vscoq/releases/download/v2.2.1/vscoq-language-server-2.2.1.tar.gz
-*)
