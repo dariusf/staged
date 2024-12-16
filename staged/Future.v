@@ -198,6 +198,12 @@ Fixpoint fst (t: theta): fstEvs :=
   | kleene t1 => fst t1 
   end. 
 
+Fixpoint normalization (t:theta) : theta := 
+  match t with 
+  | seq emp t1 => normalization t1
+  | _ => t 
+  end.
+
 
 Fixpoint theta_der (t:theta) (ev:event) : theta := 
   match t with 
@@ -239,7 +245,59 @@ Lemma trace_model_prefix : forall rho t rho1 t1,
   trace_model rho1 t1 -> 
   trace_model (rho++rho1) (seq t t1).
 Proof.
-Admitted.
+  intros.
+  invert H.
+  - intros. 
+    econstructor.
+    eauto.
+    constructor.
+    exact H0.
+  - intros.  
+    econstructor.
+    eauto.
+    constructor.
+    exact H1.
+    exact H0.
+  - intros.  
+    econstructor.
+    eauto.
+    constructor.
+    exact H0.
+  - intros.  
+    econstructor.
+    eauto.
+    subst.
+    econstructor. eauto.
+    exact H2.
+    exact H3.
+    exact H0.
+  - intros.  
+    econstructor.
+    eauto.
+    econstructor.
+    exact H1.
+    exact H0.
+  - intros.  
+    econstructor.
+    subst.
+    eauto. subst. 
+    apply tm_disj_right. exact H1.
+    exact H0.
+  - intros.  
+    econstructor.
+    eauto.
+    apply tm_kleene_emp.
+    exact H1.
+    exact H0.
+  - intros.  
+    econstructor.
+    eauto.
+    apply tm_kleene_rec.
+    exact H1.
+    exact H0.
+Qed.
+
+
 
 
 
