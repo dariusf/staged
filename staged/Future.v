@@ -1,3 +1,13 @@
+(*
+
+$ opam pin add coq 8.18.0
+$ opam install vscoq-language-server
+
+$ which vscoqtop
+
+opam pin add vscoq-language-server.2.2.1  https://github.com/coq/vscoq/releases/download/v2.2.1/vscoq-language-server-2.2.1.tar.gz
+*)
+
 (** A minimal, reference formalization of #<a href="https://dl.acm.org/doi/10.1007/978-3-031-71162-6_26">Staged Specification Logic for Verifying Higher-Order Imperative Programs</a># (FM 2024). *)
 From Coq Require Import Classes.RelationClasses.
 From Coq Require Morphisms Program.Basics.
