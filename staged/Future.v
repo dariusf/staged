@@ -362,6 +362,17 @@ Proof.
   exact H2.
 Qed. 
 
+Lemma fc_conj_to_trace : forall rho f1 f2, 
+  fc_model rho (fc_conj f1 f2) -> 
+  fc_model rho f1 /\ fc_model rho f2.
+Proof.
+  intros. 
+  invert H.
+  intros. subst. split. exact H3. exact H4.
+Qed.     
+
+
+
 Lemma trace_to_fc_singleton : forall rho t, 
   trace_model rho t -> 
   fc_model rho (fc_singleton t). 
@@ -393,41 +404,85 @@ Proof.
   exact H1.
 Qed.   
 
+Lemma every_rho_models_kleene_any : forall rho , 
+  trace_model rho (kleene any).
+Proof. 
+  intros. 
+  induction rho0.
+  - constructor. constructor. 
+  - apply tm_kleene_rec. 
+    pose proof tm_seq.
+    Search ((_ :: _) ++ _). 
+    pose proof List.app_comm_cons.
+    specialize (H0 event nil rho0 a). 
+    pose proof tm_any.
+    specialize (H1 a). 
+
+    specialize (H (a::nil) rho0 any (kleene any) H1 IHrho0). 
+    Search (nil ++ _).
+    rewrite List.app_nil_l in H0.
+    auto.
+Qed. 
+
+
 Theorem futureCond_sound : forall f1 f2 fR rho, 
   futureCondEntail f1 f2 fR -> 
   fc_model rho f1 -> 
   fc_model rho (fc_conj f2 fR).
 Proof. 
   intros.
-  invert H.
+  induction H.
   - intros. subst. 
-    pose proof inclusion_sound.
-    specialize (H t1 t2 rho0). 
+    pose proof inclusion_sound. 
+    specialize (H1 t1 t2 rho0). 
     pose proof fc_singleton_to_trace. 
     specialize (H2 rho0 t1 H0).  
-    specialize (H H1 H2).
-    constructor. 
-    pose proof trace_to_fc_singleton.
-    specialize (H3 rho0 t2).
-    apply H3. exact H.
-    constructor. 
-    apply fc_singleton_to_trace in H0. 
-    pose proof trace_model_consequent.  
-    specialize (H3 rho0 t1 (kleene any) H2).
+    specialize (H1 H H2).
+    constructor.   
+    pose proof trace_to_fc_singleton. 
+    specialize (H3 rho0 t2 H1).
+    exact H3.
+    pose proof trace_to_fc_singleton. 
+    specialize (H3 rho0 (kleene any)). 
     apply H3. 
-    apply inc_kleene_any.
-  - intros. subst.  
-Admitted.
+    pose proof every_rho_models_kleene_any.
+    specialize (H4 rho0 ).
+    exact H4.  
+  
+  - pose proof fc_conj_to_trace.
+    specialize (H2 rho0 f1 f2 H0).     
+    destr H2. 
+    constructor.
+    specialize (IHfutureCondEntail1 H3).
+    specialize (IHfutureCondEntail2 H4).
+    pose proof fc_conj_to_trace.
+    specialize (H2 rho0 f fR1 IHfutureCondEntail1).
+    destr H2. 
+    exact H5.
+    pose proof every_rho_models_kleene_any.
+    specialize (H2 rho0 ).
+    apply trace_to_fc_singleton.  
+    exact H2. 
+  - specialize (IHfutureCondEntail1 H0).
+    specialize (IHfutureCondEntail2 H0).
+    pose proof fc_conj_to_trace.
+    specialize (H2 rho0 f1 fR1 IHfutureCondEntail1). 
+    pose proof fc_conj_to_trace.
+    specialize (H3 rho0 f2 fR2 IHfutureCondEntail2).
+    destr H2. destr H3. 
+    constructor. 
+    constructor. 
+    exact H4. exact H2. 
+    constructor.
+    exact H5. exact H6. 
+Qed. 
 
 
-    
-
-
-
+  
 
 
 Lemma futureCondEntail_exact : forall f, 
-  futureCondEntail f f (fc_singleton(kleene any)).
+  futureCondEntail f f.
 Proof.
   intros.
   induction f.
