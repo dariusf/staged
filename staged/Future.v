@@ -142,11 +142,10 @@ Inductive trace_model : rho -> theta -> Prop :=
   | tm_any : forall ev, 
     trace_model (ev::nil) (any)
 
-  | tm_seq : forall rho rho1 rho2 t1 t2, 
-    rho1 ++ rho2 = rho ->
+  | tm_seq : forall rho1 rho2 t1 t2, 
     trace_model rho1 t1 -> 
     trace_model rho2 t2 -> 
-    trace_model rho (seq t1 t2)
+    trace_model (rho1 ++ rho2) (seq t1 t2)
 
   | tm_disj_left : forall rho t1 t2, 
     trace_model rho t1 -> 
@@ -219,25 +218,73 @@ Fixpoint theta_der (t:theta) (ev:event) : theta :=
   | kleene t1 => seq (theta_der t1 ev) t 
   end.
 
+Definition inclusionCTX : Type := list (theta * theta).
+
+Fixpoint re_eq (t1:theta) (t2:theta) : bool := 
+  match t1, t2 with 
+  | emp, emp => true 
+  | bot, bot => true 
+  | any, any => true 
+  | theta_singleton ev1, theta_singleton ev2 => 
+    if compare_event ev1 ev2 then true else false 
+  | seq t1 t2, seq t3 t4 => 
+    if (re_eq t1 t3) && (re_eq t2 t4) then true else false 
+  | _, _ => false 
+  end. 
+
+Fixpoint memberof (t1:theta) (t2:theta) (ctx:inclusionCTX) : bool := 
+  match ctx with 
+  | nil => false 
+  | (t11, t22) :: rest => 
+    if (re_eq t1 t11) && re_eq t2 t22 then true 
+    else memberof t1 t2 rest
+    
+  end.
 
 
-Inductive inclusion : theta -> theta -> bool -> Prop := 
-  | inc_emp: forall t1 t2, 
+Inductive inclusion : inclusionCTX -> theta -> theta -> bool -> Prop := 
+  | (* Disprove *)
+    inc_emp: forall ctx t1 t2, 
     nullable t1 -> 
     not (nullable t2) -> 
-    inclusion t1 t2 false 
-  | inc_exact: forall t, 
-    inclusion t t true
-  | inc_singleton: forall t1 t2, 
-    fst t1 = nil -> 
-    inclusion t1 t2 true 
-  | inc_rec: forall t1 t2 ev,
+    inclusion ctx t1 t2 false 
+
+  | (* Reoccur *)
+    inc_reoccur: forall ctx t1 t2, 
+    memberof t1 t2 ctx -> 
+    inclusion ctx t1 t2 true  
+
+  | (* Unfold *)
+    inc_unfold: forall ctx t1 t2 ev,
     let deriv1 := theta_der t1 ev in 
     let deriv2 := theta_der t2 ev in 
-    inclusion deriv1 deriv2 true -> 
-    inclusion t1 t2 true. 
- 
+    let ctx' := (t1, t2) :: ctx in 
+    inclusion ctx' deriv1 deriv2 true -> 
+    inclusion ctx t1 t2 true
 
+  | inc_exact: forall ctx t, 
+    inclusion ctx t t true
+
+  | inc_singleton: forall ctx t1 t2, 
+    fst t1 = nil -> 
+    inclusion ctx t1 t2 true 
+    
+  | inc_kleene_any: forall t, 
+    inclusion nil t (kleene any) true . 
+
+Theorem inclusion_sound: forall t1 t2 rho, 
+  inclusion nil t1 t2 true -> 
+  trace_model rho t1 -> 
+  trace_model rho t2.
+Proof.
+  intros.
+  invert H.
+  - induction ctx. 
+    intros. subst.    
+    invert H1. 
+    intros. subst.
+    eapply IHctx.
+Admitted. 
 
 
 Lemma trace_model_prefix : forall rho t rho1 t1, 
@@ -247,50 +294,42 @@ Lemma trace_model_prefix : forall rho t rho1 t1,
 Proof.
   intros.
   invert H.
-  - intros. 
-    econstructor.
+  intros. 
+  - econstructor.
     eauto.
     constructor.
     exact H0.
-  - intros.  
-    econstructor.
+  - econstructor.
     eauto.
     constructor.
     exact H1.
     exact H0.
-  - intros.  
-    econstructor.
+  - econstructor.
     eauto.
     constructor.
     exact H0.
-  - intros.  
-    econstructor.
+  - econstructor.
     eauto.
     subst.
     econstructor. eauto.
     exact H2.
-    exact H3.
     exact H0.
-  - intros.  
-    econstructor.
+  - econstructor.
     eauto.
     econstructor.
     exact H1.
     exact H0.
-  - intros.  
-    econstructor.
+  - econstructor.
     subst.
     eauto. subst. 
     apply tm_disj_right. exact H1.
     exact H0.
-  - intros.  
-    econstructor.
+  - econstructor.
     eauto.
     apply tm_kleene_emp.
     exact H1.
     exact H0.
-  - intros.  
-    econstructor.
+  - econstructor.
     eauto.
     apply tm_kleene_rec.
     exact H1.
@@ -298,40 +337,111 @@ Proof.
 Qed.
 
 
-
-
-
 Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop := 
   | futureCondEntail_empty : forall t1 t2, 
-    inclusion t1 t2 true -> 
+    inclusion nil t1 t2 true -> 
     futureCondEntail (fc_singleton t1) (fc_singleton t2)  (fc_singleton (kleene any))
+  | futureCondEntail_conj_left : forall f f1 f2 fR1 fR2, 
+    futureCondEntail f1 f fR1 -> 
+    futureCondEntail f2 f fR2 -> 
+    futureCondEntail (fc_conj f1 f2) f  (fc_singleton (kleene any))
   | futureCondEntail_conj_right : forall f f1 f2 fR1 fR2, 
     futureCondEntail f f1 fR1 -> 
     futureCondEntail f f2 fR2 -> 
     futureCondEntail f (fc_conj f1 f2) (fc_conj fR1 fR2) 
 
-  | futureCondEntail_conj_left : forall f f1 f2 fR1 fR2, 
-    futureCondEntail f1 f fR1 -> 
-    futureCondEntail f2 f fR2 -> 
-    futureCondEntail (fc_conj f1 f2) f  (fc_singleton (kleene any))
   .
+
+Lemma fc_singleton_to_trace : forall rho t, 
+  fc_model rho (fc_singleton t) -> 
+  trace_model rho t.
+Proof.
+  intros. 
+  invert H.
+  intros.
+  exact H2.
+Qed. 
+
+Lemma trace_to_fc_singleton : forall rho t, 
+  trace_model rho t -> 
+  fc_model rho (fc_singleton t). 
+Proof.
+  intros.
+  invert H.
+  - intros. subst.
+    constructor.
+    constructor.
+  - intros. subst.
+    constructor. constructor. reflexivity.
+  - intros. subst. constructor. constructor. 
+  - intros. subst. constructor. 
+    constructor. exact H0. exact H1.
+  - intros. subst. constructor. constructor. exact H0.
+  - intros. subst. constructor. apply tm_disj_right. exact H0.
+  - intros. subst. constructor. constructor. exact H0.
+  - intros. subst. constructor. apply tm_kleene_rec. exact H0. 
+Qed. 
+
+Lemma trace_model_consequent: forall rho t1 t2, 
+  trace_model rho t1 -> 
+  inclusion nil t1 t2 true ->
+  trace_model rho t2.
+Proof. 
+  intros.
+  pose proof inclusion_sound.
+  specialize (H1 t1 t2 rho0 H0 H).
+  exact H1.
+Qed.   
+
+Theorem futureCond_sound : forall f1 f2 fR rho, 
+  futureCondEntail f1 f2 fR -> 
+  fc_model rho f1 -> 
+  fc_model rho (fc_conj f2 fR).
+Proof. 
+  intros.
+  invert H.
+  - intros. subst. 
+    pose proof inclusion_sound.
+    specialize (H t1 t2 rho0). 
+    pose proof fc_singleton_to_trace. 
+    specialize (H2 rho0 t1 H0).  
+    specialize (H H1 H2).
+    constructor. 
+    pose proof trace_to_fc_singleton.
+    specialize (H3 rho0 t2).
+    apply H3. exact H.
+    constructor. 
+    apply fc_singleton_to_trace in H0. 
+    pose proof trace_model_consequent.  
+    specialize (H3 rho0 t1 (kleene any) H2).
+    apply H3. 
+    apply inc_kleene_any.
+  - intros. subst.  
+Admitted.
+
+
+    
+
+
+
+
 
 Lemma futureCondEntail_exact : forall f, 
   futureCondEntail f f (fc_singleton(kleene any)).
 Proof.
   intros.
   induction f.
-  constructor.
-  constructor.
+  - constructor.
+    apply inc_exact.
+  - eapply futureCondEntail_conj_left.
+    eapply futureCondEntail_conj_right.
+    eauto.
   
 Admitted.
 
 Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=  
   | futureSubtraction_empty : forall f, 
     futureSubtraction f emp f.  
-
-
-
 
 
 Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCond -> val -> Prop :=
@@ -412,7 +522,9 @@ Lemma strengthening_futureCond_from_pre: forall f1 f2 fR h1 rho1 e h2 rho2 f v,
   futureCondEntail f1 f2 fR -> 
   bigstep h1 rho1 f2 e h2 rho2 f v -> 
   bigstep h1 rho1 f1 e h2 rho2 f v. 
-Proof. Admitted. 
+Proof. 
+  intros.
+Admitted. 
 
 Lemma subtractTheSame: forall f t f1 f2, 
   futureSubtraction f t f1 -> 
