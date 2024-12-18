@@ -262,8 +262,8 @@ Inductive inclusion : inclusionCTX -> theta -> theta -> bool -> Prop :=
     inclusion ctx' deriv1 deriv2 true -> 
     inclusion ctx t1 t2 true
 
-  | inc_exact: forall ctx t, 
-    inclusion ctx t t true
+  | inc_exact: forall t, 
+    inclusion nil t t true
 
   | inc_singleton: forall ctx t1 t2, 
     fst t1 = nil -> 
@@ -350,7 +350,30 @@ Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop :=
     futureCondEntail f f2 fR2 -> 
     futureCondEntail f (fc_conj f1 f2) (fc_conj fR1 fR2) 
 
+  | futureCondEntail_conj : forall f1 f2 f3 f4 fR1 fR2, 
+    futureCondEntail f1 f3 fR1 -> 
+    futureCondEntail f2 f4 fR2 -> 
+    futureCondEntail (fc_conj f1 f2) (fc_conj f3 f4) (fc_conj fR1 fR2) 
   .
+
+Axiom conj_kleene_any : 
+   (fc_singleton(kleene any)) = 
+   fc_conj (fc_singleton(kleene any)) (fc_singleton(kleene any)). 
+  
+
+Lemma futureCondEntail_exact : forall f,  
+  futureCondEntail f f (fc_singleton(kleene any)).
+Proof.
+  intros.
+  induction f. 
+  - constructor.
+    apply inc_exact.
+  - rewrite conj_kleene_any. 
+    apply futureCondEntail_conj.
+    exact IHf1.
+    exact IHf2.
+Qed.   
+    
 
 Lemma fc_singleton_to_trace : forall rho t, 
   fc_model rho (fc_singleton t) -> 
@@ -475,24 +498,25 @@ Proof.
     exact H4. exact H2. 
     constructor.
     exact H5. exact H6. 
+  - pose proof fc_conj_to_trace.
+    specialize (H2 rho0 f1 f2 H0). 
+    destr H2.
+    specialize (IHfutureCondEntail1 H3).
+    specialize (IHfutureCondEntail2 H4).
+    pose proof fc_conj_to_trace.
+    specialize (H2 rho0 f3 fR1 IHfutureCondEntail1). 
+    pose proof fc_conj_to_trace.
+    specialize (H5 rho0 f4 fR2 IHfutureCondEntail2).
+    destr H2. destr H5.
+    constructor.
+    constructor.
+    exact H6. exact H2. 
+    constructor. 
+    exact H7. exact H8.     
 Qed. 
 
 
-  
 
-
-Lemma futureCondEntail_exact : forall f, 
-  futureCondEntail f f.
-Proof.
-  intros.
-  induction f.
-  - constructor.
-    apply inc_exact.
-  - eapply futureCondEntail_conj_left.
-    eapply futureCondEntail_conj_right.
-    eauto.
-  
-Admitted.
 
 Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=  
   | futureSubtraction_empty : forall f, 
