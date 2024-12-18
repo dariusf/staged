@@ -341,24 +341,33 @@ Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop :=
   | futureCondEntail_empty : forall t1 t2, 
     inclusion nil t1 t2 true -> 
     futureCondEntail (fc_singleton t1) (fc_singleton t2)  (fc_singleton (kleene any))
-  | futureCondEntail_conj_left : forall f f1 f2 fR1 fR2, 
+
+  | futureCondEntail_conj_LHS : forall f1 f2 f fR1 fR2, 
     futureCondEntail f1 f fR1 -> 
     futureCondEntail f2 f fR2 -> 
-    futureCondEntail (fc_conj f1 f2) f  (fc_singleton (kleene any))
-  | futureCondEntail_conj_right : forall f f1 f2 fR1 fR2, 
-    futureCondEntail f f1 fR1 -> 
-    futureCondEntail f f2 fR2 -> 
-    futureCondEntail f (fc_conj f1 f2) (fc_conj fR1 fR2) 
+    futureCondEntail (fc_conj f1 f2) f (fc_conj fR1 fR2) 
 
-  | futureCondEntail_conj : forall f1 f2 f3 f4 fR1 fR2, 
-    futureCondEntail f1 f3 fR1 -> 
-    futureCondEntail f2 f4 fR2 -> 
-    futureCondEntail (fc_conj f1 f2) (fc_conj f3 f4) (fc_conj fR1 fR2) 
-  .
+  | futureCondEntail_conj_frame_left : forall f f1 f2 fR1, 
+    futureCondEntail f1 f fR1 -> 
+    futureCondEntail (fc_conj f1 f2) f  (fc_conj fR1 f2)
+  
+  | futureCondEntail_conj_frame_right : forall f f1 f2 fR1, 
+    futureCondEntail f2 f fR1 -> 
+    futureCondEntail (fc_conj f1 f2) f  (fc_conj fR1 f1)
+
+
+  | futureCondEntail_conj_RHS : forall f f1 f2 fR1 fR2, 
+    futureCondEntail f f1 fR1 -> 
+    futureCondEntail fR1 f2 fR2 -> 
+    futureCondEntail f (fc_conj f1 f2) (fR2) 
+ .
 
 Axiom conj_kleene_any : 
    (fc_singleton(kleene any)) = 
    fc_conj (fc_singleton(kleene any)) (fc_singleton(kleene any)). 
+  
+Axiom f_conj_kleene_any_is_f : forall f, 
+   f = fc_conj (fc_singleton(kleene any)) f . 
   
 
 Lemma futureCondEntail_exact : forall f,  
@@ -368,10 +377,14 @@ Proof.
   induction f. 
   - constructor.
     apply inc_exact.
-  - rewrite conj_kleene_any. 
-    apply futureCondEntail_conj.
-    exact IHf1.
-    exact IHf2.
+  - pose proof  futureCondEntail_conj_RHS.
+    specialize (H (fc_conj f1 f2) f1 f2 f2 (fc_singleton (kleene any))).  
+    apply H.
+    pose proof futureCondEntail_conj_frame_left. 
+    specialize (H0 f1 f1 f2 (fc_singleton (kleene any)) IHf1).
+    rewrite  f_conj_kleene_any_is_f.
+    exact H0.
+    exact IHf2.  
 Qed.   
     
 
@@ -471,48 +484,67 @@ Proof.
     pose proof every_rho_models_kleene_any.
     specialize (H4 rho0 ).
     exact H4.  
-  
-  - pose proof fc_conj_to_trace.
-    specialize (H2 rho0 f1 f2 H0).     
-    destr H2. 
-    constructor.
-    specialize (IHfutureCondEntail1 H3).
-    specialize (IHfutureCondEntail2 H4).
-    pose proof fc_conj_to_trace.
-    specialize (H2 rho0 f fR1 IHfutureCondEntail1).
-    destr H2. 
-    exact H5.
-    pose proof every_rho_models_kleene_any.
-    specialize (H2 rho0 ).
-    apply trace_to_fc_singleton.  
-    exact H2. 
-  - specialize (IHfutureCondEntail1 H0).
-    specialize (IHfutureCondEntail2 H0).
-    pose proof fc_conj_to_trace.
-    specialize (H2 rho0 f1 fR1 IHfutureCondEntail1). 
-    pose proof fc_conj_to_trace.
-    specialize (H3 rho0 f2 fR2 IHfutureCondEntail2).
-    destr H2. destr H3. 
-    constructor. 
-    constructor. 
-    exact H4. exact H2. 
-    constructor.
-    exact H5. exact H6. 
   - pose proof fc_conj_to_trace.
     specialize (H2 rho0 f1 f2 H0). 
     destr H2.
     specialize (IHfutureCondEntail1 H3).
     specialize (IHfutureCondEntail2 H4).
     pose proof fc_conj_to_trace.
-    specialize (H2 rho0 f3 fR1 IHfutureCondEntail1). 
+    specialize (H2 rho0 f fR1 IHfutureCondEntail1). 
     pose proof fc_conj_to_trace.
-    specialize (H5 rho0 f4 fR2 IHfutureCondEntail2).
-    destr H2. destr H5.
+    specialize (H5 rho0 f fR2 IHfutureCondEntail2).  
+    destr H2.     destr H5.
+    constructor. exact H6.
+    constructor. exact H7. exact H8.     
+
+  - pose proof fc_conj_to_trace.
+    specialize (H1 rho0 f1 f2 H0).     
+    destr H1. 
+    constructor.
+    specialize (IHfutureCondEntail H2).
+    pose proof fc_conj_to_trace.
+    specialize (H1 rho0 f fR1 IHfutureCondEntail).
+    destr H1. 
+    exact H4.
+    pose proof every_rho_models_kleene_any.
+    specialize (H1 rho0 ).
+    constructor.   
+    specialize (IHfutureCondEntail H2). 
+    pose proof fc_conj_to_trace.
+    specialize (H4 rho0 f fR1 IHfutureCondEntail ). 
+    destr H4.  
+    exact H6.
+    exact H3.  
+  - pose proof fc_conj_to_trace.
+    specialize (H1 rho0 f1 f2 H0). 
+    destr H1.
+    specialize (IHfutureCondEntail H3). 
+    pose proof fc_conj_to_trace.
+    specialize (H1 rho0 f fR1 IHfutureCondEntail).
+    destr H1.
+    constructor.
+    exact H4.
+    constructor.
+    exact H5.
+    exact H2.
+  - 
+    specialize (IHfutureCondEntail1 H0).  
+    pose proof fc_conj_to_trace.
+    specialize (H2 rho0 f1 fR1 IHfutureCondEntail1). 
+    destr H2.
+    specialize (IHfutureCondEntail2 H4).
+    pose proof fc_conj_to_trace.
+    specialize (H2 rho0 f1 fR1 IHfutureCondEntail1).
+    destr H2.
+    pose proof fc_conj_to_trace.
+    specialize (H2 rho0 f2 fR2 IHfutureCondEntail2).
+    destr H2.
     constructor.
     constructor.
-    exact H6. exact H2. 
-    constructor. 
-    exact H7. exact H8.     
+    exact H3.
+    exact H7.
+    exact H8.
+    
 Qed. 
 
 
