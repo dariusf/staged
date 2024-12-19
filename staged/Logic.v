@@ -662,6 +662,17 @@ Proof.
   apply empty_intro.
 Qed.
 
+Lemma req_pure_inv: forall env h1 h2 r P,
+  P -> satisfies env h1 h2 r (req_ \[P]) -> h1 = h2 /\ r = norm vunit.
+Proof.
+  intros env h1 h2 r P HP H. 
+  apply empty_inv with (env := env).
+
+  inverts H as H. specialize (H empty_heap h1). apply H.
+  - apply hpure_intro. assumption.
+  - auto. - auto.
+Qed.
+
 Lemma seq_ens_pure_inv : forall P env h1 h2 v f,
   satisfies env h1 h2 (norm v) (ens (fun a => \[P a]);; f) ->
   exists v1, P v1 /\ satisfies env h1 h2 (norm v) f.
@@ -1758,6 +1769,134 @@ Module BiabductionExamples.
   Qed.
 
 End BiabductionExamples.
+
+(** * Lemmas about Pure Fact Simplification *)
+
+(** This section provides a few lemmas showing that once a pure predicate has
+    been proven/ensured, it can be used again later down the specification. This
+    can be useful when it comes to simplification of the spec. *)
+
+Lemma req_generates_info: forall  P p f,
+  let original_flow := req (p \* \[P]) f in
+  let new_flow := req (p \* \[P]) (ens_ \[P] ;; f) in
+  entails original_flow new_flow.
+Proof.
+  intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
+  intros env h1 h2 r H.
+
+  (* Remove prefix req p from both the goal and the hypothesis *)
+  apply norm_req_req. apply s_req. intros hp hr H1 H2 H3.
+  apply norm_req_req in H. inverts H as H. specialize (H hp hr). specialize(H H1 H2 H3).
+  subst. clear H1 H3 p.
+
+  (* Remove req \[P] from goal *)
+  apply s_req. intros hp' hr' H1 H2 H3.
+
+  assert (HP: hp' = empty_heap). (* and thus hr = hr' *)
+  { inverts H1. inverts H0. reflexivity. }
+
+  inverts H as H. specialize (H hp' hr' H1 H2 H3). subst. 
+  
+  apply s_seq. exists hr' (norm vunit). intuition.
+  apply ens_void_pure_intro. destruct H1. assumption.
+Qed.
+
+Lemma req_generates_info_bientails: forall  P p f,
+  let original_flow := req (p \* \[P]) f in
+  let new_flow := req (p \* \[P]) (ens_ \[P] ;; f) in
+  bientails original_flow new_flow.
+Proof.
+  intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
+  constructor.
+  - apply req_generates_info.
+  - intros H. 
+
+    (* Remove req p \* \[P] *)
+    apply s_req. intros hp hr H1 H2 H3.
+    inverts H as H. specialize (H hp hr H1 H2 H3). 
+
+    (* Just prove the ens_ f *)
+    apply seq_ens_void_pure_inv in H. destruct H. assumption.
+Qed.
+
+Lemma ens_generates_info: forall P q f g, 
+  let original_flow := ens_ (q \* \[P]) ;; f ;; g in 
+  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in 
+  entails original_flow new_flow.
+Proof.
+  intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
+  intros env h1 h2 r H.
+
+  fdestr H. 
+  apply s_seq. exists h3 r1. intuition.
+
+  fdestr H1 as (h4&r2&H1&H1').
+  apply s_seq. exists h4 r2. intuition.
+
+  apply s_seq. exists h4 (norm vunit). intuition.
+  apply req_pure_intro.
+Qed.
+
+Lemma ens_generates_info_bientails: forall P q f g, 
+  let original_flow := ens_ (q \* \[P]) ;; f ;; g in 
+  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in 
+  bientails original_flow new_flow.
+Proof.
+  intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
+  constructor.
+  - apply ens_generates_info.
+  - intro H. 
+    
+    (* Remove the ens_ q *)
+    fdestr H as (h3&r1&H&H').
+    apply s_seq. exists h3 r1. intuition.
+
+    (* Extract proof of P. *)
+    rewrite hstar_comm in H. 
+    apply norm_ens_ens_void in H. fdestr H as (h4&v&H''&_). fdestr H'' as (HP&_).
+    clear r1 h1 q v h4.
+
+    (* Proving env, h3, h2, r |= (f;; g) *)
+    fdestr H' as (h4&r2&H&H').
+    apply s_seq. exists h4 r2. intuition.
+    clear H h3 r2.
+
+    fdestr H' as (h5&r3&H&H').
+    apply req_pure_inv with (env := env) (h1 := h4) (h2 := h5) (r := r3) in HP.
+    + destruct HP as [HP _]. subst. assumption.
+    + assumption. 
+Qed.
+
+(** In ens_generates_info, the final flow g is not within the context of 
+    req_ \[P] (i.e. req \[P] g). This is inconsequential as we can bring g in
+    and out of the context of the req.
+    
+    This is important for the normalized form of a specification. *)
+
+Lemma move_seq_into_req: forall P f,
+  entails (req_ P ;; f) (req P f).
+Proof.
+  intros. 
+  assert (bientails (req P f) (req P (empty ;; f))) as H.
+  { rewrite  (norm_empty_l f). reflexivity. }
+  rewrite H.
+  apply norm_reassoc with (H := P) (f1 := empty) (f2 := f).
+Qed.
+
+(** The converse is true if P is pure and P holds. *)
+Lemma move_seq_out_of_req_pure: forall P f,
+  P -> entails (req \[P] f) (req_ \[P] ;; f).
+Proof.
+  intros P f HP. unfold entails. intros env h1 h2 r H.
+
+  apply s_seq. exists h1 (norm vunit). split.
+  - apply req_pure_intro.
+  - inverts H as H. specialize (H empty_heap h1). apply H.
+    + apply hpure_intro. apply HP.
+    + auto.
+    + auto.
+Qed.
+
 
 (** * Lemmas about entailment sequents *)
 Lemma ent_all_r : forall f A (fctx:A -> flow) env,
