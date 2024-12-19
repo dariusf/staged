@@ -175,115 +175,153 @@ Inductive fc_model : rho -> futureCond -> Prop :=
     .
 
 
-Fixpoint nullable (t: theta): bool :=
-  match t with
-  | bot => false 
-  | any => false
-  | emp => true 
-  | theta_singleton _ => false
-  | seq t1 t2 =>  andb (nullable t1) (nullable t2 )
-  | disj t1 t2 => orb (nullable t1) (nullable t2)
-  | kleene _ => true 
-  end.
-
-Fixpoint fst (t: theta): fstEvs :=
-  match t with
-  | bot => nil
-  | emp => nil
-  | any => (ev "_" vunit) :: nil
-  | theta_singleton (ev e v) => (ev e v) :: nil
-  | seq t1 t2 => if (nullable t1) then fst t1 ++ fst t2 else fst t1 
-  | disj t1 t2 => fst t1 ++ fst t2
-  | kleene t1 => fst t1 
-  end. 
-
-Fixpoint normalization (t:theta) : theta := 
-  match t with 
-  | seq emp t1 => normalization t1
-  | _ => t 
-  end.
+Inductive nullable: theta -> Prop :=
+  | nullable_emp : nullable emp 
+  | nullable_seq : forall t1 t2, 
+    nullable t1 -> nullable t2 -> nullable (seq t1 t2)
+  | nullable_disj_left : forall t1 t2, 
+    nullable t1 -> nullable (disj t1 t2)
+  | nullable_disj_right : forall t1 t2, 
+    nullable t2 -> nullable (disj t1 t2)
+  | nullable_kleene : forall t, nullable (kleene t) . 
 
 
-Fixpoint theta_der (t:theta) (ev:event) : theta := 
-  match t with 
-  | bot => bot
-  | emp => bot
-  | any => emp 
-  | theta_singleton ev1 => 
-    if compare_event ev ev1 then emp else bot  
-  | seq t1 t2 => 
-    let temp := seq (theta_der t1 ev) t2 in 
-    if (nullable t1) then disj temp (theta_der t2 ev) else temp
-  | disj t1 t2 => disj (theta_der t1 ev) (theta_der t2 ev)
-  | kleene t1 => seq (theta_der t1 ev) t 
-  end.
+Lemma empty_rho_model_nullable_trace : forall t, 
+  nullable t -> 
+  trace_model nil t. 
+Proof.
+  intros.
+  induction H.
+  - constructor.
+  - pose proof List.app_nil_l. 
+    specialize (H1 event nil). 
+    rewrite <- H1.
+    constructor.
+    exact IHnullable1.
+    exact IHnullable2.  
+  - apply tm_disj_left. exact IHnullable.
+  - apply tm_disj_right. exact IHnullable.
+  - apply tm_kleene_emp. constructor.
+Qed.   
 
-Definition inclusionCTX : Type := list (theta * theta).
-
-Fixpoint re_eq (t1:theta) (t2:theta) : bool := 
-  match t1, t2 with 
-  | emp, emp => true 
-  | bot, bot => true 
-  | any, any => true 
-  | theta_singleton ev1, theta_singleton ev2 => 
-    if compare_event ev1 ev2 then true else false 
-  | seq t1 t2, seq t3 t4 => 
-    if (re_eq t1 t3) && (re_eq t2 t4) then true else false 
-  | _, _ => false 
-  end. 
-
-Fixpoint memberof (t1:theta) (t2:theta) (ctx:inclusionCTX) : bool := 
-  match ctx with 
-  | nil => false 
-  | (t11, t22) :: rest => 
-    if (re_eq t1 t11) && re_eq t2 t22 then true 
-    else memberof t1 t2 rest
-    
-  end.
+Lemma trace_model_emp_must_nil : forall rho, 
+  trace_model rho emp -> rho = nil.
+Proof.
+  intros.
+  induction H.
+  - reflexivity.
+Admitted. 
 
 
-Inductive inclusion : inclusionCTX -> theta -> theta -> bool -> Prop := 
-  | (* Disprove *)
-    inc_emp: forall ctx t1 t2, 
+
+Inductive fst : theta -> fstEvs -> Prop :=
+  | fst_bot: fst bot nil 
+  | fst_emp: fst emp nil 
+  | fst_any: 
+    fst (any) ((ev "_" vunit) :: nil)
+
+  | fst_event: forall e v, 
+    fst (theta_singleton (ev e v)) ((ev e v) :: nil)
+  | fst_seq_nullable: forall t1 t2 fst1 fst2, 
     nullable t1 -> 
-    not (nullable t2) -> 
-    inclusion ctx t1 t2 false 
+    fst t1 fst1 -> 
+    fst t2 fst2 -> 
+    fst (seq t1 t2) (fst1 ++ fst2)
+  | fst_seq_not_nullable: forall t1 t2 fst1, 
+    fst t1 fst1 -> 
+    fst (seq t1 t2) (fst1)
+  | fst_disj: forall t1 t2 fst1 fst2, 
+    fst t1 fst1 -> 
+    fst t2 fst2 -> 
+    fst (disj t1 t2) (fst1 ++ fst2)
+  | fst_kleene : forall t f1, 
+    fst t f1 -> 
+    fst (kleene t) f1
+  .
+
+Inductive theta_der : theta -> event -> theta  -> Prop := 
+  | derivative_bot : forall ev, theta_der bot ev bot
+  | derivative_emp : forall ev, theta_der emp ev bot
+  | derivative_any : forall ev, theta_der any ev emp
+
+  | derivative_event_emp : forall ev1 ev2, 
+    ev1 = ev1 -> 
+    theta_der (theta_singleton ev1) ev2 emp 
+  | derivative_event_bot : forall ev1 ev2, 
+    theta_der (theta_singleton ev1) ev2 bot 
+  | derivative_seq_nullable: forall t1 t2 ev t1_der t2_der, 
+    nullable t1 -> 
+    theta_der t1 ev t1_der -> 
+    theta_der t2 ev t2_der -> 
+    theta_der (seq t1 t2) ev (disj (seq t1_der t2) t2_der)
+  | derivative_seq_not_nullable: forall t1 t2 ev t1_der, 
+    theta_der t1 ev t1_der -> 
+    theta_der (seq t1 t2) ev (seq t1_der t2)
+  | derivative_disj: forall t1 t2 ev t1_der t2_der, 
+    theta_der t1 ev t1_der -> 
+    theta_der t2 ev t2_der -> 
+    theta_der (disj t1 t2) ev (disj t1_der t2_der)
+
+  | derivative_kleene: forall t ev t_der, 
+    theta_der t ev t_der -> 
+    theta_der (kleene t) ev (seq (t_der) (kleene t))
+  . 
+
+
+Inductive inclusion : theta -> theta -> Prop := 
+
+  | inc_emp: forall t, 
+    nullable t -> 
+    inclusion emp t 
 
   | (* Reoccur *)
-    inc_reoccur: forall ctx t1 t2, 
-    memberof t1 t2 ctx -> 
-    inclusion ctx t1 t2 true  
+    inc_reoccur: forall t1 t2, 
+    inclusion t1 t2 -> 
+    inclusion t1 t2  
 
-  | (* Unfold *)
-    inc_unfold: forall ctx t1 t2 ev,
-    let deriv1 := theta_der t1 ev in 
-    let deriv2 := theta_der t2 ev in 
-    let ctx' := (t1, t2) :: ctx in 
-    inclusion ctx' deriv1 deriv2 true -> 
-    inclusion ctx t1 t2 true
 
   | inc_exact: forall t, 
-    inclusion nil t t true
+    inclusion t t
 
-  | inc_singleton: forall ctx t1 t2, 
-    fst t1 = nil -> 
-    inclusion ctx t1 t2 true 
-    
   | inc_kleene_any: forall t, 
-    inclusion nil t (kleene any) true . 
+    inclusion t (kleene any) 
+
+  | (* Unfold *)
+    inc_unfold: forall t1 t2 ev deriv1 deriv2,
+    theta_der t1 ev deriv1 -> 
+    theta_der t2 ev deriv2 -> 
+    inclusion deriv1 deriv2 -> 
+    inclusion t1 t2
+. 
+
+Lemma trace_model_derivatives : forall rho rho1 t ev t_der, 
+  trace_model rho t -> 
+  theta_der t ev t_der -> 
+  rho = ev :: rho1 -> 
+  trace_model rho1 t_der
+.
+Admitted. 
+
 
 Theorem inclusion_sound: forall t1 t2 rho, 
-  inclusion nil t1 t2 true -> 
+  inclusion t1 t2 -> 
   trace_model rho t1 -> 
   trace_model rho t2.
 Proof.
-  intros.
-  invert H.
-  - induction ctx. 
-    intros. subst.    
-    invert H1. 
-    intros. subst.
-    eapply IHctx.
+  intros. 
+  gen rho0. 
+  induction H.
+  - intros. 
+    pose proof empty_rho_model_nullable_trace.
+    specialize (H1 t H).
+    pose proof trace_model_emp_must_nil.
+    specialize (H2 rho0 H0).
+    subst.
+    exact H1.
+  - intros. exact (IHinclusion rho0 H0).
+  - intros. exact H0.
+  - intros.  
+    
 Admitted. 
 
 
@@ -339,7 +377,7 @@ Qed.
 
 Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop := 
   | futureCondEntail_empty : forall t1 t2, 
-    inclusion nil t1 t2 true -> 
+    inclusion t1 t2 -> 
     futureCondEntail (fc_singleton t1) (fc_singleton t2)  (fc_singleton (kleene any))
 
   | futureCondEntail_conj_LHS : forall f1 f2 f fR1 fR2, 
@@ -431,7 +469,7 @@ Qed.
 
 Lemma trace_model_consequent: forall rho t1 t2, 
   trace_model rho t1 -> 
-  inclusion nil t1 t2 true ->
+  inclusion t1 t2 ->
   trace_model rho t2.
 Proof. 
   intros.
@@ -548,11 +586,27 @@ Proof.
 Qed. 
 
 
+(*
+Inductive traceSubtraction : theta -> theta -> theta -> Prop :=  
+  | traceSubtraction_base : forall t, 
+    traceSubtraction t emp t
+  | traceSubtraction_ind : forall ev, 
+    
+*)
 
 
 Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=  
-  | futureSubtraction_empty : forall f, 
-    futureSubtraction f emp f.  
+  | futureSubtraction_conj : forall f1 f2 f3 f4 t, 
+    futureSubtraction f1 t f3 ->
+    futureSubtraction f2 t f4 -> 
+    futureSubtraction (fc_conj f1 f2) t (fc_conj f3 f4)
+
+  | futureSubtraction_base : forall t, 
+    futureSubtraction (fc_singleton t) emp (fc_singleton t)
+
+
+
+  .   
 
 
 Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCond -> val -> Prop :=
@@ -593,6 +647,11 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
 . 
 
 Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
+(*| eval_plet : forall h1 h2 h3 x e1 e2 v r rho1 rho2 rho3 f1 f2 f3,
+    bigstep h1 rho1 f1 e1 h2 rho2 f2 v ->
+    bigstep h2 rho2 f2 (subst x v e2) h3 rho3 f3 r ->
+    bigstep h1 rho1 f1 (plet x e1 e2) h3 rho3 f3 r
+*)
   | fw_let : forall x e1 e2 P Q Q1 t1 t2 t3 f1 f2 f3, 
     forward P t1 f1 e1 Q t2 f2  -> 
     (forall v, forward (Q v) t2 f2 (subst x v e2) Q1 t3 f3 ) -> 
@@ -635,6 +694,14 @@ Lemma strengthening_futureCond_from_pre: forall f1 f2 fR h1 rho1 e h2 rho2 f v,
   bigstep h1 rho1 f1 e h2 rho2 f v. 
 Proof. 
   intros.
+  induction H.
+  induction e. 
+  pose proof inclusion_sound.
+  specialize (H1 t1 t2 rho1 H).
+  - invert H0.
+  - invert H0. 
+    intros. subst. 
+
 Admitted. 
 
 Lemma subtractTheSame: forall f t f1 f2, 
@@ -659,8 +726,7 @@ Proof.
   intros.
   invert H4. intros. subst.
   specialize (IHforward h1).
-  specialize (IHforward H2).
-  specialize (IHforward v0 h3 rho1).
+  specialize (IHforward H2 v0 h3 rho1).
   specialize (IHforward H3).
   specialize (IHforward rho3 f5).
   specialize (IHforward H15).
@@ -785,8 +851,10 @@ Proof.
   intros.
   invert H2.
   intros. subst.
-  invert H5.
-Qed.   
+  invert H5. 
+  intros. subst.    
+Admitted. 
+  
 
 
 
