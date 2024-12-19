@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html class="alectryon-standalone"><head><title>Tactics.v</title><meta charset="utf-8"><meta content="Alectryon" name="generator"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="alectryon.css" rel="stylesheet"><link href="pygments.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/IBM-type/0.5.4/css/ibm-type.min.css" integrity="sha512-sky5cf9Ts6FY1kstGOBHSybfKqdHR41M0Ldb0BjNiv3ifltoQIsg0zIaQ+wwdwgQ0w9vKFW7Js50lxH9vqNSSw==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/5.2.0/fira_code.min.css" integrity="sha512-MbysAYimH1hH2xYzkkMHB6MqxBqfP0megxsCLknbYqHVwXTCg9IqHbk+ZP/vnhO8UEW6PaXAkKe2vQ+SWACxxA==" crossorigin="anonymous" /><script src="alectryon.js"></script></head><body><article class="alectryon-root alectryon-centered alectryon-coqdoc"><div class="alectryon-banner">Built with <a href="https://github.com/cpitclaudel/alectryon/">Alectryon</a>, running Coq+SerAPI v8.19.0+0.19.3. Bubbles (<span class="alectryon-bubble"></span>) indicate interactive fragments: hover for details, tap to reveal contents. Use <kbd>Ctrl+↑</kbd> <kbd>Ctrl+↓</kbd> to navigate, <kbd>Ctrl+🖱️</kbd> to focus. On Mac, use <kbd>⌘</kbd> instead of <kbd>Ctrl</kbd>.</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Tactic Notation</span> <span class="s2">&quot;ok&quot;</span> := <span class="nb">intuition</span> <span class="nb">auto</span>; <span class="kp">try</span> <span class="bp">easy</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">inv</span> H := <span class="nb">inversion</span> H; <span class="nb">clear</span> H; <span class="nb">subst</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">destr</span> H :=
+  <span class="kr">match</span> <span class="kp">type of</span> H <span class="kr">with</span>
+  | ex (<span class="kr">fun</span> <span class="nv">x</span> =&gt; _) =&gt;
+    <span class="kr">let</span> <span class="nv">L</span> := <span class="kp">fresh</span> x <span class="kr">in</span>
+    <span class="kr">let</span> <span class="nv">R</span> := <span class="kp">fresh</span> <span class="kr">in</span>
+    <span class="nb">destruct</span> H <span class="kr">as</span> [L R]; destr R
+  | _ /\ _ =&gt;
+    <span class="kr">let</span> <span class="nv">L</span> := <span class="kp">fresh</span> <span class="kr">in</span>
+    <span class="kr">let</span> <span class="nv">R</span> := <span class="kp">fresh</span> <span class="kr">in</span>
+    <span class="nb">destruct</span> H <span class="kr">as</span> [L R]; destr L; destr R
+  | _ =&gt; <span class="kp">idtac</span>
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* https://github.com/mattam82/Coq-Equations/blob/main/theories/Init.v#L148 *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">forward_gen</span> H tac :=
+  <span class="kr">match</span> <span class="kp">type of</span> H <span class="kr">with</span>
+  | <span class="kr">forall</span> (<span class="nv">_</span> : <span class="nl">?X</span>), _ =&gt; <span class="kr">let</span> <span class="nv">H&#39;</span> := <span class="kp">fresh</span> <span class="kr">in</span> <span class="nb">assert</span> (H&#39;:X) ; [tac|<span class="nb">specialize</span> (H H&#39;); <span class="nb">clear</span> H&#39;]
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Tactic Notation</span> <span class="s2">&quot;forward&quot;</span> <span class="kp">constr</span>(H) := forward_gen H <span class="kp">ltac</span>:(<span class="kp">idtac</span>).</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Tactic Notation</span> <span class="s2">&quot;forward&quot;</span> <span class="kp">constr</span>(H) <span class="s2">&quot;by&quot;</span> tactic(tac) := forward_gen H tac.</span></span></pre></article></body></html>
