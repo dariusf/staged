@@ -1,4 +1,4 @@
-(** A minimal, reference formalization of #<a href="https://dl.acm.org/doi/10.1007/978-3-031-71162-6_26">Staged Specification Logic for Verifying Higher-Order Imperative Programs</a># (FM 2024). *)
+(** A reference formalization of #<a href="https://dl.acm.org/doi/10.1007/978-3-031-71162-6_26">Staged Specification Logic for Verifying Higher-Order Imperative Programs</a># (FM 2024). *)
 From Coq Require Import Classes.RelationClasses.
 From Coq Require Morphisms Program.Basics.
 
@@ -1770,12 +1770,10 @@ Module BiabductionExamples.
 
 End BiabductionExamples.
 
-(** * Lemmas about Pure Fact Simplification *)
-
+(** * Lemmas about pure fact simplification *)
 (** This section provides a few lemmas showing that once a pure predicate has
     been proven/ensured, it can be used again later down the specification. This
     can be useful when it comes to simplification of the spec. *)
-
 Lemma req_generates_info: forall  P p f,
   let original_flow := req (p \* \[P]) f in
   let new_flow := req (p \* \[P]) (ens_ \[P] ;; f) in
@@ -1872,7 +1870,6 @@ Qed.
     and out of the context of the req.
     
     This is important for the normalized form of a specification. *)
-
 Lemma move_seq_into_req: forall P f,
   entails (req_ P ;; f) (req P f).
 Proof.
@@ -1896,7 +1893,6 @@ Proof.
     + auto.
     + auto.
 Qed.
-
 
 (** * Lemmas about entailment sequents *)
 Lemma ent_all_r : forall f A (fctx:A -> flow) env,
