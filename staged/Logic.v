@@ -1798,8 +1798,9 @@ Proof.
 
   inverts H as H. specialize (H hp' hr' H1 H2 H3). subst. 
   
-  apply s_seq. exists hr' (norm vunit). intuition.
+  eapply s_seq.
   apply ens_void_pure_intro. destruct H1. assumption.
+  assumption.
 Qed.
 
 Lemma req_generates_info_bientails: forall  P p f,
@@ -1829,13 +1830,15 @@ Proof.
   intros env h1 h2 r H.
 
   fdestr H. 
-  apply s_seq. exists h3 r1. intuition.
+  eapply s_seq. eassumption.
 
-  fdestr H1 as (h4&r2&H1&H1').
-  apply s_seq. exists h4 r2. intuition.
+  fdestr H6.
+  eapply s_seq.
+  eassumption.
 
-  apply s_seq. exists h4 (norm vunit). intuition.
+  eapply s_seq.
   apply req_pure_intro.
+  assumption.
 Qed.
 
 Lemma ens_generates_info_bientails: forall P q f g, 
@@ -1849,23 +1852,23 @@ Proof.
   - intro H. 
     
     (* Remove the ens_ q *)
-    fdestr H as (h3&r1&H&H').
-    apply s_seq. exists h3 r1. intuition.
+    fdestr H.
+    eapply s_seq. eassumption.
 
     (* Extract proof of P. *)
     rewrite hstar_comm in H. 
-    apply norm_ens_ens_void in H. fdestr H as (h4&v&H''&_). fdestr H'' as (HP&_).
-    clear r1 h1 q v h4.
+    apply norm_ens_ens_void in H. fdestr H. fdestr H.
 
     (* Proving env, h3, h2, r |= (f;; g) *)
-    fdestr H' as (h4&r2&H&H').
-    apply s_seq. exists h4 r2. intuition.
-    clear H h3 r2.
+    fdestr H6.
+    eapply s_seq.
+    eassumption.
 
-    fdestr H' as (h5&r3&H&H').
-    apply req_pure_inv with (env := env) (h1 := h4) (h2 := h5) (r := r3) in HP.
-    + destruct HP as [HP _]. subst. assumption.
-    + assumption. 
+    fdestr H10.
+    eapply req_pure_inv in H10. destr H10.
+    subst.
+    assumption.
+    assumption.
 Qed.
 
 (** In ens_generates_info, the final flow g is not within the context of 
@@ -1889,7 +1892,7 @@ Lemma move_seq_out_of_req_pure: forall P f,
 Proof.
   intros P f HP. unfold entails. intros env h1 h2 r H.
 
-  apply s_seq. exists h1 (norm vunit). split.
+  eapply s_seq.
   - apply req_pure_intro.
   - inverts H as H. specialize (H empty_heap h1). apply H.
     + apply hpure_intro. apply HP.
