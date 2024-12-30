@@ -2296,13 +2296,13 @@ Inductive forward : expr -> flow -> Prop :=
 
 Module Soundness.
 
-  (** * Semantic pairs *)
-  (** A #<i>semantic pair</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
+  (** * Specification assertions *)
+  (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
   Definition pair_valid_under penv env e f : Prop :=
     forall h1 h2 v,
       bigstep penv h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
 
-  (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid semantic pair. *)
+  (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid specification assertion. *)
   Definition env_compatible penv env :=
     forall pfn xf x,
       Fmap.read penv xf = pfn ->
@@ -2310,16 +2310,16 @@ Module Soundness.
       forall v, pair_valid_under penv env (pfn x) (sfn x v).
 
   (** The full definition requires compatible environments. *)
-  Definition sem_pair (e: expr) (f: flow) : Prop :=
+  Definition spec_assert (e: expr) (f: flow) : Prop :=
     forall penv env,
       env_compatible penv env -> pair_valid_under penv env e f.
 
   #[global]
-  Instance Proper_sem_pair : Proper
+  Instance Proper_spec_assert : Proper
     (eq ====> entails ====> impl)
-    sem_pair.
+    spec_assert.
   Proof.
-    unfold entails, Proper, respectful, impl, sem_pair, pair_valid_under.
+    unfold entails, Proper, respectful, impl, spec_assert, pair_valid_under.
     intros. subst.
     eauto.
   Qed.
@@ -2327,20 +2327,20 @@ Module Soundness.
   (** Structural rules *)
   Lemma sem_consequence : forall f1 f2 e,
     entails f2 f1 ->
-    sem_pair e f2 ->
-    sem_pair e f1.
+    spec_assert e f2 ->
+    spec_assert e f1.
   Proof.
     introv He H.
-    unfold sem_pair. intros.
+    unfold spec_assert. intros.
     rewrite He in H.
     eauto.
   Qed.
 
   (** Rules for program constructs *)
   Lemma sem_pval: forall n,
-    sem_pair (pval n) (ens (fun res => \[res = n])).
+    spec_assert (pval n) (ens (fun res => \[res = n])).
   Proof.
-    unfold sem_pair. introv Hc Hb.
+    unfold spec_assert. introv Hc Hb.
     (* appeal to how e executes to tell us about the heaps *)
     inverts Hb as Hb.
     (* justify that the staged formula describes the heap *)
@@ -2349,19 +2349,19 @@ Module Soundness.
   Qed.
 
   Lemma sem_plet: forall x e1 e2 f1 f2 v,
-    sem_pair e1 f1 ->
+    spec_assert e1 f1 ->
     flow_res f1 v ->
-    sem_pair (subst x v e2) f2 ->
-    sem_pair (plet x e1 e2) (f1;; f2).
+    spec_assert (subst x v e2) f2 ->
+    spec_assert (plet x e1 e2) (f1;; f2).
   Proof.
     intros.
-    unfold sem_pair, pair_valid_under. introv Hc Hb.
+    unfold spec_assert, pair_valid_under. introv Hc Hb.
 
     (* reason about how the let executes *)
     inverts Hb as. introv He1 He2.
 
-    (* use the semantic pair we have about e1 *)
-    unfold sem_pair in H.
+    (* use the specification assertion we have about e1 *)
+    unfold spec_assert in H.
     lets H3: H env He1. exact Hc. clear H He1. sort.
 
     (* we need to know that spec value and program value are the same *)
@@ -2374,29 +2374,29 @@ Module Soundness.
   Qed.
 
   Lemma sem_pif: forall b e1 e2 f1 f2,
-    sem_pair e1 f1 ->
-    sem_pair e2 f2 ->
-    sem_pair (pif b e1 e2) (disj f1 f2).
+    spec_assert e1 f1 ->
+    spec_assert e2 f2 ->
+    spec_assert (pif b e1 e2) (disj f1 f2).
   Proof.
     introv Ht Hf.
-    unfold sem_pair. introv Hc Hb.
+    unfold spec_assert. introv Hc Hb.
     inverts Hb as Hb.
     { (* true *)
-      unfold sem_pair in Ht.
+      unfold spec_assert in Ht.
       specializes Ht env Hb.
       now apply s_disj_l. }
     { (* false *)
-      unfold sem_pair in Hf.
+      unfold spec_assert in Hf.
       specializes Hf env Hb.
       now apply s_disj_r. }
   Qed.
 
   Lemma sem_pderef: forall x,
-    sem_pair (pderef (pval (vloc x)))
+    spec_assert (pderef (pval (vloc x)))
       (fall (fun y => (req (x~~>y)
         (ens (fun res => \[res = y] \* x~~>y))))).
   Proof.
-    intros. unfold sem_pair. introv Hc Hb.
+    intros. unfold spec_assert. introv Hc Hb.
     inverts Hb as Hb.
     constructor. intros v.
     constructor. intros.
@@ -2415,11 +2415,11 @@ Module Soundness.
   Qed.
 
   Lemma sem_pref: forall v,
-    sem_pair (pref (pval v)) (fex (fun y =>
+    spec_assert (pref (pval v)) (fex (fun y =>
       (ens (fun r => \[r = vloc y] \* y~~>v)))).
   Proof.
     intros.
-    unfold sem_pair. introv Hc Hb.
+    unfold spec_assert. introv Hc Hb.
     inverts Hb as Hb.
     constructor. exists p.
     constructor. exists (vloc p). exists (Fmap.single p v).
@@ -2435,11 +2435,11 @@ Module Soundness.
   Qed.
 
   Lemma sem_passign: forall x y v,
-    sem_pair (passign (pval (vloc x)) (pval y))
+    spec_assert (passign (pval (vloc x)) (pval y))
       (req (x~~>v) (ens_ (x~~>y))).
   Proof.
     intros.
-    unfold sem_pair. introv Hc Hb.
+    unfold spec_assert. introv Hc Hb.
     inverts Hb as Hb.
     constructor. intros.
     constructor. exists vunit. exists (Fmap.update hp x y).
@@ -2471,10 +2471,10 @@ Module Soundness.
   Qed.
 
   Lemma sem_passert: forall b,
-    sem_pair (passert (pval (vbool b))) (req_ \[b = true]).
+    spec_assert (passert (pval (vbool b))) (req_ \[b = true]).
   Proof.
     intros.
-    unfold sem_pair. introv Hc Hb.
+    unfold spec_assert. introv Hc Hb.
     inverts Hb as Hb.
     constructor.
     intros.
@@ -2484,38 +2484,38 @@ Module Soundness.
 
   Lemma sem_papp_fun: forall vf x e va f,
     vf = vfun x e ->
-    sem_pair (subst x va e) f ->
-    sem_pair (papp (pval vf) (pval va)) f.
+    spec_assert (subst x va e) f ->
+    spec_assert (papp (pval vf) (pval va)) f.
   Proof.
     intros. subst.
-    unfold sem_pair. introv Hc Hb.
+    unfold spec_assert. introv Hc Hb.
     inverts Hb as.
     { introv H Hb.
       injection H; intros; subst e0 x0; clear H.
-      unfold sem_pair in H0.
+      unfold spec_assert in H0.
       specializes H0 env Hb. }
     { intros. false. }
   Qed.
 
   Lemma sem_papp_fix: forall vf x e va f xf,
     vf = vfix xf x e ->
-    sem_pair (subst x va (subst xf vf e)) f ->
-    sem_pair (papp (pval vf) (pval va)) f.
+    spec_assert (subst x va (subst xf vf e)) f ->
+    spec_assert (papp (pval vf) (pval va)) f.
   Proof.
     intros. subst.
-    unfold sem_pair. introv Hc Hb.
+    unfold spec_assert. introv Hc Hb.
     inverts Hb as.
     { intros. false. }
     { introv H Hb. injection H; intros; subst e0 x0 xf0; clear H.
-      unfold sem_pair in H0.
+      unfold spec_assert in H0.
       specializes H0 env Hb. }
   Qed.
 
   Lemma sem_papp_unk: forall xf va,
-    sem_pair (papp (pvar xf) (pval va)) (fex (fun r => unk xf va r)).
+    spec_assert (papp (pvar xf) (pval va)) (fex (fun r => unk xf va r)).
   Proof.
     intros.
-    unfold sem_pair. introv Hc Hb.
+    unfold spec_assert. introv Hc Hb.
     inverts Hb.
     constructor. exists v.
     unfold env_compatible in Hc. specializes Hc va ___. destr Hc.
@@ -2524,7 +2524,7 @@ Module Soundness.
   Qed.
 
   Local Notation derivable := forward.
-  Local Notation valid := sem_pair.
+  Local Notation valid := spec_assert.
 
   (** * Soundness *)
   Theorem soundness : forall e f,
@@ -2617,15 +2617,15 @@ Module HistoryTriples.
   Qed.
 
   Lemma hist_sem : forall f e,
-    sem_pair e f <->
+    spec_assert e f <->
     hist_triple empty e f.
   Proof.
     iff H.
     { unfold hist_triple. intros.
       apply empty_inv in H0. destruct H0. subst h0.
-      unfold sem_pair, pair_valid_under in H.
+      unfold spec_assert, pair_valid_under in H.
       specializes H H1 H2. }
-    { unfold sem_pair, pair_valid_under. intros.
+    { unfold spec_assert, pair_valid_under. intros.
       unfold hist_triple in H.
       applys H.
       apply empty_intro.
@@ -2648,7 +2648,7 @@ Module HistoryTriples.
 
   (** History triples which only append to history can be derived directly from the history-frame rule. *)
   Lemma hist_frame_sem: forall fh e f,
-    sem_pair e f ->
+    spec_assert e f ->
     hist_triple fh e (fh;; f).
   Proof.
     intros.
@@ -2666,7 +2666,7 @@ Module HistoryTriples.
     applys s_seq h1 R.
     assumption.
     lets H: sem_pval n Hc.
-    unfold pair_valid_under, sem_pair in H.
+    unfold pair_valid_under, spec_assert in H.
     apply H; auto.
   Qed.
 
@@ -2852,8 +2852,8 @@ End ForwardExamples.
 - #<a href="&num;norm_ens_req_transpose">norm_ens_req_transpose</a># *)
 (** A definition of #<a href="&num;biabduction">biabduction</a># is given and proved sound with respect to heap entailment. *)
 (** ** Section 4. Forward rules *)
-(** The reasoning rules for programs are first presented as a more primitive relation #<a href="&num;forward">forward</a># between programs and staged formulae, without history. The validity of these rules for each program construct is defined as a collection of #<i>semantic pairs</i># #<a href="&num;sem_pair">sem_pair</a># (analogous to semantic triples), and soundness (Theorem 2) is #<a href="&num;soundness">explicitly proved</a>#, under a new #<a href="&num;env_compatible">env_compatible</a># condition. *)
-(** #<a href="&num;hist_triple"><i>History triples</i></a># (Fig 8) are then defined. Many of the resulting rules can be derived from semantic pairs using the structural #<i>history-frame rule</i># #<a href="&num;hist_frame">hist_frame</a>#. History triples are also defined semantically and are hence sound by construction. *)
+(** The reasoning rules for programs are first presented as a more primitive relation #<a href="&num;forward">forward</a># between programs and staged formulae, without history. The validity of these rules for each program construct is defined as a collection of #<i>specification assertions</i># #<a href="&num;spec_assert">spec_assert</a># (analogous to semantic triples), and soundness (Theorem 2) is #<a href="&num;soundness">explicitly proved</a>#, under a new #<a href="&num;env_compatible">env_compatible</a># condition. *)
+(** #<a href="&num;hist_triple"><i>History triples</i></a># (Fig 8) are then defined. Many of the resulting rules can be derived from specification assertions using the structural #<i>history-frame rule</i># #<a href="&num;hist_frame">hist_frame</a>#. History triples are also defined semantically and are hence sound by construction. *)
 (** Other differences from the paper:
 - The #<a href="&num;sem_passert">assert</a># rule takes a value (or expression, under ANF), not a heap formula. No expressiveness is lost as it's still possible to assert things about the content of heap locations by first reading them.
 - The #<a href="&num;sem_papp_fun">fun</a>#/#<a href="&num;sem_papp_fun">fix</a># rules require function specifications to be given via triples, instead of via annotations in the syntax. An annotation can still be given by proving a lemma giving the function body a specification beforehand.
