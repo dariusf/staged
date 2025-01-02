@@ -2260,7 +2260,10 @@ Inductive forward : expr -> flow -> Prop :=
   | fw_if: forall b e1 e2 f1 f2,
     forward e1 f1 ->
     forward e2 f2 ->
-    forward (pif b e1 e2) (disj f1 f2)
+    forward (pif (pval (vbool b)) e1 e2)
+      (disj
+        (ens_ \[b = true];; f1)
+        (ens_ \[b = false];; f2))
 
   | fw_deref: forall x,
     forward (pderef (pval (vloc x)))
@@ -2372,6 +2375,32 @@ Module Soundness.
   Qed.
 
   Lemma sem_pif: forall b e1 e2 f1 f2,
+    spec_assert e1 f1 ->
+    spec_assert e2 f2 ->
+    spec_assert (pif (pval (vbool b)) e1 e2) (disj
+      (ens_ \[b = true];; f1)
+      (ens_ \[b = false];; f2)).
+  Proof.
+    introv Ht Hf.
+    unfold spec_assert. introv Hc Hb.
+    inverts Hb as Hb.
+    { (* true *)
+      unfold spec_assert in Ht.
+      specializes Ht env Hb.
+      apply s_disj_l.
+      eapply s_seq.
+      apply ens_void_pure_intro. reflexivity.
+      assumption. }
+    { (* false *)
+      unfold spec_assert in Hf.
+      specializes Hf env Hb.
+      apply s_disj_r.
+      eapply s_seq.
+      apply ens_void_pure_intro. reflexivity.
+      assumption. }
+  Qed.
+
+  Lemma sem_pif_ignore_cond: forall b e1 e2 f1 f2,
     spec_assert e1 f1 ->
     spec_assert e2 f2 ->
     spec_assert (pif b e1 e2) (disj f1 f2).
