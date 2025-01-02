@@ -739,23 +739,41 @@ Tactic Notation "fdestr" constr(H) := fdestr_rec H.
 Tactic Notation "fdestr" constr(H) "as" simple_intropattern(pat) := fdestr_pat H pat.
 
 (** * Entailment and normalization rules *)
+Lemma top_intro : forall s h1 h2 R,
+  satisfies s h1 h2 R top.
+Proof.
+  unfold bientails. intros.
+  unfold top.
+  apply s_req. intros.
+  hinv H.
+  false.
+Qed.
+
+Lemma bot_inv : forall s h1 h2 R,
+  satisfies s h1 h2 R bot -> False.
+Proof.
+  unfold bientails. intros.
+  inverts H as H.
+  specializes H empty_heap h1.
+  forwards: H.
+  apply* hpure_intro.
+  fmap_eq.
+  fmap_disjoint.
+  fdestr H0.
+  false.
+Qed.
+
 Lemma entails_bot: forall f, entails bot f.
 Proof.
   unfold entails. intros.
-  inverts H as H.
-  specializes H empty_heap h1 ___.
-  hintro. auto.
-  inverts H as H. destr H.
-  hinv H. hinv H2.
+  apply bot_inv in H.
   false.
 Qed.
 
 Lemma entails_top: forall f, entails f top.
 Proof.
   unfold entails. intros.
-  constructor. intros.
-  hinv H0.
-  false.
+  apply top_intro.
 Qed.
 
 Lemma disentails_okay_error: forall P Q,
