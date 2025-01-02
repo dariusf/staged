@@ -976,13 +976,21 @@ Proof.
 Qed.
 
 Lemma seq_disj_distr : forall f1 f2 f3,
-  entails ((disj f1 f2) ;; f3) (disj (f1;; f3) (f2;; f3)).
+  bientails ((disj f1 f2) ;; f3) (disj (f1;; f3) (f2;; f3)).
 Proof.
-  unfold entails. intros.
-  inverts H as H. destr H.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H. destr H.
   inverts H as H.
   - apply s_disj_l. econstructor; jauto.
-  - apply s_disj_r. econstructor; jauto.
+  - apply s_disj_r. econstructor; jauto. }
+  { inverts H as H. destr H.
+    - inverts H as H.
+      eapply s_seq.
+      apply* s_disj_l. assumption.
+    - inverts H as H.
+      eapply s_seq.
+      apply* s_disj_r. assumption. }
 Qed.
 
 (** seq is associative *)
