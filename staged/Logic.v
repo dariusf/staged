@@ -822,27 +822,25 @@ Proof.
 Qed.
 
 (** Contravariance of req *)
-Lemma satisfies_req : forall H1 H2 env h1 h2 R f,
+Lemma satisfies_req : forall H1 H2 env h1 h2 R f1 f2,
   H2 ==> H1 ->
-  satisfies env h1 h2 R (req H1 f) ->
-  satisfies env h1 h2 R (req H2 f).
+  entails f1 f2 ->
+  satisfies env h1 h2 R (req H1 f1) ->
+  satisfies env h1 h2 R (req H2 f2).
 Proof.
   intros.
-  inverts H0 as H0.
-  apply s_req.
-  intros hH1 hr H3.
-  (* hH1 is the heap that satisfies H1 *)
-  (* hr is the starting heap of the continuation *)
-  apply H in H3.
-  specialize (H0 _ hr H3).
-  intuition.
+  apply s_req. intros.
+  apply H in H4.
+  inverts H3 as H3.
+  specializes H3 hr H4.
 Qed.
 
-Lemma entails_req : forall H1 H2 f,
-  (H2 ==> H1) -> entails (req H1 f) (req H2 f).
+Lemma entails_req : forall H1 H2 f1 f2,
+  (H2 ==> H1) ->
+  entails f1 f2 ->
+  entails (req H1 f1) (req H2 f2).
 Proof.
-  unfold entails.
-  intros.
+  unfold entails. intros.
   applys* satisfies_req H1.
 Qed.
 
