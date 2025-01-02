@@ -910,6 +910,15 @@ Proof.
   { apply* s_disj_l. }
 Qed.
 
+Lemma disj_dom : forall f,
+  bientails (disj f top) top.
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { apply top_intro. }
+  { apply* s_disj_r. }
+Qed.
+
 Lemma conj_comm : forall f1 f2,
   bientails (intersect f2 f1) (intersect f1 f2).
 Proof.
@@ -946,6 +955,7 @@ Proof.
   { apply* s_intersect. }
 Qed.
 
+(* top is the unit or identity element of conjunction. *)
 Lemma conj_unit : forall f,
   bientails (intersect f top) f.
 Proof.
@@ -953,6 +963,16 @@ Proof.
   iff H.
   { inverts H as H. assumption. }
   { apply* s_intersect. apply top_intro. }
+Qed.
+
+(* This property is variously called domination or annihilation, with bot being called the annihilator. *)
+Lemma conj_dom : forall f,
+  bientails (intersect f bot) bot.
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H. assumption. }
+  { apply* s_intersect. apply bot_inv in H. false. }
 Qed.
 
 Lemma seq_disj_distr : forall f1 f2 f3,
