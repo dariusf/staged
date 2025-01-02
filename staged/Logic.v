@@ -910,6 +910,51 @@ Proof.
   { apply* s_disj_l. }
 Qed.
 
+Lemma conj_comm : forall f1 f2,
+  bientails (intersect f2 f1) (intersect f1 f2).
+Proof.
+  unfold bientails. intros. iff H.
+  { inverts H as H.
+    apply* s_intersect. }
+  { inverts H as H.
+    apply* s_intersect. }
+Qed.
+
+Lemma conj_assoc : forall f1 f2 f3,
+  bientails
+    (intersect f1 (intersect f2 f3))
+    (intersect (intersect f1 f2) f3).
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H.
+    inverts H6 as H6.
+    apply* s_intersect.
+    apply* s_intersect. }
+  { inverts H as H.
+    inverts H as H.
+    apply* s_intersect.
+    apply* s_intersect. }
+Qed.
+
+Lemma conj_idem : forall f,
+  bientails (intersect f f) f.
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H. assumption. }
+  { apply* s_intersect. }
+Qed.
+
+Lemma conj_unit : forall f,
+  bientails (intersect f top) f.
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H. assumption. }
+  { apply* s_intersect. apply top_intro. }
+Qed.
+
 Lemma seq_disj_distr : forall f1 f2 f3,
   entails ((disj f1 f2) ;; f3) (disj (f1;; f3) (f2;; f3)).
 Proof.
