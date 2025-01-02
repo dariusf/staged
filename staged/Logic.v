@@ -875,6 +875,41 @@ Proof.
     apply s_disj_l. assumption. }
 Qed.
 
+Lemma disj_assoc : forall f1 f2 f3,
+  bientails (disj f1 (disj f2 f3)) (disj (disj f1 f2) f3).
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H.
+    apply s_disj_l. apply* s_disj_l.
+    inverts H as H.
+    apply s_disj_l. apply* s_disj_r.
+    apply* s_disj_r. }
+  { inverts H as H.
+    inverts H as H.
+    apply* s_disj_l.
+    apply s_disj_r. apply* s_disj_l.
+    apply s_disj_r. apply* s_disj_r. }
+Qed.
+
+Lemma disj_idem : forall f,
+  bientails (disj f f) f.
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H; auto. }
+  { apply* s_disj_l. }
+Qed.
+
+Lemma disj_unit : forall f,
+  bientails (disj f bot) f.
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H; auto. apply bot_inv in H. false. }
+  { apply* s_disj_l. }
+Qed.
+
 Lemma seq_disj_distr : forall f1 f2 f3,
   entails ((disj f1 f2) ;; f3) (disj (f1;; f3) (f2;; f3)).
 Proof.
