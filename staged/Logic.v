@@ -1081,17 +1081,26 @@ Proof.
 Qed.
 
 Lemma norm_ens_ens_void_comm : forall H1 H2,
-  entails (ens_ H1;; ens_ H2) (ens_ H2;; ens_ H1).
+  bientails (ens_ H1;; ens_ H2) (ens_ H2;; ens_ H1).
 Proof.
-  unfold entails. intros.
-  fdestr H.
-  inverts H as H. destr H. hinv H. hinv H.
-  inverts H8 as H8. destr H8. hinv H8. hinv H8.
-  applys s_seq (h1 \u x2) (norm vunit).
-  { constructor. exists vunit. exists x2.
-    intuition. hintro. intuition. }
-  { constructor. exists vunit. exists x0.
-    intuition. subst. reflexivity. hintro. intuition. }
+  unfold bientails. intros.
+  iff H.
+  { fdestr H.
+    inverts H as H. destr H. hinv H. hinv H.
+    inverts H8 as H8. destr H8. hinv H8. hinv H8.
+    applys s_seq (h1 \u x2) (norm vunit).
+    { constructor. exists vunit. exists x2.
+      intuition. hintro. intuition. }
+    { constructor. exists vunit. exists x0.
+      intuition. subst. reflexivity. hintro. intuition. } }
+  { fdestr H.
+    inverts H as H. destr H. hinv H. hinv H.
+    inverts H8 as H8. destr H8. hinv H8. hinv H8.
+    applys s_seq (h1 \u x2) (norm vunit).
+    { constructor. exists vunit. exists x2.
+      intuition. hintro. intuition. }
+    { constructor. exists vunit. exists x0.
+      intuition. subst. reflexivity. hintro. intuition. } }
 Qed.
 
 (** Compaction rule 1 from the paper *)
