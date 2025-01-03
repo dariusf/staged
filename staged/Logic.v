@@ -739,6 +739,42 @@ Proof.
   applys ens_void_inv H0.
 Qed.
 
+Lemma unk_inv : forall s h1 h2 R xf a v fn,
+  Fmap.read s xf = fn ->
+  satisfies s h1 h2 R (unk xf a v) ->
+  satisfies s h1 h2 R (fn a v).
+Proof.
+  intros.
+  inverts H0 as H0.
+  rewrite H in H0.
+  assumption.
+Qed.
+
+Lemma unk_inv_bi : forall s h1 h2 r a fn xf,
+  Fmap.read s xf = fn ->
+  satisfies s h1 h2 (norm r) (unk xf a r) <->
+  satisfies s h1 h2 (norm r) (fn a r).
+Proof.
+  intros.
+  split; intros.
+  { inverts H0 as H0.
+    rewrite H in H0.
+    assumption. }
+  { pose proof s_unk.
+    lets: s_unk s h1 h2 r xf.
+    specializes H2 fn a H. }
+Qed.
+
+Lemma unk_res_inv : forall s h1 h2 r a fn xf R,
+  Fmap.read s xf = fn ->
+  satisfies s h1 h2 R (unk xf a r) ->
+  R = norm r.
+Proof.
+  intros.
+  inverts H0 as H0.
+  reflexivity.
+Qed.
+
 (** * Some tactics *)
 
 Ltac fdestr_rec H :=
@@ -760,14 +796,16 @@ Tactic Notation "fdestr" constr(H) := fdestr_rec H.
 Tactic Notation "fdestr" constr(H) "as" simple_intropattern(pat) := fdestr_pat H pat.
 
 (** * Entailment and normalization rules *)
-Lemma entails_bot: forall f, entails bot f.
+Lemma entails_bot: forall f,
+  entails bot f.
 Proof.
   unfold entails. intros.
   apply bot_inv in H.
   false.
 Qed.
 
-Lemma entails_top: forall f, entails f top.
+Lemma entails_top: forall f,
+  entails f top.
 Proof.
   unfold entails. intros.
   apply top_intro.
@@ -790,11 +828,11 @@ Proof.
 Abort.
 
 (** Covariance of ens *)
-Lemma satisfies_ens : forall Q1 Q2 env h1 h2 R,
+Lemma entails_ens : forall Q1 Q2,
   (forall v, Q1 v ==> Q2 v) ->
-  satisfies env h1 h2 R (ens Q1)->
-  satisfies env h1 h2 R (ens Q2).
+  entails (ens Q1) (ens Q2).
 Proof.
+  unfold entails. intros.
   intros.
   inverts H0 as H3.
   constructor.
@@ -804,13 +842,6 @@ Proof.
   intuition.
   apply H.
   easy.
-Qed.
-
-Lemma entails_ens : forall Q1 Q2,
-  (forall v, Q1 v ==> Q2 v) -> entails (ens Q1) (ens Q2).
-Proof.
-  unfold entails. intros.
-  applys* satisfies_ens.
 Qed.
 
 Lemma satisfies_ens_void : forall H1 H2 env h1 h2 R,
@@ -833,32 +864,41 @@ Lemma entails_ens_void : forall H1 H2,
 Proof.
   unfold entails.
   intros.
-  applys* satisfies_ens_void H.
+  apply (satisfies_ens_void H).
+  assumption.
 Qed.
 
 (** Contravariance of req *)
-Lemma satisfies_req : forall H1 H2 env h1 h2 R f1 f2,
-  H2 ==> H1 ->
-  entails f1 f2 ->
-  satisfies env h1 h2 R (req H1 f1) ->
-  satisfies env h1 h2 R (req H2 f2).
-Proof.
-  intros.
-  apply s_req. intros.
-  apply H in H4.
-  inverts H3 as H3.
-  specializes H3 hr H4.
-Qed.
-
 Lemma entails_req : forall H1 H2 f1 f2,
   (H2 ==> H1) ->
   entails f1 f2 ->
   entails (req H1 f1) (req H2 f2).
 Proof.
   unfold entails. intros.
-  applys* satisfies_req H1.
+  apply s_req. intros.
+  apply H in H4.
+  inverts H3 as H3.
+  specializes H3 hr H4.
 Qed.
 
+(** Reassociating req *)
+Lemma norm_reassoc : forall H f1 f2,
+  entails (req H f1;; f2) (req H (f1;; f2)).
+Proof.
+  unfold entails.
+  intros.
+  inverts H0 as H0. destr H0.
+
+  (* find out about req *)
+  constructor. intros hp hr. intros.
+
+  (* prove the req *)
+  inverts H0 as H0.
+  specializes H0 hp hr H1 ___.
+  applys~ s_seq h3 R1.
+Qed.
+
+(** Properties of disjunction *)
 Lemma disj_comm : forall f1 f2,
   bientails (disj f2 f1) (disj f1 f2).
 Proof.
@@ -926,6 +966,7 @@ Proof.
     apply* s_intersect. }
 Qed.
 
+(** Properties of conjunction *)
 Lemma conj_assoc : forall f1 f2 f3,
   bientails
     (intersect f1 (intersect f2 f3))
@@ -972,6 +1013,7 @@ Proof.
   { apply* s_intersect. apply bot_inv in H. false. }
 Qed.
 
+(* Properties of sequencing *)
 Lemma seq_disj_distr : forall f1 f2 f3,
   bientails ((disj f1 f2) ;; f3) (disj (f1;; f3) (f2;; f3)).
 Proof.
@@ -990,7 +1032,6 @@ Proof.
       apply* s_disj_r. assumption. }
 Qed.
 
-(** seq is associative *)
 Lemma seq_assoc : forall env h1 h2 R f1 f2 f3,
   satisfies env h1 h2 R (f1;; f2;; f3) <->
   satisfies env h1 h2 R ((f1;; f2);; f3).
@@ -1014,46 +1055,9 @@ Proof.
   split; intros; now apply seq_assoc.
 Qed.
 
-Lemma unk_inv : forall s h1 h2 R xf a v fn,
-  Fmap.read s xf = fn ->
-  satisfies s h1 h2 R (unk xf a v) ->
-  satisfies s h1 h2 R (fn a v).
-Proof.
-  intros.
-  inverts H0 as H0.
-  rewrite H in H0.
-  assumption.
-Qed.
-
-Lemma unk_inv_bi : forall s h1 h2 r a fn xf,
-  Fmap.read s xf = fn ->
-  satisfies s h1 h2 (norm r) (unk xf a r) <->
-  satisfies s h1 h2 (norm r) (fn a r).
-Proof.
-  intros.
-  split; intros.
-  { inverts H0 as H0.
-    rewrite H in H0.
-    assumption. }
-  { pose proof s_unk.
-    lets: s_unk s h1 h2 r xf.
-    specializes H2 fn a H. }
-Qed.
-
-Lemma unk_res_inv : forall s h1 h2 r a fn xf R,
-  Fmap.read s xf = fn ->
-  satisfies s h1 h2 R (unk xf a r) ->
-  R = norm r.
-Proof.
-  intros.
-  inverts H0 as H0.
-  reflexivity.
-Qed.
-
 Lemma norm_forall : forall (A:Type) f1 f2_ctx,
-  entails
-    (f1;; fall (fun (a:A) => f2_ctx a))
-    (fall (fun (a:A) => f1;; f2_ctx a)).
+  entails (f1;; ∀ a:A, f2_ctx a)
+    (∀ a:A, f1;; f2_ctx a).
 Proof.
   unfold entails.
   intros.
@@ -1065,9 +1069,7 @@ Proof.
 Qed.
 
 Lemma norm_exists : forall (A:Type) f1 ctx,
-  entails
-    (f1;; fex (fun (a:A) => ctx a))
-    (fex (fun (a:A) => f1;; ctx a)).
+  entails (f1;; ∃ a:A, ctx a) (∃ a:A, f1;; ctx a).
 Proof.
   unfold entails.
   intros.
@@ -1075,29 +1077,6 @@ Proof.
   fdestr H6.
   constructor. exists b.
   econstructor; jauto.
-Qed.
-
-Lemma norm_ens_ens_void_comm : forall H1 H2,
-  bientails (ens_ H1;; ens_ H2) (ens_ H2;; ens_ H1).
-Proof.
-  unfold bientails. intros.
-  iff H.
-  { fdestr H.
-    inverts H as H. destr H. hinv H. hinv H.
-    inverts H8 as H8. destr H8. hinv H8. hinv H8.
-    applys s_seq (h1 \u x2) (norm vunit).
-    { constructor. exists vunit. exists x2.
-      intuition. hintro. intuition. }
-    { constructor. exists vunit. exists x0.
-      intuition. subst. reflexivity. hintro. intuition. } }
-  { fdestr H.
-    inverts H as H. destr H. hinv H. hinv H.
-    inverts H8 as H8. destr H8. hinv H8. hinv H8.
-    applys s_seq (h1 \u x2) (norm vunit).
-    { constructor. exists vunit. exists x2.
-      intuition. hintro. intuition. }
-    { constructor. exists vunit. exists x0.
-      intuition. subst. reflexivity. hintro. intuition. } }
 Qed.
 
 (** Compaction rule 1 from the paper *)
@@ -1116,9 +1095,8 @@ Qed.
 Lemma norm_ens_false : forall f,
   entails (ens_ \[False]) f.
 Proof.
-  unfold entails. intros.
-  apply ens_void_pure_inv in H.
-  intuition.
+  intros.
+  apply entails_bot.
 Qed.
 
 Lemma norm_req_false : forall f f1,
@@ -1126,8 +1104,7 @@ Lemma norm_req_false : forall f f1,
 Proof.
   unfold entails. intros.
   constructor. intros.
-  apply hpure_inv in H0.
-  intuition.
+  hinv H0. false.
 Qed.
 
 Lemma norm_req_pure : forall P f,
@@ -1138,6 +1115,16 @@ Proof.
   specializes H0 empty_heap h1.
   forward H0. hintro. assumption.
   rew_fmap *.
+Qed.
+
+Lemma norm_ens_pure : forall P f,
+  P -> entails f (ens_ \[P];; f).
+Proof.
+  unfold entails. intros.
+  eapply s_seq.
+  apply ens_void_pure_intro.
+  assumption.
+  assumption.
 Qed.
 
 (** The converse is not true as the result would change *)
@@ -1191,7 +1178,7 @@ Proof.
   apply ens_no_result.
 Qed.
 
-(** Compaction rule 3 from the paper. Stated this way to ensure [f] has no meaningful result. *)
+(** Compaction rule 3 from the paper. Stated this way to ensure [f] has no meaningful result. See [norm_ens_empty_r] for a better statement. *)
 Lemma norm_empty_r : forall f H,
   bientails (f;; ens_ H;; empty) (f;; ens_ H).
 Proof.
@@ -1214,28 +1201,27 @@ Proof.
     assumption. }
 Qed.
 
-(** Reassociating req *)
-Lemma satisfies_reassoc : forall H f1 f2 env h1 h2 R,
-  satisfies env h1 h2 R (req H f1;; f2) ->
-  satisfies env h1 h2 R (req H (f1;; f2)).
+Lemma norm_ens_ens_void_comm : forall H1 H2,
+  bientails (ens_ H1;; ens_ H2) (ens_ H2;; ens_ H1).
 Proof.
-  intros.
-  inverts H0 as H0. destr H0.
-
-  (* find out about req *)
-  constructor. intros hp hr. intros.
-
-  (* prove the req *)
-  inverts H0 as H0.
-  specializes H0 hp hr H1 ___.
-  applys~ s_seq h3 R1.
-Qed.
-
-Lemma norm_reassoc : forall H f1 f2,
-  entails (req H f1;; f2) (req H (f1;; f2)).
-Proof.
-  unfold entails.
-  apply satisfies_reassoc.
+  unfold bientails. intros.
+  iff H.
+  { fdestr H.
+    inverts H as H. destr H. hinv H. hinv H.
+    inverts H8 as H8. destr H8. hinv H8. hinv H8.
+    applys s_seq (h1 \u x2) (norm vunit).
+    { constructor. exists vunit. exists x2.
+      intuition. hintro. intuition. }
+    { constructor. exists vunit. exists x0.
+      intuition. subst. reflexivity. hintro. intuition. } }
+  { fdestr H.
+    inverts H as H. destr H. hinv H. hinv H.
+    inverts H8 as H8. destr H8. hinv H8. hinv H8.
+    applys s_seq (h1 \u x2) (norm vunit).
+    { constructor. exists vunit. exists x2.
+      intuition. hintro. intuition. }
+    { constructor. exists vunit. exists x0.
+      intuition. subst. reflexivity. hintro. intuition. } }
 Qed.
 
 (** Splitting and combining [req]s *)
@@ -1481,22 +1467,11 @@ Proof.
   applys* s_seq.
 Qed.
 
-Lemma norm_ent_ent_pure_comm: forall H P,
+Lemma norm_ens_ens_pure_comm: forall H P,
   bientails (ens_ H;; ens_ \[P]) (ens_ \[P];; ens_ H).
 Proof.
-  intros. split; intros.
-  { inverts H0 as H0. destr H0.
-    pose proof (ens_no_result H0).
-    fdestr H7. subst.
-    applys s_seq h1 (norm vunit).
-    apply ens_void_pure_intro. assumption. 
-    assumption. }
-  { inverts H0 as H0. destr H0.
-    pose proof (ens_no_result H7).
-    fdestr H0. subst.
-    applys s_seq h2 (norm vunit).
-    assumption.
-    apply ens_void_pure_intro. assumption. }
+  intros.
+  apply norm_ens_ens_void_comm.
 Qed.
 
 (** Rule EntEns from the paper *)
@@ -1508,6 +1483,7 @@ Proof.
   unfold entails.
   intros.
   inverts H3 as H3. destr H3.
+  (* eapply s_seq. *)
   apply (satisfies_ens_void H) in H3.
   applys* s_seq h3 R1.
 Qed.

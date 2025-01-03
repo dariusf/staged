@@ -80,7 +80,7 @@ Proof.
   rewrite norm_seq_assoc.
   rewrite norm_seq_assoc.
   rewrite norm_ens_ens_void_combine.
-  rewrite norm_ent_ent_pure_comm.
+  rewrite norm_ens_ens_pure_comm.
   rewrite <- norm_seq_assoc.
   fassume H.
 

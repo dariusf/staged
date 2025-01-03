@@ -345,7 +345,7 @@ Proof.
     rewrite <- norm_seq_assoc.
     fassume H2.
     rewrite norm_seq_assoc.
-    rewrite norm_ent_ent_pure_comm.
+    rewrite norm_ens_ens_pure_comm.
     rewrite <- norm_seq_assoc.
     fassume H3.
     finst q.
