@@ -263,8 +263,8 @@ Notation "env '⊢' f1 '⊑' f2" :=
   (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
 
 (** * Top and bottom *)
-Definition top := req \[False] (ens_ \[True]).
-Definition bot := req \[True] (ens_ \[False]).
+Definition top := req_ \[False].
+Definition bot := ens_ \[False].
 Definition error := req \[False] (ens_ \[False]).
 Definition post_sat (Q:postcond) := exists v h, Q v h.
 Definition flow_sat f := exists s h1 h2 R, satisfies s h1 h2 R f.
@@ -569,6 +569,27 @@ Proof.
   constructor.
 Qed.
 
+(* We get absolutely no info from top, so there is no top_inv.
+  This is not the case for empty, which tells us that the heaps are empty. *)
+Lemma top_intro : forall s h1 h2 R,
+  satisfies s h1 h2 R top.
+Proof.
+  unfold bientails. intros.
+  unfold top.
+  apply s_req. intros.
+  hinv H.
+  false.
+Qed.
+
+(* Conversely, there is no bot_intro because we should never be able to prove it. *)
+Lemma bot_inv : forall s h1 h2 R,
+  satisfies s h1 h2 R bot -> False.
+Proof.
+  unfold bientails. intros.
+  inverts H as H. destr H. hinv H. hinv H2.
+  false.
+Qed.
+
 Lemma req_pure_ret_inv : forall env h1 h2 P R,
   P ->
   satisfies env h1 h2 R (req_ \[P]) ->
@@ -739,30 +760,6 @@ Tactic Notation "fdestr" constr(H) := fdestr_rec H.
 Tactic Notation "fdestr" constr(H) "as" simple_intropattern(pat) := fdestr_pat H pat.
 
 (** * Entailment and normalization rules *)
-Lemma top_intro : forall s h1 h2 R,
-  satisfies s h1 h2 R top.
-Proof.
-  unfold bientails. intros.
-  unfold top.
-  apply s_req. intros.
-  hinv H.
-  false.
-Qed.
-
-Lemma bot_inv : forall s h1 h2 R,
-  satisfies s h1 h2 R bot -> False.
-Proof.
-  unfold bientails. intros.
-  inverts H as H.
-  specializes H empty_heap h1.
-  forwards: H.
-  apply* hpure_intro.
-  fmap_eq.
-  fmap_disjoint.
-  fdestr H0.
-  false.
-Qed.
-
 Lemma entails_bot: forall f, entails bot f.
 Proof.
   unfold entails. intros.
