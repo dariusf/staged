@@ -41,27 +41,15 @@ Proof.
   unfold f1, flow_res.
   intros.
   inverts H as H. destr H.
-  injects H0.
   inv H.
   reflexivity.
-Qed.
-
-Lemma flow_res_inv: forall v v1 f h1 h2 env,
-  satisfies env h1 h2 (norm v) f ->
-  flow_res f v1 ->
-  v = v1.
-Proof.
-  unfold flow_res.
-  intros.
-  specializes H0 H.
-  assumption.
 Qed.
 
 Example ex2_ret1: forall v, flow_res f1 v -> v = vint 1.
 Proof.
   unfold f1, flow_res.
   intros.
-  forwards: H empty_heap empty_heap empty_env (vint 1).
+  forwards: H empty_heap empty_heap empty_env.
   { constructor.
     exists (vint 1). exists empty_heap.
     intuition.

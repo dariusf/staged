@@ -233,13 +233,13 @@ Notation "s ','  h1 ','  h2 ','  R  '|=' f" :=
 
 (** The result of a staged formula, written in the paper as [Φ[r]]. Because it relates a formula and a value here (and not a variable, as in the paper), we need a model for the formula to talk about the value. *)
 Definition flow_res (f:flow) (v:val) : Prop :=
-  forall h1 h2 env v1, satisfies env h1 h2 (norm v1) f -> v1 = v.
+  forall h1 h2 env R, satisfies env h1 h2 R f -> R = norm v.
 
 Definition flow_res_in_env (f:flow) (v:val) env : Prop :=
   forall h1 h2 v1, satisfies env h1 h2 (norm v1) f -> v1 = v.
 
 Definition has_no_result f :=
-  forall env h1 h2 R, satisfies env h1 h2 R f -> R = norm vunit.
+  flow_res f vunit.
 
 (** * Entailment *)
 (** This sequent is useful for (interactive) proofs involving functions. *)
@@ -524,6 +524,18 @@ Section Proprium.
 End Proprium.
 
 (** * Inversion/introduction lemmas *)
+Lemma flow_res_inv: forall v v1 f h1 h2 env,
+  satisfies env h1 h2 (norm v) f ->
+  flow_res f v1 ->
+  v = v1.
+Proof.
+  unfold flow_res.
+  intros.
+  specializes H0 H.
+  injects H0.
+  reflexivity.
+Qed.
+
 Lemma ens_ret_inv : forall env h1 h2 H R,
   satisfies env h1 h2 R (ens_ H) ->
   R = norm vunit.
@@ -755,9 +767,10 @@ Qed.
 Lemma ens_no_result : forall H,
   has_no_result (ens_ H).
 Proof.
-  unfold has_no_result.
+  unfold has_no_result, flow_res.
   intros.
-  applys ens_void_inv H0.
+  apply ens_void_inv in H0.
+  congruence.
 Qed.
 
 Lemma unk_inv : forall s h1 h2 R xf a v fn,
@@ -1166,7 +1179,8 @@ Lemma norm_ens_no_result_r : forall f,
   bientails (f;; empty) f.
 Proof.
   iff H1.
-  { inverts H1 as H1. destr H1.
+  { inverts H1 as H1.
+  unfold has_no_result, flow_res in H.
     specializes H H1. subst.
     apply empty_inv in H7. destr H7. subst.
     assumption. }
@@ -2521,6 +2535,7 @@ Module Soundness.
 
     (* we need to know that spec value and program value are the same *)
     specializes H0 H3. subst.
+    injects H0.
 
     (* know about f2 *)
     specializes H1 env h3 h2 v0 He2. clear He2.
@@ -2976,6 +2991,7 @@ Module HistoryTriples.
 
     (* reason about the result of e1 *)
     specializes Hres He1. subst.
+    injects Hres.
 
     (* reason about the execution of e2 *)
     unfold hist_triple in He2.
@@ -2997,11 +3013,11 @@ Module ForwardExamples.
   Proof.
     eapply fw_let.
     - apply fw_val.
-    - unfold flow_res.
-      intros.
+    - unfold flow_res. intros.
+      destruct R.
       apply ens_pure_inv in H.
       destruct H.
-      exact H.
+      subst. reflexivity.
     - simpl.
       apply fw_val.
   Qed.
