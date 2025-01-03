@@ -75,7 +75,8 @@ Proof.
   intros.
   inverts H as H.
   specializes H (vint 1).
-  apply req_pure_ret_inv in H.
+  apply req_void_pure_inv in H.
+  destr H.
   congruence.
   reflexivity.
 Qed.

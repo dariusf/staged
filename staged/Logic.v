@@ -590,20 +590,6 @@ Proof.
   false.
 Qed.
 
-Lemma req_pure_ret_inv : forall env h1 h2 P R,
-  P ->
-  satisfies env h1 h2 R (req_ \[P]) ->
-  R = norm vunit.
-Proof.
-  intros.
-  inverts H0 as H0.
-  specializes H0 empty_heap h1 ___.
-  apply hpure_intro.
-  assumption.
-  apply empty_inv in H0.
-  intuition.
-Qed.
-
 Lemma req_empty_inv : forall env h1 h2 R,
   satisfies env h1 h2 R (req_ \[]) ->
   h1 = h2 /\ R = norm vunit.
@@ -701,8 +687,8 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma req_pure_intro : forall env h1 P,
-  satisfies env h1 h1 (norm vunit) (req \[P] empty).
+Lemma req_void_pure_intro : forall env h1 P,
+  satisfies env h1 h1 (norm vunit) (req_ \[P]).
 Proof.
   intros.
   constructor. intros.
@@ -710,15 +696,36 @@ Proof.
   apply empty_intro.
 Qed.
 
-Lemma req_pure_inv: forall env h1 h2 R P,
-  P -> satisfies env h1 h2 R (req_ \[P]) -> h1 = h2 /\ R = norm vunit.
+Lemma req_pure_intro : forall env h1 h2 R P f,
+  (P -> satisfies env h1 h2 R f) ->
+  satisfies env h1 h2 R (req \[P] f).
+Proof.
+  intros.
+  apply s_req. intros.
+  hinv H0. subst. rew_fmap.
+  apply* H.
+Qed.
+
+Lemma req_void_pure_inv: forall env h1 h2 R P,
+  P ->
+  satisfies env h1 h2 R (req_ \[P]) ->
+  h1 = h2 /\ R = norm vunit.
 Proof.
   intros env h1 h2 r P HP H. 
   apply empty_inv with (env := env).
+  inverts H as H. specialize (H empty_heap h1). apply* H.
+  apply hpure_intro. assumption.
+Qed.
 
-  inverts H as H. specialize (H empty_heap h1). apply H.
-  - apply hpure_intro. assumption.
-  - auto. - auto.
+Lemma req_pure_inv: forall env h1 h2 R P f,
+  P ->
+  satisfies env h1 h2 R (req \[P] f) ->
+  satisfies env h1 h2 R f.
+Proof.
+  intros.
+  inverts H0 as H0.
+  specialize (H0 empty_heap h1). apply H0.
+  hintro. assumption. fmap_eq. fmap_disjoint.
 Qed.
 
 Lemma seq_ens_pure_inv : forall P env h1 h2 v f,
@@ -1899,7 +1906,7 @@ Proof.
   eassumption.
 
   eapply s_seq.
-  apply req_pure_intro.
+  apply req_void_pure_intro.
   assumption.
 Qed.
 
@@ -1927,7 +1934,7 @@ Proof.
     eassumption.
 
     fdestr H10.
-    eapply req_pure_inv in H10. destr H10.
+    eapply req_void_pure_inv in H10. destr H10.
     subst.
     assumption.
     assumption.
@@ -1955,11 +1962,51 @@ Proof.
   intros P f HP. unfold entails. intros env h1 h2 r H.
 
   eapply s_seq.
-  - apply req_pure_intro.
-  - inverts H as H. specialize (H empty_heap h1). apply H.
-    + apply hpure_intro. apply HP.
-    + auto.
-    + auto.
+  - apply req_void_pure_intro.
+  - apply (req_pure_inv HP) in H. assumption.
+Qed.
+
+Lemma norm_disj_ens_distr: forall P1 P2 f,
+  bientails (ens_ \[P1 \/ P2]) (disj (ens_ \[P1]) (ens_ \[P2])).
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { fdestr H. subst.
+    destruct H0.
+    { apply s_disj_l.
+      apply* ens_void_pure_intro. }
+    { apply s_disj_r.
+      apply* ens_void_pure_intro. } }
+  { inverts H as H.
+    { fdestr H. subst.
+      apply* ens_void_pure_intro. }
+    { fdestr H. subst.
+      apply* ens_void_pure_intro. } }
+  Qed.
+
+Lemma norm_disj_req_distr: forall P1 P2 f,
+  entails
+    (disj (req \[P1] f) (req \[P2] f))
+    (req \[P1 /\ P2] f).
+Proof.
+  unfold entails. intros.
+  apply req_pure_intro. intros [? ?].
+  inverts H as H.
+  - apply (req_pure_inv H0) in H. assumption.
+  - apply (req_pure_inv H1) in H. assumption.
+Qed.
+
+Lemma norm_req_disj_distr: forall P1 P2 f,
+  entails
+    (req \[P1 \/ P2] f)
+    (disj (req \[P1] f) (req \[P2] f)).
+Proof.
+  unfold entails. intros.
+  apply s_disj_l.
+  apply req_pure_intro. intros.
+  apply req_pure_inv in H.
+  - assumption.
+  - left. assumption.
 Qed.
 
 (** * Lemmas about entailment sequents *)
