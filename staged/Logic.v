@@ -1076,30 +1076,6 @@ Proof.
   split; intros; now apply seq_assoc.
 Qed.
 
-Lemma norm_forall : forall (A:Type) f1 f2_ctx,
-  entails (f1;; ∀ a:A, f2_ctx a)
-    (∀ a:A, f1;; f2_ctx a).
-Proof.
-  unfold entails.
-  intros.
-  constructor. intros v.
-  inverts H as H. destr H.
-  econstructor; jauto.
-  inverts H6 as H6.
-  specializes~ H6 v.
-Qed.
-
-Lemma norm_exists : forall (A:Type) f1 ctx,
-  entails (f1;; ∃ a:A, ctx a) (∃ a:A, f1;; ctx a).
-Proof.
-  unfold entails.
-  intros.
-  fdestr H.
-  fdestr H6.
-  constructor. exists b.
-  econstructor; jauto.
-Qed.
-
 (** Compaction rule 1 from the paper *)
 Lemma norm_ens_false_l : forall f,
   bientails (ens_ \[False]) (ens_ \[False];; f).
@@ -1449,7 +1425,29 @@ Proof.
   apply satisfies_ens_sep_split.
 Qed.
 
-Lemma norm_seq_ex_reassoc_ctx: forall A (f:A->flow) f1,
+Lemma norm_seq_forall_distr_r: forall (A:Type) (f:A->flow) f1,
+  entails ((∀ x:A, f x);; f1) (∀ x:A, f x;; f1).
+Proof.
+  unfold entails. intros.
+  inverts H as H. destr H.
+  inverts H as H.
+  constructor. intros v.
+  specializes H v.
+  applys* s_seq.
+Qed.
+
+Lemma norm_seq_forall_distr_l: forall (A:Type) (f:A->flow) f1,
+  entails (f1;; (∀ x:A, f x)) (∀ x:A, f1;; f x).
+Proof.
+  unfold entails. intros.
+  inverts H as H. destr H.
+  inverts H6 as H6.
+  constructor. intros v.
+  specialize (H6 v).
+  applys* s_seq.
+Qed.
+
+Lemma norm_seq_exists_distr_l: forall A (f:A->flow) f1,
   bientails (f1;; (∃ x : A, f x)) (∃ x : A, f1;; f x).
 Proof.
   intros. split; intros.
@@ -1463,7 +1461,7 @@ Proof.
     constructor. now exists b. }
 Qed.
 
-Lemma norm_seq_ex_reassoc : forall A p f1,
+Lemma norm_seq_exists_distr_r : forall A p f1,
   bientails (fex (fun (x:A) => p x);; f1) (fex (fun (x:A) => p x;; f1)).
 Proof.
   intros. split; intros.
@@ -1473,28 +1471,6 @@ Proof.
   { fdestr H. fdestr H0.
     applys~ s_seq h3 R1.
     constructor. exists b. assumption. }
-Qed.
-
-Lemma norm_seq_all_reassoc: forall A (f:A->flow) f1,
-  entails ((∀ x : A, f x);; f1) (∀ x : A, f x;; f1).
-Proof.
-  unfold entails. intros.
-  inverts H as H. destr H.
-  inverts H as H.
-  constructor. intros v.
-  specializes H v.
-  applys* s_seq.
-Qed.
-
-Lemma norm_seq_all_reassoc_ctx: forall A (f:A->flow) f1,
-  entails (f1;; (∀ x : A, f x)) (∀ x : A, f1;; f x).
-Proof.
-  unfold entails. intros.
-  inverts H as H. destr H.
-  inverts H6 as H6.
-  constructor. intros v.
-  specialize (H6 v).
-  applys* s_seq.
 Qed.
 
 Lemma norm_ens_ens_pure_comm: forall H P,

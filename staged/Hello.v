@@ -60,7 +60,7 @@ Proof.
 
   (* intro the existential, and specialize the forall *)
   fintro v.
-  rewrite norm_seq_all_reassoc.
+  rewrite norm_seq_forall_distr_r.
   finst (a + 1).
   rewrite norm_reassoc.
 

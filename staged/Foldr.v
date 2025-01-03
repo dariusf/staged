@@ -206,9 +206,9 @@ Proof.
     simpl.
 
     (* we need the locations to agree to use biab *)
-    rewrite norm_forall.
+    rewrite norm_seq_forall_distr_l.
     apply ent_all_l. exists x0.
-    rewrite norm_forall.
+    rewrite norm_seq_forall_distr_l.
     apply ent_all_l. exists (a + length (to_int_list l1)).
     rewrite norm_ens_req_transpose.
     2: { apply b_pts_single. }
@@ -362,8 +362,8 @@ Proof.
 
     rewrite norm_reassoc.
     apply ent_req_emp_l.
-    rewrite norm_seq_ex_reassoc_ctx.
-    rewrite norm_seq_ex_reassoc.
+    rewrite norm_seq_exists_distr_l.
+    rewrite norm_seq_exists_distr_r.
     fintro ys.
     rewrite norm_ens_ens_void_split.
     rewrite norm_ens_ens_void_comm.

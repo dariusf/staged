@@ -7,7 +7,7 @@ Ltac funfold_hyp H env f :=
 Ltac funfold_ env f :=
   rewrites (>> ent_unk env f); [ unfold env; resolve_fn_in_env | ].
 
-Global Hint Rewrite norm_seq_ens_empty norm_exists norm_forall norm_reassoc : norm_db.
+Global Hint Rewrite norm_seq_ens_empty norm_seq_exists_distr_l norm_seq_forall_distr_l norm_reassoc : norm_db.
 
 Ltac norm :=
   autorewrite with norm_db.
@@ -39,9 +39,9 @@ Ltac fintro x :=
 
   (* ex under an ens *)
   | |- entails_under _ (ens_ _;; ∃ _, _) _ =>
-    rewrite norm_seq_ex_reassoc_ctx; fintro x
+    rewrite norm_seq_exists_distr_l; fintro x
   | |- entails_under _ (ens_ _;; ∃ _, _;; _) _ =>
-    rewrite norm_seq_ex_reassoc_ctx; fintro x
+    rewrite norm_seq_exists_distr_l; fintro x
 
   (* SL exists *)
   | |- entails_under _ (ens_ (\exists _, _)) _ =>
@@ -54,9 +54,9 @@ Ltac fintro x :=
 Ltac finst a :=
   lazymatch goal with
   | |- entails_under _ (ens_ _;; ∀ _, _) _ =>
-    rewrite norm_seq_all_reassoc_ctx; finst a
+    rewrite norm_seq_forall_distr_l; finst a
   | |- entails_under _ (ens_ _;; ∀ _, _;; _) _ =>
-    rewrite norm_seq_all_reassoc_ctx; finst a
+    rewrite norm_seq_forall_distr_l; finst a
 
   | |- entails_under _ ((∀ _, _);; _) _ =>
     apply ent_seq_all_l; exists a
@@ -99,7 +99,7 @@ Ltac ent_step :=
     let x := fresh y in
     simple apply ent_ex_l; intros x
   | |- entails_under _ (fex (fun _ => _);; _) _ =>
-    rewrite norm_seq_ex_reassoc
+    rewrite norm_seq_exists_distr_r
   | |- entails_under _ (ens_ \[_];; _) _ =>
     let H := fresh "H" in
     simple apply ent_seq_ens_l; intros H; destr H

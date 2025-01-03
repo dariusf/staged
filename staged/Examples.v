@@ -380,7 +380,7 @@ Proof.
 
   (* we can reason at a higher level with rewriting *)
 
-  rewrite norm_forall in H.
+  rewrite norm_seq_forall_distr_l in H.
   inverts H as H. specialize (H 2).
 
   rewrites (>> norm_ens_req_transpose) in H.
