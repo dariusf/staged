@@ -636,6 +636,20 @@ Proof.
   constructor.
 Qed.
 
+Lemma ens_void_empty_intro : forall env h1 R,
+  satisfies env h1 h1 (norm vunit) (ens_ \[]).
+Proof.
+  intros.
+  constructor.
+  exs.
+  splits*.
+  hintro.
+  splits*.
+  hintro.
+  rew_fmap.
+  reflexivity.
+Qed.
+
 Lemma ens_pure_inv : forall P env h1 h2 v,
   satisfies env h1 h2 (norm v) (ens (fun a => \[P a])) ->
   P v /\ h1 = h2.
@@ -1108,37 +1122,46 @@ Proof.
 Qed.
 
 Lemma norm_req_pure : forall P f,
-  P -> entails (req \[P] f) f.
+  P -> bientails (req \[P] f) f.
 Proof.
-  unfold entails. intros.
-  inverts H0 as H0.
-  specializes H0 empty_heap h1.
-  forward H0. hintro. assumption.
-  rew_fmap *.
+  unfold bientails. intros.
+  iff H0.
+  { inverts H0 as H0.
+    specializes H0 empty_heap h1.
+    forward H0. hintro. assumption.
+    rew_fmap *. }
+  { apply s_req. intros.
+    hinv H1. subst. rew_fmap *. }
 Qed.
 
 Lemma norm_ens_pure : forall P f,
-  P -> entails f (ens_ \[P];; f).
+  P -> bientails f (ens_ \[P];; f).
 Proof.
-  unfold entails. intros.
-  eapply s_seq.
-  apply ens_void_pure_intro.
-  assumption.
-  assumption.
+  unfold bientails. intros.
+  iff H0.
+  { eapply s_seq.
+    apply ens_void_pure_intro.
+    assumption.
+    assumption. }
+  { fdestr H0. fdestr H0. subst.
+    assumption. }
 Qed.
 
 (** The converse is not true as the result would change *)
 Lemma norm_seq_ens_empty : forall f,
-  entails (ens_ \[];; f) f.
+  bientails (ens_ \[];; f) f.
 Proof.
-  unfold entails. intros.
-  inverts H as H. destr H.
-  inverts H as H.
-  destr H.
-  rew_heap in H.
-  hinv H.
-  subst.
-  rew_fmap *.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H. destr H.
+    inverts H as H. destr H.
+    hinv H. hinv H. hinv H2.
+    subst.
+    rew_fmap *. }
+  { applys s_seq h1 (norm vunit).
+    apply ens_void_empty_intro.
+    apply (norm vunit).
+    assumption. }
 Qed.
 
 (** Compaction rule 2 from the paper *)
@@ -1802,7 +1825,7 @@ Module BiabductionExamples.
       reflexivity.
       fmap_eq.
 
-      apply norm_seq_ens_empty in H.
+      rewrite norm_seq_ens_empty in H.
       assumption. }
     { rewrite norm_ens_req_transpose in H; only 2: apply b_pts_diff_single.
       pose proof (norm_ens_empty_r (x~~>a)) .
