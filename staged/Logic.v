@@ -1267,50 +1267,6 @@ Proof.
     assumption. }
 Qed.
 
-Lemma norm_ens_ens_void_comm : forall H1 H2,
-  bientails (ens_ H1;; ens_ H2) (ens_ H2;; ens_ H1).
-Proof.
-  unfold bientails. intros.
-  iff H.
-  { fdestr H.
-    inverts H as H. destr H. hinv H. hinv H.
-    inverts H8 as H8. destr H8. hinv H8. hinv H8.
-    applys s_seq (h1 \u x2) (norm vunit).
-    { constructor. exists vunit. exists x2.
-      intuition. hintro. intuition. }
-    { constructor. exists vunit. exists x0.
-      intuition. subst. reflexivity. hintro. intuition. } }
-  { fdestr H.
-    inverts H as H. destr H. hinv H. hinv H.
-    inverts H8 as H8. destr H8. hinv H8. hinv H8.
-    applys s_seq (h1 \u x2) (norm vunit).
-    { constructor. exists vunit. exists x2.
-      intuition. hintro. intuition. }
-    { constructor. exists vunit. exists x0.
-      intuition. subst. reflexivity. hintro. intuition. } }
-Qed.
-
-Lemma norm_req_req_comm : forall H1 H2 f,
-  bientails (req H1 (req H2 f)) (req H2 (req H1 f)).
-Proof.
-  unfold bientails. intros.
-  iff H.
-  { fintro.
-    fintro.
-    inverts H as H.
-    specializes H hp0 (hp \u hr0) H5.
-    forwards: H. fmap_eq. fmap_disjoint. clear H.
-    inverts H8 as H8.
-    specializes H8 hp hr0 H0. }
-  { fintro.
-    fintro.
-    inverts H as H.
-    specializes H hp0 (hp \u hr0) H5.
-    forwards: H. fmap_eq. fmap_disjoint. clear H.
-    inverts H8 as H8.
-    specializes H8 hp hr0 H0. }
-Qed.
-
 (** Splitting and combining [req]s *)
 Lemma norm_req_sep_combine : forall H1 H2 f,
   entails (req H1 (req H2 f)) (req (H1 \* H2) f).
@@ -1504,6 +1460,36 @@ Lemma norm_ens_split : forall H Q,
 Proof.
   unfold entails.
   apply satisfies_ens_sep_split.
+Qed.
+
+Lemma norm_ens_ens_void_comm : forall H1 H2,
+  bientails (ens_ H1;; ens_ H2) (ens_ H2;; ens_ H1).
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { rewrite <- norm_ens_ens_void in H.
+    rewrite <- norm_ens_ens_void.
+    rewrite hstar_comm.
+    assumption. }
+  { rewrite <- norm_ens_ens_void in H.
+    rewrite <- norm_ens_ens_void.
+    rewrite hstar_comm.
+    assumption. }
+Qed.
+
+Lemma norm_req_req_comm : forall H1 H2 f,
+  bientails (req H1 (req H2 f)) (req H2 (req H1 f)).
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { rewrite <- norm_req_req in H.
+    rewrite <- norm_req_req.
+    rewrite hstar_comm.
+    assumption. }
+  { rewrite <- norm_req_req in H.
+    rewrite <- norm_req_req.
+    rewrite hstar_comm.
+    assumption. }
 Qed.
 
 Lemma norm_seq_forall_distr_r: forall (A:Type) (f:A->flow) f1,
