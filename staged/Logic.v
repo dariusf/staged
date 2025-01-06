@@ -844,8 +844,9 @@ Ltac finv H :=
   | satisfies _ _ _ _ (_ ;; _) => inverts H as H; destr H
   | satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_inv in H; destr H
   | satisfies _ _ _ _ (ens_ \[]) => apply ens_void_empty_inv in H; destr H; subst
-  (* | satisfies _ _ _ _ (req \[_] _) => idtac *)
-  (* | satisfies _ _ _ _ (req _ _) => idtac *)
+  | satisfies _ _ _ _ (ens_ _) => inverts H as H; destr H
+  | satisfies _ _ _ _ (req \[_] _) => inverts H as H
+  | satisfies _ _ _ _ (req _ _) => inverts H as H
   end.
 
 Ltac fintro :=
@@ -853,6 +854,8 @@ Ltac fintro :=
   | |- satisfies _ _ _ _ (_ ;; _) => eapply s_seq
   | |- satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_intro
   | |- satisfies _ _ _ _ (ens_ \[]) => apply ens_void_empty_intro
+  | |- satisfies _ _ _ _ (ens_ _) => apply s_ens; exists vunit
+  | |- satisfies _ _ _ _ (ens_ _) => apply s_ens
   | |- satisfies _ _ _ _ (req \[_] _) => apply req_pure_intro
   | |- satisfies _ _ _ _ (req _ _) => apply s_req; intros
   end.
@@ -1614,6 +1617,76 @@ Proof.
   apply entails_refl.
 Qed.
 
+Lemma ens_match : forall s h1 h2 R H f1 f2,
+  satisfies s h1 h2 R (ens_ H;; f1) ->
+  (forall s h1 h2 R, satisfies s h1 h2 R f1 -> satisfies s h1 h2 R f2) ->
+  satisfies s h1 h2 R (ens_ H;; f2).
+Proof.
+  intros.
+  finv H0.
+  fintro.
+  eassumption.
+  apply H1.
+  assumption.
+Qed.
+
+Lemma norm_ens_req : forall H f,
+  entails (ens_ H;; req H f) f.
+Proof.
+  unfold entails. intros.
+  finv H0.
+  finv H0. hinv H0. hinv H0.
+  inverts H7 as H7.
+  forwards: H7 x0 h1 H3.
+  fmap_eq.
+  fmap_disjoint.
+  assumption.
+Qed.
+
+Lemma norm_req_assumption : forall H f1 f2,
+  entails (ens_ H;; f2) f1 <->
+  entails f2 (req H f1).
+Proof.
+  unfold entails. intros.
+  iff H0; intros.
+  { fintro.
+    apply H0.
+    fintro.
+    apply s_ens.
+    exists vunit hp. splits*. hintro. splits*.
+    subst.
+    assumption. }
+  { finv H1.
+    finv H1. hinv H1. hinv H1.
+    apply H0 in H8.
+    inverts H8 as H8.
+    specializes H8 x0 (h1 \u x) H4.
+    forwards: H8. fmap_eq. fmap_disjoint.
+    subst. rew_fmap*. }
+Qed.
+
+(* Cancelling [ens; req] on the right requires a lot more assumptions *)
+Lemma ens_req_cancel : forall s h1 h2 R H h3 f,
+  H h3 ->
+  Fmap.disjoint h3 h1 ->
+  satisfies s h1 h2 R f ->
+  satisfies s h1 h2 R (ens_ H;; req H f).
+Proof.
+  unfold entails. intros.
+  fintro.
+  apply s_ens. exists vunit. exists h3.
+  splits*.
+  hintro. splits*.
+  fintro.
+  (* determinism/precise heaps *)
+  assert (h3 = hp) as ?. admit.
+  subst. rew_fmap *.
+  lets: union_eq_inv_of_disjoint H4.
+  fmap_disjoint.
+  fmap_disjoint.
+  subst.
+  assumption.
+Abort.
 (** * Biabduction *)
 (** Simplified definition following #<a href="http://www0.cs.ucl.ac.uk/staff/p.ohearn/papers/popl09.pdf">Compositional Shape Analysis by means of Bi-Abduction</a># (Fig 1). *)
 Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
@@ -1670,8 +1743,24 @@ Proof.
   { xsimpl. assumption. }
 Qed.
 
+(* Incomplete because [ens_req_cancel] can't be easily proved *)
+Lemma biab_single_h_conv : forall H env h1 h2 R H1 H2 f,
+  satisfies env h1 h2 R (ens_ H1;; req H2 f) ->
+  satisfies env h1 h2 R (ens_ (H \* H1);; req (H \* H2) f).
+Proof.
+  intros.
+  rewrite (hstar_comm H H1).
+  rewrite norm_ens_ens_void.
+  rewrite <- seq_assoc.
+  apply (ens_match H0). intros.
+  rewrite norm_req_req.
+  (* apply ens_req_cancel. *)
+  (* assumption. *)
+  admit.
+Abort.
+
 Lemma biab_single_h : forall H env h1 h2 R H1 H2 f,
-  satisfies env h1 h2 R (ens_ (H \* H1);; req (H \* H2) f)->
+  satisfies env h1 h2 R (ens_ (H \* H1);; req (H \* H2) f) ->
   satisfies env h1 h2 R (ens_ H1;; req H2 f).
 Proof.
   intros.
