@@ -634,7 +634,7 @@ Proof.
   constructor.
 Qed.
 
-Lemma ens_void_empty_intro : forall env h1 R,
+Lemma ens_void_empty_intro : forall env h1,
   satisfies env h1 h1 (norm vunit) (ens_ \[]).
 Proof.
   intros.
@@ -646,6 +646,15 @@ Proof.
   hintro.
   rew_fmap.
   reflexivity.
+Qed.
+
+Lemma ens_void_empty_inv : forall env h1 h2 R,
+  satisfies env h1 h2 R (ens_ \[]) ->
+  h1 = h2 /\ R = norm vunit.
+Proof.
+  intros.
+  inverts H as H. destr H. hinv H. hinv H. hinv H2.
+  subst. rew_fmap *.
 Qed.
 
 Lemma ens_pure_inv : forall P env h1 h2 v,
@@ -828,6 +837,21 @@ Ltac fdestr_pat H pat :=
 (** Use these on product-like things like sequencing, existentials, and ens *)
 Tactic Notation "fdestr" constr(H) := fdestr_rec H.
 Tactic Notation "fdestr" constr(H) "as" simple_intropattern(pat) := fdestr_pat H pat.
+
+Ltac finv H :=
+  match type of H with
+  | satisfies _ _ _ _ (fex (fun _ => _)) => inverts H as H; destr H
+  | satisfies _ _ _ _ (_ ;; _) => inverts H as H; destr H
+  | satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_inv in H; destr H
+  | satisfies _ _ _ _ (ens_ \[]) => apply ens_void_empty_inv in H; destr H; subst
+  end.
+
+Ltac fintro :=
+  match goal with
+  | |- satisfies _ _ _ _ (_ ;; _) => eapply s_seq
+  | |- satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_intro
+  | |- satisfies _ _ _ _ (ens_ \[]) => apply ens_void_empty_intro
+  end.
 
 (** * Entailment and normalization rules *)
 Lemma entails_bot: forall f,
@@ -1170,14 +1194,11 @@ Lemma norm_seq_ens_empty : forall f,
 Proof.
   unfold bientails. intros.
   iff H.
-  { inverts H as H. destr H.
-    inverts H as H. destr H.
-    hinv H. hinv H. hinv H2.
-    subst.
-    rew_fmap *. }
-  { applys s_seq h1 (norm vunit).
-    apply ens_void_empty_intro.
-    apply (norm vunit).
+  { finv H.
+    finv H.
+    assumption. }
+  { fintro.
+    fintro.
     assumption. }
 Qed.
 
