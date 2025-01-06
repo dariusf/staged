@@ -844,6 +844,8 @@ Ltac finv H :=
   | satisfies _ _ _ _ (_ ;; _) => inverts H as H; destr H
   | satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_inv in H; destr H
   | satisfies _ _ _ _ (ens_ \[]) => apply ens_void_empty_inv in H; destr H; subst
+  (* | satisfies _ _ _ _ (req \[_] _) => idtac *)
+  (* | satisfies _ _ _ _ (req _ _) => idtac *)
   end.
 
 Ltac fintro :=
@@ -851,6 +853,8 @@ Ltac fintro :=
   | |- satisfies _ _ _ _ (_ ;; _) => eapply s_seq
   | |- satisfies _ _ _ _ (ens_ \[_]) => apply ens_void_pure_intro
   | |- satisfies _ _ _ _ (ens_ \[]) => apply ens_void_empty_intro
+  | |- satisfies _ _ _ _ (req \[_] _) => apply req_pure_intro
+  | |- satisfies _ _ _ _ (req _ _) => apply s_req; intros
   end.
 
 (** * Entailment and normalization rules *)
@@ -1284,6 +1288,27 @@ Proof.
       intuition. hintro. intuition. }
     { constructor. exists vunit. exists x0.
       intuition. subst. reflexivity. hintro. intuition. } }
+Qed.
+
+Lemma norm_req_req_comm : forall H1 H2 f,
+  bientails (req H1 (req H2 f)) (req H2 (req H1 f)).
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { fintro.
+    fintro.
+    inverts H as H.
+    specializes H hp0 (hp \u hr0) H5.
+    forwards: H. fmap_eq. fmap_disjoint. clear H.
+    inverts H8 as H8.
+    specializes H8 hp hr0 H0. }
+  { fintro.
+    fintro.
+    inverts H as H.
+    specializes H hp0 (hp \u hr0) H5.
+    forwards: H. fmap_eq. fmap_disjoint. clear H.
+    inverts H8 as H8.
+    specializes H8 hp hr0 H0. }
 Qed.
 
 (** Splitting and combining [req]s *)
