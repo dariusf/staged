@@ -604,7 +604,7 @@ Proof.
     finst (app l1 a).
     rewrite norm_ens_req_transpose.
     2: { apply b_pts_single. }
-    rewrite norm_req_pure. 2: reflexivity.
+    rewrite norm_req_pure_l. 2: reflexivity.
     rewrite norm_seq_ens_empty.
     apply ent_ens_single.
     subst.

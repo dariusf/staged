@@ -1117,7 +1117,7 @@ Proof.
   hinv H0. false.
 Qed.
 
-Lemma norm_req_pure : forall P f,
+Lemma norm_req_pure_l : forall P f,
   P -> bientails (req \[P] f) f.
 Proof.
   unfold bientails. intros.
@@ -1130,7 +1130,19 @@ Proof.
     hinv H1. subst. rew_fmap *. }
 Qed.
 
-Lemma norm_ens_pure : forall P f,
+Lemma norm_ens_pure_r : forall P f,
+  P -> bientails empty (ens_ \[P]).
+Proof.
+  unfold bientails. intros.
+  iff H0.
+  { apply empty_inv in H0. destr H0. subst.
+    apply ens_void_pure_intro.
+    assumption. }
+  { apply ens_void_pure_inv in H0. destr H0. subst.
+    apply empty_intro. }
+Qed.
+
+Lemma norm_ens_pure_seq_r : forall P f,
   P -> bientails f (ens_ \[P];; f).
 Proof.
   unfold bientails. intros.
@@ -1141,6 +1153,15 @@ Proof.
     assumption. }
   { fdestr H0. fdestr H0. subst.
     assumption. }
+Qed.
+
+Lemma norm_req_ens_empty : forall P f,
+  entails empty (req \[P] (ens_ \[P])).
+Proof.
+  unfold entails. intros.
+  apply empty_inv in H. destr H. subst.
+  apply req_pure_intro. intros.
+  apply* ens_void_pure_intro.
 Qed.
 
 (** The converse is not true as the result would change *)

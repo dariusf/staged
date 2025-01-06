@@ -377,7 +377,7 @@ Proof.
     apply b_base_empty. }
 
   rew_heap in H.
-  rewrite norm_req_pure in H. 2: { reflexivity. }
+  rewrite norm_req_pure_l in H. 2: { reflexivity. }
   rewrite norm_seq_ens_empty in H.
   assumption.
 Qed.
