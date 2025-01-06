@@ -1665,28 +1665,31 @@ Proof.
     subst. rew_fmap*. }
 Qed.
 
+Definition heap_inhab H := exists h, H h.
+
+Definition precise H := forall h1 h2,
+  H h1 -> H h2 -> h1 = h2.
+
 (* Cancelling [ens; req] on the right requires a lot more assumptions *)
-Lemma ens_req_cancel : forall s h1 h2 R H h3 f,
-  H h3 ->
-  Fmap.disjoint h3 h1 ->
-  satisfies s h1 h2 R f ->
-  satisfies s h1 h2 R (ens_ H;; req H f).
+Lemma ens_req_cancel : forall f H,
+  heap_inhab H ->
+  precise H ->
+  entails f (ens_ H;; req H f).
 Proof.
   unfold entails. intros.
+  unfold heap_inhab in H0. destr H0.
+  assert (Fmap.disjoint h1 h) as ?. admit.
   fintro.
-  apply s_ens. exists vunit. exists h3.
+  fintro. exists h.
   splits*.
   hintro. splits*.
   fintro.
-  (* determinism/precise heaps *)
-  assert (h3 = hp) as ?. admit.
-  subst. rew_fmap *.
-  lets: union_eq_inv_of_disjoint H4.
-  fmap_disjoint.
-  fmap_disjoint.
-  subst.
+  specializes H1 H3 H4. subst.
+  lets: union_eq_inv_of_disjoint H5.
+  fmap_disjoint. fmap_disjoint. subst.
   assumption.
 Abort.
+
 (** * Biabduction *)
 (** Simplified definition following #<a href="http://www0.cs.ucl.ac.uk/staff/p.ohearn/papers/popl09.pdf">Compositional Shape Analysis by means of Bi-Abduction</a># (Fig 1). *)
 Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
