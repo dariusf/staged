@@ -2145,6 +2145,36 @@ Proof.
 Qed.
 
 (** * Lemmas about entailment sequents *)
+Lemma entails_ent : forall f1 f2 env,
+  entails f1 f2 ->
+  entails_under env f1 f2.
+Proof.
+  unfold entails, entails_under. intros.
+  apply H.
+  assumption.
+Qed.
+
+Lemma ent_entails : forall f1 f2,
+  (forall env, entails_under env f1 f2) ->
+  entails f1 f2.
+Proof.
+  unfold entails, entails_under. intros.
+  apply H.
+  assumption.
+Qed.
+
+Lemma ent_entails_1 : forall f1 f2 f3 f4,
+  (forall env, entails_under env f1 f2 -> entails_under env f3 f4) ->
+  entails f1 f2 -> entails f3 f4.
+Proof.
+  intros.
+  apply ent_entails.
+  intros.
+  apply H.
+  apply entails_ent.
+  apply H0.
+Qed.
+
 Lemma ent_all_r : forall f A (fctx:A -> flow) env,
   (forall x, entails_under env f (fctx x)) ->
   entails_under env f (fall (fun x => fctx x)).
@@ -2189,6 +2219,14 @@ Proof.
     intuition.
     rewrite hstar_hpure_l. intuition. }
   { rewrite <- H3. assumption. }
+Qed.
+
+Lemma ent_req_r1 : forall f f1 H,
+  entails (ens_ H;; f) f1 ->
+  entails f (req H f1).
+Proof.
+  intros ? ? ?.
+  applys ent_entails_1 ent_req_r.
 Qed.
 
 Lemma ent_req_req : forall f1 f2 H1 H2 env,
@@ -2640,9 +2678,9 @@ Module Soundness.
 
   (** Structural rules *)
   Lemma sem_consequence : forall f1 f2 e,
-    entails f2 f1 ->
-    spec_assert e f2 ->
-    spec_assert e f1.
+    entails f1 f2 ->
+    spec_assert e f1 ->
+    spec_assert e f2.
   Proof.
     introv He H.
     unfold spec_assert. intros.
