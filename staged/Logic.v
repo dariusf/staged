@@ -2207,12 +2207,12 @@ Proof.
   applys* s_seq.
 Qed.
 
-Lemma ent_req_r : forall f f1 H env,
+Lemma ent_req_r0 : forall f f1 H env,
   entails_under env (ens_ H;; f) f1 ->
   entails_under env f (req H f1).
 Proof.
   unfold entails_under. intros.
-  constructor. intros.
+  apply s_req. intros.
   apply H0.
   applys s_seq (hr \+ hp) (norm vunit).
   { constructor. exists vunit. exists hp.
@@ -2221,12 +2221,29 @@ Proof.
   { rewrite <- H3. assumption. }
 Qed.
 
+Lemma ent_req_r : forall f f1 H env,
+  entails_under env (ens_ H;; f) f1 <->
+  entails_under env f (req H f1).
+Proof.
+  unfold entails_under. intros.
+  split.
+  { apply ent_req_r0. }
+  { intros.
+    finv H1.
+    specializes H0 H8.
+    finv H1. hinv H1. hinv H1.
+    subst. rew_fmap *.
+    finv H0.
+    specializes H0 H4. forwards: H0. reflexivity. fmap_disjoint.
+    assumption. }
+Qed.
+
 Lemma ent_req_r1 : forall f f1 H,
   entails (ens_ H;; f) f1 ->
   entails f (req H f1).
 Proof.
   intros ? ? ?.
-  applys ent_entails_1 ent_req_r.
+  applys ent_entails_1 ent_req_r0.
 Qed.
 
 Lemma ent_req_req : forall f1 f2 H1 H2 env,
