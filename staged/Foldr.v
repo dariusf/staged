@@ -329,7 +329,7 @@ Proof.
     simpl.
     xsimpl.
     reflexivity. }
-  { fassume.
+  { rewrite <- ent_req_r.
     rewrites (>> entails_ens_void IsList_if).
     case_if.
     { fassume H1.
