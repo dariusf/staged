@@ -373,6 +373,28 @@ Proof.
     exact H0.
 Qed.
 
+Inductive futureCondEntail1 : futureCond -> futureCond -> Prop := 
+  | futureCondEntail1_empty : forall t1 t2, 
+    inclusion t1 t2 -> 
+    futureCondEntail1 (fc_singleton t1) (fc_singleton t2)
+
+  | futureCondEntail1_conj_LHS_1 : forall f1 f2 f, 
+    futureCondEntail1 f1 f -> 
+    futureCondEntail1 (fc_conj f1 f2) f 
+
+  | futureCondEntail1_conj_LHS_2 : forall f1 f2 f, 
+    futureCondEntail1 f2 f -> 
+    futureCondEntail1 (fc_conj f1 f2) f 
+
+
+  | futureCondEntail1_conj_RHS : forall f f1 f2, 
+    futureCondEntail1 f1 f -> 
+    futureCondEntail1 f2 f -> 
+    futureCondEntail1 f (fc_conj f1 f2) 
+ .
+
+
+
 
 Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop := 
   | futureCondEntail_empty : forall t1 t2, 
@@ -399,6 +421,35 @@ Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop :=
     futureCondEntail f (fc_conj f1 f2) (fR2) 
  .
 
+
+
+Theorem futureCond1_sound : forall f1 f2 rho, 
+  futureCondEntail1 f1 f2 -> 
+  fc_model rho f1 -> 
+  fc_model rho f2.
+Proof using. introv M1. induction M1; introv M2. 
+  -   
+  pose proof inclusion_sound.
+  specialize (H0 t1 t2 rho0 H). 
+  pose proof fc_model_singleton.
+  specialize (H1 rho0 t1). 
+
+Admitted. 
+
+
+Theorem futureCond1_trans : forall f1 f2 f3, 
+  futureCondEntail1 f1 f2 -> 
+  futureCondEntail1 f2 f3 -> 
+  futureCondEntail1 f1 f3.
+Proof using. introv M1. induction M1; introv M2. 
+  -  
+  pose proof inclusion_sound.
+  specialize (H0 t1 t2).
+  pose proof futureCond1_sound.
+
+Admitted. 
+
+
 Axiom conj_kleene_any : 
    (fc_singleton(kleene any)) = 
    fc_conj (fc_singleton(kleene any)) (fc_singleton(kleene any)). 
@@ -406,6 +457,11 @@ Axiom conj_kleene_any :
 Axiom f_conj_kleene_any_is_f : forall f, 
    f = fc_conj (fc_singleton(kleene any)) f . 
   
+
+Lemma futureCondEntail1_exact : forall f,  
+  futureCondEntail1 f f .
+Proof.
+Admitted. 
 
 Lemma futureCondEntail_exact : forall f,  
   futureCondEntail f f (fc_singleton(kleene any)).
@@ -646,26 +702,29 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
 . 
 
 Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
-(*| eval_plet : forall h1 h2 h3 x e1 e2 v r rho1 rho2 rho3 f1 f2 f3,
-    bigstep h1 rho1 f1 e1 h2 rho2 f2 v ->
-    bigstep h2 rho2 f2 (subst x v e2) h3 rho3 f3 r ->
-    bigstep h1 rho1 f1 (plet x e1 e2) h3 rho3 f3 r
-*)
-  | fw_let : forall x e1 e2 P Q Q1 t1 t2 t3 f1 f2 f3, 
-    forward P t1 f1 e1 Q t2 f2  -> 
+  | fw_consequence: forall P1 P2 P3 P4 t' f' t f e, 
+    forward P3 emp (fc_singleton (kleene any)) e P4 t' f' -> 
+    P1 ==> P3 -> 
+    P4 ===> P2 -> 
+    inclusion t' t -> 
+    futureCondEntail1 f f' -> 
+    forward P1 emp (fc_singleton (kleene any)) e P2 t f
+
+  | fw_let : forall x e1 e2 P Q Q1 t2 t3 f2 f3, 
+    forward P emp (fc_singleton (kleene any)) e1 Q t2 f2  -> 
     (forall v, forward (Q v) t2 f2 (subst x v e2) Q1 t3 f3 ) -> 
-    forward P t1 f1 (plet x e1 e2) Q1 t3 f3
+    forward P emp (fc_singleton (kleene any)) (plet x e1 e2) Q1 t3 f3
   
-  | fw_val: forall t f v P ,
-    forward P t f (pval v) (fun res => P \* \[res = v]) t f
+  | fw_val: forall v P ,
+    forward P emp (fc_singleton (kleene any)) (pval v) (fun res => P \* \[res = v]) emp (fc_singleton (kleene any))
+
+  | fw_event: forall P (ev:event) ,
+    forward P emp (fc_singleton (kleene any)) (pevent ev) (fun res => P \* \[res = vunit]) (theta_singleton ev) (fc_singleton (kleene any))
 
   | fw_cond : forall (b:bool) e1 e2 t t1 f f1 P Q, 
     forward P t f (if b then e1 else e2) Q t1 f1 -> 
     forward P t f (pif (pval (vbool b)) e1 e2) Q t1 f1
 
-  | fw_event: forall t f P (ev:event) f',
-    futureSubtraction f (theta_singleton ev) f' -> 
-    forward P t f (pevent ev) (fun res => P \* \[res = vunit]) (seq t (theta_singleton ev)) f'
 
   | fw_ref : forall t f v, 
     forward \[] t f (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) t f
@@ -687,8 +746,8 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     forward P t f' (papp (pval vf) (pval actual_arg)) Q t1 (fc_conj fR' f1) 
 .
 
-Lemma strengthening_futureCond_from_pre: forall f1 f2 fR h1 rho1 e h2 rho2 f v, 
-  futureCondEntail f1 f2 fR -> 
+Lemma strengthening_futureCond_from_pre: forall f1 f2 h1 rho1 e h2 rho2 f v, 
+  futureCondEntail1 f1 f2 -> 
   bigstep h1 rho1 f2 e h2 rho2 f v -> 
   bigstep h1 rho1 f1 e h2 rho2 f v. 
 Proof. 
@@ -715,26 +774,44 @@ Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
   P h1 -> 
   trace_model rho1 t1 -> 
   bigstep h1 rho1 f1 e h2 rho2 f3 v ->  
-  Q v h2 /\ trace_model rho2 t2 /\ exists f_Res, futureCondEntail f2 f3 f_Res.  
+  Q v h2 /\ trace_model rho2 t2 /\ futureCondEntail1 f2 f3.  
 Proof. 
   introv.
   intros. 
   gen h1 v h2 rho1 rho2 f3.
   induction H.
+  - (* consequence *)
+  intros.
+  unfold himpl in H0. 
+  specialize (H0 h1 H4).  
+  specialize (IHforward h1 H0 v h2 rho1 H5 rho2 f3 H6). 
+  destr IHforward. 
+  split.
+  unfold qimpl, himpl in H1.  
+  specialize (H1 v h2 H7). 
+  exact H1.
+  split.
+  pose proof inclusion_sound.
+  specialize (H8 t' t rho2 H2 H9).
+  exact H8.
+  pose proof futureCond1_trans.
+  specialize (H8 f f' f3 H3 H10). 
+  exact H8. 
+  
   - (* let *)
   intros.
   invert H4. intros. subst.
   specialize (IHforward h1).
   specialize (IHforward H2 v0 h3 rho1).
   specialize (IHforward H3).
-  specialize (IHforward rho3 f5).
+  specialize (IHforward rho3 f4).
   specialize (IHforward H15).
   destr IHforward.
   eapply H1.
   exact  H4.
   exact H6.
-  eapply strengthening_futureCond_from_pre. 
-  exact H5.
+  eapply strengthening_futureCond_from_pre.  
+  exact H7.
   exact H16.
   - (* val *)
   intros.
@@ -745,8 +822,35 @@ Proof.
   split. subst. auto.
   reflexivity.
   split. subst. auto.
+  apply futureCondEntail1_exact.
+
+  - (* event *)
+  intros.
+  invert H2.
+  intros. subst.
+  split.
+  rewrite hstar_hpure_r.
+  split.
+  exact H0. 
+  reflexivity.
+  split.
+  pose proof trace_model_emp_must_nil.
+  specialize (H rho1 H1).
+  subst.
+  Search (nil ++ _). 
+  rewrite List.app_nil_l. 
+  constructor. reflexivity.
+
+Admitted. 
+
+(*
   exists (fc_singleton(kleene any)).
+  pose proof (subtractTheSame).
+  specialize (H2 f (theta_singleton ev0) f' f3).
+  specialize (H2 H H7).
+  subst. 
   apply futureCondEntail_exact.
+
 
   - (* if-else *)
   intros.
@@ -762,25 +866,6 @@ Proof.
   eapply H1.
   exact H13.
 
-  - (* event *)
-  intros.
-  invert H2.
-  intros. subst.
-  split.
-  rewrite hstar_hpure_r.
-  split.
-  exact H0. 
-  reflexivity.
-  split.
-  apply trace_model_prefix.
-  exact H1.
-  constructor. reflexivity.
-  exists (fc_singleton(kleene any)).
-  pose proof (subtractTheSame).
-  specialize (H2 f (theta_singleton ev0) f' f3).
-  specialize (H2 H H7).
-  subst. 
-  apply futureCondEntail_exact.
   -  (* ref *)
   intros.
   invert H2.
@@ -855,5 +940,5 @@ Proof.
 Admitted. 
   
 
-
+*)
 
