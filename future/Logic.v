@@ -467,12 +467,19 @@ Axiom conj_kleene_any :
   
 Axiom f_conj_kleene_any_is_f : forall f, 
    f = fc_conj (fc_singleton(kleene any)) f . 
+
+Axiom f_conj_kleene_any_is_f_reverse : forall f, 
+   fc_conj (fc_singleton(kleene any)) f = f. 
+
   
 
 Lemma futureCondEntail1_exact : forall f,  
   futureCondEntail1 f f .
 Proof.
 Admitted. 
+
+
+
 
 Lemma futureCondEntail_exact : forall f,  
   futureCondEntail f f (fc_singleton(kleene any)).
@@ -774,6 +781,16 @@ Lemma subtractTheSame: forall f t f1 f2,
   f1 = f2. 
 Proof. Admitted. 
 
+Lemma subtractFromTrueISTrue: forall ev f, 
+  futureSubtraction (fc_singleton (kleene any))
+(theta_singleton ev) f -> f = (fc_singleton (kleene any)).
+Proof. Admitted. 
+   
+Lemma futureCondEntail1TrueISTrue: forall f, 
+  futureCondEntail1 (fc_singleton (kleene any)) f -> f = (fc_singleton (kleene any)).
+Proof. Admitted. 
+   
+
 Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
   bigstep h3 rho3 f4 e h2 rho2 f0 v -> 
   forward Q t2 f2 e Q1 t3 f3 -> 
@@ -782,10 +799,65 @@ Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f
   bigstep h3 rho3 f2 e h2 rho2 (fc_conj x0 f0) v /\ futureCondEntail1 f3 f0. 
 Proof. 
   intros.
-  induction H.
-  pose proof inclusion_sound.
-
-Admitted. 
+  gen h3 rho3 f4 h2 rho2 f0 v. 
+  induction H0. 
+  -
+  intros. 
+  specialize (IHforward h3 rho3 f4 H4 h2 rho2 f0 v H5). 
+  destr IHforward. 
+  exists x0.
+  split.
+  exact H7.
+  pose proof futureCond1_trans.
+  specialize (H6 f f' f0 H3 H8). 
+  exact H6.
+  -
+  intros. 
+  specialize (IHforward h3 rho3 f4 H1 h2 rho2 f0 v H). 
+  destr IHforward. 
+  exists x0. 
+  split.
+  exact H3.
+  exact H4.
+  - 
+  intros.  
+  pose proof H3. 
+  invert H3. 
+  intros.
+  subst.
+  specialize (IHforward h3 rho3 f4 H2 h0 rho0 f5 v0 H15 ).
+  destr IHforward.
+  specialize (H1 v0 h0 rho0 f5 H6 h2 rho2 f0 v H16). 
+  destr H1.
+  exists ((fc_singleton (kleene any))).
+  split.
+  pose proof futureCondEntail1TrueISTrue.
+  specialize (H3 f4 H2). subst. 
+  rewrite  f_conj_kleene_any_is_f_reverse.
+  exact H4. exact H7.
+  - 
+  intros.
+  pose proof futureCondEntail1TrueISTrue.
+  specialize (H0 f4 H1). subst. 
+  exists ((fc_singleton (kleene any))).
+  split.
+  rewrite  f_conj_kleene_any_is_f_reverse.
+  exact H. invert H.
+  intros. subst.
+  apply futureCondEntail1_exact.
+  - 
+  intros.
+  pose proof futureCondEntail1TrueISTrue.
+  specialize (H0 f4 H1). subst.
+  exists ((fc_singleton (kleene any))).
+  split.
+  rewrite  f_conj_kleene_any_is_f_reverse.
+  exact H. invert H.
+  intros. subst.
+  pose proof subtractFromTrueISTrue.
+  specialize (H ev0 f0 H5). subst.  
+  apply futureCondEntail1_exact.
+Qed. 
 
 
 (* to prove the frame rule *)
@@ -798,10 +870,16 @@ Lemma frame_big_step: forall h1 h2 h3 h_frame e t f1 f2 v P Q rho1 rho2 F ,
   exists h4, 
   Fmap.disjoint h4 h_frame /\ h2 = h4 \u h_frame /\ bigstep h3 rho1 f1 e h4 rho2 f2 v. 
 Proof. 
-  intros.
-  invert H0.   
-  induction H.
-  - intros. subst. 
+  intros.  
+  induction e. 
+  - 
+  invert H.  
+  invert H0.
+  invert H0.
+  - 
+
+  
+   intros. subst. 
   eapply  IHforward.
   unfold himpl in H0. 
   specialize (H0 h3 H1). exact H0. 
@@ -817,6 +895,7 @@ Proof.
 
 
 Admitted.  
+
 
 
 Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
@@ -908,8 +987,15 @@ Proof.
   Search (nil ++ _). 
   rewrite List.app_nil_l. 
   constructor. reflexivity.
+  pose proof subtractFromTrueISTrue. 
+  specialize (H ev0 f3 H6). 
+  subst.
+  apply futureCondEntail1_exact. 
 
-Admitted. 
+
+
+
+Qed. 
 
 (*
   exists (fc_singleton(kleene any)).
