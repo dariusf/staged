@@ -1694,6 +1694,9 @@ Abort.
 (** Simplified definition following #<a href="http://www0.cs.ucl.ac.uk/staff/p.ohearn/papers/popl09.pdf">Compositional Shape Analysis by means of Bi-Abduction</a># (Fig 1). *)
 Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
 
+  | b_trivial : forall H,
+    biab \[] H H \[]
+
   | b_base_empty : forall Hf,
     biab \[] Hf \[] Hf
 
@@ -1740,6 +1743,7 @@ Lemma biab_sound : forall Ha H1 H2 Hf,
 Proof.
   intros.
   induction H.
+  { xsimpl. }
   { xsimpl. }
   { xsimpl; auto. }
   { xsimpl. assumption. }
@@ -1827,6 +1831,18 @@ Proof.
   unfold entails.
   introv Hbi.
   induction Hbi.
+
+  { (* trivial *)
+    introv H2.
+    rewrite norm_seq_req_emp.
+    rewrite norm_seq_ens_empty.
+    finv H2.
+    finv H2. hinv H1. hinv H1.
+    subst. rew_fmap *.
+    finv H7.
+    specializes H7 H3.
+    forwards: H7. reflexivity. fmap_disjoint.
+    assumption. }
 
   { (* base case *)
     introv H2.
