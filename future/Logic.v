@@ -748,22 +748,26 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
   | fw_event: forall P (ev:event) ,
     forward P emp (fc_singleton (kleene any)) (pevent ev) (fun res => P \* \[res = vunit]) (theta_singleton ev) (fc_singleton (kleene any))
 
-  (*| fw_cond : forall (b:bool) e1 e2 t t1 f f1 P Q, 
-    forward P t f (if b then e1 else e2) Q t1 f1 -> 
-    forward P t f (pif (pval (vbool b)) e1 e2) Q t1 f1
+  | fw_cond : forall (b:bool) e1 e2 t f P Q, 
+    forward P emp (fc_singleton (kleene any)) (if b then e1 else e2) Q t f -> 
+    forward P emp (fc_singleton (kleene any)) (pif (pval (vbool b)) e1 e2) Q t f
+
+  | fw_deref : forall loc v, 
+    forward (loc ~~> v) emp (fc_singleton (kleene any)) (pderef (pval(vloc loc))) (fun res => (loc ~~> v) \* \[res = v]) emp (fc_singleton (kleene any))
+
+  | fw_assign : forall loc v v', 
+    forward (loc ~~> v') emp (fc_singleton (kleene any)) (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  emp (fc_singleton (kleene any))
+
+  | fw_assume : forall P f1, 
+    forward P emp (fc_singleton (kleene any)) (passume f1) (fun res => P \* \[res = vunit]) emp f1
+
+(*
+  | fw_ref : forall v, 
+    forward \[] emp (fc_singleton (kleene any)) (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) emp (fc_singleton (kleene any))
 
 
-  | fw_ref : forall t f v, 
-    forward \[] t f (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) t f
-  
-  | fw_deref : forall t f loc v, 
-    forward (loc ~~> v) t f (pderef (pval(vloc loc))) (fun res => (loc ~~> v) \* \[res = v])  t f
 
-  | fw_assign : forall t f loc v v', 
-    forward (loc ~~> v') t f (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  t f
 
-  | fw_assume : forall P t f f1, 
-    forward P t f (passume f1) (fun res => P \* \[res = vunit])  t (fc_conj f f1) 
 
   | fw_app : forall vf fromal_arg e actual_arg P t f Q t1 f1 f' fR fR', 
     vf = vfun fromal_arg e  ->
@@ -857,6 +861,54 @@ Proof.
   pose proof subtractFromTrueISTrue.
   specialize (H ev0 f0 H5). subst.  
   apply futureCondEntail1_exact.
+  - intros.
+  induction b.
+  + 
+  invert H.
+  intros. subst.  
+  specialize (IHforward h3 rho3 f4 H1 h2 rho2 f0 v H11). 
+  destr IHforward. 
+  exists (x0).
+  split. constructor. exact H2. exact H3.
+  + 
+  invert H.
+  intros. subst.  
+  specialize (IHforward h3 rho3 f4 H1 h2 rho2 f0 v H11). 
+  destr IHforward. 
+  exists (x0).
+  split. constructor. exact H2. exact H3. 
+
+  - 
+  intros. 
+  invert H.
+  intros. subst.  
+  pose proof futureCondEntail1TrueISTrue.
+  specialize (H f0 H1). subst. 
+  exists ((fc_singleton (kleene any))).
+  split.
+  rewrite  f_conj_kleene_any_is_f_reverse.
+  constructor. exact H5.
+  apply futureCondEntail1_exact.
+
+  - intros.
+  invert H. intros. subst. 
+  exists ((fc_singleton (kleene any))).
+  rewrite  f_conj_kleene_any_is_f_reverse.
+  split. 
+  pose proof futureCondEntail1TrueISTrue.
+  specialize (H f0 H1). subst. 
+  constructor.  exact H10.
+  exact H1.
+  - intros.
+  invert H. intros. subst. 
+  exists ((fc_singleton (kleene any))).
+  rewrite  f_conj_kleene_any_is_f_reverse.
+  pose proof futureCondEntail1TrueISTrue.
+  specialize (H f4 H1). subst. 
+  split. 
+  constructor.
+  rewrite  f_conj_kleene_any_is_f_reverse. 
+  apply futureCondEntail1_exact. 
 Qed. 
 
 
@@ -870,28 +922,27 @@ Lemma frame_big_step: forall h1 h2 h3 h_frame e t f1 f2 v P Q rho1 rho2 F ,
   exists h4, 
   Fmap.disjoint h4 h_frame /\ h2 = h4 \u h_frame /\ bigstep h3 rho1 f1 e h4 rho2 f2 v. 
 Proof. 
-  intros.  
-  induction e. 
-  - 
-  invert H.  
-  invert H0.
-  invert H0.
-  - 
-
-  
-   intros. subst. 
-  eapply  IHforward.
-  unfold himpl in H0. 
-  specialize (H0 h3 H1). exact H0. 
-  eauto.
-  eauto.  
-  eauto.
-  eauto.  
-  reflexivity. reflexivity. reflexivity. reflexivity. 
-  eauto.
-  eauto.  
+  intros.
+  gen h1 rho1 f1 h2 rho2 f2 v h3 h_frame. 
+  induction H. 
   -
-  intros. subst. 
+  intros.
+  unfold himpl in H0.
+  specialize (H0 h3 H5).  
+  specialize (IHforward h1 rho1 f1 h2 rho2 f2 v H4 h3 H0 h_frame H6 H7). 
+  destr IHforward.
+  exists h4.
+  split. exact H9. split. exact H8. exact H11.
+  - 
+  intros.
+  Search ((_ \* _) _).
+  apply hstar_inv in H1. 
+  destr H1.  
+  specialize (IHforward h1 rho1 f1 h2 rho2 f2 v H0 ).
+  Search (Fmap.disjoint _ _). 
+  pose proof Fmap.disjoint_empty_r. 
+  specialize (H6 loc Val.value h0).  
+  specialize (IHforward h0 H4 Fmap.empty H6).
 
 
 Admitted.  
@@ -992,6 +1043,66 @@ Proof.
   subst.
   apply futureCondEntail1_exact. 
 
+  - (* if-else *)
+  intros.
+  invert H2.
+  intros. subst.
+  eapply IHforward.
+  eapply H0.
+  eapply H1.
+  exact H13.
+  intros. subst.
+  eapply IHforward.
+  eapply H0.
+  eapply H1.
+  exact H13.
+  
+  - (* deref *) 
+  intros.
+  invert H2.
+  intros. subst.
+  split.
+  rewrite hstar_hpure_r. 
+  split. exact H0. 
+  apply hsingle_inv in H0.
+  rewrite H0.
+  apply Fmap.read_single. 
+  split. 
+  exact H1. 
+  apply futureCondEntail1_exact.
+
+
+
+  - (* assign *) 
+  intros.
+  invert H2.
+  intros. subst.
+  split.
+  rewrite hstar_hpure_r.
+  split. 
+  apply hsingle_inv in H0.
+  rewrite H0.
+  rewrite Fmap.update_single.
+  Search (Fmap.single _ _ ). 
+  apply hsingle_intro. 
+  reflexivity. 
+  split.  exact H1. 
+  apply futureCondEntail1_exact.
+
+  - (*assume*)
+  intros.
+  invert H2.
+  intros. subst.
+  split. 
+  rewrite hstar_hpure_r. subst.
+  split. exact H0.
+  reflexivity.
+  split.
+  exact H1.
+  rewrite  f_conj_kleene_any_is_f_reverse. 
+  apply futureCondEntail1_exact.
+
+
 
 
 
@@ -1006,19 +1117,6 @@ Qed.
   apply futureCondEntail_exact.
 
 
-  - (* if-else *)
-  intros.
-  invert H2.
-  intros. subst.
-  eapply IHforward.
-  eapply H0.
-  eapply H1.
-  exact H13.
-  intros. subst.
-  eapply IHforward.
-  eapply H0.
-  eapply H1.
-  exact H13.
 
   -  (* ref *)
   intros.
@@ -1040,50 +1138,7 @@ Qed.
   exists (fc_singleton(kleene any)).
   apply futureCondEntail_exact.
 
-  - (* deref *) 
-  intros.
-  invert H2.
-  intros. subst.
-  split.
-  rewrite hstar_hpure_r. 
-  split. exact H0. 
-  apply hsingle_inv in H0.
-  rewrite H0.
-  apply Fmap.read_single. 
-  split. 
-  exact H1.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
 
-  - (* assign *) 
-  intros.
-  invert H2.
-  intros. subst.
-  split.
-  rewrite hstar_hpure_r.
-  split. 
-  apply hsingle_inv in H0.
-  rewrite H0.
-  rewrite Fmap.update_single.
-  Search (Fmap.single _ _ ). 
-  apply hsingle_intro. 
-  reflexivity. 
-  split.  exact H1.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
-
-  - (*assume*)
-  intros.
-  invert H2.
-  intros. subst.
-  split. 
-  rewrite hstar_hpure_r. subst.
-  split. exact H0.
-  reflexivity.
-  split.
-  exact H1.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
 
   - (* fun call *)
   intros.
