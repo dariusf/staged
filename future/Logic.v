@@ -676,13 +676,14 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
 
 
 Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCond -> val -> Prop :=
+  | eval_const : forall h r f v, 
+    bigstep h r f (pval v) h r f v 
+
   | eval_plet : forall h1 h2 h3 x e1 e2 v r rho1 rho2 rho3 f1 f2 f3,
     bigstep h1 rho1 f1 e1 h2 rho2 f2 v ->
     bigstep h2 rho2 f2 (subst x v e2) h3 rho3 f3 r ->
     bigstep h1 rho1 f1 (plet x e1 e2) h3 rho3 f3 r
     
-  | eval_const : forall h r f v, 
-    bigstep h r f (pval v) h r f v 
   
   | eval_if_true : forall h r f e1 e2 h' r' f' v, 
     bigstep h r f e1 h' r' f' v -> 
@@ -764,6 +765,13 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     forward P t f' (papp (pval vf) (pval actual_arg)) Q t1 (fc_conj fR' f1) 
 .
 
+
+Lemma subtractTheSame: forall f t f1 f2, 
+  futureSubtraction f t f1 -> 
+  futureSubtraction f t f2 -> 
+  f1 = f2. 
+Proof. Admitted. 
+
 Lemma strengthening_futureCond_from_pre: forall f1 f2 h1 rho1 e h2 rho2 f v, 
   futureCondEntail1 f1 f2 -> 
   bigstep h1 rho1 f2 e h2 rho2 f v -> 
@@ -780,19 +788,29 @@ Proof.
 
 Admitted. 
 
-Lemma subtractTheSame: forall f t f1 f2, 
-  futureSubtraction f t f1 -> 
-  futureSubtraction f t f2 -> 
-  f1 = f2. 
-Proof. Admitted. 
 
-Lemma frame_big_step: forall h1 h2 h3 h_frame e t1 t2 f1 f2 v, 
+(* to prove the frame rule *)
+Lemma frame_big_step: forall h1 h2 h3 h_frame e t1 t2 f1 f2 v P Q rho1 rho2 F , 
   Fmap.disjoint h3 h_frame->
   h1 = h3 \u h_frame -> 
-  bigstep h1 t1 f1 e h2 t2 f2 v -> 
+  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
+  forward P t1 f1 e Q t2 F -> 
+  P h3 -> 
   exists h4, 
-  Fmap.disjoint h4 h_frame /\ h2 = h4 \u h_frame /\ bigstep h3 t1 f1 e h4 t2 f2 v.
+  Fmap.disjoint h4 h_frame /\ h2 = h4 \u h_frame /\ bigstep h3 rho1 f1 e h4 rho2 f2 v. 
 Proof. 
+  intros. 
+  invert H1.
+  induction H2.
+  - intros. subst. 
+  eapply  IHforward.
+  unfold himpl in H1. 
+  specialize (H1 h3 H3). exact H1. 
+  eauto.
+  eauto.  
+  eauto.
+  eauto.  
+  reflexivity. reflexivity. reflexivity. reflexivity.    
 Admitted.  
 
 
@@ -827,9 +845,9 @@ Proof.
   - (* frame *)
   intros.
   apply hstar_inv in H0. 
-  destruct H0 as (h0&h4&H8&H9&H10&H11). 
+  destruct H0 as (h0&h4&H8&H9&H10&H11).  
   pose proof frame_big_step.
-  specialize (H0 h1 h2 h0 h4 e rho1 rho2 (fc_singleton (kleene any)) f3 v H10 H11 H2). 
+  specialize (H0 h1 h2 h0 h4 e emp t (fc_singleton (kleene any)) f3 v P Q rho1 rho2 F H10 H11 H2 H H8). 
   destruct H0 as (h5&H12&H13&H14).    
 
   specialize (IHforward h0 H8 v h5 rho1 H1 rho2 f3 H14). 
@@ -852,6 +870,8 @@ Proof.
   eapply H1.
   exact  H4.
   exact H6.
+
+
   eapply strengthening_futureCond_from_pre.  
   exact H7.
   exact H16.
