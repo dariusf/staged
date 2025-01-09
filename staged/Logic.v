@@ -602,7 +602,26 @@ Proof.
   false.
 Qed.
 
-Lemma req_empty_inv : forall env h1 h2 R,
+Lemma req_empty_inv : forall env h1 h2 R f,
+  satisfies env h1 h2 R (req \[] f) ->
+  satisfies env h1 h2 R f.
+Proof.
+  intros.
+  inverts H as H. specializes H empty_heap h1 ___.
+  apply hempty_intro.
+Qed.
+
+Lemma req_empty_intro : forall env h1 h2 R f,
+  satisfies env h1 h2 R f ->
+  satisfies env h1 h2 R (req \[] f).
+Proof.
+  intros.
+  apply s_req. intros.
+  hinv H0.
+  subst. rew_fmap *.
+Qed.
+
+Lemma req_void_empty_inv : forall env h1 h2 R,
   satisfies env h1 h2 R (req_ \[]) ->
   h1 = h2 /\ R = norm vunit.
 Proof.
@@ -749,6 +768,32 @@ Proof.
   hintro. assumption. fmap_eq. fmap_disjoint.
 Qed.
 
+Lemma ens_req_inv : forall env h1 h2 R H f,
+  satisfies env h1 h2 R (ens_ H;; req H f) ->
+  satisfies env h1 h2 R f.
+Proof.
+  intros.
+  inverts H0 as H0.
+  inverts H0 as H0. destr H0. hinv H0. hinv H0.
+  inverts H7 as H7.
+  specializes H7 H3.
+  subst. rew_fmap *.
+Qed.
+
+Lemma req_ens_intro : forall env h1 h2 R H f,
+  satisfies env h1 h2 R f ->
+  satisfies env h1 h2 R (req H (ens_ H;; f)).
+Proof.
+  intros.
+  apply s_req. intros.
+  eapply s_seq.
+  apply s_ens.
+  exists vunit hp.
+  splits*.
+  hintro. splits*.
+  subst. assumption.
+Qed.
+
 Lemma seq_ens_pure_inv : forall P env h1 h2 v f,
   satisfies env h1 h2 (norm v) (ens (fun a => \[P a]);; f) ->
   exists v1, P v1 /\ satisfies env h1 h2 (norm v) f.
@@ -847,6 +892,8 @@ Ltac finv H :=
   | satisfies _ _ _ _ (ens_ _) => inverts H as H; destr H
   | satisfies _ _ _ _ (req \[_] _) => inverts H as H
   | satisfies _ _ _ _ (req _ _) => inverts H as H
+  | satisfies _ _ _ _ (intersect _ _) => inverts H as H
+  | satisfies _ _ _ _ (disj _ _) => inverts H as H
   end.
 
 Ltac fintro :=
@@ -1054,7 +1101,7 @@ Lemma conj_idem : forall f,
 Proof.
   unfold bientails. intros.
   iff H.
-  { inverts H as H. assumption. }
+  { finv H. assumption. }
   { apply* s_intersect. }
 Qed.
 
@@ -1064,7 +1111,7 @@ Lemma conj_unit : forall f,
 Proof.
   unfold bientails. intros.
   iff H.
-  { inverts H as H. assumption. }
+  { finv H. assumption. }
   { apply* s_intersect. apply top_intro. }
 Qed.
 
@@ -1074,7 +1121,7 @@ Lemma conj_dom : forall f,
 Proof.
   unfold bientails. intros.
   iff H.
-  { inverts H as H. assumption. }
+  { finv H. assumption. }
   { apply* s_intersect. apply bot_inv in H. false. }
 Qed.
 
@@ -1084,15 +1131,15 @@ Lemma seq_disj_distr : forall f1 f2 f3,
 Proof.
   unfold bientails. intros.
   iff H.
-  { inverts H as H. destr H.
-  inverts H as H.
+  { finv H.
+  finv H.
   - apply s_disj_l. econstructor; jauto.
   - apply s_disj_r. econstructor; jauto. }
-  { inverts H as H. destr H.
-    - inverts H as H.
+  { finv H.
+    - finv H.
       eapply s_seq.
       apply* s_disj_l. assumption.
-    - inverts H as H.
+    - finv H.
       eapply s_seq.
       apply* s_disj_r. assumption. }
 Qed.
@@ -1103,12 +1150,10 @@ Lemma seq_assoc : forall env h1 h2 R f1 f2 f3,
 Proof.
   intros.
   split; intros H.
-  { inverts H as H. destr H.
-    inverts H6 as H6. destr H6.
+  { finv H. finv H6.
     econstructor; jauto.
     econstructor; jauto. }
-  { inverts H as H. destr H.
-    inverts H as H. destr H.
+  { finv H. finv H.
     econstructor; jauto.
     econstructor; jauto. }
 Qed.
@@ -1126,11 +1171,9 @@ Lemma norm_ens_false_l : forall f,
 Proof.
   unfold bientails.
   iff H.
-  { apply ens_void_pure_inv in H.
-    destr H. false. }
-  { inverts H as H. destr H.
-    apply ens_void_pure_inv in H.
-    destr H. false. }
+  { apply ens_void_pure_inv in H. destr H. false. }
+  { finv H. apply ens_void_pure_inv in H. destr H.
+    false. }
 Qed.
 
 Lemma norm_ens_false : forall f,
@@ -1144,8 +1187,8 @@ Lemma norm_req_false : forall f f1,
   entails f (req \[False] f1).
 Proof.
   unfold entails. intros.
-  constructor. intros.
-  hinv H0. false.
+  apply req_pure_intro.
+  intros. false.
 Qed.
 
 Lemma norm_req_pure_l : forall P f,
@@ -1153,12 +1196,10 @@ Lemma norm_req_pure_l : forall P f,
 Proof.
   unfold bientails. intros.
   iff H0.
-  { inverts H0 as H0.
-    specializes H0 empty_heap h1.
-    forward H0. hintro. assumption.
-    rew_fmap *. }
-  { apply s_req. intros.
-    hinv H1. subst. rew_fmap *. }
+  { apply req_pure_inv in H0.
+    assumption.
+    assumption. }
+  { apply req_pure_intro. auto. }
 Qed.
 
 Lemma norm_ens_pure_r : forall P f,
@@ -1215,8 +1256,7 @@ Lemma norm_empty_l : forall f,
 Proof.
   unfold bientails, empty.
   iff H.
-  { inverts H as H. destr H.
-    apply ens_void_pure_inv in H. destr H. subst.
+  { finv H. finv H. subst.
     assumption. }
   { applys s_seq h1 (norm vunit).
     apply ens_void_pure_intro; constructor.
@@ -1228,8 +1268,8 @@ Lemma norm_ens_no_result_r : forall f,
   bientails (f;; empty) f.
 Proof.
   iff H1.
-  { inverts H1 as H1.
-  unfold has_no_result, flow_res in H.
+  { finv H1.
+    unfold has_no_result, flow_res in H.
     specializes H H1. subst.
     apply empty_inv in H7. destr H7. subst.
     assumption. }
@@ -1263,11 +1303,8 @@ Lemma norm_seq_req_emp : forall f,
   bientails (req \[] f) f.
 Proof.
   unfold entails. split; intros.
-  { inverts H as H.
-    specializes H empty_heap h1 ___. hintro. }
-  { constructor. intros.
-    hinv H0. rewrite H0 in H1. rew_fmap *. subst.
-    assumption. }
+  { apply req_empty_inv in H. assumption. }
+  { apply req_empty_intro. assumption. }
 Qed.
 
 (** Splitting and combining [req]s *)
@@ -1834,14 +1871,9 @@ Proof.
 
   { (* trivial *)
     introv H2.
+    apply ens_req_inv in H2.
     rewrite norm_seq_req_emp.
     rewrite norm_seq_ens_empty.
-    finv H2.
-    finv H2. hinv H1. hinv H1.
-    subst. rew_fmap *.
-    finv H7.
-    specializes H7 H3.
-    forwards: H7. reflexivity. fmap_disjoint.
     assumption. }
 
   { (* base case *)
