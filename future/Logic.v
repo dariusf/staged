@@ -676,14 +676,15 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
 
 
 Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCond -> val -> Prop :=
-  | eval_const : forall h r f v, 
-    bigstep h r f (pval v) h r f v 
 
   | eval_plet : forall h1 h2 h3 x e1 e2 v r rho1 rho2 rho3 f1 f2 f3,
     bigstep h1 rho1 f1 e1 h2 rho2 f2 v ->
     bigstep h2 rho2 f2 (subst x v e2) h3 rho3 f3 r ->
     bigstep h1 rho1 f1 (plet x e1 e2) h3 rho3 f3 r
-    
+  
+  | eval_const : forall h r f v, 
+    bigstep h r f (pval v) h r f v 
+
   
   | eval_if_true : forall h r f e1 e2 h' r' f' v, 
     bigstep h r f e1 h' r' f' v -> 
@@ -740,7 +741,7 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
   | fw_event: forall P (ev:event) ,
     forward P emp (fc_singleton (kleene any)) (pevent ev) (fun res => P \* \[res = vunit]) (theta_singleton ev) (fc_singleton (kleene any))
 
-  | fw_cond : forall (b:bool) e1 e2 t t1 f f1 P Q, 
+  (*| fw_cond : forall (b:bool) e1 e2 t t1 f f1 P Q, 
     forward P t f (if b then e1 else e2) Q t1 f1 -> 
     forward P t f (pif (pval (vbool b)) e1 e2) Q t1 f1
 
@@ -763,6 +764,7 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     futureCondEntail f' f fR -> 
     futureSubtraction fR t1 fR' -> 
     forward P t f' (papp (pval vf) (pval actual_arg)) Q t1 (fc_conj fR' f1) 
+    *)
 .
 
 
@@ -772,45 +774,48 @@ Lemma subtractTheSame: forall f t f1 f2,
   f1 = f2. 
 Proof. Admitted. 
 
-Lemma strengthening_futureCond_from_pre: forall f1 f2 h1 rho1 e h2 rho2 f v, 
-  futureCondEntail1 f1 f2 -> 
-  bigstep h1 rho1 f2 e h2 rho2 f v -> 
-  bigstep h1 rho1 f1 e h2 rho2 f v. 
+Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
+  bigstep h3 rho3 f4 e h2 rho2 f0 v -> 
+  forward Q t2 f2 e Q1 t3 f3 -> 
+  futureCondEntail1 f2 f4 -> 
+  exists x0, 
+  bigstep h3 rho3 f2 e h2 rho2 (fc_conj x0 f0) v /\ futureCondEntail1 f3 f0. 
 Proof. 
   intros.
   induction H.
-  induction e. 
   pose proof inclusion_sound.
-  specialize (H1 t1 t2 rho1 H).
-  - invert H0.
-  - invert H0. 
-    intros. subst. 
 
 Admitted. 
 
 
 (* to prove the frame rule *)
-Lemma frame_big_step: forall h1 h2 h3 h_frame e t1 t2 f1 f2 v P Q rho1 rho2 F , 
+Lemma frame_big_step: forall h1 h2 h3 h_frame e t f1 f2 v P Q rho1 rho2 F , 
+  forward P emp (fc_singleton (kleene any)) e Q t F -> 
+  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
+  P h3 -> 
   Fmap.disjoint h3 h_frame->
   h1 = h3 \u h_frame -> 
-  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
-  forward P t1 f1 e Q t2 F -> 
-  P h3 -> 
   exists h4, 
   Fmap.disjoint h4 h_frame /\ h2 = h4 \u h_frame /\ bigstep h3 rho1 f1 e h4 rho2 f2 v. 
 Proof. 
-  intros. 
-  invert H1.
-  induction H2.
+  intros.
+  invert H0.   
+  induction H.
   - intros. subst. 
   eapply  IHforward.
-  unfold himpl in H1. 
-  specialize (H1 h3 H3). exact H1. 
+  unfold himpl in H0. 
+  specialize (H0 h3 H1). exact H0. 
   eauto.
   eauto.  
   eauto.
   eauto.  
-  reflexivity. reflexivity. reflexivity. reflexivity.    
+  reflexivity. reflexivity. reflexivity. reflexivity. 
+  eauto.
+  eauto.  
+  -
+  intros. subst. 
+
+
 Admitted.  
 
 
@@ -847,7 +852,7 @@ Proof.
   apply hstar_inv in H0. 
   destruct H0 as (h0&h4&H8&H9&H10&H11).  
   pose proof frame_big_step.
-  specialize (H0 h1 h2 h0 h4 e emp t (fc_singleton (kleene any)) f3 v P Q rho1 rho2 F H10 H11 H2 H H8). 
+  specialize (H0 h1 h2 h0 h4 e t (fc_singleton (kleene any)) f3 v P Q rho1 rho2 F H H2 H8 H10 H11). 
   destruct H0 as (h5&H12&H13&H14).    
 
   specialize (IHforward h0 H8 v h5 rho1 H1 rho2 f3 H14). 
@@ -861,20 +866,21 @@ Proof.
   - (* let *)
   intros.
   invert H4. intros. subst.
-  specialize (IHforward h1).
-  specialize (IHforward H2 v0 h3 rho1).
-  specialize (IHforward H3).
-  specialize (IHforward rho3 f4).
-  specialize (IHforward H15).
+  specialize (IHforward h1 H2 v0 h3 rho1).
+  specialize (IHforward H3 rho3 f4 H15).
   destr IHforward.
-  eapply H1.
-  exact  H4.
-  exact H6.
+  specialize (H0 v0). 
+  pose proof strengthening_futureCond_from_pre.
+  specialize (H5 h3 rho3 f4 (subst x v0 e2) h2 rho2 f0 v (Q v0) t2 f2 Q1 t3 f3 H16 H0 H7). 
+  destruct H5 as (x0&H5&H18). 
+  specialize(H1 v0 h3 H4 v h2 rho3 H6 rho2 (fc_conj x0 f0) H5).
+  destruct H1. destruct H8.
+  split.
+  exact H1.
+  split.
+  exact H8. 
+  exact H18. 
 
-
-  eapply strengthening_futureCond_from_pre.  
-  exact H7.
-  exact H16.
   - (* val *)
   intros.
   invert H2.
