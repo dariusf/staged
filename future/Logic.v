@@ -708,10 +708,6 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
     futureSubtraction f (theta_singleton ev) f' -> 
     bigstep h r f (pevent ev) h (r ++ (ev::nil)) f' vunit
 
-  | eval_pref : forall h r f loc v,
-    ~ Fmap.indom h loc ->
-    bigstep h r f (pref (pval v)) (Fmap.update h loc v) r f (vloc loc)
-
   | eval_pderef : forall h r f loc,
     Fmap.indom h loc ->
     bigstep h r f (pderef (pval (vloc loc))) h r f (Fmap.read h loc)
@@ -719,6 +715,15 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
   | eval_passign : forall h r f loc v,
     Fmap.indom h loc ->
     bigstep h r f (passign (pval (vloc loc)) (pval v)) (Fmap.update h loc v) r f vunit
+
+  | eval_app : forall fromal_arg e actual_arg h1 h2 rho1 rho2 f1 f2 v, 
+    bigstep h1 rho1 f1 (subst fromal_arg actual_arg e) h2 rho2 f2 v -> 
+    bigstep h1 rho1 f1 (papp (pval (vfun fromal_arg e)) (pval actual_arg)) h2 rho2 f2 v
+
+  | eval_pref : forall h r f loc v,
+    ~ Fmap.indom h loc ->
+    bigstep h r f (pref (pval v)) (Fmap.update h loc v) r f (vloc loc)
+
 . 
 
 
@@ -761,6 +766,11 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
   | fw_assume : forall P f1, 
     forward P emp (fc_singleton (kleene any)) (passume f1) (fun res => P \* \[res = vunit]) emp f1
 
+  | fw_app : forall fromal_arg e actual_arg P Q t f, 
+    forward P emp (fc_singleton (kleene any)) (subst fromal_arg actual_arg e) Q t f  -> 
+    forward P emp (fc_singleton (kleene any)) (papp (pval (vfun fromal_arg e)) (pval actual_arg)) Q t f
+
+
 (*
   | fw_ref : forall v, 
     forward \[] emp (fc_singleton (kleene any)) (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) emp (fc_singleton (kleene any))
@@ -769,12 +779,6 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
 
 
 
-  | fw_app : forall vf fromal_arg e actual_arg P t f Q t1 f1 f' fR fR', 
-    vf = vfun fromal_arg e  ->
-    forward P emp f (subst fromal_arg actual_arg e) Q t1 f1  -> 
-    futureCondEntail f' f fR -> 
-    futureSubtraction fR t1 fR' -> 
-    forward P t f' (papp (pval vf) (pval actual_arg)) Q t1 (fc_conj fR' f1) 
     *)
 .
 
@@ -828,7 +832,7 @@ Proof.
   pose proof H3. 
   invert H3. 
   intros.
-  subst.
+  subst. 
   specialize (IHforward h3 rho3 f4 H2 h0 rho0 f5 v0 H15 ).
   destr IHforward.
   specialize (H1 v0 h0 rho0 f5 H6 h2 rho2 f0 v H16). 
@@ -909,6 +913,20 @@ Proof.
   constructor.
   rewrite  f_conj_kleene_any_is_f_reverse. 
   apply futureCondEntail1_exact. 
+
+  - 
+  intros.  
+  invert H.  
+  intros. subst.   
+  specialize (IHforward h3 rho3 f4 H1 h2 rho2 f0 v H12). 
+  destr IHforward. 
+  exists x0.
+  pose proof futureCondEntail1TrueISTrue.
+  specialize (H f4 H1). subst. 
+  split. 
+  constructor. 
+  exact H2. exact H3.       
+
 Qed. 
 
 
@@ -1102,9 +1120,16 @@ Proof.
   rewrite  f_conj_kleene_any_is_f_reverse. 
   apply futureCondEntail1_exact.
 
-
-
-
+  - (* fun call *)
+  intros.
+  invert H2.
+  intros. subst.  
+  specialize (IHforward h1 H0 v h2 rho1 H1 rho2 f3 H13). 
+  destr IHforward.
+  split.
+  exact H2.
+  split. 
+  exact H4. exact H5.      
 
 Qed. 
 
@@ -1140,12 +1165,6 @@ Qed.
 
 
 
-  - (* fun call *)
-  intros.
-  invert H2.
-  intros. subst.
-  invert H5. 
-  intros. subst.    
 Admitted. 
   
 
