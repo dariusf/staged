@@ -659,13 +659,6 @@ Proof.
 Qed. 
 
 
-(*
-Inductive traceSubtraction : theta -> theta -> theta -> Prop :=  
-  | traceSubtraction_base : forall t, 
-    traceSubtraction t emp t
-  | traceSubtraction_ind : forall ev, 
-    
-*)
 
 
 Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=  
@@ -676,10 +669,14 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
 
   | futureSubtraction_base : forall t, 
     futureSubtraction (fc_singleton t) emp (fc_singleton t)
-
-
-
   .   
+
+Inductive futureSubtraction_linear : futureCond -> rho -> futureCond -> Prop :=  
+
+  | futureSubtraction_linear_base : forall t, 
+    futureSubtraction_linear (fc_singleton t) nil (fc_singleton t)
+  .   
+
 
 
 Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCond -> val -> Prop :=
@@ -729,6 +726,8 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
 
 
 Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
+
+
   | fw_consequence: forall P1 P2 P3 P4 t' f' t f e, 
     forward P3 emp (fc_singleton (kleene any)) e P4 t' f' -> 
     P1 ==> P3 -> 
@@ -770,6 +769,11 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     forward P emp (fc_singleton (kleene any)) (subst fromal_arg actual_arg e) Q t f  -> 
     forward P emp (fc_singleton (kleene any)) (papp (pval (vfun fromal_arg e)) (pval actual_arg)) Q t f
 
+  | fw_structural: forall P Q t f f_ctx t_ctx f_ctx' e, 
+    forward P emp (fc_singleton (kleene any)) e Q t f -> 
+    futureSubtraction f_ctx t f_ctx' -> 
+    forward P t_ctx f_ctx e Q (seq t_ctx t) (fc_conj f_ctx' f)
+
 
 (*
   | fw_ref : forall v, 
@@ -799,6 +803,7 @@ Lemma futureCondEntail1TrueISTrue: forall f,
 Proof. Admitted. 
    
 
+(* to prove the let rule *)
 Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
   bigstep h3 rho3 f4 e h2 rho2 f0 v -> 
   forward Q t2 f2 e Q1 t3 f3 -> 
@@ -809,6 +814,7 @@ Proof.
   intros.
   gen h3 rho3 f4 h2 rho2 f0 v. 
   induction H0. 
+
   -
   intros. 
   specialize (IHforward h3 rho3 f4 H4 h2 rho2 f0 v H5). 
@@ -927,7 +933,12 @@ Proof.
   constructor. 
   exact H2. exact H3.       
 
-Qed. 
+  - intros.
+  pose proof futureCondEntail1_exact.
+  specialize (H3 (fc_singleton (kleene any))).
+  specialize (IHforward h3 rho3 (fc_singleton (kleene any)) H3 h2 rho2 f0 v ). 
+
+Admitted.
 
 
 (* to prove the frame rule *)
@@ -964,6 +975,17 @@ Proof.
 
 
 Admitted.  
+
+
+
+Lemma prefix_bigstep: forall h1 h2 rho1 rho2 f1 f2 e v, 
+  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
+  exists rho3 f3, 
+  bigstep h1 nil (fc_singleton (kleene any)) e h2 rho3 f3 v /\ 
+  rho2 = rho1 ++ rho3 /\ futureCondEntail1 f2 f3. 
+Proof. 
+Admitted. 
+
 
 
 
@@ -1129,44 +1151,21 @@ Proof.
   split.
   exact H2.
   split. 
-  exact H4. exact H5.      
+  exact H4. exact H5.     
 
-Qed. 
-
-(*
-  exists (fc_singleton(kleene any)).
-  pose proof (subtractTheSame).
-  specialize (H2 f (theta_singleton ev0) f' f3).
-  specialize (H2 H H7).
-  subst. 
-  apply futureCondEntail_exact.
-
-
-
-  -  (* ref *)
+  - (* STRUCTURAL RULE *) 
   intros.
-  invert H2.
-  intros. 
+  pose proof prefix_bigstep.  
+  specialize (H4 h1 h2 rho1 rho2 f_ctx f3 e v H3 ). 
+  destr H4. 
+  specialize (IHforward h1 H1 v h2 nil tm_emp rho3 f0 H5). 
+  destr IHforward.
   split. 
-  exists loc0. subst.  
-  rewrite hstar_hpure_l.
-  split.
-  reflexivity.
-  Search (\[]).
-  apply hempty_inv in H0. 
-  rewrite H0.
-  Search (Fmap.update).
-  rewrite (update_empty).
-  apply hsingle_intro.
-  split.
-  subst. exact H1.
-  exists (fc_singleton(kleene any)).
-  apply futureCondEntail_exact.
-
+  exact H6.
+  split. 
+  rewrite H4.
+  constructor.
+  exact H2. exact H9.       
 
 
 Admitted. 
-  
-
-*)
-
