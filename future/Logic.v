@@ -461,6 +461,12 @@ Proof using. introv M1. induction M1; introv M2.
 Admitted. 
 
 
+Theorem strong_LHS_futureEnatil : forall f1 f2 f3, 
+  futureCondEntail1 f1 f2 -> 
+  futureCondEntail1 (fc_conj f3 f1) f2.
+Proof.
+Admitted. 
+
 Axiom conj_kleene_any : 
    (fc_singleton(kleene any)) = 
    fc_conj (fc_singleton(kleene any)) (fc_singleton(kleene any)). 
@@ -478,7 +484,10 @@ Lemma futureCondEntail1_exact : forall f,
 Proof.
 Admitted. 
 
-
+Lemma anything_future_entail_default : forall f,  
+  futureCondEntail1 f  (fc_singleton(kleene any)).
+Proof.
+Admitted. 
 
 
 Lemma futureCondEntail_exact : forall f,  
@@ -774,15 +783,9 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     futureSubtraction f_ctx t f_ctx' -> 
     forward P t_ctx f_ctx e Q (seq t_ctx t) (fc_conj f_ctx' f)
 
-
 (*
   | fw_ref : forall v, 
     forward \[] emp (fc_singleton (kleene any)) (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) emp (fc_singleton (kleene any))
-
-
-
-
-
     *)
 .
 
@@ -801,7 +804,21 @@ Proof. Admitted.
 Lemma futureCondEntail1TrueISTrue: forall f, 
   futureCondEntail1 (fc_singleton (kleene any)) f -> f = (fc_singleton (kleene any)).
 Proof. Admitted. 
-   
+
+Lemma weaken_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
+  bigstep h1 r1 f1 e h2 r2 f2 v -> 
+  futureCondEntail1 f1 f3 -> 
+  exists f4,  
+  bigstep h1 r1 f3 e h2 r2 f4 v /\ 
+  futureCondEntail1 f4 f2.
+Proof. Admitted.   
+
+Lemma strenthen_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
+  bigstep h1 r1 f1 e h2 r2 f2 v -> 
+  futureCondEntail1 f3 f1 -> 
+  exists f4,  
+  bigstep h1 r1 f3 e h2 r2 (fc_conj f4 f2) v. 
+Proof. Admitted.  
 
 (* to prove the let rule *)
 Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
@@ -936,9 +953,25 @@ Proof.
   - intros.
   pose proof futureCondEntail1_exact.
   specialize (H3 (fc_singleton (kleene any))).
-  specialize (IHforward h3 rho3 (fc_singleton (kleene any)) H3 h2 rho2 f0 v ). 
+  pose proof weaken_futureCond_big_step.
+  pose proof anything_future_entail_default. 
+  specialize (H5 f4). 
+  specialize (H4 h3 rho3 f4 e h2 rho2 f0 v (fc_singleton (kleene any)) H2 H5).   
+  destr H4. 
+  specialize (IHforward h3 rho3 (fc_singleton (kleene any)) H3 h2 rho2 f1 v H4). 
+  destr IHforward.
 
-Admitted.
+  pose proof strenthen_futureCond_big_step.
+  specialize (H6 h3 rho3 f4 e h2 rho2 f0 v f_ctx H2 H1 ). 
+  destr H6.
+  exists f2.
+  split. exact H10. 
+  pose proof futureCond1_trans.
+  specialize (H6 f f1 f0 H9 H7).
+  pose proof strong_LHS_futureEnatil.
+  specialize (H11 f f0 f_ctx' H6).
+  exact H11.  
+Qed. 
 
 
 (* to prove the frame rule *)
