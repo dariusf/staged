@@ -1010,6 +1010,24 @@ Proof.
   exact H12.  
 Qed. 
 
+Lemma heap_disjoint_consequence: forall [A B : Type] (h1:Fmap.fmap A B) h2 h3 h4, 
+  Fmap.disjoint h1 h2 -> 
+  h1 = h3 \u h4 -> 
+  Fmap.disjoint h3 h2 /\ Fmap.disjoint h4 h2. 
+Proof. Admitted. 
+
+Lemma heap_disjoint_consequence_aux: forall [A B : Type] (h1:Fmap.fmap A B) h2 h3, 
+  Fmap.disjoint h1 h2 -> 
+  Fmap.disjoint h2 h3 -> 
+  Fmap.disjoint h1 h3-> 
+  Fmap.disjoint h1 (h2 \u h3). 
+Proof. Admitted. 
+
+Lemma heap_framing_bigstep : forall h1 rho1 f1 e h2 rho2 f2 v h4, 
+  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
+  Fmap.disjoint h1 h4 -> 
+  bigstep (h1\u h4) rho1 f1 e (h2\u h4) rho2 f2 v. 
+Proof. Admitted. 
 
 (* to prove the frame rule *)
 Lemma frame_big_step: forall h1 h2 h3 h_frame e t f1 f2 v P Q rho1 rho2 F , 
@@ -1037,14 +1055,34 @@ Proof.
   Search ((_ \* _) _).
   apply hstar_inv in H1. 
   destr H1.  
-  specialize (IHforward h1 rho1 f1 h2 rho2 f2 v H0 ).
-  Search (Fmap.disjoint _ _). 
-  pose proof Fmap.disjoint_empty_r. 
-  specialize (H6 loc Val.value h0).  
-  specialize (IHforward h0 H4 Fmap.empty H6).
+  specialize (IHforward h1 rho1 f1 ).
+  pose proof heap_disjoint_consequence. 
+  specialize (H6 loc Val.value h3 h_frame h0 h4 H2 H7 ).  
+  destr H6.
+  pose proof heap_disjoint_consequence_aux. 
+  specialize (H6 loc Val.value  h0 h4 h_frame H5 H9 H8). 
+  specialize (IHforward h2 rho2 f2 v H0 h0 H4 (h4\u h_frame) H6 ).
+  Search ((_ \u _) \u _).  
+  pose proof Fmap.union_assoc. 
+  rewrite H3 in IHforward.
+  rewrite H7 in IHforward.
+  specialize (H10 loc Val.value h0 h4 h_frame ). 
+  specialize (IHforward H10). 
+  destr IHforward.
+  exists (h5 \u h4).
+  subst. 
+  split.
+  eauto.
+  split.
+  eauto.
+  pose proof heap_framing_bigstep. 
+  specialize (H3 h0 rho1 f1 e h5 rho2 f2 v h4 H14 H5).
+  exact H3.
+  -
+  intros.
+  
+Admitted. 
 
-
-Admitted.  
 
 
 
