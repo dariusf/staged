@@ -460,6 +460,16 @@ Proof using. introv M1. induction M1; introv M2.
 
 Admitted. 
 
+Theorem futureCond1_distribution : forall f1 f2 f3 f4, 
+  futureCondEntail1 f1 f2 -> 
+  futureCondEntail1 f3 f4 -> 
+  futureCondEntail1 (fc_conj f1 f3) (fc_conj f2 f4).
+Proof.
+Admitted. 
+
+Axiom futureCond1_commute : forall f1 f2, 
+  fc_conj f1 f2 = fc_conj f2 f1. 
+
 
 Theorem strong_LHS_futureEnatil : forall f1 f2 f3, 
   futureCondEntail1 f1 f2 -> 
@@ -827,6 +837,17 @@ Lemma future_frame_big_step : forall P e Q t f h3 rho3 f4 h2 rho2 f0 v f1,
   futureCondEntail1 f1 f0. 
 Proof. Admitted.  
 
+Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v, 
+  forward P emp (fc_singleton (kleene any)) e Q t f -> 
+  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
+  exists rho3 f3, 
+  bigstep h1 nil (fc_singleton (kleene any)) e h2 rho3 f3 v /\ 
+  rho2 = rho1 ++ rho3 /\ futureCondEntail1 f f3 /\ futureCondEntail1 f2 f3
+  . 
+Proof. Admitted.  
+
+
+
 Lemma weakening_futureSubtraction: forall f1 t f2 f3, 
   futureSubtraction f1 t f2 -> 
   futureCondEntail1 f1 f3 -> 
@@ -1029,13 +1050,20 @@ Admitted.
 
 Lemma prefix_bigstep: forall h1 h2 rho1 rho2 f1 f2 e v, 
   bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
-  exists rho3 f3, 
+  exists rho3 f3 f4, 
   bigstep h1 nil (fc_singleton (kleene any)) e h2 rho3 f3 v /\ 
-  rho2 = rho1 ++ rho3 /\ futureCondEntail1 f2 f3. 
+  rho2 = rho1 ++ rho3 /\ f2 = fc_conj f3 f4 /\ futureSubtraction_linear f1 rho3 f4. 
 Proof. 
 Admitted. 
 
 
+Lemma bigstep_frame : forall h1 rho1 f_ctx e h2 rho2 f3 v rho3 f0 f_ctx', 
+  bigstep h1 rho1 f_ctx e h2 rho2 f3 v -> 
+  bigstep h1 nil (fc_singleton (kleene any)) e h2 rho3 f0 v ->
+  futureSubtraction_linear f_ctx rho3 f_ctx' /\ 
+  f3 = fc_conj f_ctx' f0. 
+Proof. 
+Admitted. 
 
 
 Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
@@ -1203,18 +1231,26 @@ Proof.
   exact H4. exact H5.     
 
   - (* STRUCTURAL RULE *) 
-  intros.
-  pose proof prefix_bigstep.  
-  specialize (H4 h1 h2 rho1 rho2 f_ctx f3 e v H3 ). 
-  destr H4. 
+  intros. 
+  pose proof future_frame_big_step_aux.
+  specialize (H4 P e Q t f h1 rho1 f_ctx h2 rho2 f3 v H H3). 
+  destr H4.  
   specialize (IHforward h1 H1 v h2 nil tm_emp rho3 f0 H5). 
   destr IHforward.
-  split. 
-  exact H6.
-  split. 
-  rewrite H4.
+  split.
+  exact H7.
+  split.
+  subst.   
   constructor.
-  exact H2. exact H9.       
-
-
-Admitted. 
+  exact H2. exact H10.
+  subst.
+  pose proof bigstep_frame.
+  specialize (H4 h1 rho1 f_ctx e h2 (rho1 ++ rho3) f3 v rho3 f0 f_ctx' H3 H5). 
+  destr H4.
+  subst.   
+  pose proof futureCond1_distribution.
+  specialize (H4 f_ctx' f_ctx' f f0).
+  apply H4.
+  apply futureCondEntail1_exact.
+  exact H11. 
+Qed. 
