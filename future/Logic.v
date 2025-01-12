@@ -373,58 +373,30 @@ Proof.
     exact H0.
 Qed.
 
-Inductive futureCondEntail1 : futureCond -> futureCond -> Prop := 
-  | futureCondEntail1_empty : forall t1 t2, 
-    inclusion t1 t2 -> 
-    futureCondEntail1 (fc_singleton t1) (fc_singleton t2)
-
-  | futureCondEntail1_conj_LHS : forall f1 f2 f, 
-    futureCondEntail1 f1 f -> 
-    futureCondEntail1 f2 f -> 
-    futureCondEntail1 (fc_conj f1 f2) f 
-
-  | futureCondEntail1_conj_RHS_1 : forall f1 f2 f, 
-    futureCondEntail1 f f1 -> 
-    futureCondEntail1 f (fc_conj f1 f2) 
-
-
-  | futureCondEntail1_conj_RHS_2 : forall f1 f2 f, 
-    futureCondEntail1 f f2 -> 
-    futureCondEntail1 f (fc_conj f1 f2) 
- .
-
-
-
-
-Inductive futureCondEntail : futureCond -> futureCond -> futureCond -> Prop := 
+Inductive futureCondEntail : futureCond -> futureCond -> Prop := 
   | futureCondEntail_empty : forall t1 t2, 
     inclusion t1 t2 -> 
-    futureCondEntail (fc_singleton t1) (fc_singleton t2)  (fc_singleton (kleene any))
+    futureCondEntail (fc_singleton t1) (fc_singleton t2)
 
-  | futureCondEntail_conj_LHS : forall f1 f2 f fR1 fR2, 
-    futureCondEntail f1 f fR1 -> 
-    futureCondEntail f2 f fR2 -> 
-    futureCondEntail (fc_conj f1 f2) f (fc_conj fR1 fR2) 
+  | futureCondEntail_conj_LHS : forall f1 f2 f, 
+    futureCondEntail f1 f -> 
+    futureCondEntail f2 f -> 
+    futureCondEntail (fc_conj f1 f2) f 
 
-  | futureCondEntail_conj_frame_left : forall f f1 f2 fR1, 
-    futureCondEntail f1 f fR1 -> 
-    futureCondEntail (fc_conj f1 f2) f  (fc_conj fR1 f2)
-  
-  | futureCondEntail_conj_frame_right : forall f f1 f2 fR1, 
-    futureCondEntail f2 f fR1 -> 
-    futureCondEntail (fc_conj f1 f2) f  (fc_conj fR1 f1)
+  | futureCondEntail_conj_RHS_1 : forall f1 f2 f, 
+    futureCondEntail f f1 -> 
+    futureCondEntail f (fc_conj f1 f2) 
 
 
-  | futureCondEntail_conj_RHS : forall f f1 f2 fR1 fR2, 
-    futureCondEntail f f1 fR1 -> 
-    futureCondEntail fR1 f2 fR2 -> 
-    futureCondEntail f (fc_conj f1 f2) (fR2) 
+  | futureCondEntail_conj_RHS_2 : forall f1 f2 f, 
+    futureCondEntail f f2 -> 
+    futureCondEntail f (fc_conj f1 f2) 
  .
 
 
 
 Theorem futureCond1_sound : forall f1 f2 rho, 
-  futureCondEntail1 f1 f2 -> 
+  futureCondEntail f1 f2 -> 
   fc_model rho f1 -> 
   fc_model rho f2.
 Proof. 
@@ -449,9 +421,9 @@ Admitted.
 
 
 Theorem futureCond1_trans : forall f1 f2 f3, 
-  futureCondEntail1 f1 f2 -> 
-  futureCondEntail1 f2 f3 -> 
-  futureCondEntail1 f1 f3.
+  futureCondEntail f1 f2 -> 
+  futureCondEntail f2 f3 -> 
+  futureCondEntail f1 f3.
 Proof using. introv M1. induction M1; introv M2. 
   -  
   pose proof inclusion_sound.
@@ -461,9 +433,9 @@ Proof using. introv M1. induction M1; introv M2.
 Admitted. 
 
 Theorem futureCond1_distribution : forall f1 f2 f3 f4, 
-  futureCondEntail1 f1 f2 -> 
-  futureCondEntail1 f3 f4 -> 
-  futureCondEntail1 (fc_conj f1 f3) (fc_conj f2 f4).
+  futureCondEntail f1 f2 -> 
+  futureCondEntail f3 f4 -> 
+  futureCondEntail (fc_conj f1 f3) (fc_conj f2 f4).
 Proof.
 Admitted. 
 
@@ -472,8 +444,8 @@ Axiom futureCond1_commute : forall f1 f2,
 
 
 Theorem strong_LHS_futureEnatil : forall f1 f2 f3, 
-  futureCondEntail1 f1 f2 -> 
-  futureCondEntail1 (fc_conj f1 f3) f2.
+  futureCondEntail f1 f2 -> 
+  futureCondEntail (fc_conj f1 f3) f2.
 Proof.
 Admitted. 
 
@@ -489,33 +461,18 @@ Axiom f_conj_kleene_any_is_f_reverse : forall f,
 
   
 
-Lemma futureCondEntail1_exact : forall f,  
-  futureCondEntail1 f f .
+Lemma futureCondEntail_exact : forall f,  
+  futureCondEntail f f .
 Proof.
 Admitted. 
 
 Lemma anything_future_entail_default : forall f,  
-  futureCondEntail1 f  (fc_singleton(kleene any)).
+  futureCondEntail f  (fc_singleton(kleene any)).
 Proof.
 Admitted. 
 
 
-Lemma futureCondEntail_exact : forall f,  
-  futureCondEntail f f (fc_singleton(kleene any)).
-Proof.
-  intros.
-  induction f. 
-  - constructor.
-    apply inc_exact.
-  - pose proof  futureCondEntail_conj_RHS.
-    specialize (H (fc_conj f1 f2) f1 f2 f2 (fc_singleton (kleene any))).  
-    apply H.
-    pose proof futureCondEntail_conj_frame_left. 
-    specialize (H0 f1 f1 f2 (fc_singleton (kleene any)) IHf1).
-    rewrite  f_conj_kleene_any_is_f.
-    exact H0.
-    exact IHf2.  
-Qed.   
+
     
 
 Lemma fc_singleton_to_trace : forall rho t, 
@@ -591,94 +548,6 @@ Proof.
 Qed. 
 
 
-Theorem futureCond_sound : forall f1 f2 fR rho, 
-  futureCondEntail f1 f2 fR -> 
-  fc_model rho f1 -> 
-  fc_model rho (fc_conj f2 fR).
-Proof. 
-  intros.
-  induction H.
-  - intros. subst. 
-    pose proof inclusion_sound. 
-    specialize (H1 t1 t2 rho0). 
-    pose proof fc_singleton_to_trace. 
-    specialize (H2 rho0 t1 H0).  
-    specialize (H1 H H2).
-    constructor.   
-    pose proof trace_to_fc_singleton. 
-    specialize (H3 rho0 t2 H1).
-    exact H3.
-    pose proof trace_to_fc_singleton. 
-    specialize (H3 rho0 (kleene any)). 
-    apply H3. 
-    pose proof every_rho_models_kleene_any.
-    specialize (H4 rho0 ).
-    exact H4.  
-  - pose proof fc_conj_to_trace.
-    specialize (H2 rho0 f1 f2 H0). 
-    destr H2.
-    specialize (IHfutureCondEntail1 H3).
-    specialize (IHfutureCondEntail2 H4).
-    pose proof fc_conj_to_trace.
-    specialize (H2 rho0 f fR1 IHfutureCondEntail1). 
-    pose proof fc_conj_to_trace.
-    specialize (H5 rho0 f fR2 IHfutureCondEntail2).  
-    destr H2.     destr H5.
-    constructor. exact H6.
-    constructor. exact H7. exact H8.     
-
-  - pose proof fc_conj_to_trace.
-    specialize (H1 rho0 f1 f2 H0).     
-    destr H1. 
-    constructor.
-    specialize (IHfutureCondEntail H2).
-    pose proof fc_conj_to_trace.
-    specialize (H1 rho0 f fR1 IHfutureCondEntail).
-    destr H1. 
-    exact H4.
-    pose proof every_rho_models_kleene_any.
-    specialize (H1 rho0 ).
-    constructor.   
-    specialize (IHfutureCondEntail H2). 
-    pose proof fc_conj_to_trace.
-    specialize (H4 rho0 f fR1 IHfutureCondEntail ). 
-    destr H4.  
-    exact H6.
-    exact H3.  
-  - pose proof fc_conj_to_trace.
-    specialize (H1 rho0 f1 f2 H0). 
-    destr H1.
-    specialize (IHfutureCondEntail H3). 
-    pose proof fc_conj_to_trace.
-    specialize (H1 rho0 f fR1 IHfutureCondEntail).
-    destr H1.
-    constructor.
-    exact H4.
-    constructor.
-    exact H5.
-    exact H2.
-  - 
-    specialize (IHfutureCondEntail1 H0).  
-    pose proof fc_conj_to_trace.
-    specialize (H2 rho0 f1 fR1 IHfutureCondEntail1). 
-    destr H2.
-    specialize (IHfutureCondEntail2 H4).
-    pose proof fc_conj_to_trace.
-    specialize (H2 rho0 f1 fR1 IHfutureCondEntail1).
-    destr H2.
-    pose proof fc_conj_to_trace.
-    specialize (H2 rho0 f2 fR2 IHfutureCondEntail2).
-    destr H2.
-    constructor.
-    constructor.
-    exact H3.
-    exact H7.
-    exact H8.
-    
-Qed. 
-
-
-
 
 Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=  
   | futureSubtraction_conj : forall f1 f2 f3 f4 t, 
@@ -752,7 +621,7 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     P1 ==> P3 -> 
     P4 ===> P2 -> 
     inclusion t' t -> 
-    futureCondEntail1 f f' -> 
+    futureCondEntail f f' -> 
     forward P1 emp (fc_singleton (kleene any)) e P2 t f
 
   | fw_frame: forall P Q t F e P_frame, 
@@ -811,21 +680,21 @@ Lemma subtractFromTrueISTrue: forall ev f,
 (theta_singleton ev) f -> f = (fc_singleton (kleene any)).
 Proof. Admitted. 
    
-Lemma futureCondEntail1TrueISTrue: forall f, 
-  futureCondEntail1 (fc_singleton (kleene any)) f -> f = (fc_singleton (kleene any)).
+Lemma futureCondEntailTrueISTrue: forall f, 
+  futureCondEntail (fc_singleton (kleene any)) f -> f = (fc_singleton (kleene any)).
 Proof. Admitted. 
 
 Lemma weaken_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
   bigstep h1 r1 f1 e h2 r2 f2 v -> 
-  futureCondEntail1 f1 f3 -> 
+  futureCondEntail f1 f3 -> 
   exists f4,  
   bigstep h1 r1 f3 e h2 r2 f4 v /\ 
-  futureCondEntail1 f2 f4.
+  futureCondEntail f2 f4.
 Proof. Admitted.   
 
 Lemma strenthen_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
   bigstep h1 r1 f1 e h2 r2 f2 v -> 
-  futureCondEntail1 f3 f1 -> 
+  futureCondEntail f3 f1 -> 
   exists f4,  
   bigstep h1 r1 f3 e h2 r2 (fc_conj f4 f2) v. 
 Proof. Admitted.  
@@ -834,7 +703,7 @@ Lemma future_frame_big_step : forall P e Q t f h3 rho3 f4 h2 rho2 f0 v f1,
   forward P emp (fc_singleton (kleene any)) e Q t f -> 
   bigstep h3 rho3 f4 e h2 rho2 f0 v -> 
   futureSubtraction f4 t f1 -> 
-  futureCondEntail1 f1 f0. 
+  futureCondEntail f1 f0. 
 Proof. Admitted.  
 
 Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v, 
@@ -842,7 +711,7 @@ Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v,
   bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
   exists rho3 f3, 
   bigstep h1 nil (fc_singleton (kleene any)) e h2 rho3 f3 v /\ 
-  rho2 = rho1 ++ rho3 /\ futureCondEntail1 f f3 /\ futureCondEntail1 f2 f3
+  rho2 = rho1 ++ rho3 /\ futureCondEntail f f3 /\ futureCondEntail f2 f3
   . 
 Proof. Admitted.  
 
@@ -850,7 +719,7 @@ Proof. Admitted.
 
 Lemma weakening_futureSubtraction: forall f1 t f2 f3, 
   futureSubtraction f1 t f2 -> 
-  futureCondEntail1 f1 f3 -> 
+  futureCondEntail f1 f3 -> 
   futureSubtraction f3 t f2. 
 Proof. Admitted. 
 
@@ -858,9 +727,9 @@ Proof. Admitted.
 Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
   bigstep h3 rho3 f4 e h2 rho2 f0 v -> 
   forward Q t2 f2 e Q1 t3 f3 -> 
-  futureCondEntail1 f2 f4 -> 
+  futureCondEntail f2 f4 -> 
   exists x0, 
-  bigstep h3 rho3 f2 e h2 rho2 (fc_conj x0 f0) v /\ futureCondEntail1 f3 f0. 
+  bigstep h3 rho3 f2 e h2 rho2 (fc_conj x0 f0) v /\ futureCondEntail f3 f0. 
 Proof. 
   intros.
   gen h3 rho3 f4 h2 rho2 f0 v. 
@@ -896,23 +765,23 @@ Proof.
   destr H1.
   exists ((fc_singleton (kleene any))).
   split.
-  pose proof futureCondEntail1TrueISTrue.
+  pose proof futureCondEntailTrueISTrue.
   specialize (H3 f4 H2). subst. 
   rewrite  f_conj_kleene_any_is_f_reverse.
   exact H4. exact H7.
   - 
   intros.
-  pose proof futureCondEntail1TrueISTrue.
+  pose proof futureCondEntailTrueISTrue.
   specialize (H0 f4 H1). subst. 
   exists ((fc_singleton (kleene any))).
   split.
   rewrite  f_conj_kleene_any_is_f_reverse.
   exact H. invert H.
   intros. subst.
-  apply futureCondEntail1_exact.
+  apply futureCondEntail_exact.
   - 
   intros.
-  pose proof futureCondEntail1TrueISTrue.
+  pose proof futureCondEntailTrueISTrue.
   specialize (H0 f4 H1). subst.
   exists ((fc_singleton (kleene any))).
   split.
@@ -921,7 +790,7 @@ Proof.
   intros. subst.
   pose proof subtractFromTrueISTrue.
   specialize (H ev0 f0 H5). subst.  
-  apply futureCondEntail1_exact.
+  apply futureCondEntail_exact.
   - intros.
   induction b.
   + 
@@ -943,20 +812,20 @@ Proof.
   intros. 
   invert H.
   intros. subst.  
-  pose proof futureCondEntail1TrueISTrue.
+  pose proof futureCondEntailTrueISTrue.
   specialize (H f0 H1). subst. 
   exists ((fc_singleton (kleene any))).
   split.
   rewrite  f_conj_kleene_any_is_f_reverse.
   constructor. exact H5.
-  apply futureCondEntail1_exact.
+  apply futureCondEntail_exact.
 
   - intros.
   invert H. intros. subst. 
   exists ((fc_singleton (kleene any))).
   rewrite  f_conj_kleene_any_is_f_reverse.
   split. 
-  pose proof futureCondEntail1TrueISTrue.
+  pose proof futureCondEntailTrueISTrue.
   specialize (H f0 H1). subst. 
   constructor.  exact H10.
   exact H1.
@@ -964,12 +833,12 @@ Proof.
   invert H. intros. subst. 
   exists ((fc_singleton (kleene any))).
   rewrite  f_conj_kleene_any_is_f_reverse.
-  pose proof futureCondEntail1TrueISTrue.
+  pose proof futureCondEntailTrueISTrue.
   specialize (H f4 H1). subst. 
   split. 
   constructor.
   rewrite  f_conj_kleene_any_is_f_reverse. 
-  apply futureCondEntail1_exact. 
+  apply futureCondEntail_exact. 
 
   - 
   intros.  
@@ -978,14 +847,14 @@ Proof.
   specialize (IHforward h3 rho3 f4 H1 h2 rho2 f0 v H12). 
   destr IHforward. 
   exists x0.
-  pose proof futureCondEntail1TrueISTrue.
+  pose proof futureCondEntailTrueISTrue.
   specialize (H f4 H1). subst. 
   split. 
   constructor. 
   exact H2. exact H3.       
 
   - intros.
-  pose proof futureCondEntail1_exact.
+  pose proof futureCondEntail_exact.
   specialize (H3 (fc_singleton (kleene any))).
   pose proof weaken_futureCond_big_step.
   pose proof anything_future_entail_default. 
@@ -1109,7 +978,7 @@ Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
   P h1 -> 
   trace_model rho1 t1 -> 
   bigstep h1 rho1 f1 e h2 rho2 f3 v ->  
-  Q v h2 /\ trace_model rho2 t2 /\ futureCondEntail1 f2 f3.  
+  Q v h2 /\ trace_model rho2 t2 /\ futureCondEntail f2 f3.  
 Proof. 
   introv.
   intros. 
@@ -1175,7 +1044,7 @@ Proof.
   split. subst. auto.
   reflexivity.
   split. subst. auto.
-  apply futureCondEntail1_exact.
+  apply futureCondEntail_exact.
 
   - (* event *)
   intros.
@@ -1196,7 +1065,7 @@ Proof.
   pose proof subtractFromTrueISTrue. 
   specialize (H ev0 f3 H6). 
   subst.
-  apply futureCondEntail1_exact. 
+  apply futureCondEntail_exact. 
 
   - (* if-else *)
   intros.
@@ -1224,7 +1093,7 @@ Proof.
   apply Fmap.read_single. 
   split. 
   exact H1. 
-  apply futureCondEntail1_exact.
+  apply futureCondEntail_exact.
 
 
 
@@ -1242,7 +1111,7 @@ Proof.
   apply hsingle_intro. 
   reflexivity. 
   split.  exact H1. 
-  apply futureCondEntail1_exact.
+  apply futureCondEntail_exact.
 
   - (*assume*)
   intros.
@@ -1255,7 +1124,7 @@ Proof.
   split.
   exact H1.
   rewrite  f_conj_kleene_any_is_f_reverse. 
-  apply futureCondEntail1_exact.
+  apply futureCondEntail_exact.
 
   - (* fun call *)
   intros.
@@ -1289,6 +1158,6 @@ Proof.
   pose proof futureCond1_distribution.
   specialize (H4 f_ctx' f_ctx' f f0).
   apply H4.
-  apply futureCondEntail1_exact.
+  apply futureCondEntail_exact.
   exact H11. 
 Qed. 
