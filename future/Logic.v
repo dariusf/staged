@@ -883,14 +883,33 @@ Lemma heap_disjoint_consequence: forall [A B : Type] (h1:Fmap.fmap A B) h2 h3 h4
   Fmap.disjoint h1 h2 -> 
   h1 = h3 \u h4 -> 
   Fmap.disjoint h3 h2 /\ Fmap.disjoint h4 h2. 
-Proof. Admitted. 
+Proof.
+  Search (Fmap.disjoint _ _ -> _ ).
+  intros.
+  split.
+  (*
+  fmap_disjoint.
+  fmap_disjoint.
+  *)
+  eauto.
+  info_eauto. 
+  (*
+  disjoint_union_eq_l
+  disjoint_union_eq_r
+  disjoint_3_unfold : rew_disjoint.
+  *)
+Qed.
 
 Lemma heap_disjoint_consequence_aux: forall [A B : Type] (h1:Fmap.fmap A B) h2 h3, 
   Fmap.disjoint h1 h2 -> 
   Fmap.disjoint h2 h3 -> 
   Fmap.disjoint h1 h3-> 
   Fmap.disjoint h1 (h2 \u h3). 
-Proof. Admitted. 
+Proof. 
+  intros.
+    pose proof  disjoint_union_eq_r. 
+  info_eauto.
+Qed. 
 
 Lemma heap_framing_bigstep : forall h1 rho1 f1 e h2 rho2 f2 v h4, 
   bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
