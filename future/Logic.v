@@ -154,10 +154,6 @@ Inductive trace_model : rho -> theta -> Prop :=
     trace_model rho t2 -> 
     trace_model rho (disj t1 t2)
 
-  | tm_kleene_emp : forall rho t, 
-    trace_model rho emp -> 
-    trace_model rho (kleene t)
-
   | tm_kleene_rec : forall rho t, 
     trace_model rho (seq t (kleene t)) -> 
     trace_model rho (kleene t).
@@ -182,7 +178,7 @@ Inductive nullable: theta -> Prop :=
     nullable t1 -> nullable (disj t1 t2)
   | nullable_disj_right : forall t1 t2, 
     nullable t2 -> nullable (disj t1 t2)
-  | nullable_kleene : forall t, nullable (kleene t) . 
+  (*| nullable_kleene : forall t, nullable (kleene t) *). 
 
 
 Lemma empty_rho_model_nullable_trace : forall t, 
@@ -200,16 +196,17 @@ Proof.
     exact IHnullable2.  
   - apply tm_disj_left. exact IHnullable.
   - apply tm_disj_right. exact IHnullable.
-  - apply tm_kleene_emp. constructor.
+  (*- apply tm_kleene_emp. constructor. *)
 Qed.   
 
 Lemma trace_model_emp_must_nil : forall rho, 
   trace_model rho emp -> rho = nil.
 Proof.
   intros.
-  induction H.
-  - reflexivity.
-Admitted. 
+  invert H.
+  intros.
+  reflexivity.   
+Qed. 
 
 
 
@@ -239,23 +236,15 @@ Inductive fst : theta -> fstEvs -> Prop :=
   .
 
 Inductive theta_der : theta -> event -> theta  -> Prop := 
-  | derivative_bot : forall ev, theta_der bot ev bot
-  | derivative_emp : forall ev, theta_der emp ev bot
-  | derivative_any : forall ev, theta_der any ev emp
 
   | derivative_event_emp : forall ev1 ev2, 
-    ev1 = ev1 -> 
+    ev1 = ev2 -> 
     theta_der (theta_singleton ev1) ev2 emp 
-  | derivative_event_bot : forall ev1 ev2, 
-    theta_der (theta_singleton ev1) ev2 bot 
-  | derivative_seq_nullable: forall t1 t2 ev t1_der t2_der, 
-    nullable t1 -> 
-    theta_der t1 ev t1_der -> 
-    theta_der t2 ev t2_der -> 
-    theta_der (seq t1 t2) ev (disj (seq t1_der t2) t2_der)
+
   | derivative_seq_not_nullable: forall t1 t2 ev t1_der, 
     theta_der t1 ev t1_der -> 
     theta_der (seq t1 t2) ev (seq t1_der t2)
+    
   | derivative_disj: forall t1 t2 ev t1_der t2_der, 
     theta_der t1 ev t1_der -> 
     theta_der t2 ev t2_der -> 
@@ -265,6 +254,153 @@ Inductive theta_der : theta -> event -> theta  -> Prop :=
     theta_der t ev t_der -> 
     theta_der (kleene t) ev (seq (t_der) (kleene t))
   . 
+
+
+
+Lemma concate_not_nil: forall (rho:rho), 
+  nil ++ rho <> nil -> rho <> nil. 
+Proof. intros.  eauto.
+Qed.  
+
+
+
+Lemma nullable_trans : forall t1 t2, 
+  nullable t1 -> nullable t2 -> nullable (seq t1 t2).
+Proof.
+  intros.
+  constructor.
+  exact H. exact H0.
+Qed.     
+
+Axiom normal_emp : forall t, seq emp t =t. 
+
+Lemma nullable_rev : forall t, 
+  nullable t -> trace_model nil t.
+Proof.
+  intros.
+  induction H.
+  -constructor.
+  -intros. 
+   rewrite<-(List.app_nil_r nil).
+   constructor. 
+   exact  IHnullable1.
+   exact IHnullable2.
+  - apply tm_disj_left. exact IHnullable.
+  - apply tm_disj_right. exact IHnullable.
+Qed.    
+
+
+Lemma derivative_model : forall t1 ev0 deriv1 rho0, 
+  theta_der t1 ev0 deriv1 -> 
+  trace_model rho0 t1 -> 
+  exists rho1, 
+  rho0 = ev0 :: rho1 /\ trace_model rho1 deriv1.
+Proof.
+  intros.
+  gen rho0.
+  induction H.
+  - 
+  intros.
+  invert H0.
+  intros. subst.
+  exists (nil:rho).
+  split.
+  reflexivity. constructor.
+  - 
+  intros.
+  invert H0.
+  intros. subst.
+  specialize (IHtheta_der rho1 H4).
+  destr IHtheta_der.
+  rewrite H1.
+  exists (rho0++rho2). 
+  split.
+  eauto.
+  constructor.
+  exact H2. exact H5.
+  - 
+  intros.      
+  invert H1.
+  intros. subst.
+  specialize (IHtheta_der1 rho0 H4).
+  destr IHtheta_der1. 
+  exists rho1.
+  split. exact H2.
+  apply tm_disj_left. exact H3.
+  intros. subst.
+  specialize (IHtheta_der2 rho0 H4).
+  destr IHtheta_der2. 
+  exists rho1.
+  split. exact H2.  
+  apply tm_disj_right. exact H3.
+  -
+  intros. 
+  invert H0.
+  intros.
+  subst.
+  invert H3.
+  intros.
+  subst.
+  specialize (IHtheta_der rho1 H4). 
+  destr IHtheta_der.
+  exists (rho0++rho2) .
+  split.
+  rewrite H1.
+  eauto.
+  constructor.
+  exact H2.
+  exact H5.
+Qed.       
+
+
+Lemma derivative_model_reverse: forall rho1 deriv2 t2 ev0, 
+  trace_model rho1 deriv2 -> 
+  theta_der t2 ev0 deriv2 -> 
+  trace_model (ev0 :: rho1) t2. 
+Proof. 
+  intros.
+  gen rho1.
+  induction H0.
+  -
+  intros. 
+  invert H0.
+  intros. subst.   
+  constructor.
+  reflexivity.
+  -
+  intros. 
+  invert H.
+  intros. subst.
+  specialize (IHtheta_der rho0 H4).
+  pose proof List.app_comm_cons.
+  specialize (H event rho0 rho2 ev0).  
+  rewrite H.
+  constructor.
+  exact IHtheta_der.
+  exact H5.      
+  -
+  intros. invert H.
+  intros. subst.
+  specialize (IHtheta_der1 rho1 H2 ). 
+  apply tm_disj_left.
+  exact IHtheta_der1.
+  intros. subst.
+  specialize (IHtheta_der2 rho1 H2 ). 
+  apply tm_disj_right.
+  exact IHtheta_der2.
+
+  - 
+  intros. invert H.
+  intros. subst.
+  specialize (IHtheta_der rho0 H4 ).  
+  pose proof List.app_comm_cons.
+  specialize (H event rho0 rho2 ev0).
+  rewrite H.
+  constructor.
+  constructor.
+  exact IHtheta_der.
+  exact H5.
+Qed.    
 
 
 Inductive inclusion : theta -> theta -> Prop := 
@@ -278,13 +414,6 @@ Inductive inclusion : theta -> theta -> Prop :=
     inclusion t1 t2 -> 
     inclusion t1 t2  
 
-
-  | inc_exact: forall t, 
-    inclusion t t
-
-  | inc_kleene_any: forall t, 
-    inclusion t (kleene any) 
-
   | (* Unfold *)
     inc_unfold: forall t1 t2 ev deriv1 deriv2,
     theta_der t1 ev deriv1 -> 
@@ -292,14 +421,6 @@ Inductive inclusion : theta -> theta -> Prop :=
     inclusion deriv1 deriv2 -> 
     inclusion t1 t2
 . 
-
-Lemma trace_model_derivatives : forall rho rho1 t ev t_der, 
-  trace_model rho t -> 
-  theta_der t ev t_der -> 
-  rho = ev :: rho1 -> 
-  trace_model rho1 t_der
-.
-Admitted. 
 
 
 Theorem inclusion_sound: forall t1 t2 rho, 
@@ -318,11 +439,16 @@ Proof.
     subst.
     exact H1.
   - intros. exact (IHinclusion rho0 H0).
-  - intros. exact H0.
-  - intros.  
-    
-Admitted. 
-
+  - intros. 
+    pose proof derivative_model.
+    specialize (H3 t1 ev0 deriv1 rho0 H H2). 
+    destr H3.
+    specialize (IHinclusion rho1 H5).  
+    subst.
+    pose proof derivative_model_reverse. 
+    specialize (H3 rho1 deriv2 t2 ev0 IHinclusion H0). 
+    exact H3.
+Qed. 
 
 Lemma trace_model_prefix : forall rho t rho1 t1, 
   trace_model rho t -> 
@@ -361,11 +487,7 @@ Proof.
     eauto. subst. 
     apply tm_disj_right. exact H1.
     exact H0.
-  - econstructor.
-    eauto.
-    apply tm_kleene_emp.
-    exact H1.
-    exact H0.
+
   - econstructor.
     eauto.
     apply tm_kleene_rec.
@@ -513,7 +635,6 @@ Proof.
   - intros. subst. constructor. constructor. exact H0.
   - intros. subst. constructor. apply tm_disj_right. exact H0.
   - intros. subst. constructor. constructor. exact H0.
-  - intros. subst. constructor. apply tm_kleene_rec. exact H0. 
 Qed. 
 
 Lemma trace_model_consequent: forall rho t1 t2, 
@@ -527,25 +648,6 @@ Proof.
   exact H1.
 Qed.   
 
-Lemma every_rho_models_kleene_any : forall rho , 
-  trace_model rho (kleene any).
-Proof. 
-  intros. 
-  induction rho0.
-  - constructor. constructor. 
-  - apply tm_kleene_rec. 
-    pose proof tm_seq.
-    Search ((_ :: _) ++ _). 
-    pose proof List.app_comm_cons.
-    specialize (H0 event nil rho0 a). 
-    pose proof tm_any.
-    specialize (H1 a). 
-
-    specialize (H (a::nil) rho0 any (kleene any) H1 IHrho0). 
-    Search (nil ++ _).
-    rewrite List.app_nil_l in H0.
-    auto.
-Qed. 
 
 
 
