@@ -273,6 +273,8 @@ Proof.
 Qed.     
 
 Axiom normal_emp : forall t, seq emp t =t. 
+Axiom normal_kleene : forall t, kleene t = seq t (kleene t).
+
 
 Lemma nullable_rev : forall t, 
   nullable t -> trace_model nil t.
@@ -409,11 +411,6 @@ Inductive inclusion : theta -> theta -> Prop :=
     nullable t -> 
     inclusion emp t 
 
-  | (* Reoccur *)
-    inc_reoccur: forall t1 t2, 
-    inclusion t1 t2 -> 
-    inclusion t1 t2  
-
   | (* Unfold *)
     inc_unfold: forall t1 t2 ev deriv1 deriv2,
     theta_der t1 ev deriv1 -> 
@@ -438,7 +435,6 @@ Proof.
     specialize (H2 rho0 H0).
     subst.
     exact H1.
-  - intros. exact (IHinclusion rho0 H0).
   - intros. 
     pose proof derivative_model.
     specialize (H3 t1 ev0 deriv1 rho0 H H2). 
@@ -449,6 +445,103 @@ Proof.
     specialize (H3 rho1 deriv2 t2 ev0 IHinclusion H0). 
     exact H3.
 Qed. 
+
+Lemma trace_model_nil_indicate_nullable: forall t rho, 
+  trace_model rho t -> rho = nil -> nullable t. 
+Proof.
+  intros.
+  induction H.
+  - constructor.
+  - false.
+  - false.
+  - 
+    pose proof List.app_eq_nil.
+  specialize (H2 event rho1 rho2 H0). 
+  destr H2. subst.
+  constructor.
+  apply IHtrace_model1.
+  reflexivity.
+  apply IHtrace_model2.
+  reflexivity.
+  - subst. 
+  constructor.
+  apply IHtrace_model. reflexivity.
+  - apply nullable_disj_right.     
+  apply IHtrace_model. exact H0.
+  - rewrite normal_kleene. 
+  apply IHtrace_model. exact H0.
+Qed.      
+
+
+Theorem inclusion_trans : forall t1 t2 t3, 
+  inclusion t1 t2 -> 
+  inclusion t2 t3 -> 
+  inclusion t1 t3.
+Proof.
+  intros.
+  gen t3.
+  induction H.
+  -
+  intros. 
+  pose proof empty_rho_model_nullable_trace.
+  specialize (H1 t H). 
+  pose proof inclusion_sound.
+  specialize (H2 t t3 nil H0 H1). 
+  invert H2.
+  intros.
+  constructor.
+  constructor.
+  intros. 
+  apply inc_emp. 
+  Search (_ ++ _ =nil).  
+  pose proof List.app_eq_nil.
+  specialize (H2 event rho1 rho2 H3). 
+  destr H2. 
+  constructor. 
+  subst. 
+  pose proof trace_model_nil_indicate_nullable.
+  specialize (H2 t1 nil H4). 
+  apply H2. reflexivity.
+  subst. 
+  pose proof trace_model_nil_indicate_nullable.
+  specialize (H2 t2 nil H5). 
+  apply H2. reflexivity.
+  intros.
+  constructor.
+  apply nullable_disj_left.
+  subst. 
+  pose proof trace_model_nil_indicate_nullable.
+  specialize (H2 t1 nil H3).
+  apply H2. reflexivity.
+  intros.
+  constructor.
+  apply nullable_disj_right.
+  subst. 
+  pose proof trace_model_nil_indicate_nullable.
+  specialize (H2 t2 nil H3).
+  apply H2. reflexivity.
+  intros. subst. 
+  constructor. 
+  rewrite<-(List.app_nil_r nil) in H3.
+  invert H3. 
+  intros.
+  subst. 
+  pose proof List.app_eq_nil.
+  specialize (H3 event rho1 rho2 H2).
+  destr H3.
+  pose proof trace_model_nil_indicate_nullable.
+  specialize (H3 (kleene t0) nil).
+  apply H3. subst. exact H7. reflexivity.
+  - 
+  intros.
+  invert H2.
+  + intros. subst.  
+  invert H0.
+  + intros. subst.
+Admitted. 
+
+
+
 
 Lemma trace_model_prefix : forall rho t rho1 t1, 
   trace_model rho t -> 
@@ -557,20 +650,67 @@ Theorem futureCond1_trans : forall f1 f2 f3,
   futureCondEntail f1 f2 -> 
   futureCondEntail f2 f3 -> 
   futureCondEntail f1 f3.
-Proof using. introv M1. induction M1; introv M2. 
-  -  
+Proof.
+  intros.
+  gen f3.
+  induction H.
+  - 
+  intros.
   pose proof inclusion_sound.
-  specialize (H0 t1 t2).
-  pose proof futureCond1_sound.
+  specialize (H1 t1 t2).
+  invert H0.
+Admitted.  
 
-Admitted. 
+Axiom futureCond_commute : forall f1 f2 f3, 
+  fc_conj (fc_conj f1 f2) f3 = 
+  fc_conj f2 (fc_conj f1 f3).
+  
+Axiom futureCond_commute1 : forall f1 f2 f3, 
+  fc_conj (fc_conj f1 f2) f3 = 
+  fc_conj f1 (fc_conj f2 f3).
+
+Axiom futureCond_distr : forall f1 f2 f3, 
+  fc_conj (fc_conj f1 f2) f3 = 
+  fc_conj (fc_conj f1 f3) (fc_conj f2 f3).
+
 
 Theorem futureCond1_distribution : forall f1 f2 f3 f4, 
   futureCondEntail f1 f2 -> 
   futureCondEntail f3 f4 -> 
   futureCondEntail (fc_conj f1 f3) (fc_conj f2 f4).
 Proof.
-Admitted. 
+  intros.
+  gen f3 f4.
+  induction H.
+  - intros. 
+  apply futureCondEntail_conj_RHS.  
+  apply futureCondEntail_conj_LHS_1.  
+  constructor.
+  exact H.
+  apply futureCondEntail_conj_LHS_2.
+  exact H0.
+  - 
+  intros.
+  specialize (IHfutureCondEntail f3 f4 H0). 
+  rewrite futureCond_commute. 
+  apply futureCondEntail_conj_LHS_2.
+  exact IHfutureCondEntail.
+  -
+  intros.
+  specialize (IHfutureCondEntail f3 f4 H0).
+  rewrite futureCond_commute1. 
+  apply futureCondEntail_conj_LHS_2.
+  exact IHfutureCondEntail.
+  -
+  intros.
+  specialize (IHfutureCondEntail1 f3 f4 H1).
+  specialize (IHfutureCondEntail2 f3 f4 H1).
+
+  rewrite futureCond_distr. 
+  apply futureCondEntail_conj_RHS.
+  exact IHfutureCondEntail1.
+  exact IHfutureCondEntail2.
+Qed.
 
 Axiom futureCond1_commute : forall f1 f2, 
   fc_conj f1 f2 = fc_conj f2 f1. 
