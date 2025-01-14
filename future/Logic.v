@@ -500,17 +500,16 @@ Inductive futureCondEntail : futureCond -> futureCond -> Prop :=
     inclusion t1 t2 -> 
     futureCondEntail (fc_singleton t1) (fc_singleton t2)
 
-  | futureCondEntail_conj_LHS : forall f1 f2 f, 
+  | futureCondEntail_conj_LHS_1 : forall f1 f2 f, 
     futureCondEntail f1 f -> 
+    futureCondEntail (fc_conj f1 f2) f 
+
+  | futureCondEntail_conj_LHS_2 : forall f1 f2 f, 
     futureCondEntail f2 f -> 
     futureCondEntail (fc_conj f1 f2) f 
 
-  | futureCondEntail_conj_RHS_1 : forall f1 f2 f, 
+  | futureCondEntail_conj_RHS : forall f1 f2 f, 
     futureCondEntail f f1 -> 
-    futureCondEntail f (fc_conj f1 f2) 
-
-
-  | futureCondEntail_conj_RHS_2 : forall f1 f2 f, 
     futureCondEntail f f2 -> 
     futureCondEntail f (fc_conj f1 f2) 
  .
@@ -523,23 +522,35 @@ Theorem futureCond1_sound : forall f1 f2 rho,
   fc_model rho f2.
 Proof. 
   intros.
-  invert H0.
+  gen rho0.
   induction H. 
   - 
   intros.   
-  invert H3. 
+  invert H0. 
   intros.
   subst.   
   constructor.
   pose proof inclusion_sound.
-  specialize (H0 t1 t2 rho0 H). 
+  specialize (H0 t1 t2 rho0 H H3). 
   eapply H0. 
-  exact H1.
-  - intros. false.
-  - intros. subst. 
-  
+  - intros. specialize (IHfutureCondEntail rho0).
+  apply IHfutureCondEntail.
+  invert H0.
+  intros. subst.
+  exact H4.    
+  - intros. apply IHfutureCondEntail. 
+  invert H0.   
+  intros. subst.
+  exact H5.
+  -
+  intros.
+  specialize (IHfutureCondEntail1 rho0 H1).     
+  specialize (IHfutureCondEntail2 rho0 H1).
+  constructor.
+  exact IHfutureCondEntail1. 
+  exact IHfutureCondEntail2.
+Qed.         
 
-Admitted. 
 
 
 Theorem futureCond1_trans : forall f1 f2 f3, 
