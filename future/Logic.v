@@ -46,12 +46,12 @@ Inductive val :=
   | vbool : bool -> val
   | vlist : list val -> val
 
-with event : Type := ev (s:var) (v:val)
+with event : Type := 
+  | ev (s:var) (v:val) | any 
 
 with theta :=
   | bot : theta
   | emp : theta
-  | any : theta
   | theta_singleton : event -> theta
   | seq : theta -> theta -> theta
   | disj : theta -> theta -> theta
@@ -131,9 +131,6 @@ Inductive trace_model : rho -> theta -> Prop :=
     ev = ev1 -> 
     trace_model (ev1::nil) (theta_singleton ev)
 
-  | tm_any : forall ev, 
-    trace_model (ev::nil) (any)
-
   | tm_seq : forall rho1 rho2 t1 t2, 
     trace_model rho1 t1 -> 
     trace_model rho2 t2 -> 
@@ -146,6 +143,9 @@ Inductive trace_model : rho -> theta -> Prop :=
   | tm_disj_right : forall rho t1 t2, 
     trace_model rho t2 -> 
     trace_model rho (disj t1 t2)
+
+  | tm_kleene_emp : forall t, 
+    trace_model nil (kleene t)
 
   | tm_kleene_rec : forall rho t, 
     trace_model rho (seq t (kleene t)) -> 
@@ -171,7 +171,7 @@ Inductive nullable: theta -> Prop :=
     nullable t1 -> nullable (disj t1 t2)
   | nullable_disj_right : forall t1 t2, 
     nullable t2 -> nullable (disj t1 t2)
-  (*| nullable_kleene : forall t, nullable (kleene t) *). 
+  | nullable_kleene : forall t, nullable (kleene t) . 
 
 
 Lemma empty_rho_model_nullable_trace : forall t, 
@@ -189,7 +189,7 @@ Proof.
     exact IHnullable2.  
   - apply tm_disj_left. exact IHnullable.
   - apply tm_disj_right. exact IHnullable.
-  (*- apply tm_kleene_emp. constructor. *)
+  - apply tm_kleene_emp. 
 Qed.   
 
 Lemma trace_model_emp_must_nil : forall rho, 
@@ -206,9 +206,6 @@ Qed.
 Inductive fst : theta -> fstEvs -> Prop :=
   | fst_bot: fst bot nil 
   | fst_emp: fst emp nil 
-  | fst_any: 
-    fst (any) ((ev "_" vunit) :: nil)
-
   | fst_event: forall e v, 
     fst (theta_singleton (ev e v)) ((ev e v) :: nil)
   | fst_seq_nullable: forall t1 t2 fst1 fst2, 
@@ -229,10 +226,18 @@ Inductive fst : theta -> fstEvs -> Prop :=
   .
 
 Inductive theta_der : theta -> event -> theta  -> Prop := 
+  | derivative_emp : forall ev, 
+    theta_der emp ev bot 
 
-  | derivative_event_emp : forall ev1 ev2, 
+  | derivative_event_singleton : forall ev1 ev2, 
     ev1 = ev2 -> 
     theta_der (theta_singleton ev1) ev2 emp 
+
+  | derivative_seq_nullable: forall t1 t2 ev t1_der t2_der, 
+    nullable t1 -> 
+    theta_der t1 ev t1_der -> 
+    theta_der t2 ev t2_der -> 
+    theta_der (seq t1 t2) ev (disj (seq t1_der t2) t2_der)
 
   | derivative_seq_not_nullable: forall t1 t2 ev t1_der, 
     theta_der t1 ev t1_der -> 
@@ -261,13 +266,6 @@ Inductive fc_der : futureCond -> event -> futureCond  -> Prop :=
 
 
 
-Lemma concate_not_nil: forall (rho:rho), 
-  nil ++ rho <> nil -> rho <> nil. 
-Proof. intros.  eauto.
-Qed.  
-
-
-
 Lemma nullable_trans : forall t1 t2, 
   nullable t1 -> nullable t2 -> nullable (seq t1 t2).
 Proof.
@@ -276,8 +274,8 @@ Proof.
   exact H. exact H0.
 Qed.     
 
-Axiom normal_emp : forall t, seq emp t =t. 
-Axiom normal_kleene : forall t, kleene t = seq t (kleene t).
+Axiom normal_emp : forall t, seq emp t = t. 
+Axiom normal_kleene : forall t, kleene t = disj emp (seq t (kleene t)).
 
 
 Lemma nullable_rev : forall t, 
@@ -293,11 +291,20 @@ Proof.
    exact IHnullable2.
   - apply tm_disj_left. exact IHnullable.
   - apply tm_disj_right. exact IHnullable.
+  - apply tm_kleene_emp.  
 Qed.    
+
+Axiom disj_not_bot: forall t1 t2, 
+  disj t1 t2 <> bot -> t1 <> bot \/ t2 <> bot.
+
+Axiom seq_not_bot: forall t1 t2, 
+  seq t1 t2 <> bot -> t1 <> bot /\ t2 <> bot.
+
 
 
 Lemma derivative_model : forall t1 ev0 deriv1 rho0, 
   theta_der t1 ev0 deriv1 -> 
+  deriv1 <> bot -> 
   trace_model rho0 t1 -> 
   exists rho1, 
   rho0 = ev0 :: rho1 /\ trace_model rho1 deriv1.
@@ -305,13 +312,38 @@ Proof.
   intros.
   gen rho0.
   induction H.
+  -
+  intros. false.  
   - 
-  intros.
-  invert H0.
+  intros. subst. 
+  invert H1.
   intros. subst.
   exists (nil:rho).
   split.
   reflexivity. constructor.
+  -
+  intros.
+  invert H3.
+  intros. subst.
+  pose disj_not_bot. 
+  specialize (o (seq t1_der t2) t2_der H0 ). 
+  destruct o. 
+  pose seq_not_bot. 
+  specialize (a t1_der t2 H3). 
+  destr a.
+  specialize (IHtheta_der1 H4 rho1 H7). 
+  destr IHtheta_der1.
+  exists (rho0 ++ rho2).
+  rewrite H9.
+  split. eauto. 
+  apply tm_disj_left.
+  constructor.
+  exact H10. exact H8.
+  specialize (IHtheta_der2 H3 rho2 H8).
+  destr IHtheta_der2.
+Admitted. 
+
+(*
   - 
   intros.
   invert H0.
@@ -357,6 +389,7 @@ Proof.
   exact H2.
   exact H5.
 Qed.       
+*)   
 
 
 Lemma derivative_model_reverse: forall rho1 deriv2 t2 ev0, 
@@ -369,32 +402,34 @@ Proof.
   induction H0.
   -
   intros. 
+  invert H.
+  -
+  intros. 
   invert H0.
   intros. subst.   
   constructor.
   reflexivity.
   -
   intros. 
-  invert H.
+  invert H0.
   intros. subst.
-  specialize (IHtheta_der rho0 H4).
+  invert H3.
+  intros. subst.  
+  specialize (IHtheta_der1 rho0 H4).
   pose proof List.app_comm_cons.
-  specialize (H event rho0 rho2 ev0).  
-  rewrite H.
+  specialize (H0 event rho0 rho2 ev0).  
+  rewrite H0.
   constructor.
-  exact IHtheta_der.
-  exact H5.      
-  -
-  intros. invert H.
-  intros. subst.
-  specialize (IHtheta_der1 rho1 H2 ). 
-  apply tm_disj_left.
   exact IHtheta_der1.
+  exact H5.
   intros. subst.
-  specialize (IHtheta_der2 rho1 H2 ). 
-  apply tm_disj_right.
-  exact IHtheta_der2.
-
+  specialize (IHtheta_der2 rho1 H3).
+  Search (nil++ _ ). 
+  pose proof List.app_nil_l.
+  specialize (H0 event (ev0 :: rho1)). 
+  rewrite <- H0.
+  constructor. 
+  apply empty_rho_model_nullable_trace. exact H. exact IHtheta_der2.     
   - 
   intros. invert H.
   intros. subst.
@@ -402,11 +437,33 @@ Proof.
   pose proof List.app_comm_cons.
   specialize (H event rho0 rho2 ev0).
   rewrite H.
+  constructor. 
+  exact IHtheta_der.
+  exact H5.
+  -
+  intros.
+  invert H.
+  intros. subst.
+  specialize (IHtheta_der1 rho1 H2).
+  apply tm_disj_left.
+  exact IHtheta_der1.
+  intros. subst.
+  specialize (IHtheta_der2 rho1 H2).
+  apply tm_disj_right. exact IHtheta_der2.
+  -
+  intros.
+  invert H.
+  intros. subst.
+  specialize (IHtheta_der rho0 H4). 
+  pose proof List.app_comm_cons. 
+  specialize (H event rho0 rho2 ev0).
+  rewrite H. 
   constructor.
   constructor.
   exact IHtheta_der.
-  exact H5.
-Qed.    
+  exact H5.   
+Qed. 
+
 
 
 Inductive inclusion : theta -> theta -> Prop := 
@@ -420,6 +477,7 @@ Inductive inclusion : theta -> theta -> Prop :=
   | (* Unfold *)
     inc_unfold: forall t1 t2 ev deriv1 deriv2,
     theta_der t1 ev deriv1 -> 
+    deriv1 <> bot -> 
     theta_der t2 ev deriv2 -> 
     inclusion deriv1 deriv2 -> 
     inclusion t1 t2
@@ -443,15 +501,15 @@ Proof.
     specialize (H2 rho0 H0).
     subst.
     exact H1.
-  - intros. 
+  - intros.
     pose proof derivative_model.
-    specialize (H3 t1 ev0 deriv1 rho0 H H2). 
-    destr H3.
-    specialize (IHinclusion rho1 H5).  
+    specialize (H4 t1 ev0 deriv1 rho0 H H0 H3). 
+    destr H4.
+    specialize (IHinclusion rho1 H6).  
     subst.
     pose proof derivative_model_reverse. 
-    specialize (H3 rho1 deriv2 t2 ev0 IHinclusion H0). 
-    exact H3.
+    specialize (H4 rho1 deriv2 t2 ev0 IHinclusion H1). 
+    exact H4.
 Qed. 
 
 Lemma trace_model_nil_indicate_nullable: forall t rho, 
@@ -460,7 +518,6 @@ Proof.
   intros.
   induction H.
   - constructor.
-  - false.
   - false.
   - 
     pose proof List.app_eq_nil.
@@ -476,9 +533,33 @@ Proof.
   apply IHtrace_model. reflexivity.
   - apply nullable_disj_right.     
   apply IHtrace_model. exact H0.
-  - rewrite normal_kleene. 
-  apply IHtrace_model. exact H0.
+  - 
+  constructor.
+  - constructor.  
 Qed.      
+
+Lemma inclusion_theta_der_indicate : forall t1 t2 ev0 deriv1, 
+  inclusion t1 t2 -> 
+  theta_der t1 ev0 deriv1 -> 
+  exists deriv2, 
+  theta_der t2 ev0 deriv2 /\ inclusion deriv1 deriv2.
+Proof. 
+  intros.
+  gen ev0 deriv1.
+  induction H.
+  - 
+  intros. subst.
+  invert H0.
+  - 
+  intros. subst.
+  invert H0.
+  intros.
+  subst.
+  admit. 
+  -
+  intros.
+Admitted. 
+
 
 
 Theorem inclusion_trans : forall t1 t2 t3, 
@@ -532,24 +613,20 @@ Proof.
   specialize (H2 t2 nil H3).
   apply H2. reflexivity.
   intros. subst. 
+  constructor.
   constructor. 
-  rewrite<-(List.app_nil_r nil) in H3.
-  invert H3. 
+  intros. subst.
+  constructor. constructor.
+  -
   intros.
-  subst. 
-  pose proof List.app_eq_nil.
-  specialize (H3 event rho1 rho2 H2).
-  destr H3.
-  pose proof trace_model_nil_indicate_nullable.
-  specialize (H3 (kleene t0) nil).
-  apply H3. subst. exact H7. reflexivity.
-  - 
-  intros.
-  invert H2.
-  + intros. subst.  
-  invert H0.
-  + intros. subst.
-Admitted. 
+  pose proof inclusion_theta_der_indicate.
+  specialize (H4 t2 t3 ev0 deriv2 H3 H1). 
+  destr H4. 
+  specialize (IHinclusion deriv0 H6 ). 
+  pose proof inc_unfold.   
+  specialize (H5 t1 t3 ev0 deriv1 deriv0 H H0 H4 IHinclusion).
+  exact H5. 
+Qed. 
 
 
 
@@ -560,43 +637,47 @@ Lemma trace_model_prefix : forall rho t rho1 t1,
   trace_model (rho++rho1) (seq t t1).
 Proof.
   intros.
-  invert H.
+  gen rho1 t1. 
+  induction H.
+  - 
+  intros. constructor. constructor. exact H0.
+  -    
+  intros. subst. constructor. constructor. reflexivity. exact H0.     
+  - 
+  intros. subst. specialize (IHtrace_model1 rho0 t0 H1).   
+  intros. subst. specialize (IHtrace_model2 rho0 t0 H1).   
+  invert IHtrace_model1.
+  invert IHtrace_model2. 
+  intros. subst.
+  constructor.
+  constructor. eauto. eauto. auto.
+  - 
+  intros.
+  specialize (IHtrace_model rho1 t0 H0 ). 
+  constructor.
+  invert IHtrace_model. intros. subst.
+  apply tm_disj_left. exact H.
+  exact H0.
+  - 
   intros. 
-  - econstructor.
-    eauto.
-    constructor.
-    exact H0.
-  - econstructor.
-    eauto.
-    constructor.
-    exact H1.
-    exact H0.
-  - econstructor.
-    eauto.
-    constructor.
-    exact H0.
-  - econstructor.
-    eauto.
-    subst.
-    econstructor. eauto.
-    exact H2.
-    exact H0.
-  - econstructor.
-    eauto.
-    econstructor.
-    exact H1.
-    exact H0.
-  - econstructor.
-    subst.
-    eauto. subst. 
-    apply tm_disj_right. exact H1.
-    exact H0.
-
-  - econstructor.
-    eauto.
-    apply tm_kleene_rec.
-    exact H1.
-    exact H0.
+  specialize (IHtrace_model rho1 t0 H0 ). 
+  constructor.
+  invert IHtrace_model. intros. subst.
+  apply tm_disj_right. exact H.
+  exact H0.
+  - 
+  intros.
+  constructor.
+  constructor.
+  exact H0.
+  -
+  intros.
+  specialize (IHtrace_model rho1 t1 H0).  
+  invert IHtrace_model.
+  intros. subst. rewrite H1. 
+  constructor.
+  constructor. exact H. 
+  exact H0.   
 Qed.
 
 Inductive futureCondEntail : futureCond -> futureCond -> Prop := 
@@ -737,10 +818,13 @@ Proof.
   exact H.
 Qed.
 
+Definition trace_default := (kleene (theta_singleton any)). 
+
+Definition fc_default := fc_singleton(kleene (theta_singleton any)). 
 
 
 Axiom f_conj_kleene_any_is_f : forall f, 
-   fc_conj (fc_singleton(kleene any)) f = f. 
+   fc_conj (fc_default) f = f. 
 
 Axiom inclusion_exact: forall t, 
   inclusion t t.
@@ -750,10 +834,10 @@ Axiom futureCondEntail_exact : forall f,
   futureCondEntail f f .
 
 Axiom anything_entail_default : forall t,  
-  inclusion t ((kleene any)).
+  inclusion t ((trace_default)).
     
 Lemma anything_future_entail_default : forall f,  
-  futureCondEntail f (fc_singleton(kleene any)).
+  futureCondEntail f (fc_default).
 Proof.
   intros. 
   induction f.
@@ -798,10 +882,12 @@ Proof.
   - intros. subst.
     constructor. constructor. reflexivity.
   - intros. subst. constructor. constructor. 
+  exact H0. exact H1.   
   - intros. subst. constructor. 
-    constructor. exact H0. exact H1.
-  - intros. subst. constructor. constructor. exact H0.
-  - intros. subst. constructor. apply tm_disj_right. exact H0.
+    constructor. exact H0. 
+  - intros. subst. constructor. 
+    apply tm_disj_right.  exact H0.
+  - intros. subst. constructor. constructor. 
   - intros. subst. constructor. constructor. exact H0.
 Qed. 
 
@@ -902,67 +988,67 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
 
 
   | fw_consequence: forall P1 P2 P3 P4 t' f' t f e, 
-    forward P3 emp (fc_singleton (kleene any)) e P4 t' f' -> 
+    forward P3 emp (fc_singleton (trace_default)) e P4 t' f' -> 
     P1 ==> P3 -> 
     P4 ===> P2 -> 
     inclusion t' t -> 
     futureCondEntail f f' -> 
-    forward P1 emp (fc_singleton (kleene any)) e P2 t f
+    forward P1 emp (fc_singleton (trace_default)) e P2 t f
 
   | fw_frame: forall P Q t F e P_frame, 
-    forward P emp (fc_singleton (kleene any)) e Q t F -> 
-    forward (P\*P_frame) emp (fc_singleton (kleene any)) e (Q\*+P_frame) t F 
+    forward P emp (fc_singleton (trace_default)) e Q t F -> 
+    forward (P\*P_frame) emp (fc_singleton (trace_default)) e (Q\*+P_frame) t F 
 
 
   | fw_let : forall x e1 e2 P Q Q1 t2 t3 f2 f3, 
-    forward P emp (fc_singleton (kleene any)) e1 Q t2 f2  -> 
+    forward P emp (fc_singleton (trace_default)) e1 Q t2 f2  -> 
     (forall v, forward (Q v) t2 f2 (subst x v e2) Q1 t3 f3 ) -> 
-    forward P emp (fc_singleton (kleene any)) (plet x e1 e2) Q1 t3 f3
+    forward P emp (fc_singleton (trace_default)) (plet x e1 e2) Q1 t3 f3
   
   | fw_val: forall v P ,
-    forward P emp (fc_singleton (kleene any)) (pval v) (fun res => P \* \[res = v]) emp (fc_singleton (kleene any))
+    forward P emp (fc_singleton (trace_default)) (pval v) (fun res => P \* \[res = v]) emp (fc_singleton (trace_default))
 
   | fw_event: forall P (ev:event) ,
-    forward P emp (fc_singleton (kleene any)) (pevent ev) (fun res => P \* \[res = vunit]) (theta_singleton ev) (fc_singleton (kleene any))
+    forward P emp (fc_singleton (trace_default)) (pevent ev) (fun res => P \* \[res = vunit]) (theta_singleton ev) (fc_singleton (trace_default))
 
   | fw_cond : forall (b:bool) e1 e2 t f P Q, 
-    forward P emp (fc_singleton (kleene any)) (if b then e1 else e2) Q t f -> 
-    forward P emp (fc_singleton (kleene any)) (pif (pval (vbool b)) e1 e2) Q t f
+    forward P emp (fc_singleton (trace_default)) (if b then e1 else e2) Q t f -> 
+    forward P emp (fc_singleton (trace_default)) (pif (pval (vbool b)) e1 e2) Q t f
 
   | fw_deref : forall loc v, 
-    forward (loc ~~> v) emp (fc_singleton (kleene any)) (pderef (pval(vloc loc))) (fun res => (loc ~~> v) \* \[res = v]) emp (fc_singleton (kleene any))
+    forward (loc ~~> v) emp (fc_singleton (trace_default)) (pderef (pval(vloc loc))) (fun res => (loc ~~> v) \* \[res = v]) emp (fc_singleton (trace_default))
 
   | fw_assign : forall loc v v', 
-    forward (loc ~~> v') emp (fc_singleton (kleene any)) (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  emp (fc_singleton (kleene any))
+    forward (loc ~~> v') emp (fc_singleton (trace_default)) (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  emp (fc_singleton (trace_default))
 
   | fw_assume : forall P f1, 
-    forward P emp (fc_singleton (kleene any)) (passume f1) (fun res => P \* \[res = vunit]) emp f1
+    forward P emp (fc_singleton (trace_default)) (passume f1) (fun res => P \* \[res = vunit]) emp f1
 
   | fw_app : forall fromal_arg e actual_arg P Q t f, 
-    forward P emp (fc_singleton (kleene any)) (subst fromal_arg actual_arg e) Q t f  -> 
-    forward P emp (fc_singleton (kleene any)) (papp (pval (vfun fromal_arg e)) (pval actual_arg)) Q t f
+    forward P emp (fc_singleton (trace_default)) (subst fromal_arg actual_arg e) Q t f  -> 
+    forward P emp (fc_singleton (trace_default)) (papp (pval (vfun fromal_arg e)) (pval actual_arg)) Q t f
 
   | fw_structural: forall P Q t f f_ctx t_ctx f_ctx' e, 
-    forward P emp (fc_singleton (kleene any)) e Q t f -> 
+    forward P emp (fc_singleton (trace_default)) e Q t f -> 
     futureSubtraction f_ctx t f_ctx' -> 
     forward P t_ctx f_ctx e Q (seq t_ctx t) (fc_conj f_ctx' f)
 
 (*
   | fw_ref : forall v, 
-    forward \[] emp (fc_singleton (kleene any)) (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) emp (fc_singleton (kleene any))
+    forward \[] emp (fc_singleton (trace_default)) (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) emp (fc_singleton (trace_default))
     *)
 .
 
 
 
 Lemma subtractFromTrueISTrue: forall ev f, 
-  futureSubtraction (fc_singleton (kleene any))
-(theta_singleton ev) f -> f = (fc_singleton (kleene any)).
+  futureSubtraction (fc_singleton (trace_default))
+(theta_singleton ev) f -> f = (fc_singleton (trace_default)).
 Proof.
 Admitted. 
    
 Lemma  futureCondEntailTrueISTrue: forall f, 
-  futureCondEntail (fc_singleton (kleene any)) f -> f = (fc_singleton (kleene any)).
+  futureCondEntail (fc_singleton (trace_default)) f -> f = (fc_singleton (trace_default)).
 Proof.
 Admitted. 
 
@@ -982,17 +1068,17 @@ Lemma strenthen_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3,
 Proof. Admitted.  
 
 Lemma future_frame_big_step : forall P e Q t f h3 rho3 f4 h2 rho2 f0 v f1, 
-  forward P emp (fc_singleton (kleene any)) e Q t f -> 
+  forward P emp (fc_singleton (trace_default)) e Q t f -> 
   bigstep h3 rho3 f4 e h2 rho2 f0 v -> 
   futureSubtraction f4 t f1 -> 
   futureCondEntail f1 f0. 
 Proof. Admitted.  
 
 Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v, 
-  forward P emp (fc_singleton (kleene any)) e Q t f -> 
+  forward P emp (fc_singleton (trace_default)) e Q t f -> 
   bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
   exists rho3 f3, 
-  bigstep h1 nil (fc_singleton (kleene any)) e h2 rho3 f3 v /\ 
+  bigstep h1 nil (fc_singleton (trace_default)) e h2 rho3 f3 v /\ 
   rho2 = rho1 ++ rho3 /\ futureCondEntail f f3 /\ futureCondEntail f2 f3
   . 
 Proof. Admitted.  
@@ -1045,7 +1131,7 @@ Proof.
   destr IHforward.
   specialize (H1 v0 h0 rho0 f5 H6 h2 rho2 f0 v H16). 
   destr H1.
-  exists ((fc_singleton (kleene any))).
+  exists ((fc_singleton (trace_default))).
   split.
   pose proof futureCondEntailTrueISTrue.
   specialize (H3 f4 H2). subst. 
@@ -1055,7 +1141,7 @@ Proof.
   intros.
   pose proof futureCondEntailTrueISTrue.
   specialize (H0 f4 H1). subst. 
-  exists ((fc_singleton (kleene any))).
+  exists ((fc_singleton (trace_default))).
   split.
   rewrite  f_conj_kleene_any_is_f.
   exact H. invert H.
@@ -1065,7 +1151,7 @@ Proof.
   intros.
   pose proof futureCondEntailTrueISTrue.
   specialize (H0 f4 H1). subst.
-  exists ((fc_singleton (kleene any))).
+  exists ((fc_singleton (trace_default))).
   split.
   rewrite  f_conj_kleene_any_is_f.
   exact H. invert H.
@@ -1096,7 +1182,7 @@ Proof.
   intros. subst.  
   pose proof futureCondEntailTrueISTrue.
   specialize (H f0 H1). subst. 
-  exists ((fc_singleton (kleene any))).
+  exists ((fc_singleton (trace_default))).
   split.
   rewrite  f_conj_kleene_any_is_f.
   constructor. exact H5.
@@ -1104,7 +1190,7 @@ Proof.
 
   - intros.
   invert H. intros. subst. 
-  exists ((fc_singleton (kleene any))).
+  exists ((fc_singleton (trace_default))).
   rewrite  f_conj_kleene_any_is_f.
   split. 
   pose proof futureCondEntailTrueISTrue.
@@ -1113,7 +1199,7 @@ Proof.
   exact H1.
   - intros.
   invert H. intros. subst. 
-  exists ((fc_singleton (kleene any))).
+  exists ((fc_singleton (trace_default))).
   rewrite  f_conj_kleene_any_is_f.
   pose proof futureCondEntailTrueISTrue.
   specialize (H f4 H1). subst. 
@@ -1137,13 +1223,13 @@ Proof.
 
   - intros.
   pose proof futureCondEntail_exact.
-  specialize (H3 (fc_singleton (kleene any))).
+  specialize (H3 (fc_singleton (trace_default))).
   pose proof weaken_futureCond_big_step.
   pose proof anything_future_entail_default. 
   specialize (H5 f4). 
-  specialize (H4 h3 rho3 f4 e h2 rho2 f0 v (fc_singleton (kleene any)) H2 H5).   
+  specialize (H4 h3 rho3 f4 e h2 rho2 f0 v (fc_singleton (trace_default)) H2 H5).   
   destr H4. 
-  specialize (IHforward h3 rho3 (fc_singleton (kleene any)) H3 h2 rho2 f1 v H4). 
+  specialize (IHforward h3 rho3 (fc_singleton (trace_default)) H3 h2 rho2 f1 v H4). 
   destr IHforward.
 
   pose proof strenthen_futureCond_big_step.
@@ -1201,7 +1287,7 @@ Proof. Admitted.
 
 (* to prove the frame rule *)
 Lemma frame_big_step: forall h1 h2 h3 h_frame e t f1 f2 v P Q rho1 rho2 F , 
-  forward P emp (fc_singleton (kleene any)) e Q t F -> 
+  forward P emp (fc_singleton (trace_default)) e Q t F -> 
   bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
   P h3 -> 
   Fmap.disjoint h3 h_frame->
@@ -1256,7 +1342,7 @@ Admitted.
 
 Lemma bigstep_frame : forall h1 rho1 f_ctx e h2 rho2 f3 v rho3 f0 f_ctx', 
   bigstep h1 rho1 f_ctx e h2 rho2 f3 v -> 
-  bigstep h1 nil (fc_singleton (kleene any)) e h2 rho3 f0 v ->
+  bigstep h1 nil (fc_singleton (trace_default)) e h2 rho3 f0 v ->
   futureSubtraction_linear f_ctx rho3 f_ctx' /\ 
   f3 = fc_conj f_ctx' f0. 
 Proof. 
@@ -1296,7 +1382,7 @@ Proof.
   apply hstar_inv in H0. 
   destruct H0 as (h0&h4&H8&H9&H10&H11).  
   pose proof frame_big_step.
-  specialize (H0 h1 h2 h0 h4 e t (fc_singleton (kleene any)) f3 v P Q rho1 rho2 F H H2 H8 H10 H11). 
+  specialize (H0 h1 h2 h0 h4 e t (fc_singleton (trace_default)) f3 v P Q rho1 rho2 F H H2 H8 H10 H11). 
   destruct H0 as (h5&H12&H13&H14).    
 
   specialize (IHforward h0 H8 v h5 rho1 H1 rho2 f3 H14). 
