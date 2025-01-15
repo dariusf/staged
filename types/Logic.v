@@ -100,14 +100,21 @@ Inductive type :=
   | tbot : type
   | tint : type
   | tsingle : val -> type
-  | tfix : var -> type -> type
+  (* | tfix : var -> type -> type *)
+  | tlist : type -> type
   | tunion : type -> type -> type
   | tconstr0 : string -> type
   | tconstr1 : string -> type -> type
   | tconstr2 : string -> type -> type -> type
+  | tarrow : type -> type -> type
+  (* annotations on types *)
+  | tcov : type -> type
+  | tcontra : type -> type
+  | tinv : type -> type
+  | twild : type
   .
 
-Fixpoint tsubst (y:var) (w:type) (e:type) : type :=
+(* Fixpoint tsubst (y:var) (w:type) (e:type) : type :=
   let aux t := tsubst y w t in
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
@@ -122,98 +129,141 @@ Fixpoint tsubst (y:var) (w:type) (e:type) : type :=
   | tconstr0 _ => e
   | tconstr1 s t => tconstr1 s (aux t)
   | tconstr2 s t1 t2 => tconstr2 s (aux t1) (aux t2)
-  end.
+  end. *)
 
-Inductive has_type : val -> type -> Prop :=
+Definition ctx := Fmap.fmap var type.
+Notation empty_ctx := Fmap.empty.
 
-  | d_ttop : forall v,
-    has_type v ttop
+Implicit Types ctx: ctx.
+Implicit Types Γ: ctx.
 
-  (* no case for bot *)
+Reserved Notation "t1 '<:' t2" (at level 40).
 
-  | d_tint : forall i,
-    has_type (vint i) tint
+Inductive subtype : type -> type -> Prop :=
 
-  | d_tsingle : forall v v1,
-    v = v1 ->
-    has_type v (tsingle v1)
+  | s_refl : forall t,
+    t <: t
 
-  | d_tfix : forall x v t,
-    has_type v (tsubst x (tfix x t) t) ->
-    has_type v (tfix x t)
+  | s_trans : forall t1 t2 t3,
+    t1 <: t2 ->
+    t2 <: t3 ->
+    t1 <: t3
 
-  | d_tunion_l : forall v t1 t2,
-    has_type v t1 ->
-    has_type v (tunion t1 t2)
+  | s_top : forall s,
+    s <: ttop
 
-  | d_tunion_r : forall v t1 t2,
-    has_type v t2 ->
-    has_type v (tunion t1 t2)
+  | s_arrow : forall t3 t4 t1 t2,
+    t1 <: t3 ->
+    t4 <: t2 ->
+    tarrow t3 t4 <: tarrow t1 t2
 
-  | d_tconstr0 : forall s,
-    has_type (vconstr0 s) (tconstr0 s)
+  | s_cov : forall t,
+    t <: tcov t
 
-  | d_tconstr1 : forall s t1 v1,
-    has_type v1 t1 ->
-    has_type (vconstr1 s v1) (tconstr1 s t1)
+  | s_contra : forall t,
+    tcontra t <: t
 
-  | d_tconstr2 : forall s v1 v2 t1 t2,
-    has_type v1 t1 ->
-    has_type v2 t2 ->
-    has_type (vconstr2 s v1 v2) (tconstr2 s t1 t2)
+  | s_tconstr1 : forall x t1 t2,
+    t1 <: t2 ->
+    tconstr1 x t1 <: tconstr1 x t2
 
-  .
+  | s_tconstr2 : forall x t1 t2 t3 t4,
+    t1 <: t3 ->
+    t2 <: t4 ->
+    tconstr2 x t1 t2 <: tconstr2 x t3 t4
 
-Definition subtype : type -> type -> Prop := fun t1 t2 =>
-  forall v, has_type v t1 -> has_type v t2.
+  | s_tlist : forall t1 t2,
+    t1 <: t2 ->
+    tlist t1 <: tlist t2
+
+where "t1 '<:' t2" := (subtype t1 t2).
 
 
-Definition tlist t : type :=
-  tfix "list" (tunion (tconstr0 "nil") (tconstr2 "cons" t (tvar "list"))).
+(* Definition tlist t : type :=
+  tfix "list" (tunion (tconstr0 "nil") (tconstr2 "cons" t (tvar "list"))). *)
 
 Definition vcons a b : val := vconstr2 "cons" a b.
 Definition vnil : val := vconstr0 "nil".
 
 
+Inductive has_type : ctx -> val -> type -> Prop :=
+
+  | t_ttop : forall ctx v,
+    has_type ctx v ttop
+
+  (* no case for bot *)
+
+  | t_tint : forall ctx i,
+    has_type ctx (vint i) tint
+
+  | t_tsingle : forall ctx v v1,
+    v = v1 ->
+    has_type ctx v (tsingle v1)
+
+  (* | t_tfix : forall ctx x v t,
+    has_type ctx v (tsubst x (tfix x t) t) ->
+    has_type ctx v (tfix x t) *)
+
+  | t_tlist_nil : forall ctx t,
+    has_type ctx vnil (tlist t)
+
+  | t_tlist_cons : forall ctx t v1 v2,
+    has_type ctx v1 t ->
+    has_type ctx v2 (tlist t) ->
+    has_type ctx (vcons v1 v2) (tlist t)
+
+  | t_tunion_l : forall ctx v t1 t2,
+    has_type ctx v t1 ->
+    has_type ctx v (tunion t1 t2)
+
+  | t_tunion_r : forall ctx v t1 t2,
+    has_type ctx v t2 ->
+    has_type ctx v (tunion t1 t2)
+
+  | t_tconstr0 : forall ctx s,
+    has_type ctx (vconstr0 s) (tconstr0 s)
+
+  | t_tconstr1 : forall ctx s t1 v1,
+    has_type ctx v1 t1 ->
+    has_type ctx (vconstr1 s v1) (tconstr1 s t1)
+
+  | t_tconstr2 : forall ctx s v1 v2 t1 t2,
+    has_type ctx v1 t1 ->
+    has_type ctx v2 t2 ->
+    has_type ctx (vconstr2 s v1 v2) (tconstr2 s t1 t2)
+
+  (* | t_sub : forall ctx t1 t2 t3,
+    has_type ctx t1 t2 ->
+    t2 <: t3 ->
+    has_type ctx t1 t3 *)
+
+  .
+
+
+(* Definition subtype : type -> type -> Prop := fun t1 t2 =>
+  forall ctx v, has_type ctx v t1 -> has_type ctx v t2. *)
+
+
 Module Examples.
 
-Example ex_list: has_type (vcons (vint 1) (vcons (vint 2) vnil)) (tlist tint).
+Example ex_list: has_type empty_ctx
+  (vcons (vint 1) (vcons (vint 2) vnil))
+  (tlist tint).
 Proof.
-  unfold vcons, vnil, tlist.
-
-  apply d_tfix. simpl.
-  apply d_tunion_r.
-  apply d_tconstr2.
-  apply d_tint.
-
-  apply d_tfix. simpl.
-  apply d_tunion_r.
-  apply d_tconstr2.
-  apply d_tint.
-
-  apply d_tfix. simpl.
-  apply d_tunion_l.
-  apply d_tconstr0.
+  apply t_tlist_cons.
+  apply t_tint.
+  apply t_tlist_cons.
+  apply t_tint.
+  apply t_tlist_nil.
 Qed.
 
-(* A lemma like this would be in the context if there is a value of [List +A]. *)
-Lemma list_covariance: forall t1 t2,
-  subtype t1 t2 ->
-  subtype (tlist t1) (tlist t2).
+Example ex_list_covariance: forall t,
+  tlist t <: tlist (tcov t).
 Proof.
-  unfold tlist. intros.
-  unfold subtype. intros.
-  inverts H0 as H0. simpl in H0.
-  apply d_tfix. simpl.
-  inverts H0 as H0.
-  { apply d_tunion_l. assumption. }
-  { apply d_tunion_r.
-    inverts H0 as H0.
-
-    apply d_tconstr2.
-    admit.
-    admit. }
-Admitted.
+  intros.
+  apply s_tlist.
+  apply s_cov.
+Qed.
 
 End Examples.
 
