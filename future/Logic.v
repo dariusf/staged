@@ -1102,16 +1102,12 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
 
 
 
-Lemma subtractFromTrueISTrue: forall ev f, 
+Axiom subtractFromTrueISTrue: forall ev f, 
   futureSubtraction (fc_singleton (trace_default))
 (theta_singleton ev) f -> f = (fc_singleton (trace_default)).
-Proof.
-Admitted. 
    
-Lemma  futureCondEntailTrueISTrue: forall f, 
+Axiom futureCondEntailTrueISTrue: forall f, 
   futureCondEntail (fc_singleton (trace_default)) f -> f = (fc_singleton (trace_default)).
-Proof.
-Admitted. 
 
 Lemma weaken_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
   bigstep h1 r1 f1 e h2 r2 f2 v -> 
@@ -1119,7 +1115,18 @@ Lemma weaken_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3,
   exists f4,  
   bigstep h1 r1 f3 e h2 r2 f4 v /\ 
   futureCondEntail f2 f4.
-Proof. Admitted.   
+Proof.
+  intros. 
+  gen f3. 
+  induction H.
+  - 
+  intros. 
+  specialize (IHbigstep1 f0 H1). 
+  destr IHbigstep1.
+  specialize (IHbigstep2 f4 H4). 
+  destr IHbigstep2. 
+  exists f5.
+Admitted.   
 
 Lemma strenthen_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
   bigstep h1 r1 f1 e h2 r2 f2 v -> 
@@ -1144,13 +1151,32 @@ Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v,
   . 
 Proof. Admitted.  
 
+Axiom strengthening_futureSubtraction_residue: forall f t f1 f2, 
+  futureSubtraction f t f1 -> 
+  futureSubtraction f t (fc_conj f1 f2)
+.  
 
+Axiom fc_comm: forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1. 
 
 Lemma weakening_futureSubtraction: forall f1 t f2 f3, 
   futureSubtraction f1 t f2 -> 
   futureCondEntail f1 f3 -> 
   futureSubtraction f3 t f2. 
-Proof. Admitted. 
+Proof.
+  intros. 
+  gen f3.
+  induction H.
+  - intros. 
+  invert H1.
+  intros. subst. specialize (IHfutureSubtraction1 f0 H5). 
+  pose strengthening_futureSubtraction_residue as H1.
+  specialize (H1 f0 t f3 f4 IHfutureSubtraction1). 
+  exact H1.
+  intros. subst. specialize (IHfutureSubtraction2 f0 H5). 
+  pose strengthening_futureSubtraction_residue as H1.
+  specialize (H1 f0 t f4 f3 IHfutureSubtraction2). 
+  rewrite fc_comm.  exact H1.
+ Admitted.  
 
 (* to prove the let rule *)
 Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
@@ -1194,13 +1220,13 @@ Proof.
   destr H1.
   exists ((fc_singleton (trace_default))).
   split.
-  pose proof futureCondEntailTrueISTrue.
+  pose futureCondEntailTrueISTrue as H3.
   specialize (H3 f4 H2). subst. 
   rewrite  f_conj_kleene_any_is_f.
   exact H4. exact H7.
   - 
   intros.
-  pose proof futureCondEntailTrueISTrue.
+  pose futureCondEntailTrueISTrue as H0.
   specialize (H0 f4 H1). subst. 
   exists ((fc_singleton (trace_default))).
   split.
@@ -1217,7 +1243,7 @@ Proof.
   rewrite  f_conj_kleene_any_is_f.
   exact H. invert H.
   intros. subst.
-  pose proof subtractFromTrueISTrue.
+  pose subtractFromTrueISTrue as H.
   specialize (H ev0 f0 H5). subst.  
   apply futureCondEntail_exact.
   - intros.
@@ -1241,7 +1267,7 @@ Proof.
   intros. 
   invert H.
   intros. subst.  
-  pose proof futureCondEntailTrueISTrue.
+  pose futureCondEntailTrueISTrue as H.
   specialize (H f0 H1). subst. 
   exists ((fc_singleton (trace_default))).
   split.
@@ -1254,7 +1280,7 @@ Proof.
   exists ((fc_singleton (trace_default))).
   rewrite  f_conj_kleene_any_is_f.
   split. 
-  pose proof futureCondEntailTrueISTrue.
+  pose futureCondEntailTrueISTrue as H.
   specialize (H f0 H1). subst. 
   constructor.  exact H10.
   exact H1.
@@ -1262,7 +1288,7 @@ Proof.
   invert H. intros. subst. 
   exists ((fc_singleton (trace_default))).
   rewrite  f_conj_kleene_any_is_f.
-  pose proof futureCondEntailTrueISTrue.
+  pose futureCondEntailTrueISTrue as H.
   specialize (H f4 H1). subst. 
   split. 
   constructor.
@@ -1276,7 +1302,7 @@ Proof.
   specialize (IHforward h3 rho3 f4 H1 h2 rho2 f0 v H12). 
   destr IHforward. 
   exists x0.
-  pose proof futureCondEntailTrueISTrue.
+  pose futureCondEntailTrueISTrue as H.
   specialize (H f4 H1). subst. 
   split. 
   constructor. 
@@ -1499,7 +1525,7 @@ Proof.
   Search (nil ++ _). 
   rewrite List.app_nil_l. 
   constructor. reflexivity.
-  pose proof subtractFromTrueISTrue. 
+  pose subtractFromTrueISTrue as H. 
   specialize (H ev0 f3 H6). 
   subst.
   apply futureCondEntail_exact. 
