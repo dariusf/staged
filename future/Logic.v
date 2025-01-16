@@ -226,6 +226,9 @@ Inductive fst : theta -> fstEvs -> Prop :=
   .
 
 Inductive theta_der : theta -> event -> theta  -> Prop := 
+  | derivative_bot : forall ev, 
+    theta_der bot ev bot 
+
   | derivative_emp : forall ev, 
     theta_der emp ev bot 
 
@@ -295,12 +298,28 @@ Proof.
 Qed.    
 
 Axiom disj_not_bot: forall t1 t2, 
-  disj t1 t2 <> bot -> t1 <> bot \/ t2 <> bot.
+  disj t1 t2 <> bot -> 
+  (t1 <> bot /\ t1=bot) \/ 
+  (t2 <> bot /\ t2=bot) \/ 
+  (t1 <> bot /\ t2 <> bot) .
 
 Axiom seq_not_bot: forall t1 t2, 
   seq t1 t2 <> bot -> t1 <> bot /\ t2 <> bot.
 
+Axiom theta_singleton_not_emp: forall ev, 
+  theta_singleton ev <> emp. 
 
+Axiom theta_singleton_not_bot: forall ev, 
+  theta_singleton ev <> bot. 
+
+Axiom theta_der_not_bot: forall t ev t_der, 
+  theta_der t ev t_der -> 
+  t_der <> bot -> 
+  t <> bot.  
+
+Axiom kleene_not_bot : forall t rho, 
+  t <> bot -> 
+  trace_model rho (kleene t) ->   rho <> nil.
 
 Lemma derivative_model : forall t1 ev0 deriv1 rho0, 
   theta_der t1 ev0 deriv1 -> 
@@ -312,6 +331,8 @@ Proof.
   intros.
   gen rho0.
   induction H.
+  -
+  intros. false.  
   -
   intros. false.  
   - 
@@ -327,70 +348,84 @@ Proof.
   intros. subst.
   pose disj_not_bot. 
   specialize (o (seq t1_der t2) t2_der H0 ). 
-  destruct o. 
+  destruct o. destruct H3. 
+  false.  
+  destruct H3. destruct H3. false. 
+  destruct H3. 
+  specialize (IHtheta_der2 H4 rho2 H8).
+  destr IHtheta_der2.
   pose seq_not_bot. 
   specialize (a t1_der t2 H3). 
   destr a.
-  specialize (IHtheta_der1 H4 rho1 H7). 
+  specialize (IHtheta_der1 H5 rho1 H7). 
   destr IHtheta_der1.
-  exists (rho0 ++ rho2).
-  rewrite H9.
+  exists (rho3 ++ rho2).
+  rewrite H12.
   split. eauto. 
   apply tm_disj_left.
   constructor.
-  exact H10. exact H8.
-  specialize (IHtheta_der2 H3 rho2 H8).
-  destr IHtheta_der2.
-Admitted. 
-
-(*
-  - 
-  intros.
-  invert H0.
-  intros. subst.
-  specialize (IHtheta_der rho1 H4).
-  destr IHtheta_der.
-  rewrite H1.
-  exists (rho0++rho2). 
-  split.
-  eauto.
-  constructor.
-  exact H2. exact H5.
-  - 
-  intros.      
-  invert H1.
-  intros. subst.
-  specialize (IHtheta_der1 rho0 H4).
-  destr IHtheta_der1. 
-  exists rho1.
-  split. exact H2.
-  apply tm_disj_left. exact H3.
-  intros. subst.
-  specialize (IHtheta_der2 rho0 H4).
-  destr IHtheta_der2. 
-  exists rho1.
-  split. exact H2.  
-  apply tm_disj_right. exact H3.
+  exact H13. exact H8.
   -
-  intros. 
-  invert H0.
-  intros.
-  subst.
-  invert H3.
-  intros.
-  subst.
-  specialize (IHtheta_der rho1 H4). 
+  intros. invert H1.
+  intros. subst.
+  pose seq_not_bot. 
+  specialize (a t1_der t2 H0). 
+  destr a.
+  specialize (IHtheta_der H1 rho1 H5). 
   destr IHtheta_der.
-  exists (rho0++rho2) .
+  exists (rho0++rho2).
   split.
-  rewrite H1.
-  eauto.
+  rewrite H4.
+  eauto. constructor. exact H7. exact H6.
+  -
+  intros.
+  invert H2.
+  intros. subst.
+  pose disj_not_bot. 
+  specialize (o t1_der t2_der H0 ). 
+  destruct o. destruct H2. false.  
+  destruct H2. destruct H2. false. 
+  destruct H2. 
+  specialize (IHtheta_der1 H2 rho0 H5). 
+  destr IHtheta_der1.
+  exists (rho1).
+  split.
+  rewrite H6.
+  eauto. apply tm_disj_left. exact H7.
+  intros. subst. 
+  pose disj_not_bot. 
+  specialize (o t1_der t2_der H0 ). 
+  destruct o. destruct H2. false.  
+  destruct H2. destruct H2. false. 
+  destruct H2. 
+  specialize (IHtheta_der2 H3 rho0 H5). 
+  destr IHtheta_der2.
+  exists (rho1).
+  split.
+  rewrite H6.
+  eauto. apply tm_disj_right. exact H7.
+  -
+  intros.
+  pose seq_not_bot. 
+  specialize (a t_der (kleene t) H0).  
+  destr a. 
+  pose theta_der_not_bot. 
+  specialize (n t ev0 t_der H H2). 
+  pose kleene_not_bot. 
+  specialize (n0 t rho0 n H1).  
+  invert H1.
+  intros. subst. false.
+  intros. 
+  invert H6. 
+  intros. subst. 
+  specialize (IHtheta_der H2  rho2 H9) .   
+  destr IHtheta_der.
+  exists ( rho1 ++ rho3).
+  split.
+  rewrite H4. eauto.
   constructor.
-  exact H2.
-  exact H5.
-Qed.       
-*)   
-
+  exact H5. exact H10.
+Qed.         
 
 Lemma derivative_model_reverse: forall rho1 deriv2 t2 ev0, 
   trace_model rho1 deriv2 -> 
@@ -400,6 +435,9 @@ Proof.
   intros.
   gen rho1.
   induction H0.
+  -
+  intros. 
+  invert H.
   -
   intros. 
   invert H.
@@ -536,29 +574,17 @@ Proof.
   - 
   constructor.
   - constructor.  
-Qed.      
+Qed.     
 
-Lemma inclusion_theta_der_indicate : forall t1 t2 ev0 deriv1, 
+Axiom all_trace_have_derivative: forall t ev , 
+  exists deriv, theta_der t ev deriv. 
+
+Axiom inclusion_theta_der_indicate : forall t1 t2 ev0 deriv1, 
   inclusion t1 t2 -> 
   theta_der t1 ev0 deriv1 -> 
   exists deriv2, 
   theta_der t2 ev0 deriv2 /\ inclusion deriv1 deriv2.
-Proof. 
-  intros.
-  gen ev0 deriv1.
-  induction H.
-  - 
-  intros. subst.
-  invert H0.
-  - 
-  intros. subst.
-  invert H0.
-  intros.
-  subst.
-  admit. 
-  -
-  intros.
-Admitted. 
+
 
 
 
@@ -619,13 +645,13 @@ Proof.
   constructor. constructor.
   -
   intros.
-  pose proof inclusion_theta_der_indicate.
-  specialize (H4 t2 t3 ev0 deriv2 H3 H1). 
-  destr H4. 
+  pose inclusion_theta_der_indicate.
+  specialize (e t2 t3 ev0 deriv2 H3 H1). 
+  destr e. 
   specialize (IHinclusion deriv0 H6 ). 
   pose proof inc_unfold.   
-  specialize (H5 t1 t3 ev0 deriv1 deriv0 H H0 H4 IHinclusion).
-  exact H5. 
+  specialize (H4 t1 t3 ev0 deriv1 deriv0 H H0 H5 IHinclusion).
+  exact H4. 
 Qed. 
 
 
@@ -737,6 +763,13 @@ Proof.
 Qed.         
 
 
+Lemma inclusion_futureCondEntail: forall t1 t2 f, 
+  inclusion t1 t2 -> 
+  futureCondEntail (fc_singleton t2) f -> 
+  futureCondEntail (fc_singleton t1) f.
+Proof.  
+Admitted.  
+
 
 Theorem futureCond_trans : forall f1 f2 f3, 
   futureCondEntail f1 f2 -> 
@@ -748,10 +781,38 @@ Proof.
   induction H.
   - 
   intros.
-  pose proof inclusion_sound.
-  specialize (H1 t1 t2). 
   invert H0.
   intros. subst. constructor. 
+  pose proof inclusion_trans.
+  apply (H0 t1 t2 t3). exact H. exact H2. 
+  intros. subst.
+  apply futureCondEntail_conj_RHS.
+  pose proof inclusion_futureCondEntail. 
+  specialize (H0 t1 t2 f1 H H1). exact H0.
+  pose proof inclusion_futureCondEntail. 
+  specialize (H0 t1 t2 f2 H H2). exact H0.
+  -
+  intros. specialize (IHfutureCondEntail f3 H0). 
+  apply futureCondEntail_conj_LHS_1. exact IHfutureCondEntail. 
+  - 
+  intros. specialize (IHfutureCondEntail f3 H0). 
+  apply futureCondEntail_conj_LHS_2. exact IHfutureCondEntail.
+  -
+  intros.
+  invert H1.
+  +
+  intros. subst. specialize (IHfutureCondEntail1 f3 H5). exact IHfutureCondEntail1.
+  +
+  intros. subst. specialize (IHfutureCondEntail2 f3 H5). exact IHfutureCondEntail2.
+  + 
+  intros. subst.  
+  invert H2.
+  * intros. subst. apply futureCondEntail_conj_RHS. 
+    exact (IHfutureCondEntail1 f0 H6).
+    invert H3.
+    intros. subst. exact (IHfutureCondEntail1 f4 H5).
+    intros. subst. exact (IHfutureCondEntail2 f4 H5).
+ 
 Admitted.  
 
 Axiom futureCond_distr : forall f1 f2 f3, 
