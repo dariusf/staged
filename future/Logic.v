@@ -979,7 +979,17 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
     fc_der f ev f_der -> 
     theta_der t ev t_der ->  
     futureSubtraction f_der t_der res -> 
-    futureSubtraction f t res. 
+    futureSubtraction f t res
+ 
+  | futureSubtraction_strengthing_res: forall f t f1 f2, 
+    futureSubtraction f t f1 -> 
+    futureCondEntail f2 f1 -> 
+    futureSubtraction f t f2
+  
+  | weakening_futureSubtraction:forall f1 t f2 f3, 
+    futureSubtraction f1 t f2 -> 
+    futureCondEntail f1 f3 -> 
+    futureSubtraction f3 t f2. 
 
 
 Fixpoint concate_trace_fc (t:theta) (f:futureCond)  : futureCond :=
@@ -1048,7 +1058,17 @@ Proof.
   pose proof fc_der_fc_model_indicate as H4. 
   specialize (H4 f ev0 f_der rho1 H IHfutureSubtraction).  
   exact H4. 
-Qed. 
+  -
+  intros.
+  admit.  
+
+  - 
+  intros. 
+  specialize (IHfutureSubtraction rho0 H1). 
+  pose proof futureCond_sound. 
+  specialize (H2 f1 f3 rho0 H0 IHfutureSubtraction).  
+  exact H2. 
+Admitted. 
   
 
 
@@ -1164,13 +1184,7 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
     futureSubtraction f_ctx t f_ctx' -> 
     forward P t_ctx f_ctx e Q (seq t_ctx t) (fc_conj f_ctx' f)
 
-(*
-  | fw_ref : forall v, 
-    forward \[] emp (fc_singleton (trace_default)) (pref (pval v)) (fun res => \exists p, \[res = vloc p] \* p ~~> v) emp (fc_singleton (trace_default))
-    *)
 .
-
-
 
 Axiom subtractFromTrueISTrue: forall ev f, 
   futureSubtraction (fc_singleton (trace_default))
@@ -1221,32 +1235,11 @@ Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v,
   . 
 Proof. Admitted.  
 
-Axiom strengthening_futureSubtraction_residue: forall f t f1 f2, 
-  futureSubtraction f t f1 -> 
-  futureSubtraction f t (fc_conj f1 f2)
-.  
+
 
 Axiom fc_comm: forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1. 
 
-Lemma weakening_futureSubtraction: forall f1 t f2 f3, 
-  futureSubtraction f1 t f2 -> 
-  futureCondEntail f1 f3 -> 
-  futureSubtraction f3 t f2. 
-Proof. 
-  intros. 
-  gen f3.
-  induction H.
-  - intros. 
-  invert H1.
-  intros. subst. specialize (IHfutureSubtraction1 f0 H5). 
-  pose strengthening_futureSubtraction_residue as H1.
-  specialize (H1 f0 t f3 f4 IHfutureSubtraction1). 
-  exact H1.
-  intros. subst. specialize (IHfutureSubtraction2 f0 H5). 
-  pose strengthening_futureSubtraction_residue as H1.
-  specialize (H1 f0 t f4 f3 IHfutureSubtraction2). 
-  rewrite fc_comm.  exact H1.
- Admitted.  
+
 
 (* to prove the let rule *)
 Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
