@@ -982,6 +982,76 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
     futureSubtraction f t res. 
 
 
+Fixpoint concate_trace_fc (t:theta) (f:futureCond)  : futureCond :=
+  match f with 
+  | fc_singleton t1 => fc_singleton (seq t t1)
+  | fc_conj f1 f2 => fc_conj (concate_trace_fc t f1) (concate_trace_fc t f2)
+  end. 
+
+Axiom fc_model_theta_der_indicate : forall rho0 t ev0 t_der res, 
+  fc_model rho0 (concate_trace_fc t res) -> 
+  theta_der t ev0 t_der -> 
+  exists rho, 
+  fc_model rho (concate_trace_fc t_der res) /\ rho0 = ev0 :: rho. 
+
+Axiom fc_der_fc_model_indicate: forall f ev0 f_der rho1, 
+  fc_der f ev0 f_der -> 
+  fc_model rho1 f_der -> 
+  fc_model (ev0::rho1) f. 
+
+
+Theorem futureSubtraction_cound : forall f t f_der rho, 
+  futureSubtraction f t f_der -> 
+  fc_model rho (concate_trace_fc t f_der) -> 
+  fc_model rho f. 
+Proof. 
+  intros. 
+  gen rho0. 
+  induction H. 
+  - 
+  intros. 
+  unfold concate_trace_fc in H1. 
+  fold concate_trace_fc in H1. 
+  invert H1. 
+  intros. subst. 
+  specialize (IHfutureSubtraction1 rho0 H5).
+  specialize (IHfutureSubtraction2 rho0 H6). 
+  constructor. 
+  exact IHfutureSubtraction1. 
+  exact IHfutureSubtraction2. 
+  -
+  intros. 
+  unfold concate_trace_fc in H0. 
+  fold concate_trace_fc in H0. 
+  invert H0. 
+  intros. subst. 
+  Search (nil ++ _). 
+  pose proof List.app_nil_l. 
+  specialize (H event rho0). 
+  rewrite  <-  H in H2.  
+  invert H2. 
+  intros. subst. 
+  invert H4. 
+  intros. subst. 
+  constructor. 
+  Search (nil ++ _). 
+  rewrite List.app_nil_l in H3.  
+  rewrite List.app_nil_l in H3.  subst. 
+  exact H5. 
+  -
+  intros.  
+  pose fc_model_theta_der_indicate as H3. 
+  specialize (H3 rho0 t ev0 t_der res H2 H0). 
+  destr H3. 
+  specialize (IHfutureSubtraction rho1 H3).  
+  rewrite H5. 
+  pose proof fc_der_fc_model_indicate as H4. 
+  specialize (H4 f ev0 f_der rho1 H IHfutureSubtraction).  
+  exact H4. 
+Qed. 
+  
+
+
 Inductive futureSubtraction_linear : futureCond -> rho -> futureCond -> Prop :=  
   | futureSubtraction_linear_conj : forall f1 f2 f3 f4 t, 
     futureSubtraction_linear f1 t f3 ->
@@ -1162,7 +1232,7 @@ Lemma weakening_futureSubtraction: forall f1 t f2 f3,
   futureSubtraction f1 t f2 -> 
   futureCondEntail f1 f3 -> 
   futureSubtraction f3 t f2. 
-Proof.
+Proof. 
   intros. 
   gen f3.
   induction H.
