@@ -723,6 +723,11 @@ Inductive futureCondEntail : futureCond -> futureCond -> Prop :=
     futureCondEntail f f1 -> 
     futureCondEntail f f2 -> 
     futureCondEntail f (fc_conj f1 f2) 
+
+  | futureCondEntail_trans : forall f1 f2 f3, 
+    futureCondEntail f1 f2 -> 
+    futureCondEntail f2 f3 -> 
+    futureCondEntail f1 f3
  .
 
 
@@ -760,60 +765,17 @@ Proof.
   constructor.
   exact IHfutureCondEntail1. 
   exact IHfutureCondEntail2.
+  -
+  intros. 
+  specialize (IHfutureCondEntail1 rho0 H1).
+  specialize (IHfutureCondEntail2 rho0 IHfutureCondEntail1). 
+  exact IHfutureCondEntail2. 
 Qed.         
 
 
-Lemma inclusion_futureCondEntail: forall t1 t2 f, 
-  inclusion t1 t2 -> 
-  futureCondEntail (fc_singleton t2) f -> 
-  futureCondEntail (fc_singleton t1) f.
-Proof.  
-Admitted.  
 
 
-Theorem futureCond_trans : forall f1 f2 f3, 
-  futureCondEntail f1 f2 -> 
-  futureCondEntail f2 f3 -> 
-  futureCondEntail f1 f3.
-Proof.
-  intros.
-  gen f3.
-  induction H.
-  - 
-  intros.
-  invert H0.
-  intros. subst. constructor. 
-  pose proof inclusion_trans.
-  apply (H0 t1 t2 t3). exact H. exact H2. 
-  intros. subst.
-  apply futureCondEntail_conj_RHS.
-  pose proof inclusion_futureCondEntail. 
-  specialize (H0 t1 t2 f1 H H1). exact H0.
-  pose proof inclusion_futureCondEntail. 
-  specialize (H0 t1 t2 f2 H H2). exact H0.
-  -
-  intros. specialize (IHfutureCondEntail f3 H0). 
-  apply futureCondEntail_conj_LHS_1. exact IHfutureCondEntail. 
-  - 
-  intros. specialize (IHfutureCondEntail f3 H0). 
-  apply futureCondEntail_conj_LHS_2. exact IHfutureCondEntail.
-  -
-  intros.
-  invert H1.
-  +
-  intros. subst. specialize (IHfutureCondEntail1 f3 H5). exact IHfutureCondEntail1.
-  +
-  intros. subst. specialize (IHfutureCondEntail2 f3 H5). exact IHfutureCondEntail2.
-  + 
-  intros. subst.  
-  invert H2.
-  * intros. subst. apply futureCondEntail_conj_RHS. 
-    exact (IHfutureCondEntail1 f0 H6).
-    invert H3.
-    intros. subst. exact (IHfutureCondEntail1 f4 H5).
-    intros. subst. exact (IHfutureCondEntail2 f4 H5).
- 
-Admitted.  
+
 
 Axiom futureCond_distr : forall f1 f2 f3, 
   fc_conj (fc_conj f1 f2) f3 = 
@@ -864,6 +826,15 @@ Proof.
   apply futureCondEntail_conj_RHS.
   exact IHfutureCondEntail1.
   exact IHfutureCondEntail2.
+  -
+  intros. 
+  apply futureCondEntail_conj_RHS.
+  constructor.
+  pose proof  futureCondEntail_trans.
+  specialize (H2 f1 f2 f3 H H0).
+  exact H2.
+  apply futureCondEntail_conj_LHS_2.
+  exact H1.    
 Qed.
 
 Axiom futureCond_excahnge : forall f1 f2, 
@@ -1010,7 +981,7 @@ Axiom fc_der_fc_model_indicate: forall f ev0 f_der rho1,
   fc_model (ev0::rho1) f. 
 
 
-Theorem futureSubtraction_cound : forall f t f_der rho, 
+Theorem futureSubtraction_sound : forall f t f_der rho, 
   futureSubtraction f t f_der -> 
   fc_model rho (concate_trace_fc t f_der) -> 
   fc_model rho f. 
@@ -1260,7 +1231,7 @@ Proof.
   exists x0.
   split.
   exact H7.
-  pose proof futureCond_trans.
+  pose proof futureCondEntail_trans.
   specialize (H6 f f' f0 H3 H8). 
   exact H6.
   -
@@ -1524,7 +1495,7 @@ Proof.
   pose proof inclusion_sound.
   specialize (H8 t' t rho2 H2 H9).
   exact H8.
-  pose proof futureCond_trans.
+  pose proof futureCondEntail_trans.
   specialize (H8 f f' f3 H3 H10). 
   exact H8. 
   - (* frame *)
