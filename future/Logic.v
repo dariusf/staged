@@ -980,6 +980,59 @@ Axiom fc_der_fc_model_indicate: forall f ev0 f_der rho1,
   fc_model rho1 f_der -> 
   fc_model (ev0::rho1) f. 
 
+Lemma futureCondEntail_fc_model_indicate : forall f2 f1 t rho0, 
+  futureCondEntail f2 f1 -> 
+  fc_model rho0 (concate_trace_fc t f2) ->
+  fc_model rho0 (concate_trace_fc t f1). 
+Proof. 
+  intros.
+  gen rho0 t. 
+  induction H.   
+  -
+  intros. 
+  unfold concate_trace_fc in H0. 
+  fold concate_trace_fc in H0.  
+  invert H0.
+  intros. subst. 
+  unfold concate_trace_fc. fold concate_trace_fc. 
+  constructor. 
+  invert H3. 
+  intros. subst. 
+  constructor.
+  exact H4.  pose proof inclusion_sound. 
+  specialize (H0 t1 t2 rho2 H H5). exact H0.
+  -
+  intros. 
+  unfold concate_trace_fc in H0. 
+  fold concate_trace_fc in H0. 
+  invert H0.
+  intros. subst. 
+  specialize (IHfutureCondEntail rho0 t H4). 
+  exact IHfutureCondEntail.
+  -
+  intros. 
+  unfold concate_trace_fc in H0. 
+  fold concate_trace_fc in H0. 
+  invert H0.
+  intros. subst. 
+  specialize (IHfutureCondEntail rho0 t H5). 
+  exact IHfutureCondEntail.
+  -
+  intros. 
+  specialize (IHfutureCondEntail1 rho0 t H1). 
+  specialize (IHfutureCondEntail2 rho0 t H1).
+  unfold concate_trace_fc. fold concate_trace_fc.
+  constructor.
+  exact IHfutureCondEntail1.
+  exact IHfutureCondEntail2.
+  -
+  intros. 
+  specialize (IHfutureCondEntail1 rho0 t H1). 
+  specialize (IHfutureCondEntail2 rho0 t IHfutureCondEntail1). 
+  unfold concate_trace_fc. fold concate_trace_fc.
+  exact IHfutureCondEntail2.
+Qed.
+
 
 Theorem futureSubtraction_sound : forall f t f_der rho, 
   futureSubtraction f t f_der -> 
@@ -1030,16 +1083,19 @@ Proof.
   specialize (H4 f ev0 f_der rho1 H IHfutureSubtraction).  
   exact H4. 
   -
-  intros.
-  admit.  
-
+  intros. 
+  pose proof futureCondEntail_fc_model_indicate. 
+  specialize (H2 f2 f1 t rho0 H0 H1). 
+  specialize (IHfutureSubtraction rho0 H2). 
+  exact IHfutureSubtraction. 
+   
   - 
   intros. 
   specialize (IHfutureSubtraction rho0 H1). 
   pose proof futureCond_sound. 
   specialize (H2 f1 f3 rho0 H0 IHfutureSubtraction).  
   exact H2. 
-Admitted. 
+Qed. 
   
 
 
