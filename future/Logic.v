@@ -1300,13 +1300,119 @@ Proof.
   exact H. exact H0.
 Qed. 
    
+Axiom futureCondEntail_indicate: forall f1 f2, 
+  futureCondEntail f1 f2 -> 
+  exists f3, 
+  f1 = fc_conj f3 f2. 
+
+
+Axiom fc_comm: forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1. 
+Axiom fc_assio: forall f1 f2 f3, fc_conj f1 (fc_conj f2 f3) = fc_conj (fc_conj f1 f2) f3. 
+
+Axiom any_fc_has_subtraction: forall f t, 
+  exists f', futureSubtraction f t f'. 
 
 Lemma strenthen_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
   bigstep h1 r1 f1 e h2 r2 f2 v -> 
   futureCondEntail f3 f1 -> 
   exists f4,  
   bigstep h1 r1 f3 e h2 r2 (fc_conj f4 f2) v. 
-Proof. Admitted.  
+Proof.
+  intros. 
+  gen f3.
+  induction H.
+  -
+  intros.
+  specialize (IHbigstep1 f0 H1). 
+  destr IHbigstep1.
+  specialize (IHbigstep2 (fc_conj f4 f2)). 
+  pose proof futureCondEntail_conj_LHS_2.
+  specialize (H3 f4 f2 f2 (futureCondEntail_exact f2) ). 
+  specialize (IHbigstep2 H3). 
+  destr IHbigstep2.
+  exists f5.
+  pose proof eval_plet. 
+  specialize (H5 h1 h2 h3 x e1 e2 v r rho1 rho2 rho3 f0 (fc_conj f4 f2) (fc_conj f5 f3) H2 H4). 
+  exact H5.
+  -
+  intros.
+  pose proof eval_const.
+  specialize (H h r f3 v). 
+  pose futureCondEntail_indicate.
+  specialize (e f3 f H0 ). 
+  destr e.
+  subst.
+  exists f0.     
+  constructor.
+  -
+  intros.
+  specialize (IHbigstep f3 H0). 
+  destr IHbigstep. 
+  pose futureCondEntail_indicate.
+  specialize (e f3 f H0 ). 
+  destr e.
+  subst.
+  exists f4. 
+  constructor.
+  exact H1.   
+  -
+  intros.
+  specialize (IHbigstep f3 H0). 
+  destr IHbigstep. 
+  pose futureCondEntail_indicate.
+  specialize (e f3 f H0 ). 
+  destr e.
+  subst.
+  exists f4. 
+  constructor.
+  exact H1.   
+  -
+  intros.
+  pose futureCondEntail_indicate.
+  specialize (e f3 f H0 ). 
+  destr e. subst.
+  exists f0. 
+  rewrite (fc_assio f0 f f_assume). 
+  constructor.   
+  -
+  intros.
+  pose futureCondEntail_indicate.
+  specialize (e f3 f H0 ). 
+  destr e. subst.
+  pose proof any_fc_has_subtraction.
+  specialize (H1 f0 (theta_singleton ev0)).
+  destr H1. 
+  exists f'0.
+  constructor.
+  constructor.
+  exact H2.
+  exact H.
+  -
+  intros.
+  pose futureCondEntail_indicate.
+  specialize (e f3 f H0 ). 
+  destr e. subst.
+  exists f0. constructor. exact H.
+  -
+  intros.
+  pose futureCondEntail_indicate.
+  specialize (e f3 f H0 ). 
+  destr e. subst.
+  exists f0. constructor. exact H.
+  -
+  intros. 
+  specialize (IHbigstep f3 H0).  
+  destr IHbigstep.
+  exists f4.
+  constructor.
+  exact H1.
+  -
+  intros.
+  pose futureCondEntail_indicate.
+  specialize (e f3 f H0 ). 
+  destr e. subst.
+  exists f0. constructor. exact H.
+Qed. 
 
 Lemma future_frame_big_step : forall P e Q t f h3 rho3 f4 h2 rho2 f0 v f1, 
   forward P emp (fc_singleton (trace_default)) e Q t f -> 
@@ -1325,8 +1431,6 @@ Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v,
 Proof. Admitted.  
 
 
-
-Axiom fc_comm: forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1. 
 
 
 
