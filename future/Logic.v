@@ -236,6 +236,11 @@ Inductive theta_der : theta -> event -> theta  -> Prop :=
     ev1 = ev2 -> 
     theta_der (theta_singleton ev1) ev2 emp 
 
+  | derivative_event_singleton_bot : forall ev1 ev2, 
+    ev1 <> ev2 -> 
+    theta_der (theta_singleton ev1) ev2 bot 
+
+
   | derivative_seq_nullable: forall t1 t2 ev t1_der t2_der, 
     nullable t1 -> 
     theta_der t1 ev t1_der -> 
@@ -306,20 +311,82 @@ Axiom disj_not_bot: forall t1 t2,
 Axiom seq_not_bot: forall t1 t2, 
   seq t1 t2 <> bot -> t1 <> bot /\ t2 <> bot.
 
-Axiom theta_singleton_not_emp: forall ev, 
-  theta_singleton ev <> emp. 
+Axiom seq_not_bot_rev: forall t1 t2, 
+  t1 <> bot /\ t2 <> bot -> seq t1 t2 <> bot. 
 
-Axiom theta_singleton_not_bot: forall ev, 
+Axiom disj_not_bot_rev: forall t1 t2, 
+  t1 <> bot /\ t2 <> bot -> disj t1 t2 <> bot. 
+
+
+Axiom theta_singleton_is_not_bot: forall ev, 
   theta_singleton ev <> bot. 
 
-Axiom theta_der_not_bot: forall t ev t_der, 
+
+Lemma theta_der_not_bot: forall t ev t_der, 
   theta_der t ev t_der -> 
   t_der <> bot -> 
-  t <> bot.  
+  t <> bot. 
+Proof. 
+  intros. 
+  induction H. 
+  - false.
+  - false.  
+  - pose proof (theta_singleton_is_not_bot ).
+    exact (H1 ev1).
+  - false.
+  - pose disj_not_bot. 
+    specialize (o (seq t1_der t2) t2_der H0). 
+    invert o.  
+    intros.
+    destr H3.
+    false.
+    intros.
+    invert H3.
+    intros. 
+    destr H4.
+    false.
+    intros.
+    destr H4.
+    pose seq_not_bot.
+    specialize (a t1_der t2 H3). 
+    destr a.
+    specialize (IHtheta_der1 H4).
+    pose seq_not_bot_rev.
+    specialize (n t1 t2). 
+    apply n.
+    split. exact IHtheta_der1. exact H6.
+  - pose  (seq_not_bot ). 
+    specialize (a t1_der t2 H0)  . 
+    destr a. 
+    specialize (IHtheta_der H1).
+    pose seq_not_bot_rev.
+    specialize (n t1 t2). 
+    apply n.
+    split. exact IHtheta_der. exact H2.
+  - pose disj_not_bot. 
+    specialize (o t1_der t2_der H0). 
+    invert o.
+    intros. destr H2.  false. 
+    intros. invert H2. 
+    intros.  destr H3. false.
+    intros. destr H3.  
+    specialize (IHtheta_der1 H2).
+    specialize (IHtheta_der2 H4).
+    pose proof disj_not_bot_rev. 
+    eapply H3.
+    split. exact IHtheta_der1. exact IHtheta_der2.
+    -
+    pose seq_not_bot.
+    specialize (a t_der (kleene t) H0). 
+    destr a.
+    exact H2.
+Qed.        
+
+
 
 Axiom kleene_not_bot : forall t rho, 
   t <> bot -> 
-  trace_model rho (kleene t) ->   rho <> nil.
+  trace_model rho (kleene t) -> rho <> nil.
 
 Lemma derivative_model : forall t1 ev0 deriv1 rho0, 
   theta_der t1 ev0 deriv1 -> 
@@ -342,6 +409,9 @@ Proof.
   exists (nil:rho).
   split.
   reflexivity. constructor.
+  -
+  intros.
+  false.  
   -
   intros.
   invert H3.
@@ -447,6 +517,9 @@ Proof.
   intros. subst.   
   constructor.
   reflexivity.
+  -
+  intros. 
+  invert H0. 
   -
   intros. 
   invert H0.
@@ -576,8 +649,48 @@ Proof.
   - constructor.  
 Qed.     
 
-Axiom all_trace_have_derivative: forall t ev , 
+Axiom case_spliting_helper: forall (ev1:event) (ev2:event), 
+  ev1 = ev2 \/ ev1 <> ev2. 
+
+Lemma all_trace_have_derivative: forall t ev , 
   exists deriv, theta_der t ev deriv. 
+Proof.
+  intros.
+  induction t.
+  -
+  exists bot. 
+  constructor.
+  -
+  exists bot. 
+  constructor.
+  -
+  pose proof case_spliting_helper. 
+  specialize (H e ev0).
+  invert H.
+  intros.
+  exists emp. 
+  constructor. exact H0.
+  exists bot.
+  constructor. exact H0.
+  -
+  destr IHt1. 
+  destr IHt2. 
+  exists (seq deriv t2).
+  constructor. exact H.
+  -
+  destr IHt1. 
+  destr IHt2.
+  exists (disj deriv deriv0).
+  constructor.
+  exact H. exact H0.
+  -
+  destr IHt.
+  exists (seq deriv (kleene t)).
+  constructor.
+  exact H.
+Qed.         
+
+
 
 Axiom inclusion_theta_der_indicate : forall t1 t2 ev0 deriv1, 
   inclusion t1 t2 -> 
@@ -643,6 +756,8 @@ Proof.
   constructor. 
   intros. subst.
   constructor. constructor.
+  -intros.  
+  specialize (IHinclusion )
   -
   intros.
   pose inclusion_theta_der_indicate.
