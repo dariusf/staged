@@ -1533,85 +1533,39 @@ forall f1 f2 ev f3,
 
 
 
-Lemma future_frame_big_step : forall P e Q t f h3 rho3 f4 h2 rho2 f0 v f1, 
-  forward P emp (fc_singleton (trace_default)) e Q t f -> 
-  bigstep h3 rho3 f4 e h2 rho2 f0 v -> 
-  futureSubtraction f4 t f1 -> 
-  futureCondEntail f1 f0. 
-Proof. 
-  intros.
-  gen  h3 rho3 f4 h2 rho2 f0 v f1.
-  induction H.
-  -
-  intros.
-  specialize(IHforward h3 rho3 f4 h2 rho2 f0 v H4). 
-  eapply IHforward. 
-  pose proof futureSubtraction_strengthing_t. 
-  eapply H6.
-  exact H5.
-  exact H2.
-  -
-  intros.
-  invert H2.
-  intros. subst. 
-  specialize (H0 v0).
-  specialize (IHforward h3 rho3 f4 h0 rho0 f6 v0 H14 ). 
-  pose proof forward_only_appending_trace. 
-  specialize (H2 (Q v0) t2 f2 (subst x v0 e2) Q1 t3 f3 H0).
-  destr H2. subst.
-  pose proof futureSubtraction_imm. 
-  specialize (H2 f4 t2 t0 f1 H3).  
-  specialize (IHforward (concate_trace_fc t0 f1) H2).  
-  admit. 
-  -
-  intros.
-  invert H0. 
-  intros. subst.  
-  pose proof futureSubtraction_emp_strenthing_res.
-  specialize (H f0 f1 H1). exact H.
-  -
-  intros. 
-  invert H0.
-  intros. subst. 
-  pose proof futureSubtraction_stretening_futureSubtraction_linear. 
-  specialize (H f4 f1 ev0 f0 H1 H5). exact H. 
-  
-  -
-  intros.
-  invert H0.
-  intros. subst. 
-  specialize (IHforward h3 rho3 f4 h2 rho2 f0 v H12 f1 H1).  
-  exact IHforward.   
-  intros. subst. 
-  specialize (IHforward h3 rho3 f4 h2 rho2 f0 v H12 f1 H1).  
-  exact IHforward.   
-  -
-  intros.
-  invert H0.
-  intros. subst. 
-  pose proof futureSubtraction_emp_strenthing_res.
-  specialize (H f0 f1 H1). exact H.
-  -
-  intros.
-  invert H0.
-  intros. subst. 
-  pose proof futureSubtraction_emp_strenthing_res.
-  specialize (H f0 f1 H1). exact H.
-  -
-  intros.
-  invert H0.
-  intros. subst. 
-  pose proof futureSubtraction_emp_strenthing_res.
-  specialize (H f4 f2 H1). 
-  constructor. 
-  
-  exact H.
-
-Admitted. 
 
 
+Axiom future_frame_big_step_aux_aux : forall h1 rho1 f1 e h2 rho2 f2 v, 
+  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
+  exists rho3 f3, 
+  bigstep h1 nil (fc_singleton (trace_default)) e h2 rho3 f3 v /\ 
+  rho2 = rho1 ++ rho3 /\ 
+  futureSubtraction_linear f1 rho3 f2. 
 
+Axiom futureSubtraction_trace_model_futureSubtraction_linear:
+forall f_ctx t f_ctx' rho3 f3, 
+  futureSubtraction f_ctx t f_ctx' -> 
+  trace_model rho3 t ->
+  futureSubtraction_linear f_ctx rho3 f3 ->
+  futureCondEntail f_ctx' f3. 
 
+Axiom bigstep_framing_trace: forall h3 e h2 rho0 f3 v rho3, 
+  bigstep h3 nil (fc_singleton trace_default) e h2 rho0 f3 v -> 
+  bigstep h3 rho3 (fc_singleton trace_default) e h2 (rho3 ++ rho0)
+f3 v. 
+
+Axiom bigstep_framing_futureCond: forall h3 e h2 rho0 f1 v rho3 f_ctx f_ctx', 
+  bigstep h3 rho3 (fc_singleton trace_default) e h2 (rho3 ++ rho0)
+f1 v -> 
+  futureSubtraction_linear f_ctx rho0 f_ctx' -> 
+  exists f3, 
+  bigstep h3 rho3 f_ctx e h2 (rho3 ++ rho0)
+f3 v /\  f3 = fc_conj f_ctx' f1. 
+
+Axiom unionbigstep: forall h1 rho1 f1 e h2 rho2 f2 v f3 f4, 
+  bigstep h1 rho1 f1 e h2 rho2 f2 v ->
+  bigstep h1 rho1 f3 e h2 rho2 f4 v ->
+  bigstep h1 rho1 (fc_conj f1 f3) e h2 rho2 (fc_conj f2 f4) v. 
 
 
 (* to prove the let rule *)
@@ -1740,30 +1694,36 @@ Proof.
   exact H2. exact H3.       
 
   - intros.
-  pose proof futureCondEntail_exact.
-  specialize (H3 (fc_singleton (trace_default))).
-  pose proof weaken_futureCond_big_step.
-  pose proof anything_future_entail_default. 
-  specialize (H5 f4). 
-  specialize (H4 h3 rho3 f4 e h2 rho2 f0 v (fc_singleton (trace_default)) H2 H5).   
-  destr H4. 
-  specialize (IHforward h3 rho3 (fc_singleton (trace_default)) H3 h2 rho2 f1 v H4). 
-  destr IHforward.
+  pose proof futureCondEntail_indicate.
+  specialize (H3 f_ctx f4 H1). 
+  destr H3. subst.    
+   
+  specialize (IHforward h3 rho3 (fc_singleton (trace_default)) (futureCondEntail_exact (fc_singleton (trace_default)))).
+  pose proof future_frame_big_step_aux_aux. 
+  specialize (H3 h3 rho3 f4 e h2 rho2 f0 v H2 ).
+  destr H3. subst. 
+  pose proof bigstep_framing_trace.
+  specialize (H3 h3 e h2 rho0 f1 v rho3 H4). 
+  specialize (IHforward h2 (rho3++rho0) f1 v H3).
+  destr IHforward.   
+  pose proof bigstep_framing_futureCond.
+  specialize (H5 h3 e h2 rho0 f1 v rho3 ). 
+  pose proof all_future_condition_has_futureSubtraction_linear.
+  specialize (H9 f3 rho0).
+  destr H9.
+  specialize (H5 f3 f' H3 H10).   
+  destr H5. subst. 
+  exists (fc_conj f' f1). 
+  split.
+  pose proof unionbigstep.
+  specialize (H9 h3 rho3 f4 e h2 (rho3 ++ rho0) f0 v f3 (fc_conj f' f1) H2 H5) . 
+  rewrite (fc_comm f3 f4). 
+  rewrite (fc_comm (fc_conj f' f1)
+f0).
+exact H9. 
+  
 
-  pose proof strenthen_futureCond_big_step.
-  specialize (H6 h3 rho3 f4 e h2 rho2 f0 v f_ctx H2 H1 ). 
-  destr H6.
-  exists f2.
-  split. exact H10. 
-  pose proof futureSubtraction_weakening_f. 
-  specialize (H6 f_ctx t f_ctx' f4 H H1). 
-  pose proof future_frame_big_step.
-  specialize (H11 P e Q t f h3 rho3 f4 h2 rho2 f0 v f_ctx' H0 H2 H6). 
-
-  pose proof strong_LHS_futureEnatil.
-  specialize (H12 f_ctx' f0 f H11).
-  exact H12.  
-Qed. 
+Admitted. 
 
 Lemma heap_disjoint_consequence: forall [A B : Type] (h1:Fmap.fmap A B) h2 h3 h4, 
   Fmap.disjoint h1 h2 -> 
@@ -1870,19 +1830,6 @@ Qed.
 
 
 
-Axiom future_frame_big_step_aux_aux : forall h1 rho1 f1 e h2 rho2 f2 v, 
-  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
-  exists rho3 f3, 
-  bigstep h1 nil (fc_singleton (trace_default)) e h2 rho3 f3 v /\ 
-  rho2 = rho1 ++ rho3 /\ 
-  futureSubtraction_linear f1 rho3 f2. 
-
-Axiom futureSubtraction_trace_model_futureSubtraction_linear:
-forall f_ctx t f_ctx' rho3 f3, 
-  futureSubtraction f_ctx t f_ctx' -> 
-  trace_model rho3 t ->
-  futureSubtraction_linear f_ctx rho3 f3 ->
-  futureCondEntail f_ctx' f3. 
 
 
 
