@@ -1567,6 +1567,18 @@ Axiom unionbigstep: forall h1 rho1 f1 e h2 rho2 f2 v f3 f4,
   bigstep h1 rho1 f3 e h2 rho2 f4 v ->
   bigstep h1 rho1 (fc_conj f1 f3) e h2 rho2 (fc_conj f2 f4) v. 
 
+Axiom generated_rho_enatil_forward_trace: 
+forall h3 f4 e h2 rho3 rho0 f0 v P Q t f, 
+  bigstep h3 rho3 f4 e h2 (rho3 ++ rho0) f0 v -> 
+  forward P emp (fc_singleton trace_default) e Q t f -> 
+  trace_model rho0 t. 
+
+Axiom trace_model_futureSubtraction_linear: 
+forall rho0 t f4 f0 f3 f_ctx', 
+trace_model rho0 t -> 
+futureSubtraction_linear f4 rho0 f0 -> 
+futureSubtraction (fc_conj f3 f4) t f_ctx' -> 
+futureCondEntail f_ctx' f0. 
 
 (* to prove the let rule *)
 Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
@@ -1694,6 +1706,7 @@ Proof.
   exact H2. exact H3.       
 
   - intros.
+  
   pose proof futureCondEntail_indicate.
   specialize (H3 f_ctx f4 H1). 
   destr H3. subst.    
@@ -1720,10 +1733,14 @@ Proof.
   rewrite (fc_comm f3 f4). 
   rewrite (fc_comm (fc_conj f' f1)
 f0).
-exact H9. 
-  
-
-Admitted. 
+  exact H9.
+  pose proof generated_rho_enatil_forward_trace.
+  specialize (H9 h3 f4 e h2 rho3 rho0 f0 v P Q t f H2 H0). 
+  pose proof trace_model_futureSubtraction_linear. 
+  specialize (H11 rho0 t f4 f0 f3 f_ctx' H9 H6 H). 
+  apply futureCondEntail_conj_LHS_1.
+  exact H11.   
+Qed. 
 
 Lemma heap_disjoint_consequence: forall [A B : Type] (h1:Fmap.fmap A B) h2 h3 h4, 
   Fmap.disjoint h1 h2 -> 
