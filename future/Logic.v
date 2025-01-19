@@ -690,15 +690,54 @@ Proof.
   exact H.
 Qed.         
 
+(* by definition *)
+Axiom inclusion_rev : forall t1 t2 ev1 deriv0 deriv, 
+  inclusion t1 t2 ->
+  theta_der t1 ev1 deriv0 -> 
+  theta_der t1 ev1 deriv0 -> 
+  inclusion deriv0 deriv.   
 
 
-Axiom inclusion_theta_der_indicate : forall t1 t2 ev0 deriv1, 
+Lemma inclusion_theta_der_indicate : forall t1 t2 ev0 deriv1, 
   inclusion t1 t2 -> 
   theta_der t1 ev0 deriv1 -> 
   exists deriv2, 
   theta_der t2 ev0 deriv2 /\ inclusion deriv1 deriv2.
-
-
+Proof.
+  intros.  
+  gen ev0 deriv1. 
+  pose proof H. 
+  invert H.
+  - intros. subst. invert H3.
+  intros. subst. 
+  pose proof all_trace_have_derivative.
+  specialize (H t2 ev0 ).
+  destr H.
+  exists deriv.
+  split. exact H1. constructor.
+  -
+  intros. subst.
+  invert H4.
+  intros. subst. 
+  pose proof all_trace_have_derivative.
+  specialize (H t2 ev0 ). 
+  destr H.
+  exists deriv. 
+  split. exact H2. constructor.  
+  -
+  intros. subst. 
+  pose proof all_trace_have_derivative.
+  specialize (H t2 ev1 ). 
+  destr H.
+  exists deriv. 
+  split.
+  exact H5.
+  pose proof inclusion_rev.
+  eapply H.
+  exact H0.
+  exact H7.
+  exact H7.     
+Qed. 
 
 
 Theorem inclusion_trans : forall t1 t2 t3, 
@@ -756,8 +795,6 @@ Proof.
   constructor. 
   intros. subst.
   constructor. constructor.
-  -intros.  
-  specialize (IHinclusion )
   -
   intros.
   pose inclusion_theta_der_indicate.
@@ -1115,11 +1152,13 @@ Axiom fc_model_theta_der_indicate : forall rho0 t ev0 t_der res,
   theta_der t ev0 t_der -> 
   exists rho, 
   fc_model rho (concate_trace_fc t_der res) /\ rho0 = ev0 :: rho. 
+(* SYH TBD *)
 
 Axiom fc_der_fc_model_indicate: forall f ev0 f_der rho1, 
   fc_der f ev0 f_der -> 
   fc_model rho1 f_der -> 
   fc_model (ev0::rho1) f. 
+(* SYH TBD *)
 
 Lemma futureCondEntail_fc_model_indicate : forall f2 f1 t rho0, 
   futureCondEntail f2 f1 -> 
@@ -1181,7 +1220,8 @@ Axiom fc_model_trans_concate_trace_fc: forall rho0 t t' f2,
   fc_model rho0 (concate_trace_fc t' f2) -> 
   inclusion t' t ->
   fc_model rho0 (concate_trace_fc t f2).
-    
+ (* SYH TBD *)
+   
 
 Theorem futureSubtraction_sound : forall f t f_der rho, 
   futureSubtraction f t f_der -> 
@@ -1373,11 +1413,14 @@ Axiom futureCondEntailTrueISTrue: forall f,
 Axiom all_future_condition_has_futureSubtraction_linear: forall f rho, 
   exists f', futureSubtraction_linear f rho f'. 
 
+(* SYH TBD *)
+
 Axiom futureSubtraction_linear_futureCondEntail_indicate: forall f t  f' f3 f'0, 
   futureSubtraction_linear f t  f' -> 
   futureCondEntail f f3 -> 
   futureSubtraction_linear f3 t f'0 -> 
   futureCondEntail f' f'0.
+(* SYH TBD *)
 
 
 Lemma weaken_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
@@ -1477,6 +1520,7 @@ Axiom futureCondEntail_indicate: forall f1 f2,
   futureCondEntail f1 f2 -> 
   exists f3, 
   f1 = fc_conj f3 f2. 
+(* SYH TBD *)
 
 
 Axiom fc_comm: forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1. 
@@ -1635,6 +1679,7 @@ Qed.
 Axiom futureSubtraction_imm: forall f4 t2 t0 f1, 
   futureSubtraction f4 (seq t2 t0) f1 -> 
   futureSubtraction f4 t2 (concate_trace_fc t0 f1). 
+(* SYH TBD *)
 
 Axiom futureSubtraction_emp_strenthing_res: forall f0 f1, 
   futureSubtraction f0 emp f1 -> 
@@ -1645,6 +1690,7 @@ forall f1 f2 ev f3,
   futureSubtraction f1 (theta_singleton ev) f2 -> 
   futureSubtraction_linear f1 (ev::nil) f3 -> 
   futureCondEntail f2 f3. 
+(* SYH TBD *)
 
 
 
@@ -1656,6 +1702,7 @@ Axiom future_frame_big_step_aux_aux : forall h1 rho1 f1 e h2 rho2 f2 v,
   bigstep h1 nil (fc_singleton (trace_default)) e h2 rho3 f3 v /\ 
   rho2 = rho1 ++ rho3 /\ 
   futureSubtraction_linear f1 rho3 f2. 
+(* SYH TBD *)
 
 Axiom futureSubtraction_trace_model_futureSubtraction_linear:
 forall f_ctx t f_ctx' rho3 f3, 
@@ -1663,11 +1710,13 @@ forall f_ctx t f_ctx' rho3 f3,
   trace_model rho3 t ->
   futureSubtraction_linear f_ctx rho3 f3 ->
   futureCondEntail f_ctx' f3. 
+(* SYH TBD *)
 
 Axiom bigstep_framing_trace: forall h3 e h2 rho0 f3 v rho3, 
   bigstep h3 nil (fc_singleton trace_default) e h2 rho0 f3 v -> 
   bigstep h3 rho3 (fc_singleton trace_default) e h2 (rho3 ++ rho0)
 f3 v. 
+(* SYH TBD *)
 
 Axiom bigstep_framing_futureCond: forall h3 e h2 rho0 f1 v rho3 f_ctx f_ctx', 
   bigstep h3 rho3 (fc_singleton trace_default) e h2 (rho3 ++ rho0)
@@ -1676,17 +1725,20 @@ f1 v ->
   exists f3, 
   bigstep h3 rho3 f_ctx e h2 (rho3 ++ rho0)
 f3 v /\  f3 = fc_conj f_ctx' f1. 
+(* SYH TBD *)
 
 Axiom unionbigstep: forall h1 rho1 f1 e h2 rho2 f2 v f3 f4, 
   bigstep h1 rho1 f1 e h2 rho2 f2 v ->
   bigstep h1 rho1 f3 e h2 rho2 f4 v ->
   bigstep h1 rho1 (fc_conj f1 f3) e h2 rho2 (fc_conj f2 f4) v. 
+(* SYH TBD *)
 
 Axiom generated_rho_enatil_forward_trace: 
 forall h3 f4 e h2 rho3 rho0 f0 v P Q t f, 
   bigstep h3 rho3 f4 e h2 (rho3 ++ rho0) f0 v -> 
   forward P emp (fc_singleton trace_default) e Q t f -> 
   trace_model rho0 t. 
+(* SYH TBD *)
 
 Axiom trace_model_futureSubtraction_linear: 
 forall rho0 t f4 f0 f3 f_ctx', 
@@ -1694,6 +1746,7 @@ trace_model rho0 t ->
 futureSubtraction_linear f4 rho0 f0 -> 
 futureSubtraction (fc_conj f3 f4) t f_ctx' -> 
 futureCondEntail f_ctx' f0. 
+(* SYH TBD *)
 
 (* to prove the let rule *)
 Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
@@ -1888,78 +1941,6 @@ Proof.
     pose proof  disjoint_union_eq_r. 
   info_eauto.
 Qed. 
-
-
-Axiom inclusion_theat_der_indicate: forall t' t ev t_der, 
-  inclusion t' t -> 
-  theta_der t ev t_der -> 
-  exists t_der', 
-  theta_der t' ev t_der' /\ inclusion t_der' t_der.  
-
-Lemma futureSubtraction_trace_inclusion: forall f_ctx t  t' f_ctx', 
-  futureSubtraction f_ctx t f_ctx' -> 
-  inclusion t' t -> 
-  futureSubtraction f_ctx t' f_ctx'. 
-Proof. 
-  intros. 
-  gen t'.
-  induction H.
-  -
-  intros. 
-  pose inclusion_bot. 
-  specialize (e t' H0). 
-  subst.  constructor. 
-  - 
-  intros. 
-  specialize (IHfutureSubtraction1 t' H1).    
-  specialize (IHfutureSubtraction2 t' H1).    
-  constructor.
-  exact  IHfutureSubtraction1. 
-  exact IHfutureSubtraction2.
-  -
-  intros.
-  invert H0.
-  intros. subst.
-  constructor.
-  intros.
-  subst. 
-  constructor.
-  intros.
-  subst.
-  invert H2. 
-  intros. subst. 
-  pose inclusion_bot. 
-  specialize (e deriv1 H3). false.
-  -
-  intros. 
-  pose proof inclusion_theat_der_indicate.
-  specialize (H4 t' t ev0 t_der H3 H1). 
-  destr H4. 
-  specialize (IHfutureSubtraction t_der' H6 ). 
-  pose proof (futureSubtraction_induc).
-  specialize (H5 ev0 f f_der t' t_der' res H  H0 H4 IHfutureSubtraction). 
-  exact H5.   
-   
-  - intros. 
-  specialize (IHfutureSubtraction t' H1). 
-  pose proof (futureSubtraction_strengthing_res). 
-  specialize (H2 f t' f1 f2 IHfutureSubtraction H0). 
-  exact H2.
-  -
-  intros.   
-  specialize (IHfutureSubtraction t' H1). 
-  pose proof (futureSubtraction_weakening_f). 
-  specialize (H2 f1 t' f2 f3 IHfutureSubtraction H0). exact H2.  
-  -
-  intros. 
-  specialize (IHfutureSubtraction t'0).
-  apply IHfutureSubtraction.
-  pose proof (inclusion_trans ).
-  specialize (H2 t'0 t' t H1 H0).
-  exact H2. 
-Qed.  
-
-
 
 
 
