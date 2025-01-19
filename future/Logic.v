@@ -936,6 +936,22 @@ Qed.
 
 
 
+Inductive futureSubtraction_linear : futureCond -> rho -> futureCond -> Prop :=  
+
+  | futureSubtraction_linear_conj : forall f1 f2 f3 f4 t, 
+    futureSubtraction_linear f1 t f3 ->
+    futureSubtraction_linear f2 t f4 -> 
+    futureSubtraction_linear (fc_conj f1 f2) t (fc_conj f3 f4)
+
+  | futureSubtraction_linear_base : forall t, 
+    futureSubtraction_linear (fc_singleton t) nil (fc_singleton t)
+
+  | futureSubtraction_linear_induc : forall ev f f_der t t_der res, 
+    fc_der f ev f_der -> 
+    f_der <> (fc_singleton bot) -> 
+    t = ev :: t_der  ->  
+    futureSubtraction_linear f_der t_der res -> 
+    futureSubtraction_linear f t res. 
 
 Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=  
   | futureSubtraction_bot: forall f1 f2, 
@@ -1153,7 +1169,7 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
     bigstep h r f (passume f_assume) h r (fc_conj f f_assume) vunit
 
   | eval_event : forall h r f ev f', 
-    futureSubtraction f (theta_singleton ev) f' -> 
+    futureSubtraction_linear f (ev::nil) f' -> 
     bigstep h r f (pevent ev) h (r ++ (ev::nil)) f' vunit
 
   | eval_pderef : forall h r f loc,
@@ -1230,9 +1246,24 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
 Axiom subtractFromTrueISTrue: forall ev f, 
   futureSubtraction (fc_singleton (trace_default))
 (theta_singleton ev) f -> f = (fc_singleton (trace_default)).
+
+Axiom subtract_linear_FromTrueISTrue: forall ev f, 
+  futureSubtraction_linear (fc_singleton (trace_default))
+(ev::nil) f -> f = (fc_singleton (trace_default)).
+
    
 Axiom futureCondEntailTrueISTrue: forall f, 
   futureCondEntail (fc_singleton (trace_default)) f -> f = (fc_singleton (trace_default)).
+
+Axiom all_future_condition_has_futureSubtraction_linear: forall f rho, 
+  exists f', futureSubtraction_linear f rho f'. 
+
+Axiom futureSubtraction_linear_futureCondEntail_indicate: forall f t  f' f3 f'0, 
+  futureSubtraction_linear f t  f' -> 
+  futureCondEntail f f3 -> 
+  futureSubtraction_linear f3 t f'0 -> 
+  futureCondEntail f' f'0.
+
 
 Lemma weaken_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
   bigstep h1 r1 f1 e h2 r2 f2 v -> 
@@ -1288,12 +1319,16 @@ Proof.
   exact (futureCondEntail_exact f_assume).
   -
   intros. 
-  exists f'.
-  split. constructor. 
-  pose futureSubtraction_weakening_f.
-  specialize (f0 f (theta_singleton ev0) f' f3 H H0). 
-  exact f0.
-  exact (futureCondEntail_exact f').
+  pose all_future_condition_has_futureSubtraction_linear.
+  specialize (e f3 (ev0 :: nil)).
+  destr e.  
+  exists f'0.
+  split.
+  constructor.
+  exact H1. 
+  pose proof futureSubtraction_linear_futureCondEntail_indicate.
+  specialize (H2 f (ev0 :: nil) f' f3 f'0 H H0 H1). 
+  exact H2. 
   -
   intros. 
   exists f3.
@@ -1398,18 +1433,20 @@ Proof.
   rewrite (fc_assio f0 f f_assume). 
   constructor.   
   -
-  intros.
-  pose futureCondEntail_indicate.
-  specialize (e f3 f H0 ). 
-  destr e. subst.
-  pose proof any_fc_has_subtraction.
-  specialize (H1 f0 (theta_singleton ev0)).
-  destr H1. 
+  intros. 
+  pose proof futureCondEntail_indicate. 
+  specialize (H1 f3 f H0). 
+  destr H1. subst.
+
+  pose all_future_condition_has_futureSubtraction_linear.
+  specialize (e f0 (ev0 :: nil)).
+  destr e.
   exists f'0.
   constructor.
   constructor.
-  exact H2.
-  exact H.
+  exact H1.
+  exact H.  
+
   -
   intros.
   pose futureCondEntail_indicate.
@@ -1488,6 +1525,11 @@ Axiom futureSubtraction_emp_strenthing_res: forall f0 f1,
   futureSubtraction f0 emp f1 -> 
   futureCondEntail f1 f0. 
 
+Axiom futureSubtraction_stretening_futureSubtraction_linear: 
+forall f1 f2 ev f3, 
+  futureSubtraction f1 (theta_singleton ev) f2 -> 
+  futureSubtraction_linear f1 (ev::nil) f3 -> 
+  futureCondEntail f2 f3. 
 
 
 
@@ -1530,8 +1572,10 @@ Proof.
   -
   intros. 
   invert H0.
-  intros. subst.  
-  admit. 
+  intros. subst. 
+  pose proof futureSubtraction_stretening_futureSubtraction_linear. 
+  specialize (H f4 f1 ev0 f0 H1 H5). exact H. 
+  
   -
   intros.
   invert H0.
@@ -1565,28 +1609,6 @@ Proof.
 
 Admitted. 
 
-
-Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v, 
-  forward P emp (fc_singleton (trace_default)) e Q t f -> 
-  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
-  exists rho3 f3, 
-  bigstep h1 nil (fc_singleton (trace_default)) e h2 rho3 f3 v /\ 
-  rho2 = rho1 ++ rho3 /\ futureCondEntail f f3 /\ futureCondEntail f2 f3
-  . 
-Proof. 
-  intros. 
-  gen h1 rho1 f1 h2 rho2 f2 v.
-  induction H.
-  -
-  intros.
-  specialize (IHforward h1 rho1 f1 h2 rho2 f2 v H4 ). 
-  destr IHforward.
-  exists rho3.
-  exists f'.
-  split.  
-
-
-Admitted. 
 
 
 
@@ -1652,7 +1674,7 @@ Proof.
   rewrite  f_conj_kleene_any_is_f.
   exact H. invert H.
   intros. subst.
-  pose subtractFromTrueISTrue as H.
+  pose subtract_linear_FromTrueISTrue as H.
   specialize (H ev0 f0 H5). subst.  
   apply futureCondEntail_exact.
   - intros.
@@ -1846,96 +1868,22 @@ Proof.
 Qed.  
 
 
-Lemma bigstep_frame : forall h1 rho1 f_ctx e h2 rho2 f3 v P Q f f_ctx' t, 
-  bigstep h1 rho1 f_ctx e h2 rho2 f3 v -> 
-  forward P emp (fc_singleton trace_default) e Q t f -> 
-  futureSubtraction f_ctx t f_ctx' -> 
-  futureCondEntail (fc_conj f_ctx' f) f3. 
-Proof. 
-  intros. 
-  gen h1 rho1 f_ctx h2 rho2 f3 v f_ctx'.
-  induction H0.
-  - 
-  intros. 
-  specialize (IHforward h1 rho1 f_ctx h2 rho2 f3 v H4 ). 
-  pose proof  futureSubtraction_trace_inclusion. 
-  specialize (H6 f_ctx t t' f_ctx' H5 H2). 
-  specialize (IHforward f_ctx' H6). 
-  pose proof futureCondEntail_trans.
-  specialize (H7 (fc_conj f_ctx' f) (fc_conj f_ctx' f') f3).  
-  apply H7.
-  apply futureCondEntail_conj_RHS.
-  apply futureCondEntail_conj_LHS_1. 
-  exact (futureCondEntail_exact f_ctx').
-  apply futureCondEntail_conj_LHS_2. 
-  exact H3. exact IHforward.
-  -   
-  intros.
-  invert H2.
-  intros. subst. 
-  specialize (IHforward h1 rho1 f_ctx h3 rho3 f4 v0 H14 ). 
-  admit. 
-  -
-  intros.
-  invert H.
-  intros. subst. 
-  rewrite fc_comm. 
-  rewrite f_conj_kleene_any_is_f. 
-  pose proof futureSubtraction_emp_strenthing_res.
-  exact (H f3 f_ctx' H1).
-  -
-  intros.
-  invert H.
-  intros. subst. 
-  rewrite fc_comm. 
-  rewrite f_conj_kleene_any_is_f.
-   admit. 
-  -
-  intros.
-  invert H.
-  intros. subst. 
-  specialize (IHforward h1 rho1 f_ctx h2 rho2 f3 v H12 f_ctx' H1). 
-  exact IHforward.
-  intros. subst. 
-  specialize (IHforward h1 rho1 f_ctx h2 rho2 f3 v H12 f_ctx' H1). 
-  exact IHforward.
-  -
-  intros.
-  invert H.
-  intros. subst. 
-  rewrite fc_comm. 
-  rewrite f_conj_kleene_any_is_f.
-  pose proof futureSubtraction_emp_strenthing_res.
-  exact (H f3 f_ctx' H1).
-  -
-  intros.
-  invert H.
-  intros. subst. 
-  rewrite fc_comm. 
-  rewrite f_conj_kleene_any_is_f.
-  pose proof futureSubtraction_emp_strenthing_res.
-  exact (H f3 f_ctx' H1).
-  -
-  intros.
-  invert H.
-  intros. subst.
-  apply futureCondEntail_conj_RHS.
-  apply futureCondEntail_conj_LHS_1. 
-  pose proof futureSubtraction_emp_strenthing_res.
-  exact (H f_ctx f_ctx' H1).  
-  apply futureCondEntail_conj_LHS_2.
-  exact (futureCondEntail_exact f1). 
-  -
-  intros.
-  invert H.
-  intros. subst. 
-  specialize (IHforward h1 rho1 f_ctx h2 rho2 f3 v H12 f_ctx' H1). 
-  exact IHforward.
-  -
-  intros.
-  specialize (IHforward h1 rho1 f_ctx0 h2 rho2 f3 v H1).
 
-Admitted. 
+
+Axiom future_frame_big_step_aux_aux : forall h1 rho1 f1 e h2 rho2 f2 v, 
+  bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
+  exists rho3 f3, 
+  bigstep h1 nil (fc_singleton (trace_default)) e h2 rho3 f3 v /\ 
+  rho2 = rho1 ++ rho3 /\ 
+  futureSubtraction_linear f1 rho3 f2. 
+
+Axiom futureSubtraction_trace_model_futureSubtraction_linear:
+forall f_ctx t f_ctx' rho3 f3, 
+  futureSubtraction f_ctx t f_ctx' -> 
+  trace_model rho3 t ->
+  futureSubtraction_linear f_ctx rho3 f3 ->
+  futureCondEntail f_ctx' f3. 
+
 
 
 Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
@@ -2013,7 +1961,7 @@ Proof.
   Search (nil ++ _). 
   rewrite List.app_nil_l. 
   constructor. reflexivity.
-  pose subtractFromTrueISTrue as H. 
+  pose subtract_linear_FromTrueISTrue as H. 
   specialize (H ev0 f3 H6). 
   subst.
   apply futureCondEntail_exact. 
@@ -2090,19 +2038,21 @@ Proof.
 
   - (* STRUCTURAL RULE *) 
   intros. 
-  pose proof future_frame_big_step_aux.
-  specialize (H4 P e Q t f h1 rho1 f_ctx h2 rho2 f3 v H H3). 
+  specialize (IHforward h1 H1 v).  
+  pose proof future_frame_big_step_aux_aux. 
+  specialize (H4 h1 rho1 f_ctx e h2 rho2 f3 v H3).  
   destr H4.  
-  specialize (IHforward h1 H1 v h2 nil tm_emp rho3 f0 H5). 
+  specialize (IHforward h2 nil tm_emp rho3 f0 H5). 
   destr IHforward.
   split.
-  exact H7.
+  exact H6.
   split.
   subst.   
   constructor.
-  exact H2. exact H10.
+  exact H2. exact H9.
   subst.
-  pose proof bigstep_frame. 
-  specialize (H4 h1 rho1 f_ctx e h2 (rho1 ++ rho3) f3 v P Q f f_ctx' t H3 H H0). 
-  exact H4. 
+  apply futureCondEntail_conj_LHS_1.
+  pose proof futureSubtraction_trace_model_futureSubtraction_linear.
+  exact (H4 f_ctx t f_ctx' rho3 f3 H0 H9 H7).   
 Qed. 
+
