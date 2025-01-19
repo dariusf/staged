@@ -5,7 +5,7 @@ $ opam install vscoq-language-server
 
 $ which vscoqtop
 
-opam pin add vscoq-language-server.2.2.1  https://github.com/coq/vscoq/releases/download/v2.2.1/vscoq-language-server-2.2.1.tar.gz
+opam pin add vscoq-language-server.2.2.2  https://github.com/coq/vscoq/releases/download/v2.2.2/vscoq-language-server-2.2.2.tar.gz
 *)
 
 From Coq Require Import Classes.RelationClasses.
@@ -960,10 +960,16 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
     futureCondEntail f2 f1 -> 
     futureSubtraction f t f2
   
-  | weakening_futureSubtraction:forall f1 t f2 f3, 
+  | futureSubtraction_weakening_f:forall f1 t f2 f3, 
     futureSubtraction f1 t f2 -> 
     futureCondEntail f1 f3 -> 
-    futureSubtraction f3 t f2. 
+    futureSubtraction f3 t f2
+    
+  | futureSubtraction_strengthing_t: forall f1 t t' f2, 
+    futureSubtraction f1 t f2 -> 
+    inclusion t' t -> 
+    futureSubtraction f1 t' f2
+  . 
 
 
 Fixpoint concate_trace_fc (t:theta) (f:futureCond)  : futureCond :=
@@ -1039,6 +1045,11 @@ Qed.
 Axiom concate_trace_fc_bot : forall f,  
   concate_trace_fc bot f = fc_singleton bot. 
 
+Axiom fc_model_trans_concate_trace_fc: forall rho0 t t' f2, 
+  fc_model rho0 (concate_trace_fc t' f2) -> 
+  inclusion t' t ->
+  fc_model rho0 (concate_trace_fc t f2).
+    
 
 Theorem futureSubtraction_sound : forall f t f_der rho, 
   futureSubtraction f t f_der -> 
@@ -1108,7 +1119,12 @@ Proof.
   specialize (IHfutureSubtraction rho0 H1). 
   pose proof futureCond_sound. 
   specialize (H2 f1 f3 rho0 H0 IHfutureSubtraction).  
-  exact H2. 
+  exact H2.
+  -
+  intros.
+  pose proof fc_model_trans_concate_trace_fc.
+  specialize (H2 rho0 t t' f2 H1 H0). 
+  specialize (IHfutureSubtraction rho0 H2). exact IHfutureSubtraction.
 Qed. 
 
 
@@ -1154,6 +1170,11 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
   | eval_pref : forall h r f loc v,
     ~ Fmap.indom h loc ->
     bigstep h r f (pref (pval v)) (Fmap.update h loc v) r f (vloc loc)
+
+  | eval_strenthening_post_future: forall h1 rho1 f1 e1 h2 rho2 f2 v f3, 
+    bigstep h1 rho1 f1 e1 h2 rho2 f2 v -> 
+    futureCondEntail f3 f2 ->
+    bigstep h1 rho1 f1 e1 h2 rho2 f3 v
 . 
 
 
@@ -1268,7 +1289,7 @@ Proof.
   intros. 
   exists f'.
   split. constructor. 
-  pose weakening_futureSubtraction.
+  pose futureSubtraction_weakening_f.
   specialize (f0 f (theta_singleton ev0) f' f3 H H0). 
   exact f0.
   exact (futureCondEntail_exact f').
@@ -1298,6 +1319,17 @@ Proof.
   split.
   constructor.
   exact H. exact H0.
+  -
+  intros.
+  specialize (IHbigstep f0 H1 ). 
+  destr IHbigstep.
+  exists f4.
+  split.
+  exact H3.
+  pose proof futureCondEntail_trans.
+  eapply H2.
+  exact H0. 
+  exact H4.    
 Qed. 
    
 Axiom futureCondEntail_indicate: forall f1 f2, 
@@ -1412,14 +1444,50 @@ Proof.
   specialize (e f3 f H0 ). 
   destr e. subst.
   exists f0. constructor. exact H.
+  -
+  intros.
+  specialize (IHbigstep f0 H1). 
+  destr IHbigstep. 
+  pose proof eval_strenthening_post_future. 
+  specialize (H3 h1 rho1 f0 e1 h2 rho2 (fc_conj f4 f2) v). 
+  exists f4. 
+  specialize (H3 (fc_conj f4 f3) H2). 
+  apply H3.
+  apply futureCondEntail_conj_RHS.
+  apply futureCondEntail_conj_LHS_1.
+  exact (futureCondEntail_exact f4).
+  apply futureCondEntail_conj_LHS_2. 
+  exact H0. 
 Qed. 
+
+Axiom inclusion_bot: forall t, 
+  inclusion t bot -> t = bot . 
 
 Lemma future_frame_big_step : forall P e Q t f h3 rho3 f4 h2 rho2 f0 v f1, 
   forward P emp (fc_singleton (trace_default)) e Q t f -> 
   bigstep h3 rho3 f4 e h2 rho2 f0 v -> 
   futureSubtraction f4 t f1 -> 
   futureCondEntail f1 f0. 
-Proof. Admitted.  
+Proof. 
+  intros.
+  gen  h3 rho3 f4 h2 rho2 f0 v f1.
+  induction H.
+  -
+  intros.
+  specialize(IHforward h3 rho3 f4 h2 rho2 f0 v H4). 
+  eapply IHforward. 
+  pose proof futureSubtraction_strengthing_t. 
+  eapply H6.
+  exact H5.
+  exact H2.
+  -
+  intros.
+  invert H2.
+  intros. subst. 
+  specialize (H0 v0).
+  specialize (IHforward h3 rho3 f4 h0 rho0 f6 v0 H14 ). 
+Admitted. 
+
 
 Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v, 
   forward P emp (fc_singleton (trace_default)) e Q t f -> 
@@ -1428,7 +1496,21 @@ Lemma future_frame_big_step_aux : forall P e Q t f h1 rho1 f1 h2 rho2 f2 v,
   bigstep h1 nil (fc_singleton (trace_default)) e h2 rho3 f3 v /\ 
   rho2 = rho1 ++ rho3 /\ futureCondEntail f f3 /\ futureCondEntail f2 f3
   . 
-Proof. Admitted.  
+Proof. 
+  intros. 
+  gen h1 rho1 f1 h2 rho2 f2 v.
+  induction H.
+  -
+  intros.
+  specialize (IHforward h1 rho1 f1 h2 rho2 f2 v H4 ). 
+  destr IHforward.
+  exists rho3.
+  exists f'.
+  split.
+  exact H5.    
+
+
+Admitted. 
 
 
 
@@ -1573,7 +1655,7 @@ Proof.
   destr H6.
   exists f2.
   split. exact H10. 
-  pose proof weakening_futureSubtraction. 
+  pose proof futureSubtraction_weakening_f. 
   specialize (H6 f_ctx t f_ctx' f4 H H1). 
   pose proof future_frame_big_step.
   specialize (H11 P e Q t f h3 rho3 f4 h2 rho2 f0 v f_ctx' H0 H2 H6). 
@@ -1615,8 +1697,6 @@ Proof.
   info_eauto.
 Qed. 
 
-Axiom inclusion_bot: forall t, 
-  inclusion t bot -> t = bot . 
 
 Lemma futureSubtraction_trace_inclusion: forall f_ctx t  t' f_ctx', 
   futureSubtraction f_ctx t f_ctx' -> 
@@ -1665,7 +1745,7 @@ Proof.
   -
   intros.   
   specialize (IHfutureSubtraction t' H1). 
-  pose proof (weakening_futureSubtraction). 
+  pose proof (futureSubtraction_weakening_f). 
   specialize (H2 f1 t' f2 f3 IHfutureSubtraction H0). exact H2.  
 Admitted. 
   
