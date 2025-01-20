@@ -283,10 +283,10 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     s2 = Fmap.update s1 x uf ->
     satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
 
-  | s_discard s1 s2 s3 h x R f :
+  | s_discard s1 s2 h x R f :
     satisfies s1 s2 h h R f ->
-    s3 = Fmap.remove s2 x ->
-    satisfies s1 s3 h h R (discard f x).
+    s2 = Fmap.remove s1 x ->
+    satisfies s1 s2 h h R (discard f x).
 
 Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f" :=
   (satisfies s1 s2 h1 h2 r f) (at level 30, only printing).
@@ -1327,6 +1327,36 @@ Definition env_independent1 k f := forall u s1 s2 h1 h2 R,
   satisfies s1 s2 h1 h2 R f ->
     satisfies (Fmap.update s1 k u) (Fmap.update s2 k u) h1 h2 R f.
 
+(* Lemma independent_weaken : forall f x u,
+  env_independent1 x f ->
+  entails (defun x u;; f;; discard x) f.
+  (* entails f (defun x u;; f;; discard x). *)
+Proof.
+  unfold entails. intros.
+
+  inverts H0 as H0.
+  inverts H0 as H0.
+  inverts H8 as H8.
+  inverts H0 as H0.
+
+  (* specializes H H8.
+  applys_eq H. *)
+
+  (* eapply s_seq.
+  apply s_defun. reflexivity.
+  eapply s_seq. *)
+
+  admit.
+
+  (* specializes H H0.
+  applys_eq H. *)
+
+  (* inverts H as H. destr H.
+  apply s_ens.
+  exists v h3.
+  splits*. *)
+Qed. *)
+
 Lemma independent_ens1 : forall Q k,
   env_independent1 k (ens Q).
 Proof.
@@ -1338,6 +1368,63 @@ Proof.
   splits*.
 Qed.
 
+
+Definition env_invariant x f := forall u s1 s2 h1 h2 R,
+  ~ Fmap.indom s1 x ->
+  (*
+  ~ Fmap.indom s2 x -> *)
+  satisfies (Fmap.update s1 x u) s2 h1 h2 R f ->
+  satisfies s1 (Fmap.remove s2 x) h1 h2 R f.
+
+Lemma env_invariant_ens : forall Q x,
+  env_invariant x (ens Q).
+Proof.
+  unfold env_invariant. intros.
+  inverts H0 as H0. destr H0.
+
+  pose proof (Fmap.disjoint_single_of_not_indom u H).
+  unfold Fmap.update.
+  rewrite Fmap.remove_union_single_l.
+  apply s_ens.
+  exists v h3.
+  splits*.
+  assumption.
+Qed.
+
+Definition flow_res (f:flow) (v:val) : Prop :=
+  forall s1 s2 h1 h2 R, satisfies s1 s2 h1 h2 R f -> R = norm v.
+
+
+
+Lemma ent_seq_defun_discard : forall x uf f s,
+  (* flow_res f vunit -> *)
+  shift_free f ->
+  env_invariant x f ->
+  ~ Fmap.indom s x ->
+  entails_under s (defun x uf;; discard f x) f.
+Proof.
+(* Hres  *)
+  unfold entails_under. introv Hsf He Hid H. intros.
+  inverts H as H; no_shift.
+  inverts H as H.
+  inverts H7 as H7.
+
+  (* inverts H0 as H0. *)
+  unfold env_invariant in He.
+  specializes He Hid H7.
+  clear H7.
+
+  unfold Fmap.update in *.
+  rewrite Fmap.remove_union_single_l in He.
+  2: { assumption. }
+  rewrite Fmap.remove_union_single_l.
+  2: { assumption. }
+
+  rewrite remove_not_indom in He.
+
+  assumption.
+  assumption.
+Qed.
 
 Definition env_independent k f := forall u s1 s2 h1 h2 R,
   ~ Fmap.indom s1 k ->
@@ -1353,6 +1440,21 @@ Proof.
   inverts H as H. destr H.
   reflexivity.
 Qed.
+
+(* Lemma independent_weaken : forall f x u,
+  env_independent x f ->
+  entails (defun x u;; f;; discard x) f.
+Proof.
+  unfold entails. intros.
+  inverts H0 as H0; no_shift.
+  inverts H0 as H0.
+  inverts H8 as H8.
+  - inverts H0 as H0.
+
+    admit.
+  - admit.
+
+Qed. *)
 
 Lemma independent_ens : forall Q k,
   env_independent k (ens Q).
@@ -1544,7 +1646,7 @@ Proof.
 }
     Qed. *)
 
-Lemma ent_seq_defun_discard :
+(* Lemma ent_seq_defun_discard :
 forall x uf f2 f1,
 (* forall x, *)
   (* ~ Fmap.indom s x -> *)
@@ -1567,7 +1669,7 @@ Proof.
   applys s_seq.
   constructor. reflexivity. *)
 
-Abort.
+Abort. *)
 
 Lemma unk_inv : forall s1 s2 h1 h2 R x a v uf,
   Fmap.read s1 x = uf ->
