@@ -4,7 +4,7 @@ Local Open Scope string_scope.
 
 Module Toss.
 
-(* s() =
+(* let s() =
   shift k.
     x := !x+1;
     let r1 = k true in
@@ -21,6 +21,7 @@ Definition s : ufun := fun _ r =>
 
 Definition s_env := Fmap.update empty_env "s" s.
 
+(* let foo () = < let v = s () in if v then 1 else 0 > *)
 Definition foo r : flow :=
   rs (
     ∃ v, unk "s" vunit (vbool v);;
@@ -28,7 +29,8 @@ Definition foo r : flow :=
   ) (vint r).
 
 Definition foo_spec : flow :=
-  ∀ x a, req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
+  ∀ x a,
+  req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
 
 Theorem foo_summary : forall r,
   entails_under s_env (foo r) foo_spec.
@@ -42,6 +44,10 @@ Proof.
   rewrite red_init.
   rewrite red_extend.
   rewrite red_shift_elim.
+
+simpl.
+
+Check ent_seq_defun.
   Fail apply ent_seq_defun.
   admit.
 Abort.

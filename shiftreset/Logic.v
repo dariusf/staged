@@ -1313,12 +1313,69 @@ Lemma ent_seq_defun : forall s x uf f2 f1,
   entails_under s (defun x uf;; f1) (defun x uf;; f2).
 Proof.
   unfold entails_under. intros.
-  inverts H0 as H0; [ | vacuous ]. destr H0.
+  inverts H0 as H0; [ | vacuous ].
   pose proof H0.
   inverts H0 as H0.
   apply H in H8.
   applys* s_seq.
 Qed.
+
+Check discard.
+
+(* Check Fmap.update. *)
+Definition independent k u f := forall s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R f <->
+    satisfies (Fmap.update s1 k u) s2 h1 h2 R f.
+
+Lemma ent_discard_indep : forall k u f s1 s2 h1 h2 R,
+ independent k u f ->
+  satisfies s1 s2 h1 h2 R f <->
+  satisfies s1 s2 h1 h2 R (defun k u;; f).
+Proof.
+  unfold entails_under. introv Hi.
+  iff H; intros.
+  {
+    eapply s_seq.
+    apply s_defun. reflexivity.
+    apply Hi in H.
+    assumption.
+    (* unfold independent in Hi.
+    apply Hi.
+    applys_eq H.
+    admit. *)
+  }
+  {
+    inverts H as H; [ | vacuous ].
+    inverts H as H.
+    apply Hi.
+    assumption.
+  }
+  Qed.
+
+Lemma ent_discard_intro1 : forall k u f1 f2 s,
+  independent k u f2 ->
+  entails_under s f1 f2 <->
+  entails_under s f1 (defun k u;; f2).
+Proof.
+  unfold entails_under. introv Hi.
+  iff H; intros.
+  {
+    apply H in H0.
+    apply* ent_discard_indep.
+
+    (* eapply s_seq.
+    apply* s_defun.
+    apply ent_discard_indep. *)
+    (* admit. *)
+  }
+  {
+
+    apply H in H0.
+    apply* ent_discard_indep.
+  }
+  Qed.
+
+
 
 Lemma ent_seq_defun_discard :
 forall x uf f2 f1,
