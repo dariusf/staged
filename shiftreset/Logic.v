@@ -1376,6 +1376,71 @@ Proof.
   Qed.
 
 
+Lemma independent_req : forall k u H f,
+  independent k u f ->
+  independent k u (req H f).
+Proof.
+  unfold independent.
+  intros.
+  iff H1.
+  {
+    apply s_req. intros.
+    inverts H1 as H1.
+    specializes H1 H2 H3 H4.
+    rewrite <- H0. 
+    assumption.
+  }
+  {
+    apply s_req. intros.
+    inverts H1 as H1.
+    specializes H1 H2 H3 H4.
+    rewrite H0. 
+    assumption.
+    }
+    Qed.
+
+
+Lemma independent_seq : forall k u H f1 f2,
+    shift_free f1 ->
+  independent k u f1 ->
+  independent k u f2 ->
+  independent k u (seq f1 f2).
+Proof.
+  unfold independent.
+  intros.
+  iff Hseq.
+  {
+    inverts Hseq as Hseq; [ | apply H0 in Hseq; false ].
+    eapply s_seq.
+    rewrite <- H1.
+    eassumption.
+    assumption.
+  }
+  {
+    inverts Hseq as Hseq; [ | apply H0 in Hseq; false ].
+    eapply s_seq.
+    rewrite H1.
+    eassumption.
+    assumption.
+}
+    Qed.
+
+Lemma independent_ens : forall k u Q,
+  independent k u (ens Q).
+Proof.
+  unfold independent.
+  intros.
+  iff H.
+  {
+    inverts H as H. destr H.
+    applys_eq s_ens.
+    
+
+
+Lemma independent_ens_void : forall k u H f,
+  independent k u f ->
+  independent k u (ens_ H f).
+Proof.
 
 Lemma ent_seq_defun_discard :
 forall x uf f2 f1,

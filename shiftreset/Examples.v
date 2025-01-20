@@ -45,6 +45,9 @@ Proof.
   rewrite red_extend.
   rewrite red_shift_elim.
 
+  (* apply ent_discard_intro1.
+  Check ent_discard_intro1. *)
+
 simpl.
 
 Check ent_seq_defun.
