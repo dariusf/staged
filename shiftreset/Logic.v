@@ -100,8 +100,8 @@ Inductive flow : Type :=
   | req : hprop -> flow -> flow
   | ens : postcond -> flow
   | seq : flow -> flow -> flow
-  | fex : forall A, (A -> flow) -> flow
-  | fall : forall A, (A -> flow) -> flow
+  | fex : forall (A:Type), (A -> flow) -> flow
+  | fall : forall (A:Type), (A -> flow) -> flow
   | unk : var -> val -> val -> flow
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
@@ -1322,8 +1322,6 @@ Proof.
   applys* s_seq.
 Qed.
 
-Check discard.
-
 (* Check Fmap.update. *)
 Definition env_independent1 k f := forall u s1 s2 h1 h2 R,
   satisfies s1 s2 h1 h2 R f ->
@@ -1402,7 +1400,7 @@ Qed.
 (* does not depend on anything vs does not depend on anything ELSE *)
 (* ens does not depend on anything *)
 
-Lemma ent_discard_indep : forall k u f s1 s2 h1 h2 R,
+(* Lemma ent_discard_indep : forall k u f s1 s2 h1 h2 R,
   env_independent k f ->
   (* not (Fmap.indom s1 k) -> *)
   satisfies s1 s2 h1 h2 R (defun k u;; f) ->
@@ -1544,7 +1542,7 @@ Proof.
     eassumption.
     assumption.
 }
-    Qed.
+    Qed. *)
 
 Lemma ent_seq_defun_discard :
 forall x uf f2 f1,
