@@ -91,182 +91,185 @@ End Val.
 Module Export Heap := HeapF.HeapSetup Val.
 
 Implicit Types e: expr.
-Implicit Types v: val.
+Implicit Types r v: val.
+
+Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
+  | eval_pval : forall h v,
+    bigstep h (pval v) h v
+
+  (* there is no var rule *)
+
+  | eval_plet : forall h1 h3 h2 x e1 e2 v Re,
+    bigstep h1 e1 h3 v ->
+    bigstep h3 (subst x v e2) h2 Re ->
+    bigstep h1 (plet x e1 e2) h2 Re
+
+  | eval_padd : forall h x y,
+    bigstep h (padd (pval (vint x)) (pval (vint y))) h (vint (x + y))
+
+  | eval_pminus : forall h x y,
+    bigstep h (pminus (pval (vint x)) (pval (vint y))) h (vint (x - y))
+
+  | eval_pfun : forall h x e,
+    bigstep h (pfun x e) h (vfun x e)
+
+  | eval_pfix : forall h x e xf,
+    bigstep h (pfix xf x e) h (vfix xf x e)
+
+  | eval_app_fun : forall v1 v2 h x e Re,
+    v1 = vfun x e ->
+    bigstep h (subst x v2 e) h Re ->
+    bigstep h (papp (pval v1) (pval v2)) h Re
+
+  | eval_app_fix : forall v1 v2 h x e Re xf,
+    v1 = vfix xf x e ->
+    bigstep h (subst x v2 (subst xf v1 e)) h Re ->
+    bigstep h (papp (pval v1) (pval v2)) h Re
+
+  | eval_pif_true : forall h1 h2 Re e1 e2,
+    bigstep h1 e1 h2 Re ->
+    bigstep h1 (pif (pval (vbool true)) e1 e2) h2 Re
+
+  | eval_pif_false : forall h1 h2 Re e1 e2,
+    bigstep h1 e2 h2 Re ->
+    bigstep h1 (pif (pval (vbool false)) e1 e2) h2 Re
+
+  | eval_pref : forall h v p,
+    ~ Fmap.indom h p ->
+    bigstep h (pref (pval v)) (Fmap.update h p v) (vloc p)
+
+  | eval_pderef : forall h p,
+    Fmap.indom h p ->
+    bigstep h (pderef (pval (vloc p))) h (Fmap.read h p)
+
+  | eval_passign : forall h p v,
+    Fmap.indom h p ->
+    bigstep h (passign (pval (vloc p)) (pval v)) (Fmap.update h p v) vunit
+
+  | eval_passert : forall h,
+    bigstep h (passert (pval (vbool true))) h vunit.
 
 (** * Types *)
-Inductive type :=
-  | tvar : var -> type
-  | ttop : type
-  | tbot : type
-  | tint : type
-  | tsingle : val -> type
-  (* | tfix : var -> type -> type *)
-  | tlist : type -> type
-  | tunion : type -> type -> type
-  | tconstr0 : string -> type
-  | tconstr1 : string -> type -> type
-  | tconstr2 : string -> type -> type -> type
-  | tarrow : type -> type -> type
-  (* annotations on types *)
-  | tcov : type -> type
-  | tcontra : type -> type
-  | tinv : type -> type
-  | twild : type
-  .
+Definition type := val -> Prop.
+Implicit Types t: type.
 
-(* Fixpoint tsubst (y:var) (w:type) (e:type) : type :=
-  let aux t := tsubst y w t in
-  let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
-  match e with
-  | tvar x => if_y_eq x w e
-  | ttop => e
-  | tbot => e
-  | tint => e
-  | tsingle _ => e
-  | tunion t1 t2 => tunion (aux t1) (aux t2)
-  | tfix x t1 =>
-    tfix x (if_y_eq x t1 (aux t1))
-  | tconstr0 _ => e
-  | tconstr1 s t => tconstr1 s (aux t)
-  | tconstr2 s t1 t2 => tconstr2 s (aux t1) (aux t2)
-  end. *)
+(* bot <: err <: t <: ok <: any <: top *)
+(* abort <: top *)
 
-Definition ctx := Fmap.fmap var type.
-Notation empty_ctx := Fmap.empty.
-
-Implicit Types ctx: ctx.
-Implicit Types Γ: ctx.
-
-Reserved Notation "t1 '<:' t2" (at level 40).
-
-Inductive subtype : type -> type -> Prop :=
-
-  | s_refl : forall t,
-    t <: t
-
-  | s_trans : forall t1 t2 t3,
-    t1 <: t2 ->
-    t2 <: t3 ->
-    t1 <: t3
-
-  | s_top : forall s,
-    s <: ttop
-
-  | s_arrow : forall t3 t4 t1 t2,
-    t1 <: t3 ->
-    t4 <: t2 ->
-    tarrow t3 t4 <: tarrow t1 t2
-
-  | s_cov : forall t,
-    t <: tcov t
-
-  | s_contra : forall t,
-    tcontra t <: t
-
-  | s_tconstr1 : forall x t1 t2,
-    t1 <: t2 ->
-    tconstr1 x t1 <: tconstr1 x t2
-
-  | s_tconstr2 : forall x t1 t2 t3 t4,
-    t1 <: t3 ->
-    t2 <: t4 ->
-    tconstr2 x t1 t2 <: tconstr2 x t3 t4
-
-  | s_tlist : forall t1 t2,
-    t1 <: t2 ->
-    tlist t1 <: tlist t2
-
-where "t1 '<:' t2" := (subtype t1 t2).
-
-
-(* Definition tlist t : type :=
-  tfix "list" (tunion (tconstr0 "nil") (tconstr2 "cons" t (tvar "list"))). *)
+Definition tint : type := fun v => exists i, v = vint i.
+Definition tbool : type := fun v => exists b, v = vbool b.
+Definition ttop : type := fun _ => True.
+Definition tbot : type := fun _ => False.
+Definition tsingle v1 : type := fun v => v = v1.
+Definition tforall A (f:A -> type) : type := fun v => forall x:A, (f x) v.
+Definition texists A (f:A -> type) : type := fun v => exists x:A, (f x) v.
+Definition tintersect t1 t2 : type := fun v => t1 v /\ t2 v.
+Definition tunion t1 t2 : type := fun v => t1 v \/ t2 v.
+Definition tnot t : type := fun v => not (t v).
+Definition terr : type := tsingle verr.
+Definition tabort : type := tsingle vabort.
+Definition tany : type := tnot tabort.
 
 Definition vcons a b : val := vconstr2 "cons" a b.
 Definition vnil : val := vconstr0 "nil".
 
+Inductive tlist : type -> val -> Prop :=
 
-Inductive has_type : ctx -> val -> type -> Prop :=
+  | tlist_nil : forall t,
+    tlist t vnil
 
-  | t_ttop : forall ctx v,
-    has_type ctx v ttop
+  | tlist_cons : forall vh vt t,
+    t vh ->
+    tlist t vt ->
+    tlist t (vcons vh vt).
 
-  (* no case for bot *)
+Definition tarrow t1 t2 : type := fun vf =>
+  forall x e, vf = vfun x e ->
+  forall v, t1 v ->
+  forall h1 h2 r,
+  bigstep h1 (papp (pval (vfun x e)) (pval v)) h2 r -> t2 r.
 
-  | t_tint : forall ctx i,
-    has_type ctx (vint i) tint
+Declare Scope type_scope.
+Open Scope type_scope.
 
-  | t_tsingle : forall ctx v v1,
-    v = v1 ->
-    has_type ctx v (tsingle v1)
+Notation "'∃' x1 .. xn , H" :=
+  (texists (fun x1 => .. (texists (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : type_scope.
 
-  (* | t_tfix : forall ctx x v t,
-    has_type ctx v (tsubst x (tfix x t) t) ->
-    has_type ctx v (tfix x t) *)
+Notation "'∀' x1 .. xn , H" :=
+  (tforall (fun x1 => .. (tforall (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : type_scope.
 
-  | t_tlist_nil : forall ctx t,
-    has_type ctx vnil (tlist t)
+Definition subtype t1 t2 := forall v, t1 v -> t2 v.
+Notation "t1 '<:' t2" := (subtype t1 t2) (at level 40).
 
-  | t_tlist_cons : forall ctx t v1 v2,
-    has_type ctx v1 t ->
-    has_type ctx v2 (tlist t) ->
-    has_type ctx (vcons v1 v2) (tlist t)
+Instance subtype_refl : Reflexive subtype.
+Proof.
+  unfold Reflexive, subtype.
+  intros.
+  exact H.
+Qed.
 
-  | t_tunion_l : forall ctx v t1 t2,
-    has_type ctx v t1 ->
-    has_type ctx v (tunion t1 t2)
+Instance subtype_trans : Transitive subtype.
+Proof.
+  unfold Transitive, subtype.
+  intros.
+  auto.
+Qed.
 
-  | t_tunion_r : forall ctx v t1 t2,
-    has_type ctx v t2 ->
-    has_type ctx v (tunion t1 t2)
+Instance subtype_preorder : PreOrder subtype.
+Proof.
+  constructor.
+  apply subtype_refl.
+  apply subtype_trans.
+Qed.
 
-  | t_tconstr0 : forall ctx s,
-    has_type ctx (vconstr0 s) (tconstr0 s)
+Definition tcov : type -> type := fun t1 v =>
+  exists t2, t2 <: t1 -> t2 v.
+Definition tcontra : type -> type := fun t1 v =>
+  exists t2, t1 <: t2 -> t2 v.
+Definition tinv : type -> type := fun t1 v => t1 v.
+Definition twild := ttop.
 
-  | t_tconstr1 : forall ctx s t1 v1,
-    has_type ctx v1 t1 ->
-    has_type ctx (vconstr1 s v1) (tconstr1 s t1)
-
-  | t_tconstr2 : forall ctx s v1 v2 t1 t2,
-    has_type ctx v1 t1 ->
-    has_type ctx v2 t2 ->
-    has_type ctx (vconstr2 s v1 v2) (tconstr2 s t1 t2)
-
-  (* | t_sub : forall ctx t1 t2 t3,
-    has_type ctx t1 t2 ->
-    t2 <: t3 ->
-    has_type ctx t1 t3 *)
-
-  .
-
-
-(* Definition subtype : type -> type -> Prop := fun t1 t2 =>
-  forall ctx v, has_type ctx v t1 -> has_type ctx v t2. *)
-
+(* Instance subtype_refl : Reflexive subtype.
+Proof.
+  unfold Reflexive, subtype.
+  intros.
+  exact H.
+Qed. *)
 
 Module Examples.
 
-Example ex_list: has_type empty_ctx
-  (vcons (vint 1) (vcons (vint 2) vnil))
-  (tlist tint).
+Example ex_list: (tlist tint) (vcons (vint 1) (vcons (vint 2) vnil)).
 Proof.
-  apply t_tlist_cons.
-  apply t_tint.
-  apply t_tlist_cons.
-  apply t_tint.
-  apply t_tlist_nil.
+  apply tlist_cons.
+  unfold tint. eexists. reflexivity.
+  apply tlist_cons.
+  unfold tint. eexists. reflexivity.
+  apply tlist_nil.
 Qed.
 
-Example ex_list_covariance: forall t,
+Lemma subtype_cov: forall t,
+  t <: tcov t.
+Proof.
+  unfold subtype, tcov. intros.
+  eauto.
+Qed.
+
+Lemma _list_covariant: forall t,
   tlist t <: tlist (tcov t).
 Proof.
-  intros.
-  apply s_tlist.
-  apply s_cov.
+  unfold subtype. intros.
+  induction H.
+  - apply tlist_nil.
+  - apply tlist_cons.
+    { unfold tcov. intros. exists t. auto. }
+    { assumption. }
 Qed.
 
 End Examples.
-
 
 (** * Program specifications *)
 
