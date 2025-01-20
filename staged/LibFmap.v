@@ -66,3 +66,25 @@ Ltac resolve_fn_in_env :=
     rewrite Fmap.read_single; reflexivity
   (* | |- ?g => idtac "resolve_fn_in_env could not solve:"; idtac g *)
   end.
+
+
+Lemma remove_union_single_l : forall (A B:Type) h (x:A) (v:B),
+  ~ indom h x ->
+  remove (union (single x v) h) x = h.
+Proof using.
+  introv M. applys fmap_extens. intros y.
+  unfold remove, map_remove, union, map_union, single. simpls. case_if.
+  { destruct h as [f F]. unfolds indom, map_indom. simpls. subst. rew_logic~ in M. }
+  { case_if~. }
+Qed.
+
+Lemma remove_not_indom : forall (A B:Type) (h:Fmap.fmap A B) (x:A),
+  ~ Fmap.indom h x ->
+  Fmap.remove h x = h.
+Proof.
+  intros.
+  applys fmap_extens. intros y.
+  unfold remove, map_remove. simpls. case_if.
+  { unfolds indom, map_indom. rew_logic in H. subst~. }
+  { auto. }
+Qed.
