@@ -1148,6 +1148,8 @@ Ltac no_shift :=
     unfold ens_ in H; apply sf_ens in H; false
   | H: satisfies _ _ _ _ (shft _ _ _ _) (rs _ _) |- _ =>
     apply sf_rs in H; false
+  | H: satisfies _ _ _ _ (shft _ _ _ _) (defun _ _) |- _ =>
+    apply sf_defun in H; false
   | _ => idtac
   end.
 
@@ -1323,31 +1325,157 @@ Qed.
 Check discard.
 
 (* Check Fmap.update. *)
-Definition env_independent f := forall s1 s2 s3 s4 h1 h2 R,
-  satisfies s1 s2 h1 h2 R f <->
-    satisfies s3 s4 h1 h2 R f.
+Definition env_independent1 k f := forall u s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R f ->
+    satisfies (Fmap.update s1 k u) (Fmap.update s2 k u) h1 h2 R f.
+
+Lemma independent_ens1 : forall Q k,
+  env_independent1 k (ens Q).
+Proof.
+  unfold env_independent1.
+  intros.
+  inverts H as H. destr H.
+  apply s_ens.
+  exists v h3.
+  splits*.
+Qed.
+
+
+Definition env_independent k f := forall u s1 s2 h1 h2 R,
+  ~ Fmap.indom s1 k ->
+  ~ Fmap.indom s2 k ->
+  satisfies (Fmap.update s1 k u) (Fmap.update s2 k u) h1 h2 R f ->
+  satisfies s1 s2 h1 h2 R f.
+
+Lemma ens_intro : forall s1 s2 h1 h2 R Q,
+  satisfies s1 s2 h1 h2 R (ens Q) ->
+  s1 = s2.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  reflexivity.
+Qed.
+
+Lemma independent_ens : forall Q k,
+  env_independent k (ens Q).
+Proof.
+  unfold env_independent.
+  intros.
+  (* inverts H as H. destr H. *)
+
+  pose proof (Fmap.disjoint_single_of_not_indom u H) as H2.
+  rewrite Fmap.disjoint_comm in H2.
+  pose proof (Fmap.disjoint_single_of_not_indom u H0) as H3.
+  rewrite Fmap.disjoint_comm in H3.
+  (* specializes Hi H0.
+  forward Hi by fmap_disjoint. *)
+
+
+  pose proof (ens_intro H1) as H4.
+  (* apply ens_intro in H1. *)
+  unfold Fmap.update in H4.
+  pose proof (union_eq_inv_of_disjoint) as H5.
+  specializes H5 H2 H3.
+
+  forward H5.
+  fmap_eq.
+  rewrite Fmap.union_comm_of_disjoint.
+  rewrite H4.
+  fmap_eq.
+
+  fmap_disjoint.
+  subst.
+  apply s_ens.
+
+  (* destruct R. *)
+  inverts H1 as H1. destr H1.
+
+  exists v h3.
+  splits*.
+Qed.
+
+  (* exists s3 s4, *)
+  (* Fmap.disjoint s1 s3 -> *)
+  (* Fmap.disjoint s2 s4 -> *)
+    (* satisfies (s1 \u s3) (s2 \u s4) h1 h2 R f. *)
+
+(* does not depend on anything vs does not depend on anything ELSE *)
+(* ens does not depend on anything *)
+
+Lemma ent_discard_indep : forall k u f s1 s2 h1 h2 R,
+  env_independent k f ->
+  (* not (Fmap.indom s1 k) -> *)
+  satisfies s1 s2 h1 h2 R (defun k u;; f) ->
+  satisfies s1 s2 h1 h2 R f.
+Proof.
+  (* introv Hi Hf H. *)
+  intros.
+  inverts H0 as H0. 2: { no_shift. }
+  inverts H0 as H0.
+  
+
+
+  (* inverts H as H. 2: { no_shift. } *)
+  (* inverts H as H. *)
+  (* unfold env_independent in Hi. *)
+
+  (* specializes Hi H7. *)
+  (* destr Hi. *)
+
+
+
+
+  inverts H1 as H1.
+
 
 Lemma ent_discard_indep : forall k u f s1 s2 h1 h2 R,
  env_independent f ->
+  not (Fmap.indom s1 k) ->
   satisfies s1 s2 h1 h2 R f <->
   satisfies s1 s2 h1 h2 R (defun k u;; f).
 Proof.
-  unfold entails_under. introv Hi.
+  unfold entails_under. introv Hi Hd.
   iff H; intros.
   {
     eapply s_seq.
     apply s_defun. reflexivity.
     unfold env_independent in Hi.
-    specializes Hi s1 s2 (Fmap.update s1 k u).
-    apply* Hi.
+    specializes Hi H.
+    (* (Fmap.single k u) empty_env. *)
+
+    pose proof (Fmap.disjoint_single_of_not_indom u Hd).
+    rewrite Fmap.disjoint_comm in H0.
+    specializes Hi H0.
+    forward Hi by fmap_disjoint.
+
+    unfold Fmap.update.
+    rew_fmap *.
+    rewrite Fmap.union_comm_of_disjoint; auto.
   }
   {
-    inverts H as H; [ | vacuous ].
+    admit.
+    (* inverts H as H; [ | vacuous ].
     inverts H as H.
-    specializes Hi (Fmap.update s1 k u) s2 s1.
-    apply* Hi.
+
+
+    unfold env_independent in Hi.
+    specializes Hi H7.
+
+    (Fmap.single k u) empty_env.
+
+    pose proof (Fmap.disjoint_single_of_not_indom u Hd).
+    rewrite Fmap.disjoint_comm in H0.
+    specializes Hi H0.
+    forward Hi by fmap_disjoint.
+
+
+    specializes Hi (Fmap.update s1 k u) s2 s1. *)
+    (* apply* Hi. *)
   }
-  Qed.
+  (* Qed. *)
+  Admitted.
+
+
 
 Lemma ent_discard_intro1 : forall k u f1 f2 s,
   env_independent f2 ->
@@ -1361,18 +1489,6 @@ Proof.
   { apply H in H0.
     apply* ent_discard_indep. }
   Qed.
-
-Lemma independent_ens : forall Q,
-  env_independent (ens Q).
-Proof.
-  unfold env_independent.
-  intros.
-  iff H.
-  {
-    inverts H as H. destr H.
-    (* eapply s_ens. *)
-    applys_eq s_ens.
-    
 
 
 Lemma independent_ens_void : forall k u H f,
