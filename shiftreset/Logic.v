@@ -1323,12 +1323,12 @@ Qed.
 Check discard.
 
 (* Check Fmap.update. *)
-Definition independent k u f := forall s1 s2 h1 h2 R,
+Definition env_independent f := forall s1 s2 s3 s4 h1 h2 R,
   satisfies s1 s2 h1 h2 R f <->
-    satisfies (Fmap.update s1 k u) s2 h1 h2 R f.
+    satisfies s3 s4 h1 h2 R f.
 
 Lemma ent_discard_indep : forall k u f s1 s2 h1 h2 R,
- independent k u f ->
+ env_independent f ->
   satisfies s1 s2 h1 h2 R f <->
   satisfies s1 s2 h1 h2 R (defun k u;; f).
 Proof.
@@ -1337,43 +1337,48 @@ Proof.
   {
     eapply s_seq.
     apply s_defun. reflexivity.
-    apply Hi in H.
-    assumption.
-    (* unfold independent in Hi.
-    apply Hi.
-    applys_eq H.
-    admit. *)
+    unfold env_independent in Hi.
+    specializes Hi s1 s2 (Fmap.update s1 k u).
+    apply* Hi.
   }
   {
     inverts H as H; [ | vacuous ].
     inverts H as H.
-    apply Hi.
-    assumption.
+    specializes Hi (Fmap.update s1 k u) s2 s1.
+    apply* Hi.
   }
   Qed.
 
 Lemma ent_discard_intro1 : forall k u f1 f2 s,
-  independent k u f2 ->
+  env_independent f2 ->
   entails_under s f1 f2 <->
   entails_under s f1 (defun k u;; f2).
 Proof.
   unfold entails_under. introv Hi.
   iff H; intros.
-  {
-    apply H in H0.
-    apply* ent_discard_indep.
-
-    (* eapply s_seq.
-    apply* s_defun.
-    apply ent_discard_indep. *)
-    (* admit. *)
-  }
-  {
-
-    apply H in H0.
-    apply* ent_discard_indep.
-  }
+  { apply H in H0.
+    apply* ent_discard_indep. }
+  { apply H in H0.
+    apply* ent_discard_indep. }
   Qed.
+
+Lemma independent_ens : forall Q,
+  env_independent (ens Q).
+Proof.
+  unfold env_independent.
+  intros.
+  iff H.
+  {
+    inverts H as H. destr H.
+    (* eapply s_ens. *)
+    applys_eq s_ens.
+    
+
+
+Lemma independent_ens_void : forall k u H f,
+  independent k u f ->
+  independent k u (ens_ H f).
+Proof.
 
 
 Lemma independent_req : forall k u H f,
@@ -1424,23 +1429,6 @@ Proof.
     assumption.
 }
     Qed.
-
-Lemma independent_ens : forall k u Q,
-  independent k u (ens Q).
-Proof.
-  unfold independent.
-  intros.
-  iff H.
-  {
-    inverts H as H. destr H.
-    applys_eq s_ens.
-    
-
-
-Lemma independent_ens_void : forall k u H f,
-  independent k u f ->
-  independent k u (ens_ H f).
-Proof.
 
 Lemma ent_seq_defun_discard :
 forall x uf f2 f1,
