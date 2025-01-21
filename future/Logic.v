@@ -687,12 +687,14 @@ Axiom inclusion_rev : forall t1 t2 ev1 deriv0 deriv,
   theta_der t1 ev1 deriv0 -> 
   inclusion deriv0 deriv.   
 
+Axiom emp_is_not_bot : emp <> bot. 
+Axiom kleene_bot_is_emp : kleene bot = emp. 
+Axiom kleene_emp_is_bot : kleene emp = bot. 
+Axiom kleene_def : forall t, kleene t = emp \/ kleene t = seq t (kleene t). 
+
 Axiom inclusion_exact: forall t, inclusion t t.
-
 Axiom anything_entail_default : forall t, inclusion t ((trace_default)).
-
-Axiom inclusion_bot: forall t, inclusion t bot -> t = bot . 
-
+Axiom inclusion_bot: forall t, inclusion t bot -> t = bot .                
 
 Lemma all_trace_have_derivative: forall t ev , 
   exists deriv, theta_der t ev deriv. 
@@ -1483,11 +1485,32 @@ forall f_ctx t f_ctx' rho3 f3,
   futureCondEntail f_ctx' f3. 
 (* SYH TBD *)
 
-Axiom bigstep_framing_trace: forall h3 e h2 rho0 f3 v rho3, 
-  bigstep h3 nil (fc_singleton trace_default) e h2 rho0 f3 v -> 
-  bigstep h3 rho3 (fc_singleton trace_default) e h2 (rho3 ++ rho0)
-f3 v. 
-(* SYH TBD *)
+Lemma bigstep_framing_trace: forall h3 e h2 rho0 f3 v rho3 rho1 f, 
+  bigstep h3 rho1 f e h2 rho0 f3 v -> 
+  bigstep h3 (rho3++rho1) f e h2 (rho3 ++ rho0) f3 v. 
+Proof. 
+  intros. 
+  gen rho3. 
+  induction H.
+  - 
+  intros. 
+  specialize (IHbigstep1 rho0). 
+  specialize (IHbigstep2 rho0). 
+  pose proof eval_plet.
+  specialize (H1 h1 h2 h3 x e1 e2 v r (rho0 ++ rho1) (rho0 ++ rho2) (rho0 ++ rho3) f1 f2 f3 IHbigstep1 IHbigstep2). 
+  exact H1.
+  -
+  intros.
+  constructor.
+  - intros. constructor. exact (IHbigstep rho3).
+  - intros. constructor. exact (IHbigstep rho3).
+  - intros. constructor. 
+  - intros. rewrite List.app_assoc. constructor. exact H.
+  - intros. constructor. exact H.
+  - intros. constructor. exact H.
+  - intros. constructor. exact (IHbigstep rho3).
+  - intros. constructor. exact H.
+Qed.      
 
 Axiom bigstep_framing_futureCond: forall h3 e h2 rho0 f1 v rho3 f_ctx f_ctx', 
   bigstep h3 rho3 (fc_singleton trace_default) e h2 (rho3 ++ rho0)
@@ -1517,6 +1540,7 @@ trace_model rho0 t ->
 futureSubtraction_linear f4 rho0 f0 -> 
 futureSubtraction (fc_conj f3 f4) t f_ctx' -> 
 futureCondEntail f_ctx' f0. 
+
 (* SYH TBD *)
 
 (* to prove the let rule *)
@@ -1655,7 +1679,8 @@ Proof.
   specialize (H3 h3 rho3 f4 e h2 rho2 f0 v H2 ).
   destr H3. subst. 
   pose proof bigstep_framing_trace.
-  specialize (H3 h3 e h2 rho0 f1 v rho3 H4). 
+  specialize (H3 h3 e h2 rho0 f1 v rho3 nil (fc_default) H4). 
+  rewrite List.app_nil_r in H3. 
   specialize (IHforward h2 (rho3++rho0) f1 v H3).
   destr IHforward.   
   pose proof bigstep_framing_futureCond.
