@@ -1626,74 +1626,124 @@ Qed.
 Definition substore s1 s2 := forall x u,
   Fmap.read s1 x = u -> Fmap.read s2 x = u.
 
-Lemma satisfies_monotonic : forall s1 s2 h1 h2 R f,
+(* this might be needed for below. but is hard to prove *)
+
+(* Lemma satisfies_monotonic : forall f s1 s2 h1 h2 R,
   satisfies s1 s2 h1 h2 R f ->
   substore s1 s2.
-Abort.
+Proof.
+  induction f; intros.
+  -
+    eapply IHf.
+    admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+Abort. *)
 
 Lemma satisfies_retained : forall s1 s2 s3 h1 h2 R f x u,
   ~ Fmap.indom s1 x ->
   satisfies (Fmap.update s1 x u) s2 h1 h2 R f ->
-  s2 = Fmap.update s3 x u.
+  (* exists s3, *)
+  Fmap.indom s2 x /\ s2 = Fmap.update s3 x u.
+Proof.
+  intros.
+  (* dependent induction H0. *)
+  remember (Fmap.update s1 x u) as s4 eqn:Hr.
+  induction H0.
+  - admit.
+  -
+    destr H0.
+    split. rewrite Hr. apply indom_union_l. apply indom_single.
+
+  admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
 Admitted.
 
-(* Lemma satisfies_monotonic : forall s1 s2 h1 h2 R f,
-  satisfies (Fmap.update s1 s2 h1 h2 R f ->
-  substore s1 s2.
-Abort. *)
+Lemma ent_weaken_env : forall s1 s2 h1 h2 R f x u,
+  (* ~ Fmap.indom s1 x ->
+  ~ Fmap.indom s2 x -> *)
+  satisfies s1 s2 h1 h2 R f ->
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
+Admitted.
 
-  (* entails_under2 s1 s2 (defun x u;; f1) f2. *)
+Lemma ent_strengthen_env : forall s1 s2 h1 h2 R f x u,
+  (* ~ Fmap.indom s1 x ->
+  ~ Fmap.indom s2 x -> *)
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
+  satisfies s1 s2 h1 h2 R f.
+Admitted.
+
+Definition can_weaken_env f := forall s1 s2 h1 h2 R x u,
+  satisfies s1 s2 h1 h2 R f ->
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
+
+Definition can_strengthen_env f := forall s1 s2 h1 h2 R x u,
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
+  satisfies s1 s2 h1 h2 R f.
 
 Lemma ent_defun_left : forall x u f1 f2 s1,
 (* s2, *)
   (* env_independent2 x f2 -> *)
   (* entails_under2 (Fmap.update s1 x u) s2 f1 f2 -> *)
   (* entails_under2 s1 s2 (defun x u;; f1) f2. *)
+  (* env_independent2 x f2 -> *)
+  can_weaken_env (defun x u;; f1) ->
+  can_strengthen_env f2 ->
+
   entails_under (Fmap.update s1 x u) f1 f2 ->
   entails_under s1 (defun x u;; f1) f2.
 Proof.
-  (* unfold entails_under2. intros. *)
+
   unfold entails_under. intros.
-  inverts H0 as H0; no_shift.
-  (* lets [? ?]: defun_inv H0. *)
-  inverts H0 as H0.
-  apply H in H8. clear H.
+  (* eapply ent_weaken_env in H0. *)
+  eapply H in H2.
 
-  lets: satisfies_retained H0 H8.
-  rewrite H in H8.
-  clear H.
-
-  assert (env_independent2 x f2) as ?. admit.
-  unfold env_independent2 in H.
-  rewrite <- H in H8.
+  rewrite ent_defun_idem in H2.
+  apply H1 in H2.
+  eapply ent_strengthen_env.
   eassumption.
-  assumption.
-  (* assumption. *)
-  admit.
-
-  (* pose proof (ent_env_weakening2).
-  unfold entails_under2 in H.
-  (* specialize (H H8). *)
-  specializes H H8. *)
-
-  (* admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit. *)
-
-  (* lets: . *)
-
-  (* pose proof env_independent2. *)
+  apply Fmap.indom_union_l. apply Fmap.indom_single.
+  resolve_fn_in_env.
 
   (* 
+  inverts H1 as H1; no_shift.
   inverts H1 as H1.
   apply H0 in H9. clear H0.
-  specializes H H1. *)
+
+  lets (?&?&?): satisfies_retained H1 H9.
+  rewrite H2 in H9.
+  clear H2.
+
+  assert (env_independent2 x f2) as ?. admit.
+  unfold env_independent2 in H2.
+  specializes H2 H1 H0. *)
+
 Qed.
 
-Lemma ent_defun_left2 : forall x u f1 f2 s1,
+(* Lemma ent_defun_left2 : forall x u f1 f2 s1,
   env_independent2 x f2 ->
   entails_under (Fmap.update s1 x u) f1 f2 ->
   entails_under s1 (defun x u;; f1) f2.
@@ -1703,7 +1753,7 @@ Proof.
   inverts H1 as H1.
   apply H0 in H9. clear H0.
   specializes H H1.
-Qed.
+Qed. *)
 
 (* Lemma env_independent_ens : forall x Q,
   env_independent1 x (ens Q).
