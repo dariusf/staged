@@ -1370,9 +1370,9 @@ Proof.
 Qed.
 
 (* Check Fmap.update. *)
-Definition env_independent1 k f := forall u s1 s2 h1 h2 R,
+(* Definition env_independent1 k f := forall u s1 s2 h1 h2 R,
   satisfies s1 s2 h1 h2 R f ->
-    satisfies (Fmap.update s1 k u) (Fmap.update s2 k u) h1 h2 R f.
+    satisfies (Fmap.update s1 k u) (Fmap.update s2 k u) h1 h2 R f. *)
 
 (* Lemma independent_weaken : forall f x u,
   env_independent1 x f ->
@@ -1404,7 +1404,7 @@ Proof.
   splits*. *)
 Qed. *)
 
-Lemma independent_ens1 : forall Q k,
+(* Lemma independent_ens1 : forall Q k,
   env_independent1 k (ens Q).
 Proof.
   unfold env_independent1.
@@ -1413,7 +1413,7 @@ Proof.
   apply s_ens.
   exists v h3.
   splits*.
-Qed.
+Qed. *)
 
 
 Definition env_invariant x f := forall u s1 s2 h1 h2 R,
