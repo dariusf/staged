@@ -86,6 +86,7 @@ clear H.
 Check norm_reassoc.
   rewrite norm_reassoc.
   rewrite <- norm_seq_assoc.
+  (* cannot rewrite on the right of a seq, so need to untangle the discard first *)
 
   (* apply s_discard. *)
 
