@@ -89,7 +89,7 @@ Proof.
   { auto. }
 Qed.
 
-Lemma update_noop : forall A B {IB:Inhab B} s (x:A) (v:B),
+Lemma update_idem : forall A B {IB:Inhab B} s (x:A) (v:B),
   Fmap.indom s x ->
   Fmap.read s x = v ->
   Fmap.update s x v = s.
@@ -101,4 +101,31 @@ Proof.
     reflexivity.
     exfalso. apply H. reflexivity. }
   { reflexivity. }
+Qed.
+
+Lemma not_indom_union : forall A (B:Type) (s1 s2:fmap A B) (x:A),
+  ~ Fmap.indom s1 x ->
+  ~ Fmap.indom s2 x ->
+  ~ Fmap.indom (s1 \+ s2) x.
+Proof.
+  unfold indom, map_indom, union, map_union.
+  intros.
+  simpls.
+  rew_logic in *.
+  destruct (Fmap.fmap_data s1 x); auto.
+Qed.
+
+Lemma not_indom_update : forall A (B:Type) (s1 s2:fmap A B) (x x1:A) (v:B),
+  ~ Fmap.indom s1 x ->
+  x <> x1 ->
+  ~ Fmap.indom (Fmap.update s1 x1 v) x.
+Proof.
+  unfold update.
+  intros.
+  apply not_indom_union.
+  { unfold not. intros.
+    unfold indom, single, map_indom in *.
+    simpls *.
+    case_if. }
+  { assumption. }
 Qed.
