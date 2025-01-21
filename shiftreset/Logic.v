@@ -1314,7 +1314,7 @@ Proof.
   unfold entails.
   intros.
   inverts H1 as H1.
-  2: {
+  2: { (* handle shift. it may be possible to relax this *)
     apply s_req. intros.
     inverts H1 as H1.
     specializes H1 H2 H3 H4.
