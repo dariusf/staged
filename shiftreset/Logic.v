@@ -1307,6 +1307,31 @@ Proof.
 Qed.
 
 (** * Entailment, entailment sequent, normalization *)
+Lemma norm_reassoc : forall H f1 f2,
+  shift_free f1 ->
+  entails (req H f1;; f2) (req H (f1;; f2)).
+Proof.
+  unfold entails.
+  intros.
+  inverts H1 as H1.
+  2: {
+    apply s_req. intros.
+    inverts H1 as H1.
+    specializes H1 H2 H3 H4.
+    apply H0 in H1.
+    false.
+  }
+  destr H1.
+
+  (* find out about req *)
+  constructor. intros hp hr. intros.
+
+  (* prove the req *)
+  inverts H1 as H1.
+  specializes H1 hp hr H2 ___.
+  applys* s_seq h3 r1.
+Qed.
+
 Lemma norm_defun : forall x uf a r,
   entails (defun x uf;; unk x a r) (defun x uf;; uf a r).
 Proof.
