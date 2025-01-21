@@ -1650,7 +1650,7 @@ Proof.
   - admit.
 Abort. *)
 
-Lemma satisfies_retained : forall s1 s2 s3 h1 h2 R f x u,
+(* Lemma satisfies_retained : forall s1 s2 s3 h1 h2 R f x u,
   ~ Fmap.indom s1 x ->
   satisfies (Fmap.update s1 x u) s2 h1 h2 R f ->
   (* exists s3, *)
@@ -1680,13 +1680,35 @@ Proof.
   - admit.
   - admit.
   - admit.
-Admitted.
+Admitted. *)
 
 Lemma ent_weaken_env : forall s1 s2 h1 h2 R f x u,
   (* ~ Fmap.indom s1 x ->
   ~ Fmap.indom s2 x -> *)
   satisfies s1 s2 h1 h2 R f ->
   satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
+Proof.
+  introv H.
+  induction H.
+  - apply s_req. intros.
+    specializes H0 H1 H2 H3.
+  - destr H.
+    apply s_ens.
+    exs. splits*.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
 Admitted.
 
 Lemma ent_strengthen_env : forall s1 s2 h1 h2 R f x u,
@@ -1694,6 +1716,29 @@ Lemma ent_strengthen_env : forall s1 s2 h1 h2 R f x u,
   ~ Fmap.indom s2 x -> *)
   satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
   satisfies s1 s2 h1 h2 R f.
+Proof.
+  introv H.
+  induction H.
+  - apply s_req. intros.
+    specializes H0 H1 H2 H3.
+  - destr H.
+    admit.
+    (* apply s_ens. *)
+    (* exs. splits*. *)
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
 Admitted.
 
 Definition can_weaken_env f := forall s1 s2 h1 h2 R x u,

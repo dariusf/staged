@@ -46,6 +46,20 @@ Proof.
   rewrite red_extend.
   rewrite red_shift_elim.
 
+(* HANLDE THE DEFUN *)
+
+  apply ent_defun_left.
+  {
+  unfold can_weaken_env.
+  intros.
+  admit.
+  }
+  
+
+
+
+(* PREVIOUS ATTEMPT TRYING TO ADD DISCARD *)
+
   (* apply ent_discard_intro1.
   Check ent_discard_intro1. *)
 
