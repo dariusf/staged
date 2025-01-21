@@ -1471,6 +1471,109 @@ Proof.
   assumption.
 Qed.
 
+(* Lemma ent_seq_defun_discard1 : forall x uf f s,
+  shift_free f ->
+  env_invariant x f ->
+  ~ Fmap.indom s x ->
+  entails_under s (defun x uf;; f) f.
+Proof.
+  unfold entails_under. introv Hsf He Hid H. intros.
+  inverts H as H; no_shift.
+  inverts H as H.
+  (* inverts H7 as H7. *)
+
+  (* inverts H0 as H0. *)
+  unfold env_invariant in He.
+  specializes He Hid H7.
+  clear H7. *)
+
+Definition env_independent x f := forall u s1 s2 h1 h2 R,
+  ~ Fmap.indom s1 x ->
+  ~ Fmap.indom s2 x ->
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
+  satisfies s1 s2 h1 h2 R f.
+
+Definition env_independent1 x f := forall u s1 s2 h1 h2 R,
+  ~ Fmap.indom s1 x ->
+  satisfies s1 s2 h1 h2 R f <->
+  satisfies (Fmap.update s1 x u) s2 h1 h2 R f.
+
+Lemma ent_env_weakening : forall x u f1 f2 s,
+  ~ Fmap.indom s x ->
+  env_independent1 x f1 ->
+  env_independent1 x f2 ->
+  entails_under (Fmap.update s x u) f1 f2 ->
+  entails_under s f1 f2.
+Proof.
+  unfold entails_under, env_independent1. intros.
+  (* destruct H0. *)
+  (* unfold  *)
+  specializes H0 H.
+  apply H0 in H3.
+  specializes H2 H3.
+  specializes H1 H.
+  rewrite <- H1 in H2.
+  assumption.
+Qed.
+
+Definition env_independent2 x f := forall u s1 s2 h1 h2 R,
+  ~ Fmap.indom s1 x ->
+  ~ Fmap.indom s2 x ->
+  satisfies s1 s2 h1 h2 R f <->
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
+
+Definition entails_under2 s1 s2 f1 f2 :=
+  forall h1 h2 R,
+    satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
+
+Lemma ent_env_weakening2 : forall x u f1 f2 s1 s2,
+  ~ Fmap.indom s1 x ->
+  ~ Fmap.indom s2 x ->
+  env_independent2 x f1 ->
+  env_independent2 x f2 ->
+  entails_under2 (Fmap.update s1 x u) (Fmap.update s2 x u) f1 f2 ->
+  entails_under2 s1 s2 f1 f2.
+Proof.
+  unfold entails_under2. intros.
+  (* destruct H0. *)
+  (* unfold  *)
+  specializes H1 H H0.
+  apply H1 in H4.
+  specializes H3 H4.
+  specializes H2 H H0.
+Qed.
+
+Lemma ent_defun_noop : forall x u f s1,
+  Fmap.indom s1 x ->
+  Fmap.read s1 x = u ->
+  entails_under s1 (defun x u;; f) f.
+Proof.
+  unfold entails_under. intros.
+  inverts H1 as H1; no_shift.
+  inverts H1 as H1.
+  rewrites (>> update_noop var ufun s1 H H0) in H9.
+  assumption.
+Qed.
+
+(* Lemma env_independent_ens : forall x Q,
+  env_independent1 x (ens Q).
+Proof.
+  unfold env_independent1.
+  intros.
+  iff H1.
+  {
+    inverts H1 as H1. destr H1.
+    applys_eq s_ens.
+
+  } *)
+
+  (* destruct H0. *)
+  (* specializes H1 H. *)
+
+  (* specializes H0 H3. assumption. *)
+  (* specializes H2 H0. *)
+
+
 (* Definition env_independent k f := forall u s1 s2 h1 h2 R,
   ~ Fmap.indom s1 k ->
   ~ Fmap.indom s2 k ->
