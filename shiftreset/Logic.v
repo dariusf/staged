@@ -118,7 +118,8 @@ Inductive flow : Type :=
   | defun : var -> (val -> val -> flow) -> flow
 (** [defun x uf] is equivalent to [ens_ (x=(λ x r. uf x r))], where [x] can reside in the environment (which regular [ens_] cannot access).
   Should defun be scoped? We don't think so, because the resulting continuation is first-class and does not have a well-defined lifetime. *)
-  | discard : flow -> var -> flow.
+  | discard : flow -> var -> flow
+  .
 
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
 
@@ -263,12 +264,13 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs (fk;; f2) r1)) (f1;; f2)
     (** This rule extends the continuation in a [shft] on the left side of a [seq]. Notably, it moves whatever comes next #<i>under the reset</i>#, preserving shift-freedom by constructon. *)
 
-  | s_rs_sh s1 s2 f h1 h2 r rf s3 h3 fb fk k v1
-    (H: satisfies s1 s3 h1 h3 (shft k fb v1 (fun r2 => rs fk r2)) f)
-    (H1: satisfies (* TODO k is fresh/not already in s3? *)
+  | s_rs_sh s1 s2 f h1 h2 r rf s3 h3 fb fk k v1 :
+    satisfies s1 s3 h1 h3 (shft k fb v1 (fun r2 => rs fk r2)) f ->
+    ~ Fmap.indom s3 k ->
+    satisfies
         (Fmap.update s3 k (fun a r =>
           rs (ens_ \[v1 = a];; fk) r)) s2
-      h3 h2 rf (rs fb r)) :
+      h3 h2 rf (rs fb r) ->
     satisfies s1 s2 h1 h2 rf (rs f r)
 
     (** This rule applies when the body of a [rs] #<i>evaluates to</i># a [shft] (not when a [sh] is directly inside a [rs]; that happens in reduction). The continuation carried by the [shft] is known, so it is bound in (the environment of) the [sh]ift body before that is run. *)
@@ -280,14 +282,15 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     satisfies s1 s2 h1 h2 (norm v) (rs f v)
 
   | s_defun s1 s2 h1 x uf :
-    (* ~ Fmap.indom s1 x -> *)
+    ~ Fmap.indom s1 x ->
     s2 = Fmap.update s1 x uf ->
     satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
 
   | s_discard s1 s2 h x R f :
     satisfies s1 s2 h h R f ->
     s2 = Fmap.remove s1 x ->
-    satisfies s1 s2 h h R (discard f x).
+    satisfies s1 s2 h h R (discard f x)
+  .
 
 Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f" :=
   (satisfies s1 s2 h1 h2 r f) (at level 30, only printing).
@@ -526,7 +529,8 @@ Section Propriety.
     inverts H1 as H1; destr H1.
     { eapply s_rs_sh.
       apply H. exact H1.
-      apply H8. }
+      assumption.
+      apply H9. }
     { apply s_rs_val. eauto. }
   Qed.
 
@@ -538,10 +542,10 @@ Section Propriety.
     unfold bientails, Proper, respectful, impl.
     split; subst; intros.
     { inverts H0 as H0.
-      { eapply s_rs_sh. apply H. exact H0. exact H8. }
+      { eapply s_rs_sh. apply H. exact H0. assumption. exact H9. }
       { apply H in H0. apply s_rs_val. assumption. } }
     { inverts H0 as H0.
-      { eapply s_rs_sh. apply H. exact H0. exact H8. }
+      { eapply s_rs_sh. apply H. exact H0. assumption. exact H9. }
       { apply H in H0. apply s_rs_val. assumption. } }
   Qed.
 
@@ -554,7 +558,8 @@ Section Propriety.
     inverts H1 as H1; destr H1.
     { eapply s_rs_sh.
       apply H. exact H1.
-      apply H8. }
+      assumption.
+      apply H9. }
     { apply s_rs_val. eauto. }
   Qed.
 
@@ -826,6 +831,7 @@ Proof.
   (* the ret of the shift can be anything because the cont is never taken *)
   eapply s_rs_sh.
   { constructor. }
+  { apply not_indom_empty. }
   { apply s_rs_val.
     (* produced by eapply, never instantiated because continuation is never taken *)
     apply ens_pure_intro.
@@ -852,6 +858,7 @@ eapply s_rs_sh.
   (* show that the body produces a shift *)
   apply s_seq_sh.
   apply s_sh. }
+{ apply not_indom_empty. }
 { apply s_rs_val. (* handle reset *)
 
   eapply s_unk. resolve_fn_in_env. (* reset body *)
@@ -888,10 +895,15 @@ Proof.
     eapply s_rs_sh.
     (* handle the shift *)
     apply s_sh.
+    apply not_indom_empty.
     (* show how the shift body goes through the reset to produce the function *)
     { apply s_rs_val.
       eapply s_seq.
-      apply s_defun. reflexivity.
+      apply s_defun.
+      { apply not_indom_update.
+        apply not_indom_empty.
+        symmetry. assumption. }
+      reflexivity.
       apply ens_pure_intro. reflexivity. }
   }
   { (* show that applying the function returns 4 *)
@@ -943,9 +955,14 @@ Proof.
       apply s_seq_sh. (* this moves the ens into the continuation *)
 
       apply s_sh. }
+    { apply not_indom_empty. }
     { apply s_rs_val.
       eapply s_seq.
-      apply s_defun. reflexivity.
+      apply s_defun.
+      { apply not_indom_update.
+        apply not_indom_empty.
+        symmetry. assumption. }
+      reflexivity.
       apply ens_pure_intro. reflexivity. }
   }
   { (* app *)
@@ -1218,8 +1235,9 @@ Proof.
       eapply s_seq.
       exact H.
       eapply s_rs_sh.
-      exact H8.
-      exact H7. }
+      exact H9.
+      assumption.
+      exact H8. }
     { (* f1 cannot produce a shift as it is shift-free *)
       apply Hsf in H.
       false. } }
@@ -1283,12 +1301,13 @@ Proof.
     (* we know that the shs is what produces a shift *)
     (* f2 goes in the continuation and under a reset *)
     (* now start reasoning backwards *)
-    inverts H8 as H8.
+    inverts H9 as H9.
     cont_eq.
     eapply s_rs_sh.
     intro_shs. apply sf_rs.
     apply s_shc.
-    applys_eq H7.
+    assumption.
+    assumption.
   }
 Qed.
 
@@ -1300,11 +1319,13 @@ Proof.
   unfold entails. intros.
   inverts H as H. 2: { inverts H as H. destr H. vacuous. }
   elim_shs H. clear H0.
-  inverts H8 as H8.
+  inverts H9 as H9.
   cont_eq.
   eapply s_seq.
-  apply s_defun. reflexivity.
-  applys_eq H7.
+  apply s_defun.
+  assumption.
+  reflexivity.
+  applys_eq H8.
 Qed.
 
 (** * Entailment, entailment sequent, normalization *)
@@ -1551,7 +1572,7 @@ Proof.
   unfold entails_under. intros.
   inverts H1 as H1; no_shift.
   inverts H1 as H1.
-  rewrites (>> update_noop var ufun s1 H H0) in H9.
+  rewrites (>> update_idem var ufun s1 H H0) in H9.
   assumption.
 Qed.
 

@@ -103,6 +103,16 @@ Proof.
   { reflexivity. }
 Qed.
 
+Lemma not_indom_empty : forall A B (x:A),
+  ~ Fmap.indom (@Fmap.empty A B) x.
+Proof.
+  unfold indom, map_indom, empty.
+  intros.
+  simpls.
+  rew_logic.
+  reflexivity.
+Qed.
+
 Lemma not_indom_union : forall A (B:Type) (s1 s2:fmap A B) (x:A),
   ~ Fmap.indom s1 x ->
   ~ Fmap.indom s2 x ->
@@ -115,7 +125,7 @@ Proof.
   destruct (Fmap.fmap_data s1 x); auto.
 Qed.
 
-Lemma not_indom_update : forall A (B:Type) (s1 s2:fmap A B) (x x1:A) (v:B),
+Lemma not_indom_update : forall A (B:Type) (s1:fmap A B) (x x1:A) (v:B),
   ~ Fmap.indom s1 x ->
   x <> x1 ->
   ~ Fmap.indom (Fmap.update s1 x1 v) x.
