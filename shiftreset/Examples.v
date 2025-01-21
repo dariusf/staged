@@ -45,6 +45,7 @@ Proof.
   rewrite red_init.
   rewrite red_extend.
   rewrite red_shift_elim.
+  2: { shiftfree. }
 
 (* HANLDE THE DEFUN *)
 
@@ -54,9 +55,30 @@ Proof.
   intros.
   admit.
   }
+  {
+  unfold can_strengthen_env.
+  intros.
+  apply s_req. intros.
+  inverts H as H. specializes H H0 H1 H2.
+  lets: ens_inv H.
+  (* Search (union _ _ = union _ _) in Fmap. *)
+  unfold Fmap.update in H3.
+  assert (Fmap.disjoint s1 (Fmap.single x1 u)) as ?. admit.
+  assert (Fmap.disjoint s2 (Fmap.single x1 u)) as ?. admit.
+  lets: union_eq_inv_of_disjoint.
+  setoid_rewrite union_comm_of_disjoint in H3.
+  specializes H6 H4 H5 H3.
+  subst.
+  (* clear H3 H4 H5. *)
+
+  inverts H as H. destr H.
+  apply s_ens.
+  exs. splits*.
+
+  fmap_disjoint.
+  fmap_disjoint.
+  }
   
-
-
 
 (* PREVIOUS ATTEMPT TRYING TO ADD DISCARD *)
 
