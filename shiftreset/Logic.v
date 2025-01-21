@@ -1487,7 +1487,7 @@ Proof.
   specializes He Hid H7.
   clear H7. *)
 
-Definition env_independent x f := forall u s1 s2 h1 h2 R,
+(* Definition env_independent x f := forall u s1 s2 h1 h2 R,
   ~ Fmap.indom s1 x ->
   ~ Fmap.indom s2 x ->
   satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
@@ -1514,7 +1514,7 @@ Proof.
   specializes H1 H.
   rewrite <- H1 in H2.
   assumption.
-Qed.
+Qed. *)
 
 Definition env_independent2 x f := forall u s1 s2 h1 h2 R,
   ~ Fmap.indom s1 x ->
