@@ -76,6 +76,8 @@ with expr : Type :=
 
 
 
+Definition trace_default := (kleene (theta_singleton any)). 
+Definition fc_default := fc_singleton(kleene (theta_singleton any)). 
 
 
 
@@ -282,8 +284,57 @@ Proof.
   exact H. exact H0.
 Qed.     
 
+
 Axiom normal_emp : forall t, seq emp t = t. 
+Axiom normal_bot : forall t, seq bot t = bot. 
 Axiom normal_kleene : forall t, kleene t = disj emp (seq t (kleene t)).
+Axiom disj_not_bot: forall t1 t2, 
+  disj t1 t2 <> bot -> 
+  (t1 <> bot /\ t1=bot) \/ 
+  (t2 <> bot /\ t2=bot) \/ 
+  (t1 <> bot /\ t2 <> bot) .
+
+Axiom seq_not_bot: forall t1 t2, 
+  seq t1 t2 <> bot -> t1 <> bot /\ t2 <> bot.
+
+Axiom seq_not_bot_rev: forall t1 t2, 
+  t1 <> bot /\ t2 <> bot -> seq t1 t2 <> bot. 
+
+Axiom disj_not_bot_rev: forall t1 t2, 
+  t1 <> bot /\ t2 <> bot -> disj t1 t2 <> bot. 
+
+Axiom theta_singleton_is_not_bot: forall ev, 
+  theta_singleton ev <> bot. 
+
+Axiom kleene_not_bot : forall t rho, 
+  t <> bot -> 
+  trace_model rho (kleene t) -> rho <> nil.
+Axiom case_spliting_helper: forall (ev1:event) (ev2:event), 
+  ev1 = ev2 \/ ev1 <> ev2. 
+
+Axiom futureCond_distr : forall f1 f2 f3, 
+  fc_conj (fc_conj f1 f2) f3 = 
+  fc_conj f2 (fc_conj f1 f3).
+  
+Axiom futureCond_distr1 : forall f1 f2 f3, 
+  fc_conj (fc_conj f1 f2) f3 = 
+  fc_conj f1 (fc_conj f2 f3).
+
+Axiom futureCond_distr2 : forall f1 f2 f3, 
+  fc_conj (fc_conj f1 f2) f3 = 
+  fc_conj (fc_conj f1 f3) (fc_conj f2 f3).
+
+Axiom futureCond_excahnge : forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1. 
+
+Axiom f_conj_kleene_any_is_f : forall f, fc_conj (fc_default) f = f. 
+
+Axiom fc_comm: forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1. 
+Axiom fc_assio: forall f1 f2 f3, fc_conj f1 (fc_conj f2 f3) = fc_conj (fc_conj f1 f2) f3. 
+
+
+
+
+
 
 
 Lemma nullable_rev : forall t, 
@@ -302,24 +353,7 @@ Proof.
   - apply tm_kleene_emp.  
 Qed.    
 
-Axiom disj_not_bot: forall t1 t2, 
-  disj t1 t2 <> bot -> 
-  (t1 <> bot /\ t1=bot) \/ 
-  (t2 <> bot /\ t2=bot) \/ 
-  (t1 <> bot /\ t2 <> bot) .
 
-Axiom seq_not_bot: forall t1 t2, 
-  seq t1 t2 <> bot -> t1 <> bot /\ t2 <> bot.
-
-Axiom seq_not_bot_rev: forall t1 t2, 
-  t1 <> bot /\ t2 <> bot -> seq t1 t2 <> bot. 
-
-Axiom disj_not_bot_rev: forall t1 t2, 
-  t1 <> bot /\ t2 <> bot -> disj t1 t2 <> bot. 
-
-
-Axiom theta_singleton_is_not_bot: forall ev, 
-  theta_singleton ev <> bot. 
 
 
 Lemma theta_der_not_bot: forall t ev t_der, 
@@ -384,9 +418,6 @@ Qed.
 
 
 
-Axiom kleene_not_bot : forall t rho, 
-  t <> bot -> 
-  trace_model rho (kleene t) -> rho <> nil.
 
 Lemma derivative_model : forall t1 ev0 deriv1 rho0, 
   theta_der t1 ev0 deriv1 -> 
@@ -647,10 +678,21 @@ Proof.
   - 
   constructor.
   - constructor.  
-Qed.     
+Qed. 
 
-Axiom case_spliting_helper: forall (ev1:event) (ev2:event), 
-  ev1 = ev2 \/ ev1 <> ev2. 
+(* by definition *)
+Axiom inclusion_rev : forall t1 t2 ev1 deriv0 deriv, 
+  inclusion t1 t2 ->
+  theta_der t1 ev1 deriv0 -> 
+  theta_der t1 ev1 deriv0 -> 
+  inclusion deriv0 deriv.   
+
+Axiom inclusion_exact: forall t, inclusion t t.
+
+Axiom anything_entail_default : forall t, inclusion t ((trace_default)).
+
+Axiom inclusion_bot: forall t, inclusion t bot -> t = bot . 
+
 
 Lemma all_trace_have_derivative: forall t ev , 
   exists deriv, theta_der t ev deriv. 
@@ -690,12 +732,6 @@ Proof.
   exact H.
 Qed.         
 
-(* by definition *)
-Axiom inclusion_rev : forall t1 t2 ev1 deriv0 deriv, 
-  inclusion t1 t2 ->
-  theta_der t1 ev1 deriv0 -> 
-  theta_der t1 ev1 deriv0 -> 
-  inclusion deriv0 deriv.   
 
 
 Lemma inclusion_theta_der_indicate : forall t1 t2 ev0 deriv1, 
@@ -882,6 +918,12 @@ Inductive futureCondEntail : futureCond -> futureCond -> Prop :=
     futureCondEntail f1 f3
  .
 
+Axiom futureCondEntail_exact : forall f, futureCondEntail f f .
+Axiom futureCondEntailTrueISTrue: forall f, 
+  futureCondEntail (fc_singleton (trace_default)) f -> f = (fc_singleton (trace_default)).
+Axiom futureCondEntail_indicate: forall f1 f2, futureCondEntail f1 f2 -> 
+  exists f3, f1 = fc_conj f3 f2.  
+
 
 
 Theorem futureCond_sound : forall f1 f2 rho, 
@@ -929,17 +971,6 @@ Qed.
 
 
 
-Axiom futureCond_distr : forall f1 f2 f3, 
-  fc_conj (fc_conj f1 f2) f3 = 
-  fc_conj f2 (fc_conj f1 f3).
-  
-Axiom futureCond_distr1 : forall f1 f2 f3, 
-  fc_conj (fc_conj f1 f2) f3 = 
-  fc_conj f1 (fc_conj f2 f3).
-
-Axiom futureCond_distr2 : forall f1 f2 f3, 
-  fc_conj (fc_conj f1 f2) f3 = 
-  fc_conj (fc_conj f1 f3) (fc_conj f2 f3).
 
 
 Theorem futureCond_distribution : forall f1 f2 f3 f4, 
@@ -989,10 +1020,6 @@ Proof.
   exact H1.    
 Qed.
 
-Axiom futureCond_excahnge : forall f1 f2, 
-  fc_conj f1 f2 = fc_conj f2 f1. 
-
-
 Theorem strong_LHS_futureEnatil : forall f1 f2 f3, 
   futureCondEntail f1 f2 -> 
   futureCondEntail (fc_conj f1 f3) f2.
@@ -1002,23 +1029,8 @@ Proof.
   exact H.
 Qed.
 
-Definition trace_default := (kleene (theta_singleton any)). 
-
-Definition fc_default := fc_singleton(kleene (theta_singleton any)). 
 
 
-Axiom f_conj_kleene_any_is_f : forall f, 
-   fc_conj (fc_default) f = f. 
-
-Axiom inclusion_exact: forall t, 
-  inclusion t t.
-
-
-Axiom futureCondEntail_exact : forall f,  
-  futureCondEntail f f .
-
-Axiom anything_entail_default : forall t,  
-  inclusion t ((trace_default)).
     
 Lemma anything_future_entail_default : forall f,  
   futureCondEntail f (fc_default).
@@ -1140,25 +1152,24 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
     futureSubtraction f1 t' f2
   . 
 
+Axiom subtractFromTrueISTrue: forall ev f, 
+  futureSubtraction (fc_singleton (trace_default))
+(theta_singleton ev) f -> f = (fc_singleton (trace_default)).
+
+Axiom subtract_linear_FromTrueISTrue: forall ev f, 
+  futureSubtraction_linear (fc_singleton (trace_default))
+(ev::nil) f -> f = (fc_singleton (trace_default)).
+
+  
+Axiom all_future_condition_has_futureSubtraction_linear: forall f rho, 
+  exists f', futureSubtraction_linear f rho f'. 
+
 
 Fixpoint concate_trace_fc (t:theta) (f:futureCond)  : futureCond :=
   match f with 
   | fc_singleton t1 => fc_singleton (seq t t1)
   | fc_conj f1 f2 => fc_conj (concate_trace_fc t f1) (concate_trace_fc t f2)
   end. 
-
-Axiom fc_model_theta_der_indicate : forall rho0 t ev0 t_der res, 
-  fc_model rho0 (concate_trace_fc t res) -> 
-  theta_der t ev0 t_der -> 
-  exists rho, 
-  fc_model rho (concate_trace_fc t_der res) /\ rho0 = ev0 :: rho. 
-(* SYH TBD *)
-
-Axiom fc_der_fc_model_indicate: forall f ev0 f_der rho1, 
-  fc_der f ev0 f_der -> 
-  fc_model rho1 f_der -> 
-  fc_model (ev0::rho1) f. 
-(* SYH TBD *)
 
 Lemma futureCondEntail_fc_model_indicate : forall f2 f1 t rho0, 
   futureCondEntail f2 f1 -> 
@@ -1213,93 +1224,6 @@ Proof.
   exact IHfutureCondEntail2.
 Qed.
 
-Axiom concate_trace_fc_bot : forall f,  
-  concate_trace_fc bot f = fc_singleton bot. 
-
-Axiom fc_model_trans_concate_trace_fc: forall rho0 t t' f2, 
-  fc_model rho0 (concate_trace_fc t' f2) -> 
-  inclusion t' t ->
-  fc_model rho0 (concate_trace_fc t f2).
- (* SYH TBD *)
-   
-
-Theorem futureSubtraction_sound : forall f t f_der rho, 
-  futureSubtraction f t f_der -> 
-  fc_model rho (concate_trace_fc t f_der) -> 
-  fc_model rho f. 
-Proof. 
-  intros. 
-  gen rho0. 
-  induction H. 
-  - 
-  intros. 
-  pose concate_trace_fc_bot. 
-  specialize (e f2).
-  rewrite e in H0.
-  invert H0.
-  intros.  subst.
-  invert H2.  
-  - 
-  intros. 
-  unfold concate_trace_fc in H1. 
-  fold concate_trace_fc in H1. 
-  invert H1. 
-  intros. subst. 
-  specialize (IHfutureSubtraction1 rho0 H5).
-  specialize (IHfutureSubtraction2 rho0 H6). 
-  constructor. 
-  exact IHfutureSubtraction1. 
-  exact IHfutureSubtraction2. 
-  -
-  intros. 
-  unfold concate_trace_fc in H0. 
-  fold concate_trace_fc in H0. 
-  invert H0. 
-  intros. subst. 
-  Search (nil ++ _). 
-  pose proof List.app_nil_l. 
-  specialize (H event rho0). 
-  rewrite  <-  H in H2.  
-  invert H2. 
-  intros. subst. 
-  invert H4. 
-  intros. subst. 
-  constructor. 
-  Search (nil ++ _). 
-  rewrite List.app_nil_l in H3.  
-  rewrite List.app_nil_l in H3.  subst. 
-  exact H5. 
-  -
-  intros.  
-  pose fc_model_theta_der_indicate as H13. 
-  specialize (H13 rho0 t ev0 t_der res H3 H1). 
-  destr H13. 
-  specialize (IHfutureSubtraction rho1 H5).  
-  rewrite H6. 
-  pose proof fc_der_fc_model_indicate as H4. 
-  specialize (H4 f ev0 f_der rho1 H IHfutureSubtraction).  
-  exact H4. 
-  -
-  intros. 
-  pose proof futureCondEntail_fc_model_indicate. 
-  specialize (H2 f2 f1 t rho0 H0 H1). 
-  specialize (IHfutureSubtraction rho0 H2). 
-  exact IHfutureSubtraction. 
-   
-  - 
-  intros. 
-  specialize (IHfutureSubtraction rho0 H1). 
-  pose proof futureCond_sound. 
-  specialize (H2 f1 f3 rho0 H0 IHfutureSubtraction).  
-  exact H2.
-  -
-  intros.
-  pose proof fc_model_trans_concate_trace_fc.
-  specialize (H2 rho0 t t' f2 H1 H0). 
-  specialize (IHfutureSubtraction rho0 H2). exact IHfutureSubtraction.
-Qed. 
-
-
 
 Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCond -> val -> Prop :=
 
@@ -1346,10 +1270,6 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
 
 . 
 
-Axiom eval_strenthening_post_future: forall h1 rho1 f1 e1 h2 rho2 f2 v f3, 
-    bigstep h1 rho1 f1 e1 h2 rho2 f2 v -> 
-    futureCondEntail f3 f2 ->
-    bigstep h1 rho1 f1 e1 h2 rho2 f3 v. 
 
 
 Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> theta -> futureCond -> Prop := 
@@ -1398,136 +1318,8 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
 
 .
 
-Axiom subtractFromTrueISTrue: forall ev f, 
-  futureSubtraction (fc_singleton (trace_default))
-(theta_singleton ev) f -> f = (fc_singleton (trace_default)).
-
-Axiom subtract_linear_FromTrueISTrue: forall ev f, 
-  futureSubtraction_linear (fc_singleton (trace_default))
-(ev::nil) f -> f = (fc_singleton (trace_default)).
-
-   
-Axiom futureCondEntailTrueISTrue: forall f, 
-  futureCondEntail (fc_singleton (trace_default)) f -> f = (fc_singleton (trace_default)).
-
-Axiom all_future_condition_has_futureSubtraction_linear: forall f rho, 
-  exists f', futureSubtraction_linear f rho f'. 
-
-(* SYH TBD *)
-
-Axiom futureSubtraction_linear_futureCondEntail_indicate: forall f t  f' f3 f'0, 
-  futureSubtraction_linear f t  f' -> 
-  futureCondEntail f f3 -> 
-  futureSubtraction_linear f3 t f'0 -> 
-  futureCondEntail f' f'0.
-(* SYH TBD *)
 
 
-Lemma weaken_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
-  bigstep h1 r1 f1 e h2 r2 f2 v -> 
-  futureCondEntail f1 f3 -> 
-  exists f4,  
-  bigstep h1 r1 f3 e h2 r2 f4 v /\ 
-  futureCondEntail f2 f4.
-Proof. 
-  intros. 
-  gen f3. 
-  induction H.
-  - 
-  intros. 
-  specialize (IHbigstep1 f0 H1). 
-  destr IHbigstep1.
-  specialize (IHbigstep2 f4 H4). 
-  destr IHbigstep2. 
-  exists f5.
-  split. 
-  pose proof eval_plet. 
-  eapply H2. exact H3. 
-  exact H5. exact H6.
-  -
-  intros.
-  exists f3.
-  split. constructor. 
-  exact H0.
-  -
-  intros. 
-  specialize (IHbigstep f3 H0).
-  destr  IHbigstep.
-  exists f4.
-  split.
-  constructor.
-  exact H2. exact H3.
-  -
-  intros.
-  specialize(IHbigstep f3 H0 ). 
-  destr IHbigstep.
-  exists f4.
-  split.
-  constructor.
-  exact H2. exact H3.
-  -
-  intros.
-  exists (fc_conj f3 f_assume).
-  split.
-  constructor.
-  apply futureCondEntail_conj_RHS.
-  apply futureCondEntail_conj_LHS_1.
-  exact H0.
-  apply futureCondEntail_conj_LHS_2.
-  exact (futureCondEntail_exact f_assume).
-  -
-  intros. 
-  pose all_future_condition_has_futureSubtraction_linear.
-  specialize (e f3 (ev0 :: nil)).
-  destr e.  
-  exists f'0.
-  split.
-  constructor.
-  exact H1. 
-  pose proof futureSubtraction_linear_futureCondEntail_indicate.
-  specialize (H2 f (ev0 :: nil) f' f3 f'0 H H0 H1). 
-  exact H2. 
-  -
-  intros. 
-  exists f3.
-  split.
-  constructor.
-  exact H. exact H0.     
-  -
-  intros.   
-  exists f3.
-  split.
-  constructor.
-  exact H. exact H0.
-  -
-  intros.   
-  specialize (IHbigstep f3 H0 ).
-  destr IHbigstep.  
-  exists f4. 
-  split.
-  constructor. 
-  exact H2.  exact H3.
-  -
-  intros.   
-  exists f3.
-  split.
-  constructor.
-  exact H. exact H0.
-    
-Qed. 
-   
-Axiom futureCondEntail_indicate: forall f1 f2, 
-  futureCondEntail f1 f2 -> 
-  exists f3, 
-  f1 = fc_conj f3 f2. 
-(* SYH TBD *)
-
-
-Axiom fc_comm: forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1. 
-Axiom fc_assio: forall f1 f2 f3, fc_conj f1 (fc_conj f2 f3) = fc_conj (fc_conj f1 f2) f3. 
-
-Axiom any_fc_has_subtraction: forall f t, 
-  exists f', futureSubtraction f t f'. 
 
 Lemma strenthen_futureCond_big_step : forall h1 r1 f1 e h2 r2 f2 v f3, 
   bigstep h1 r1 f1 e h2 r2 f2 v -> 
@@ -1634,8 +1426,6 @@ Proof.
 
 Qed. 
 
-Axiom inclusion_bot: forall t, 
-  inclusion t bot -> t = bot . 
 
 
 Lemma forward_only_appending_trace: forall P t1 f1 e Q t2 f3, 
@@ -1675,25 +1465,6 @@ Proof.
   -
   exists t. reflexivity.
 Qed. 
-
-Axiom futureSubtraction_imm: forall f4 t2 t0 f1, 
-  futureSubtraction f4 (seq t2 t0) f1 -> 
-  futureSubtraction f4 t2 (concate_trace_fc t0 f1). 
-(* SYH TBD *)
-
-Axiom futureSubtraction_emp_strenthing_res: forall f0 f1, 
-  futureSubtraction f0 emp f1 -> 
-  futureCondEntail f1 f0. 
-
-Axiom futureSubtraction_stretening_futureSubtraction_linear: 
-forall f1 f2 ev f3, 
-  futureSubtraction f1 (theta_singleton ev) f2 -> 
-  futureSubtraction_linear f1 (ev::nil) f3 -> 
-  futureCondEntail f2 f3. 
-(* SYH TBD *)
-
-
-
 
 
 Axiom future_frame_big_step_aux_aux : forall h1 rho1 f1 e h2 rho2 f2 v, 
