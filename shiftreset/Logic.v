@@ -1556,12 +1556,41 @@ Lemma ent_env_weakening2 : forall x u f1 f2 s1 s2,
   entails_under2 s1 s2 f1 f2.
 Proof.
   unfold entails_under2. intros.
-  (* destruct H0. *)
-  (* unfold  *)
   specializes H1 H H0.
   apply H1 in H4.
   specializes H3 H4.
   specializes H2 H H0.
+Qed.
+
+Lemma ens_inv : forall s1 s2 h1 h2 R Q,
+  satisfies s1 s2 h1 h2 R (ens Q) ->
+  s1 = s2.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  reflexivity.
+Qed.
+
+Lemma env_independent_ens : forall x Q,
+  env_independent2 x (ens Q).
+Proof.
+  unfold env_independent2. intros.
+  iff H1.
+  { inverts H1 as H1. destr H1.
+    apply s_ens. exs. splits*. }
+  { lets: ens_inv H1.
+    unfold Fmap.update in H2.
+    lets: Fmap.disjoint_single_of_not_indom H.
+    lets: Fmap.disjoint_single_of_not_indom H0.
+    rewrites (>> Fmap.union_comm_of_disjoint s1) in H2. apply H3.
+    rewrites (>> Fmap.union_comm_of_disjoint s2) in H2. apply H4.
+    rewrite disjoint_comm in H3.
+    rewrite disjoint_comm in H4.
+    lets: union_eq_inv_of_disjoint H3 H4 H2.
+    clear H2 H3 H4.
+    subst.
+    inverts H1 as H1. destr H1.
+    apply s_ens. exs. splits*. }
 Qed.
 
 Lemma ent_defun_noop : forall x u f s1,
@@ -1601,15 +1630,6 @@ Proof.
   satisfies (Fmap.update s1 k u) (Fmap.update s2 k u) h1 h2 R f ->
   satisfies s1 s2 h1 h2 R f.
 *)
-
-Lemma ens_inv : forall s1 s2 h1 h2 R Q,
-  satisfies s1 s2 h1 h2 R (ens Q) ->
-  s1 = s2.
-Proof.
-  intros.
-  inverts H as H. destr H.
-  reflexivity.
-Qed.
 
 (* Lemma independent_weaken : forall f x u,
   env_independent x f ->
