@@ -15,8 +15,8 @@ Module Toss.
 Definition s : ufun := fun _ r =>
   (* ∀ k, *)
   sh "k" (
-    ∀ x a r1, req (x~~>vint a) (ens_ (x~~>vint (a+1));; unk "k" (vbool true) (vint r1));;
-    ∀ b r2, req (x~~>vint b) (ens_ (x~~>vint (b+1));; unk "k" (vbool false) (vint r2));;
+    ∀ x a, ∃ r1, req (x~~>vint a) (ens_ (x~~>vint (a+1));; unk "k" (vbool true) (vint r1));;
+    ∀ b, ∃ r2, req (x~~>vint b) (ens_ (x~~>vint (b+1));; unk "k" (vbool false) (vint r2));;
     ens (fun r3 => \[r3 = (vint (r1 + r2))])) r.
 
 Definition s_env := Fmap.update empty_env "s" s.
@@ -49,10 +49,68 @@ Proof.
   (* apply ent_discard_intro1.
   Check ent_discard_intro1. *)
 
-simpl.
-
-Check ent_seq_defun.
+  (* Check ent_seq_defun.
   Fail apply ent_seq_defun.
+  Check ent_seq_defun_discard. *)
+
+pose proof ent_seq_defun_discard.
+specializes H
+(req (x0 ~~> vint a) (ens (fun r0 => x0 ~~> vint (a + 2) \* \[r0 = vint 1]))).
+  rewrite <- H.
+  (* 2: { 
+    (* Search shift_free. *)
+    Check sf_req.
+    apply sf_req.
+
+  } *)
+clear H.
+
+  apply ent_seq_defun.
+  Search (rs _ _).
+  Search (rs (fall _) _).
+
+  (* funfold1 "k". unfold k. *)
+  Check ent_unk.
+  
+
+  (* funfold1 "k". *)
+  (* unfold k. *)
+
+  (* simpl. *)
+  (* [ | unfold env; resolve_fn_in_env ] *)
+
+  rewrite norm_rs_all. finst x0.
+  rewrite norm_rs_all. finst a.
+  rewrite norm_rs_ex. fintro r1.
+
+Check norm_reassoc.
+  rewrite norm_reassoc.
+
+  pose proof (
+    @ent_unk
+(    Fmap.update s_env "k"
+    (fun a0 r0 : val =>
+    rs
+    (ens_ \[vbool x = a0];;
+    (ens (fun r2 => \[r2 = vbool x]));;
+    (ens (fun r2 => \[x = true /\ r2 = vint 1 \/ x = false /\ r2 = vint 0]))) r0)
+    )
+    
+    "k" (vbool true) (vint r1)).
+
+  rewrite H.
+  
+
+
+
+  (* funfold1 "k". *)
+
+(* finst x0. *)
+  (* fintro x0. fintro a.
+  funfold1 "s". unfold s. *)
+
+  (* apply ent_discard. *)
+
   admit.
 Abort.
 

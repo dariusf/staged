@@ -416,6 +416,16 @@ Section Propriety.
   Qed.
 
   #[global]
+  Instance Proper_entails_under_flip : forall env, Proper
+    (entails_under env ====> flip (entails_under env) ====> flip impl)
+    (entails_under env).
+  Proof.
+    unfold entails_under, Proper, respectful, impl, flip.
+    intros.
+    auto.
+  Qed.
+
+  #[global]
   Instance Proper_bientails : Proper
     (bientails ====> bientails ====> iff)
     entails.
