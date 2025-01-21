@@ -85,6 +85,9 @@ clear H.
 
 Check norm_reassoc.
   rewrite norm_reassoc.
+  rewrite <- norm_seq_assoc.
+
+  (* apply s_discard. *)
 
   pose proof (
     @ent_unk
