@@ -1391,10 +1391,8 @@ Proof.
   assumption.
 Qed.
 
-Definition flow_res (f:flow) (v:val) : Prop :=
-  forall s1 s2 h1 h2 R, satisfies s1 s2 h1 h2 R f -> R = norm v.
-
-
+(* Definition flow_res (f:flow) (v:val) : Prop :=
+  forall s1 s2 h1 h2 R, satisfies s1 s2 h1 h2 R f -> R = norm v. *)
 
 Lemma ent_seq_defun_discard : forall x uf f s,
   (* flow_res f vunit -> *)
@@ -1426,13 +1424,14 @@ Proof.
   assumption.
 Qed.
 
-Definition env_independent k f := forall u s1 s2 h1 h2 R,
+(* Definition env_independent k f := forall u s1 s2 h1 h2 R,
   ~ Fmap.indom s1 k ->
   ~ Fmap.indom s2 k ->
   satisfies (Fmap.update s1 k u) (Fmap.update s2 k u) h1 h2 R f ->
   satisfies s1 s2 h1 h2 R f.
+*)
 
-Lemma ens_intro : forall s1 s2 h1 h2 R Q,
+Lemma ens_inv : forall s1 s2 h1 h2 R Q,
   satisfies s1 s2 h1 h2 R (ens Q) ->
   s1 = s2.
 Proof.
@@ -1456,7 +1455,7 @@ Proof.
 
 Qed. *)
 
-Lemma independent_ens : forall Q k,
+(* Lemma independent_ens : forall Q k,
   env_independent k (ens Q).
 Proof.
   unfold env_independent.
@@ -1471,8 +1470,8 @@ Proof.
   forward Hi by fmap_disjoint. *)
 
 
-  pose proof (ens_intro H1) as H4.
-  (* apply ens_intro in H1. *)
+  pose proof (ens_inv H1) as H4.
+  (* apply ens_inv in H1. *)
   unfold Fmap.update in H4.
   pose proof (union_eq_inv_of_disjoint) as H5.
   specializes H5 H2 H3.
@@ -1492,7 +1491,7 @@ Proof.
 
   exists v h3.
   splits*.
-Qed.
+Qed. *)
 
   (* exists s3 s4, *)
   (* Fmap.disjoint s1 s3 -> *)
