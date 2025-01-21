@@ -88,3 +88,17 @@ Proof.
   { unfolds indom, map_indom. rew_logic in H. subst~. }
   { auto. }
 Qed.
+
+Lemma update_noop : forall A B {IB:Inhab B} s (x:A) (v:B),
+  Fmap.indom s x ->
+  Fmap.read s x = v ->
+  Fmap.update s x v = s.
+Proof.
+  unfold update, indom, read, map_indom, single, union, map_union. intros.
+  applys fmap_extens. intros y. simpls. case_if.
+  { subst.
+    destruct (Fmap.fmap_data s y).
+    reflexivity.
+    exfalso. apply H. reflexivity. }
+  { reflexivity. }
+Qed.
