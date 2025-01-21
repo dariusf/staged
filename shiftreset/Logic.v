@@ -116,7 +116,8 @@ Inductive flow : Type :=
   | rs : flow -> val -> flow
 (** [rs f vr] is a reset with body [f] and return value [vr]. *)
   | defun : var -> (val -> val -> flow) -> flow
-(** [defun x uf] is equivalent to [ens_ (x=(λ x r. uf x r))], where [x] can reside in the environment (which regular [ens_] cannot access). *)
+(** [defun x uf] is equivalent to [ens_ (x=(λ x r. uf x r))], where [x] can reside in the environment (which regular [ens_] cannot access).
+  Should defun be scoped? We don't think so, because the resulting continuation is first-class and does not have a well-defined lifetime. *)
   | discard : flow -> var -> flow.
 
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
