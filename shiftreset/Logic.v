@@ -1593,7 +1593,7 @@ Proof.
     apply s_ens. exs. splits*. }
 Qed.
 
-Lemma ent_defun_noop : forall x u f s1,
+Lemma ent_defun_idem : forall x u f s1,
   Fmap.indom s1 x ->
   Fmap.read s1 x = u ->
   entails_under s1 (defun x u;; f) f.
@@ -1603,6 +1603,106 @@ Proof.
   inverts H1 as H1.
   rewrites (>> update_idem var ufun s1 H H0) in H9.
   assumption.
+Qed.
+
+(* Definition env_independent2 x f := forall u s1 s2 h1 h2 R,
+  ~ Fmap.indom s1 x ->
+  ~ Fmap.indom s2 x ->
+  satisfies s1 s2 h1 h2 R f <->
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f. *)
+
+Lemma defun_inv : forall s1 s2 h1 h2 R x u,
+  satisfies s1 s2 h1 h2 R (defun x u) ->
+  ~ Fmap.indom s1 x /\ Fmap.indom s2 x.
+Proof.
+  intros.
+  inverts H as H.
+  split. assumption.
+  unfold Fmap.update.
+  apply Fmap.indom_union_l.
+  apply Fmap.indom_single.
+Qed.
+
+Definition substore s1 s2 := forall x u,
+  Fmap.read s1 x = u -> Fmap.read s2 x = u.
+
+Lemma satisfies_monotonic : forall s1 s2 h1 h2 R f,
+  satisfies s1 s2 h1 h2 R f ->
+  substore s1 s2.
+Abort.
+
+Lemma satisfies_retained : forall s1 s2 s3 h1 h2 R f x u,
+  ~ Fmap.indom s1 x ->
+  satisfies (Fmap.update s1 x u) s2 h1 h2 R f ->
+  s2 = Fmap.update s3 x u.
+Admitted.
+
+(* Lemma satisfies_monotonic : forall s1 s2 h1 h2 R f,
+  satisfies (Fmap.update s1 s2 h1 h2 R f ->
+  substore s1 s2.
+Abort. *)
+
+  (* entails_under2 s1 s2 (defun x u;; f1) f2. *)
+
+Lemma ent_defun_left : forall x u f1 f2 s1,
+(* s2, *)
+  (* env_independent2 x f2 -> *)
+  (* entails_under2 (Fmap.update s1 x u) s2 f1 f2 -> *)
+  (* entails_under2 s1 s2 (defun x u;; f1) f2. *)
+  entails_under (Fmap.update s1 x u) f1 f2 ->
+  entails_under s1 (defun x u;; f1) f2.
+Proof.
+  (* unfold entails_under2. intros. *)
+  unfold entails_under. intros.
+  inverts H0 as H0; no_shift.
+  (* lets [? ?]: defun_inv H0. *)
+  inverts H0 as H0.
+  apply H in H8. clear H.
+
+  lets: satisfies_retained H0 H8.
+  rewrite H in H8.
+  clear H.
+
+  assert (env_independent2 x f2) as ?. admit.
+  unfold env_independent2 in H.
+  rewrite <- H in H8.
+  eassumption.
+  assumption.
+  (* assumption. *)
+  admit.
+
+  (* pose proof (ent_env_weakening2).
+  unfold entails_under2 in H.
+  (* specialize (H H8). *)
+  specializes H H8. *)
+
+  (* admit.
+  admit.
+  admit.
+  admit.
+  admit.
+  admit. *)
+
+  (* lets: . *)
+
+  (* pose proof env_independent2. *)
+
+  (* 
+  inverts H1 as H1.
+  apply H0 in H9. clear H0.
+  specializes H H1. *)
+Qed.
+
+Lemma ent_defun_left2 : forall x u f1 f2 s1,
+  env_independent2 x f2 ->
+  entails_under (Fmap.update s1 x u) f1 f2 ->
+  entails_under s1 (defun x u;; f1) f2.
+Proof.
+  unfold entails_under. intros.
+  inverts H1 as H1; no_shift.
+  inverts H1 as H1.
+  apply H0 in H9. clear H0.
+  specializes H H1.
 Qed.
 
 (* Lemma env_independent_ens : forall x Q,
