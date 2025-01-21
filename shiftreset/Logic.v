@@ -1332,6 +1332,17 @@ Proof.
   applys* s_seq h3 r1.
 Qed.
 
+Lemma norm_discard : forall f1 f2 x,
+  entails f1 f2 ->
+  entails (discard f1 x) (discard f2 x).
+Proof.
+  unfold entails. intros.
+  inverts H0 as H0.
+  apply s_discard.
+  eauto.
+  reflexivity.
+Qed.
+
 Lemma norm_defun : forall x uf a r,
   entails (defun x uf;; unk x a r) (defun x uf;; uf a r).
 Proof.
