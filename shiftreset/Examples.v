@@ -51,9 +51,12 @@ Proof.
 
   apply ent_defun_left.
   {
-  unfold can_weaken_env.
+    apply weaken_seq.
+    admit.
+    admit.
+  (* unfold can_weaken_env.
   intros.
-  admit.
+  admit. *)
   }
   {
   unfold can_strengthen_env.

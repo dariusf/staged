@@ -1740,6 +1740,15 @@ Proof.
   exs. splits*.
 Qed.
 
+Lemma weaken_defun : forall x u,
+  can_weaken_env (defun x u).
+Proof.
+  unfold can_weaken_env. intros.
+  inverts H as H. destr H.
+  (* apply s_ens. *)
+  (* exs. splits*. *)
+Qed.
+
 Lemma weaken_seq : forall f1 f2,
   can_weaken_env f1 ->
   can_weaken_env f2 ->
