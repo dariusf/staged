@@ -1727,6 +1727,11 @@ Definition can_weaken_env_fresh f := forall s1 s2 h1 h2 R x u,
   satisfies s1 s2 h1 h2 R f ->
   satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
 
+Definition can_weaken_env_except x0 f := forall s1 s2 h1 h2 R x u,
+  x <> x0 ->
+  satisfies s1 s2 h1 h2 R f ->
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
+
 Lemma weaken_req : forall H f,
   can_weaken_env f ->
   can_weaken_env (req H f).
@@ -1744,6 +1749,32 @@ Proof.
   inverts H as H. destr H.
   apply s_ens.
   exs. splits*.
+Qed.
+
+Lemma weaken_defun1 : forall x u,
+  can_weaken_env (defun x u).
+Proof.
+  unfold can_weaken_env. intros.
+  inverts H as H.
+  apply s_defun.
+  (* need x <> x0 *)
+  admit.
+  unfold Fmap.update.
+  fmap_eq.
+  (* need same cond *)
+  admit.
+Abort.
+
+Lemma weaken_defun2 : forall x u,
+  can_weaken_env_except x (defun x u).
+Proof.
+  unfold can_weaken_env_except. intros.
+  inverts H0 as H0.
+  apply s_defun.
+  apply* not_indom_update.
+  unfold Fmap.update.
+  fmap_eq.
+  apply* Fmap.disjoint_single_single.
 Qed.
 
 Lemma weaken_defun : forall x u,
