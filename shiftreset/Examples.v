@@ -33,13 +33,15 @@ Definition foo_spec : flow :=
   (* ∃ (uf:val->val->flow), defun "k" uf;; *)
 
   (* terrible defun workaround *)
-(* defun "k"
+  ∃ b,
+defun "k"
   (fun a0 r0 : val =>
 rs
-  (ens_ \[vbool x = a0];;
-(ens (fun r1 => \[r1 = vbool x]));;
-(ens (fun r1 => \[x = true /\ r1 = vint 1 \/ x = false /\ r1 = vint 0])))
-  r0);; *)
+  (ens_ \[vbool b = a0];;
+(ens (fun r1 => \[r1 = vbool b]));;
+(ens (fun r1 => \[b = true /\ r1 = vint 1 \/ b = false /\ r1 = vint 0])))
+  r0);;
+  (* end terrible workarounds *)
   
   req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
 
@@ -57,9 +59,24 @@ Proof.
   rewrite red_shift_elim.
   2: { shiftfree. }
 
+  finst x.
+  apply ent_seq_defun.
+
+
+  rewrite norm_rs_all. finst x0.
+  rewrite norm_rs_all. finst a.
+  rewrite norm_rs_ex. fintro r1.
+
+  rewrite norm_reassoc.
+  rewrite <- norm_seq_assoc.
+
+(* Search (entails_under _ _ (req _ _)). *)
+  apply ent_req_r.
+  (* Search (rs (req _ _) _). *)
+
 (* HANLDE THE DEFUN *)
 
-  apply ent_defun_left.
+  (* apply ent_defun_left.
   {
     apply weaken_seq1.
     apply weaken_defun3.
@@ -113,7 +130,7 @@ Proof.
 
   fmap_disjoint.
   fmap_disjoint.
-  }
+  } *)
   
 
 (* PREVIOUS ATTEMPT TRYING TO ADD DISCARD *)
