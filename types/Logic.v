@@ -190,18 +190,25 @@ Definition tarrow t1 t2 : type := fun vf =>
   forall v, t1 v ->
   E t2 (papp (pval (vfun x e)) (pval v)).
 
-Declare Scope type_scope.
-Open Scope type_scope.
+(* dependent arrow *)
+Definition tdarrow v t1 t2 : type := fun vf =>
+  forall x e, vf = vfun x e ->
+  t1 v ->
+  E t2 (papp (pval (vfun x e)) (pval v)).
+
+Declare Scope typ_scope.
+Open Scope typ_scope.
+Bind Scope typ_scope with type.
 
 Notation "'∃' x1 .. xn , H" :=
   (texists (fun x1 => .. (texists (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
-   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : type_scope.
+   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
 
 Notation "'∀' x1 .. xn , H" :=
   (tforall (fun x1 => .. (tforall (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
-   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : type_scope.
+   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
 
 Definition subtype t1 t2 := forall v, t1 v -> t2 v.
 Notation "t1 '<:' t2" := (subtype t1 t2) (at level 40).
@@ -294,3 +301,55 @@ Inductive spec :=
   | sexists : forall A, (A -> spec) -> spec
   | sforall : forall A, (A -> spec) -> spec
   | scase : spec -> spec -> spec.
+
+Declare Scope spec_scope.
+Open Scope spec_scope.
+Bind Scope spec_scope with spec.
+
+Notation "'∃' x1 .. xn , H" :=
+  (texists (fun x1 => .. (texists (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : spec_scope.
+
+Notation "'∀' x1 .. xn , H" :=
+  (tforall (fun x1 => .. (tforall (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : spec_scope.
+
+(* Inductive spec_satisfies : expr -> spec -> Prop := *)
+
+Module Examples1.
+
+Definition id := vfun "x" (pvar "x").
+Definition id_type1 : type := ∀ t, tarrow t t.
+Definition id_type2 : type := ∀ v t, tdarrow v t (tsingle v).
+
+Lemma id_has_type1 : id_type1 id.
+Proof.
+  unfold id, id_type1.
+  unfold tforall. intros.
+  unfold tarrow. intros.
+  unfold E. intros.
+  injects H.
+  inverts H1 as H1.
+  { injects H1.
+    inverts H6 as H6.
+    assumption. }
+  { inverts H1 as H1. }
+Qed.
+
+Lemma id_has_type2 : id_type2 id.
+Proof.
+  unfold id, id_type2.
+  unfold tforall. intros v t. intros.
+  unfold tdarrow. intros.
+  unfold tsingle, E. intros.
+  injects H.
+  inverts H1 as H1.
+  { injects H1.
+    inverts H6 as H6.
+    reflexivity. }
+  { inverts H1 as H1. }
+Qed.
+
+End Examples1.
