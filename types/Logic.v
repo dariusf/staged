@@ -295,7 +295,7 @@ Module Examples1.
 
 Definition id := vfun "x" (pvar "x").
 Definition id_type1 : type := ∀ t, tarrow t t.
-Definition id_type2 : type := ∀ v t, tdarrow v t (tsingle v).
+Definition id_type2 : type := ∀ v, tdarrow v ttop (tsingle v).
 
 Lemma id_has_type1 : id_type1 id.
 Proof.
@@ -314,7 +314,7 @@ Qed.
 Lemma id_has_type2 : id_type2 id.
 Proof.
   unfold id, id_type2.
-  unfold tforall. intros v t. intros.
+  unfold tforall. intros.
   unfold tdarrow. intros.
   unfold tsingle, E. intros.
   injects H.
