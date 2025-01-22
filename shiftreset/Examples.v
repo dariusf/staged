@@ -70,9 +70,9 @@ Proof.
   rewrite norm_reassoc.
   rewrite <- norm_seq_assoc.
 
-(* Search (entails_under _ _ (req _ _)). *)
+(* can only rewrite on the left of ;;, so we have to do things in this order *)
+  rewrite norm_rs_req.
   apply ent_req_r.
-  (* Search (rs (req _ _) _). *)
 
 (* HANLDE THE DEFUN *)
 
@@ -142,24 +142,24 @@ Proof.
   Fail apply ent_seq_defun.
   Check ent_seq_defun_discard. *)
 
-pose proof ent_seq_defun_discard.
+(* pose proof ent_seq_defun_discard.
 specializes H
 (req (x0 ~~> vint a) (ens (fun r0 => x0 ~~> vint (a + 2) \* \[r0 = vint 1]))).
-  rewrite <- H.
+  rewrite <- H. *)
   (* 2: { 
     (* Search shift_free. *)
     Check sf_req.
     apply sf_req.
 
   } *)
-clear H.
+(* clear H. *)
 
-  apply ent_seq_defun.
+  (* apply ent_seq_defun.
   Search (rs _ _).
-  Search (rs (fall _) _).
+  Search (rs (fall _) _). *)
 
   (* funfold1 "k". unfold k. *)
-  Check ent_unk.
+  (* Check ent_unk. *)
   
 
   (* funfold1 "k". *)
@@ -168,18 +168,18 @@ clear H.
   (* simpl. *)
   (* [ | unfold env; resolve_fn_in_env ] *)
 
-  rewrite norm_rs_all. finst x0.
+  (* rewrite norm_rs_all. finst x0.
   rewrite norm_rs_all. finst a.
   rewrite norm_rs_ex. fintro r1.
 
 Check norm_reassoc.
   rewrite norm_reassoc.
-  rewrite <- norm_seq_assoc.
+  rewrite <- norm_seq_assoc. *)
   (* cannot rewrite on the right of a seq, so need to untangle the discard first *)
 
   (* apply s_discard. *)
 
-  pose proof (
+  (* pose proof (
     @ent_unk
 (    Fmap.update s_env "k"
     (fun a0 r0 : val =>
@@ -192,7 +192,7 @@ Check norm_reassoc.
     "k" (vbool true) (vint r1)).
 
   rewrite H.
-  
+   *)
 
 
 

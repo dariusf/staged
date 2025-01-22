@@ -2445,6 +2445,28 @@ Proof.
     { constructor. exists v x. jauto. } }
 Qed.
 
+Lemma norm_rs_req : forall H f r,
+  entails (rs (req H f) r) (req H (rs f r)).
+Proof.
+  unfold entails. intros.
+  apply s_req. intros.
+  inverts H0 as H0.
+  { eapply s_rs_sh.
+    inverts H0 as H0. specializes H0 H1 H2 H3.
+    assumption. }
+  { inverts H0 as H0. specializes H0 H1 H2 H3.
+    apply* s_rs_val. }
+Qed.
+
+Lemma norm_rs_seq_ens : forall Q f r,
+  entails (rs (ens Q;; f) r) (ens Q;; (rs f r)).
+Proof.
+  unfold entails. intros.
+  apply red_skip.
+  apply sf_ens.
+  assumption.
+Qed.
+
 Lemma ent_seq_ens_sl_ex: forall env A (c:A->hprop) f,
   entails_under env (ens_ (\exists b, c b);; f)
   (∃ b, ens_ (c b);; f).
