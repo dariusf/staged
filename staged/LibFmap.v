@@ -149,3 +149,11 @@ Proof.
   destruct H; case_if.
   congruence.
 Qed.
+
+Lemma indom_update : forall A (B:Type) (s1:fmap A B) (x:A) (u:B),
+  Fmap.indom (Fmap.update s1 x u) x.
+Proof.
+  intros.
+  apply Fmap.indom_union_l.
+  apply Fmap.indom_single.
+Qed.

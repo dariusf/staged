@@ -1732,6 +1732,10 @@ Definition can_weaken_env_except x0 f := forall s1 s2 h1 h2 R x u,
   satisfies s1 s2 h1 h2 R f ->
   satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
 
+Definition can_weaken_env_with x u f := forall s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R f ->
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
+
 Lemma weaken_req : forall H f,
   can_weaken_env f ->
   can_weaken_env (req H f).
@@ -1777,6 +1781,23 @@ Proof.
   apply* Fmap.disjoint_single_single.
 Qed.
 
+Lemma weaken_defun3 : forall x u,
+  can_weaken_env_with x u (defun x u).
+Proof.
+  unfold can_weaken_env_with. intros.
+  inverts H as H.
+  apply* s_defun.
+
+  (* Check update_idem.
+  rewrites (>> update_idem (Fmap.update s1 x u)).
+  apply indom_update.
+  (* admit. *)
+  (* admit. *)
+  resolve_fn_in_env.
+  *)
+
+Qed.
+
 Lemma weaken_defun : forall x u,
   can_weaken_env_fresh (defun x u).
 Proof.
@@ -1799,6 +1820,17 @@ Lemma weaken_seq : forall f1 f2,
   can_weaken_env (f1;; f2).
 Proof.
   unfold can_weaken_env. intros.
+  inverts H1 as H1.
+  { applys* s_seq. }
+  { applys* s_seq_sh. }
+Qed.
+
+Lemma weaken_seq1 : forall x u f1 f2,
+  can_weaken_env_with x u f1 ->
+  can_weaken_env_with x u f2 ->
+  can_weaken_env_with x u (f1;; f2).
+Proof.
+  unfold can_weaken_env_with. intros.
   inverts H1 as H1.
   { applys* s_seq. }
   { applys* s_seq_sh. }
@@ -1883,7 +1915,7 @@ Lemma ent_defun_left : forall x u f1 f2 s1,
   (* entails_under2 (Fmap.update s1 x u) s2 f1 f2 -> *)
   (* entails_under2 s1 s2 (defun x u;; f1) f2. *)
   (* env_independent2 x f2 -> *)
-  can_weaken_env (defun x u;; f1) ->
+  can_weaken_env_with x u (defun x u;; f1) ->
   can_strengthen_env f2 ->
 
   entails_under (Fmap.update s1 x u) f1 f2 ->
