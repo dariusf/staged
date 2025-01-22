@@ -53,8 +53,29 @@ Proof.
   {
     apply weaken_seq1.
     apply weaken_defun3.
-    (* unfold can_weaken_env. *)
+    apply weaken_rs_admitted.
+    apply weaken_with.
+    (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+    apply weaken_all. intros.
+    apply weaken_all. intros.
+    apply weaken_ex. intros.
+    apply weaken_seq.
+    apply weaken_req.
+    unfold ens_. apply weaken_seq.
+    apply weaken_ens.
     admit.
+    apply weaken_all. intros.
+    apply weaken_ex. intros.
+    apply weaken_seq.
+    apply weaken_req.
+    unfold ens_. apply weaken_seq.
+    apply weaken_ens.
+    admit.
+    apply weaken_ens.
+
+    (* apply weaken_ *)
+    (* unfold can_weaken_env. *)
+    (* admit. *)
     (* admit. *)
   (* unfold can_weaken_env.
   intros.
