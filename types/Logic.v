@@ -173,6 +173,8 @@ Definition tany : type := tnot tabort.
 Definition vcons a b : val := vconstr2 "cons" a b.
 Definition vnil : val := vconstr0 "nil".
 
+(* the type of finite lists. can be coinductive to be infinite.
+  non-inductive recursive types are ignored for now. *)
 Inductive tlist : type -> val -> Prop :=
   | tlist_nil : forall t,
     tlist t vnil
@@ -289,6 +291,42 @@ Proof.
       specializes* IHtlist. }
 Qed.
 
+Module Examples1.
+
+Definition id := vfun "x" (pvar "x").
+Definition id_type1 : type := ∀ t, tarrow t t.
+Definition id_type2 : type := ∀ v t, tdarrow v t (tsingle v).
+
+Lemma id_has_type1 : id_type1 id.
+Proof.
+  unfold id, id_type1.
+  unfold tforall. intros.
+  unfold tarrow. intros.
+  unfold E. intros.
+  injects H.
+  inverts H1 as H1.
+  { injects H1.
+    inverts H6 as H6.
+    assumption. (* this is the key step *) }
+  { inverts H1 as H1. }
+Qed.
+
+Lemma id_has_type2 : id_type2 id.
+Proof.
+  unfold id, id_type2.
+  unfold tforall. intros v t. intros.
+  unfold tdarrow. intros.
+  unfold tsingle, E. intros.
+  injects H.
+  inverts H1 as H1.
+  { injects H1.
+    inverts H6 as H6.
+    reflexivity. (* note the difference! *) }
+  { inverts H1 as H1. }
+Qed.
+
+End Examples1.
+
 (** * Program specifications *)
 
 (* Even though we use hprop, for pure logic we can just wrap everything in \[P] *)
@@ -317,39 +355,3 @@ Notation "'∀' x1 .. xn , H" :=
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : spec_scope.
 
 (* Inductive spec_satisfies : expr -> spec -> Prop := *)
-
-Module Examples1.
-
-Definition id := vfun "x" (pvar "x").
-Definition id_type1 : type := ∀ t, tarrow t t.
-Definition id_type2 : type := ∀ v t, tdarrow v t (tsingle v).
-
-Lemma id_has_type1 : id_type1 id.
-Proof.
-  unfold id, id_type1.
-  unfold tforall. intros.
-  unfold tarrow. intros.
-  unfold E. intros.
-  injects H.
-  inverts H1 as H1.
-  { injects H1.
-    inverts H6 as H6.
-    assumption. }
-  { inverts H1 as H1. }
-Qed.
-
-Lemma id_has_type2 : id_type2 id.
-Proof.
-  unfold id, id_type2.
-  unfold tforall. intros v t. intros.
-  unfold tdarrow. intros.
-  unfold tsingle, E. intros.
-  injects H.
-  inverts H1 as H1.
-  { injects H1.
-    inverts H6 as H6.
-    reflexivity. }
-  { inverts H1 as H1. }
-Qed.
-
-End Examples1.
