@@ -1883,11 +1883,22 @@ Restart.
 
 Abort.
 
+Lemma weaken_with : forall f x u,
+  can_weaken_env f ->
+  can_weaken_env_with x u f.
+Proof.
+  unfold can_weaken_env_with, can_weaken_env. intros.
+  eauto.
+Qed.
 
+Lemma weaken_rs_admitted : forall f r x u,
+  can_weaken_env_with x u f ->
+  can_weaken_env_with x u (rs f r).
+Admitted.
 
-Lemma weaken_ex : forall c,
-  (forall x1, can_weaken_env (c x1)) ->
-  can_weaken_env (∃ x, c x).
+Lemma weaken_ex : forall A (c:A->flow),
+  (forall (x1:A), can_weaken_env (c x1)) ->
+  can_weaken_env (∃ (x:A), c x).
 Proof.
   unfold can_weaken_env. intros.
   inverts H0 as H0. destr H0.
@@ -1895,9 +1906,9 @@ Proof.
   eauto.
 Qed.
 
-Lemma weaken_all : forall c,
-  (forall x1, can_weaken_env (c x1)) ->
-  can_weaken_env (∀ x, c x).
+Lemma weaken_all : forall (A:Type) (c:A->flow),
+  (forall (x1:A), can_weaken_env (c x1)) ->
+  can_weaken_env (∀ (x:A), c x).
 Proof.
   unfold can_weaken_env. intros.
   apply s_fall. intros b.
