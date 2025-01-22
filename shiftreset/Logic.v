@@ -1695,8 +1695,14 @@ Proof.
   - destr H.
     apply s_ens.
     exs. splits*.
-  - admit.
-  - admit.
+  - eapply s_seq.
+    eassumption.
+    assumption.
+  - apply s_fex.
+    destr H.
+    exists b.
+    (* no induction hypothesis *)
+    admit.
   - admit.
   - admit.
   - admit.
