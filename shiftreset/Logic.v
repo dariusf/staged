@@ -266,7 +266,7 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
 
   | s_rs_sh s1 s2 f h1 h2 r rf s3 h3 fb fk k v1 :
     satisfies s1 s3 h1 h3 (shft k fb v1 (fun r2 => rs fk r2)) f ->
-    ~ Fmap.indom s3 k ->
+    (* ~ Fmap.indom s3 k -> *)
     satisfies
         (Fmap.update s3 k (fun a r =>
           rs (ens_ \[v1 = a];; fk) r)) s2
@@ -529,8 +529,7 @@ Section Propriety.
     inverts H1 as H1; destr H1.
     { eapply s_rs_sh.
       apply H. exact H1.
-      assumption.
-      apply H9. }
+      apply H8. }
     { apply s_rs_val. eauto. }
   Qed.
 
@@ -542,10 +541,10 @@ Section Propriety.
     unfold bientails, Proper, respectful, impl.
     split; subst; intros.
     { inverts H0 as H0.
-      { eapply s_rs_sh. apply H. exact H0. assumption. exact H9. }
+      { eapply s_rs_sh. apply H. exact H0. exact H8. }
       { apply H in H0. apply s_rs_val. assumption. } }
     { inverts H0 as H0.
-      { eapply s_rs_sh. apply H. exact H0. assumption. exact H9. }
+      { eapply s_rs_sh. apply H. exact H0. exact H8. }
       { apply H in H0. apply s_rs_val. assumption. } }
   Qed.
 
@@ -558,8 +557,7 @@ Section Propriety.
     inverts H1 as H1; destr H1.
     { eapply s_rs_sh.
       apply H. exact H1.
-      assumption.
-      apply H9. }
+      apply H8. }
     { apply s_rs_val. eauto. }
   Qed.
 
@@ -831,7 +829,6 @@ Proof.
   (* the ret of the shift can be anything because the cont is never taken *)
   eapply s_rs_sh.
   { constructor. }
-  { apply not_indom_empty. }
   { apply s_rs_val.
     (* produced by eapply, never instantiated because continuation is never taken *)
     apply ens_pure_intro.
@@ -858,7 +855,6 @@ eapply s_rs_sh.
   (* show that the body produces a shift *)
   apply s_seq_sh.
   apply s_sh. }
-{ apply not_indom_empty. }
 { apply s_rs_val. (* handle reset *)
 
   eapply s_unk. resolve_fn_in_env. (* reset body *)
@@ -895,7 +891,6 @@ Proof.
     eapply s_rs_sh.
     (* handle the shift *)
     apply s_sh.
-    apply not_indom_empty.
     (* show how the shift body goes through the reset to produce the function *)
     { apply s_rs_val.
       eapply s_seq.
@@ -955,7 +950,6 @@ Proof.
       apply s_seq_sh. (* this moves the ens into the continuation *)
 
       apply s_sh. }
-    { apply not_indom_empty. }
     { apply s_rs_val.
       eapply s_seq.
       apply s_defun.
@@ -1235,9 +1229,7 @@ Proof.
       eapply s_seq.
       exact H.
       eapply s_rs_sh.
-      exact H9.
-      assumption.
-      exact H8. }
+      exact H8. assumption. }
     { (* f1 cannot produce a shift as it is shift-free *)
       apply Hsf in H.
       false. } }
@@ -1301,12 +1293,11 @@ Proof.
     (* we know that the shs is what produces a shift *)
     (* f2 goes in the continuation and under a reset *)
     (* now start reasoning backwards *)
-    inverts H9 as H9.
+    inverts H8 as H8.
     cont_eq.
     eapply s_rs_sh.
     intro_shs. apply sf_rs.
     apply s_shc.
-    assumption.
     assumption.
   }
 Qed.
@@ -1319,13 +1310,13 @@ Proof.
   unfold entails. intros.
   inverts H as H. 2: { inverts H as H. destr H. vacuous. }
   elim_shs H. clear H0.
-  inverts H9 as H9.
+  inverts H8 as H8.
   cont_eq.
   eapply s_seq.
   apply s_defun.
   (* assumption. *)
   reflexivity.
-  applys_eq H8.
+  applys_eq H7.
 Qed.
 
 (** * Entailment, entailment sequent, normalization *)
@@ -1781,6 +1772,18 @@ Proof.
   apply* Fmap.disjoint_single_single.
 Qed. *)
 
+Lemma weaken_defun : forall x u,
+  can_weaken_env (defun x u).
+Proof.
+  unfold can_weaken_env. intros.
+  inverts H as H.
+  apply* s_defun.
+  unfold Fmap.update.
+  fmap_eq.
+(* Qed. *)
+Abort.
+
+
 Lemma weaken_defun3 : forall x u,
   can_weaken_env_with x u (defun x u).
 Proof.
@@ -1840,20 +1843,44 @@ Lemma weaken_rs : forall f r,
   can_weaken_env f ->
   can_weaken_env (rs f r).
 Proof.
-  unfold can_weaken_env. intros.
-  Abort.
-  (* inverts H0 as H0.
+  unfold can_weaken_env. introv H. intros.
+  (* dependent induction H0. *)
+  inverts H0 as H0.
   { eapply s_rs_sh.
-    eauto.
+    (* eauto. *)
+    specializes~ H H0.
+    clear H H0.
 
-    admit.
-    eauto.
-    admit.
+      admit.
   }
   { apply s_rs_val.
     eauto. }
 (* Qed. *)
-Abort. *)
+Restart.
+
+  introv H.
+  unfold can_weaken_env. intros.
+  dependent induction H0.
+  { eapply s_rs_sh.
+    eauto.
+
+    clear IHsatisfies1.
+    specializes IHsatisfies2 r fb.
+    assert (can_weaken_env fb) as ?. admit.
+    specializes IHsatisfies2 H0.
+    forward IHsatisfies2 by reflexivity.
+    applys_eq IHsatisfies2.
+    unfold Fmap.update.
+    assert (k <> x) as ?. admit.
+    fmap_eq.
+    applys disjoint_single_single H1.
+  }
+  { apply s_rs_val.
+    eauto. }
+
+Abort.
+
+
 
 Lemma weaken_ex : forall c,
   (forall x1, can_weaken_env (c x1)) ->
