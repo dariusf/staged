@@ -1752,6 +1752,9 @@ Proof.
   unfold can_weaken_env. intros.
   inverts H as H.
   eapply s_unk.
+  destruct (classic (xf = x)).
+  - subst. reflexivity.
+  - admit.
 Abort.
 
 Lemma weaken_fn : forall xf v r u,
