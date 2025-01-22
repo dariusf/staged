@@ -184,7 +184,7 @@ Implicit Types s : senv.
 Implicit Types h : heap.
 Implicit Types H : hprop.
 Implicit Types Q : postcond.
-Implicit Types uf fn : ufun.
+Implicit Types u : ufun.
 (* Implicit Types c : val -> flow. *)
 Implicit Types f : flow.
 Implicit Types x y z k : var.
