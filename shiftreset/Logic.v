@@ -1746,6 +1746,23 @@ Proof.
   exs. splits*.
 Qed.
 
+Lemma weaken_fn1 : forall xf v r,
+  can_weaken_env (unk xf v r).
+Proof.
+  unfold can_weaken_env. intros.
+  inverts H as H.
+  eapply s_unk.
+Abort.
+
+Lemma weaken_fn : forall xf v r u,
+  can_weaken_env_with xf u (unk xf v r).
+Proof.
+  unfold can_weaken_env_with. intros.
+  inverts H as H.
+  eapply s_unk.
+  resolve_fn_in_env.
+Abort.
+
 (* Lemma weaken_defun1 : forall x u,
   can_weaken_env (defun x u).
 Proof.
