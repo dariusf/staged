@@ -1750,18 +1750,41 @@ Lemma weaken_fn1 : forall xf v r,
   can_weaken_env (unk xf v r).
 Proof.
   unfold can_weaken_env. intros.
+  assert (can_weaken_env (Fmap.read s1 xf v r)) as ?. admit.
   inverts H as H.
   eapply s_unk.
   reflexivity.
-  destruct (classic (xf = x)).
+  specializes H0 H.
+  applys_eq H0.
+  clear H H0.
+
+  f_equal.
+  applys update_idem s1.
+
+  (* destruct (classic (xf = x)).
+  subst. rewrite fmap_read_update. *)
+
+  (* destruct (classic (xf = x)).
   - subst.
+  applys_eq H0.
+  rewrite fmap_read_update. *)
+
+    (* rewrite fmap_read_update.
     remember (Fmap.read (Fmap.update s1 x u) x) as z eqn:H1.
     unfold Fmap.update in H1.
     rewrite Fmap.read_union_l in H1.
+    (* unfold can_weaken_env in H0. *)
+    specializes H0 H.
+    applys_eq H0. *)
+    (* eauto. *)
+  (* rewrites (>> update_idem ). *)
+    (* remember (Fmap.read (Fmap.update s1 x u) x) as z eqn:H1.
+    unfold Fmap.update in H1.
+    rewrite Fmap.read_union_l in H1. *)
     (* rewrite <- H1 in H. clear H1. *)
-    admit.
-    admit.
-  - admit.
+    (* admit. *)
+    (* admit.
+  - admit. *)
   (* cannot express that these ufuns are functions are of a certain behavior,
     s.t. when a binding in the env other than theirs is changed,
     their behavior is still equiv *)

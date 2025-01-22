@@ -31,6 +31,16 @@ Definition foo r : flow :=
 Definition foo_spec : flow :=
   ∀ x a,
   (* ∃ (uf:val->val->flow), defun "k" uf;; *)
+
+  (* terrible defun workaround *)
+(* defun "k"
+  (fun a0 r0 : val =>
+rs
+  (ens_ \[vbool x = a0];;
+(ens (fun r1 => \[r1 = vbool x]));;
+(ens (fun r1 => \[x = true /\ r1 = vint 1 \/ x = false /\ r1 = vint 0])))
+  r0);; *)
+  
   req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
 
 Theorem foo_summary : forall r,
