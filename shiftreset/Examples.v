@@ -52,10 +52,10 @@ Proof.
   apply ent_defun_left.
   {
     apply weaken_seq1.
-    apply weaken_defun2.
-    unfold can_weaken_env.
+    apply weaken_defun3.
+    (* unfold can_weaken_env. *)
     admit.
-    admit.
+    (* admit. *)
   (* unfold can_weaken_env.
   intros.
   admit. *)
