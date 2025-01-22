@@ -158,14 +158,35 @@ Implicit Types t: type.
 
 Definition tint : type := fun v => exists i, v = vint i.
 Definition tbool : type := fun v => exists b, v = vbool b.
+
 Definition ttop : type := fun _ => True.
 Definition tbot : type := fun _ => False.
 Definition tsingle v1 : type := fun v => v = v1.
+
 Definition tforall A (f:A -> type) : type := fun v => forall x:A, (f x) v.
 Definition texists A (f:A -> type) : type := fun v => exists x:A, (f x) v.
+
+Declare Scope typ_scope.
+Open Scope typ_scope.
+Bind Scope typ_scope with type.
+
+Notation "'∃' x1 .. xn , H" :=
+  (texists (fun x1 => .. (texists (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
+
+Notation "'∀' x1 .. xn , H" :=
+  (tforall (fun x1 => .. (tforall (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
+
+
 Definition tintersect t1 t2 : type := fun v => t1 v /\ t2 v.
 Definition tunion t1 t2 : type := fun v => t1 v \/ t2 v.
 Definition tnot t : type := fun v => not (t v).
+
+(* TODO err has to be in every type.
+  is it just in base types? in that case what about (¬ int)? *)
 Definition terr : type := tsingle verr.
 Definition tabort : type := tsingle vabort.
 Definition tany : type := tnot tabort.
@@ -197,20 +218,6 @@ Definition tdarrow v t1 t2 : type := fun vf =>
   forall x e, vf = vfun x e ->
   t1 v ->
   E t2 (papp (pval (vfun x e)) (pval v)).
-
-Declare Scope typ_scope.
-Open Scope typ_scope.
-Bind Scope typ_scope with type.
-
-Notation "'∃' x1 .. xn , H" :=
-  (texists (fun x1 => .. (texists (fun xn => H)) ..))
-  (at level 39, x1 binder, H at level 50, right associativity,
-   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
-
-Notation "'∀' x1 .. xn , H" :=
-  (tforall (fun x1 => .. (tforall (fun xn => H)) ..))
-  (at level 39, x1 binder, H at level 50, right associativity,
-   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
 
 Definition subtype t1 t2 := forall v, t1 v -> t2 v.
 Notation "t1 '<:' t2" := (subtype t1 t2) (at level 40).
