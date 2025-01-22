@@ -174,20 +174,21 @@ Definition vcons a b : val := vconstr2 "cons" a b.
 Definition vnil : val := vconstr0 "nil".
 
 Inductive tlist : type -> val -> Prop :=
-
   | tlist_nil : forall t,
     tlist t vnil
-
   | tlist_cons : forall vh vt t,
     t vh ->
     tlist t vt ->
     tlist t (vcons vh vt).
 
+(* unary logical relation on expressions *)
+Definition E t := fun e =>
+  forall h1 h2 r, bigstep h1 e h2 r -> t r.
+
 Definition tarrow t1 t2 : type := fun vf =>
   forall x e, vf = vfun x e ->
   forall v, t1 v ->
-  forall h1 h2 r,
-  bigstep h1 (papp (pval (vfun x e)) (pval v)) h2 r -> t2 r.
+  E t2 (papp (pval (vfun x e)) (pval v)).
 
 Declare Scope type_scope.
 Open Scope type_scope.
@@ -229,16 +230,9 @@ Qed.
 Definition tcov : type -> type := fun t1 v =>
   exists t2, t2 <: t1 -> t2 v.
 Definition tcontra : type -> type := fun t1 v =>
-  exists t2, t1 <: t2 -> t2 v.
+  forall t2, t1 <: t2 -> t2 v.
 Definition tinv : type -> type := fun t1 v => t1 v.
-Definition twild := ttop.
-
-(* Instance subtype_refl : Reflexive subtype.
-Proof.
-  unfold Reflexive, subtype.
-  intros.
-  exact H.
-Qed. *)
+Definition twild : type := ttop.
 
 Module Examples.
 
@@ -251,6 +245,8 @@ Proof.
   apply tlist_nil.
 Qed.
 
+End Examples.
+
 Lemma subtype_cov: forall t,
   t <: tcov t.
 Proof.
@@ -258,7 +254,7 @@ Proof.
   eauto.
 Qed.
 
-Lemma _list_covariant: forall t,
+Lemma list_covariant: forall t,
   tlist t <: tlist (tcov t).
 Proof.
   unfold subtype. intros.
@@ -269,7 +265,22 @@ Proof.
     { assumption. }
 Qed.
 
-End Examples.
+Lemma list_contravariant: forall t,
+  tlist (tcontra t) <: tlist t.
+Proof.
+  unfold subtype. intros.
+  remember (tcontra t) as t1 eqn:H1.
+  induction H.
+  - apply tlist_nil.
+  - apply tlist_cons.
+    { subst. unfold tcontra in H.
+      specializes* IHtlist.
+      apply H.
+      unfold subtype.
+      auto. }
+    { subst.
+      specializes* IHtlist. }
+Qed.
 
 (** * Program specifications *)
 
