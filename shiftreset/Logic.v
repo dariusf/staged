@@ -1673,7 +1673,7 @@ Proof.
   - admit.
 Admitted. *)
 
-Lemma ent_weaken_env : forall s1 s2 h1 h2 R f x u,
+(* Lemma ent_weaken_env : forall s1 s2 h1 h2 R f x u,
   (* ~ Fmap.indom s1 x ->
   ~ Fmap.indom s2 x -> *)
   satisfies s1 s2 h1 h2 R f ->
@@ -1706,7 +1706,7 @@ Proof.
   - admit.
   - admit.
   - admit.
-Admitted.
+Admitted. *)
 
 Definition can_weaken_env f := forall s1 s2 h1 h2 R x u,
   satisfies s1 s2 h1 h2 R f ->
@@ -1752,9 +1752,19 @@ Proof.
   unfold can_weaken_env. intros.
   inverts H as H.
   eapply s_unk.
+  reflexivity.
   destruct (classic (xf = x)).
-  - subst. reflexivity.
+  - subst.
+    remember (Fmap.read (Fmap.update s1 x u) x) as z eqn:H1.
+    unfold Fmap.update in H1.
+    rewrite Fmap.read_union_l in H1.
+    (* rewrite <- H1 in H. clear H1. *)
+    admit.
+    admit.
   - admit.
+  (* cannot express that these ufuns are functions are of a certain behavior,
+    s.t. when a binding in the env other than theirs is changed,
+    their behavior is still equiv *)
 Abort.
 
 Lemma weaken_fn : forall xf v r u,
