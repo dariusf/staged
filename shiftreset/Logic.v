@@ -1862,9 +1862,11 @@ Restart.
   unfold can_weaken_env. intros.
   dependent induction H0.
   { eapply s_rs_sh.
-    eauto.
 
-    clear IHsatisfies1.
+    { apply H.
+    apply H0_. }
+
+    { clear IHsatisfies1.
     specializes IHsatisfies2 r fb.
     assert (can_weaken_env fb) as ?. admit.
     specializes IHsatisfies2 H0.
@@ -1874,6 +1876,7 @@ Restart.
     assert (k <> x) as ?. admit.
     fmap_eq.
     applys disjoint_single_single H1.
+    }
   }
   { apply s_rs_val.
     eauto. }
