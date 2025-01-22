@@ -139,3 +139,13 @@ Proof.
     case_if. }
   { assumption. }
 Qed.
+
+Lemma disjoint_single_neq : forall A (B:Type) (x1 x2:A) (u1 u2:B),
+  Fmap.disjoint (Fmap.single x1 u1) (Fmap.single x2 u2) ->
+  x1 <> x2.
+Proof.
+  unfold disjoint, single, map_disjoint. intros. simpls.
+  specializes H x1.
+  destruct H; case_if.
+  congruence.
+Qed.
