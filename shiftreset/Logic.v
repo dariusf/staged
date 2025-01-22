@@ -1717,6 +1717,83 @@ Proof.
   - admit.
 Admitted.
 
+Definition can_weaken_env f := forall s1 s2 h1 h2 R x u,
+  satisfies s1 s2 h1 h2 R f ->
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
+
+Lemma weaken_req : forall H f,
+  can_weaken_env f ->
+  can_weaken_env (req H f).
+Proof.
+  unfold can_weaken_env. intros.
+  apply s_req. intros.
+  inverts H1 as H1.
+  specializes H1 H2 H3 H4.
+Qed.
+
+Lemma weaken_ens : forall Q,
+  can_weaken_env (ens Q).
+Proof.
+  unfold can_weaken_env. intros.
+  inverts H as H. destr H.
+  apply s_ens.
+  exs. splits*.
+Qed.
+
+Lemma weaken_seq : forall f1 f2,
+  can_weaken_env f1 ->
+  can_weaken_env f2 ->
+  can_weaken_env (f1;; f2).
+Proof.
+  unfold can_weaken_env. intros.
+  inverts H1 as H1.
+  { applys* s_seq. }
+  { applys* s_seq_sh. }
+Qed.
+
+Lemma weaken_rs : forall f r,
+  can_weaken_env f ->
+  can_weaken_env (rs f r).
+Proof.
+  unfold can_weaken_env. intros.
+  inverts H0 as H0.
+  { eapply s_rs_sh.
+    eauto.
+
+    admit.
+    eauto.
+    admit.
+  }
+  { apply s_rs_val.
+    eauto. }
+(* Qed. *)
+Abort.
+
+Lemma weaken_ex : forall c,
+  (forall x1, can_weaken_env (c x1)) ->
+  can_weaken_env (∃ x, c x).
+Proof.
+  unfold can_weaken_env. intros.
+  inverts H0 as H0. destr H0.
+  apply s_fex. exists b.
+  eauto.
+Qed.
+
+Lemma weaken_all : forall c,
+  (forall x1, can_weaken_env (c x1)) ->
+  can_weaken_env (∀ x, c x).
+Proof.
+  unfold can_weaken_env. intros.
+  apply s_fall. intros b.
+  inverts H0 as H0. specializes H0 b.
+  apply H.
+  eauto.
+Qed.
+
+Definition can_strengthen_env f := forall s1 s2 h1 h2 R x u,
+  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
+  satisfies s1 s2 h1 h2 R f.
+
 Lemma ent_strengthen_env : forall s1 s2 h1 h2 R f x u,
   (* ~ Fmap.indom s1 x ->
   ~ Fmap.indom s2 x -> *)
@@ -1746,14 +1823,6 @@ Proof.
   - admit.
   - admit.
 Admitted.
-
-Definition can_weaken_env f := forall s1 s2 h1 h2 R x u,
-  satisfies s1 s2 h1 h2 R f ->
-  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f.
-
-Definition can_strengthen_env f := forall s1 s2 h1 h2 R x u,
-  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
-  satisfies s1 s2 h1 h2 R f.
 
 Lemma ent_defun_left : forall x u f1 f2 s1,
 (* s2, *)
