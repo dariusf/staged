@@ -282,7 +282,7 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     satisfies s1 s2 h1 h2 (norm v) (rs f v)
 
   | s_defun s1 s2 h1 x uf :
-    ~ Fmap.indom s1 x ->
+    (* ~ Fmap.indom s1 x -> *)
     s2 = Fmap.update s1 x uf ->
     satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
 
@@ -900,9 +900,9 @@ Proof.
     { apply s_rs_val.
       eapply s_seq.
       apply s_defun.
-      { apply not_indom_update.
+      (* { apply not_indom_update.
         apply not_indom_empty.
-        symmetry. assumption. }
+        symmetry. assumption. } *)
       reflexivity.
       apply ens_pure_intro. reflexivity. }
   }
@@ -959,9 +959,9 @@ Proof.
     { apply s_rs_val.
       eapply s_seq.
       apply s_defun.
-      { apply not_indom_update.
+      (* { apply not_indom_update.
         apply not_indom_empty.
-        symmetry. assumption. }
+        symmetry. assumption. } *)
       reflexivity.
       apply ens_pure_intro. reflexivity. }
   }
@@ -1323,7 +1323,7 @@ Proof.
   cont_eq.
   eapply s_seq.
   apply s_defun.
-  assumption.
+  (* assumption. *)
   reflexivity.
   applys_eq H8.
 Qed.
@@ -1611,7 +1611,7 @@ Qed.
   satisfies s1 s2 h1 h2 R f <->
   satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f. *)
 
-Lemma defun_inv : forall s1 s2 h1 h2 R x u,
+(* Lemma defun_inv : forall s1 s2 h1 h2 R x u,
   satisfies s1 s2 h1 h2 R (defun x u) ->
   ~ Fmap.indom s1 x /\ Fmap.indom s2 x.
 Proof.
@@ -1621,10 +1621,10 @@ Proof.
   unfold Fmap.update.
   apply Fmap.indom_union_l.
   apply Fmap.indom_single.
-Qed.
+Qed. *)
 
-Definition substore s1 s2 := forall x u,
-  Fmap.read s1 x = u -> Fmap.read s2 x = u.
+(* Definition substore s1 s2 := forall x u,
+  Fmap.read s1 x = u -> Fmap.read s2 x = u. *)
 
 (* this might be needed for below. but is hard to prove *)
 
@@ -1755,7 +1755,7 @@ Proof.
   exs. splits*.
 Qed.
 
-Lemma weaken_defun1 : forall x u,
+(* Lemma weaken_defun1 : forall x u,
   can_weaken_env (defun x u).
 Proof.
   unfold can_weaken_env. intros.
@@ -1767,9 +1767,9 @@ Proof.
   fmap_eq.
   (* need same cond *)
   admit.
-Abort.
+Abort. *)
 
-Lemma weaken_defun2 : forall x u,
+(* Lemma weaken_defun2 : forall x u,
   can_weaken_env_except x (defun x u).
 Proof.
   unfold can_weaken_env_except. intros.
@@ -1779,7 +1779,7 @@ Proof.
   unfold Fmap.update.
   fmap_eq.
   apply* Fmap.disjoint_single_single.
-Qed.
+Qed. *)
 
 Lemma weaken_defun3 : forall x u,
   can_weaken_env_with x u (defun x u).
@@ -1798,7 +1798,7 @@ Proof.
 
 Qed.
 
-Lemma weaken_defun : forall x u,
+(* Lemma weaken_defun : forall x u,
   can_weaken_env_fresh (defun x u).
 Proof.
   unfold can_weaken_env_fresh. intros.
@@ -1812,7 +1812,7 @@ Proof.
     congruence. }
   { unfold Fmap.update.
     fmap_eq. }
-Qed.
+Qed. *)
 
 Lemma weaken_seq : forall f1 f2,
   can_weaken_env f1 ->
