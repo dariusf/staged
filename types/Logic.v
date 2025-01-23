@@ -261,6 +261,25 @@ Proof.
   specializes H1 H H4.
 Qed.
 
+(** All values are of type top *)
+Lemma top_intro: forall v,
+  ttop v.
+Proof.
+  unfold ttop. jauto.
+Qed.
+
+Lemma subtype_bot: forall t,
+  tbot <: t.
+Proof.
+  unfold tbot, subtype. intros. false.
+Qed.
+
+Lemma subtype_top: forall t,
+  t <: ttop.
+Proof.
+  unfold ttop, subtype. constructor.
+Qed.
+
 (** top is the annihilator of union *)
 Lemma top_equiv: forall t,
   equiv (tunion ttop t) ttop.
@@ -279,6 +298,14 @@ Proof.
   destruct H.
   - exists ttop. jauto.
   - exists t1. jauto.
+Qed.
+
+Lemma contra_is_top: forall t1 v,
+  ttop v <-> (exists t2, t1 <: t2 /\ t2 v).
+Proof.
+  iff H.
+  { exists ttop. hint subtype_top. jauto. }
+  { destr H. apply top_intro. }
 Qed.
 
 (** * Variance and mutability *)
