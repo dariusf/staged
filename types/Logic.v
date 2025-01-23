@@ -408,6 +408,18 @@ Inductive spec_satisfies : heap -> heap -> val -> spec -> Prop :=
     spec_satisfies h1 h2 r (sintersect s1 s2)
   .
 
+(*
+  case v of
+  | p1 => s1
+  | p2 => s2
+    
+  is written as
+
+  intersect
+    (req (p1 v) (ens s1))
+    (req (p2 v /\ not (p1 v)) (ens s2))
+*)
+
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
 Definition empty := ens_ \[True].
 Notation req_ H := (req H empty).
