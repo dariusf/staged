@@ -73,6 +73,12 @@ Proof.
 (* can only rewrite on the left of ;;, so we have to do things in this order *)
   rewrite norm_rs_req.
   apply ent_req_r.
+  rewrite norm_ens_req_transpose.
+  2: {
+    apply b_pts_single.
+  }
+
+  
 
 (* HANLDE THE DEFUN *)
 

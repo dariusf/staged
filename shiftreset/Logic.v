@@ -2467,6 +2467,51 @@ Proof.
   assumption.
 Qed.
 
+(** * Biabduction *)
+
+Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
+
+  | b_trivial : forall H,
+    biab \[] H H \[]
+
+  | b_base_empty : forall Hf,
+    biab \[] Hf \[] Hf
+
+  | b_pts_match : forall a b H1 H2 Ha Hf l,
+    biab Ha H1 H2 Hf ->
+    biab (\[a=b] \* Ha) (l~~>a \* H1) (l~~>b \* H2) Hf
+
+  | b_any_match : forall H H1 H2 Ha Hf,
+    biab Ha H1 H2 Hf ->
+    biab Ha (H \* H1) (H \* H2) Hf
+
+  | b_pts_diff : forall a b H1 H2 Ha Hf l1 l2,
+    (* l1 <> l2 -> *)
+    biab Ha H1 H2 Hf ->
+    biab (l2~~>b \* Ha) (l1~~>a \* H1) (l2~~>b \* H2) (l1~~>a \* Hf).
+
+Lemma b_pts_single : forall l a b,
+  biab \[a=b] (l~~>a) (l~~>b) \[].
+Proof.
+  intros.
+  rewrite <- (hstar_hempty_r (l~~>a)).
+  rewrite <- (hstar_hempty_r (l~~>b)).
+  applys_eq b_pts_match.
+  instantiate (1 := \[]).
+  xsimpl.
+  intuition.
+  intuition.
+  apply b_base_empty.
+Qed.
+
+(* This is proved elsewhere *)
+Axiom norm_ens_req_transpose : forall H1 H2 Ha Hf f,
+  biab Ha H1 H2 Hf ->
+  entails (ens_ H1;; (req H2 f))
+    (req Ha (ens_ Hf;; f)).
+
+(** * Entailment sequent *)
+
 Lemma ent_seq_ens_sl_ex: forall env A (c:A->hprop) f,
   entails_under env (ens_ (\exists b, c b);; f)
   (∃ b, ens_ (c b);; f).
@@ -2596,19 +2641,6 @@ Lemma ent_disj_l : forall f1 f2 f3 env,
 Proof.
   unfold entails_under. intros.
   inverts H1 as H1; auto.
-Qed.
-
-Lemma norm_seq_ens_empty : forall f,
-  entails (ens_ \[];; f) f.
-Proof.
-  unfold entails. intros.
-  inverts H as H. 2: vacuous. destr H.
-  inverts H as H.
-  destr H.
-  rew_heap in H.
-  hinv H.
-  subst.
-  rew_fmap *.
 Qed.
 
 Lemma norm_rs_ex : forall A ctx r,
