@@ -90,6 +90,7 @@ End Val.
 
 Module Export Heap := HeapF.HeapSetup Val.
 
+Implicit Types h: heap.
 Implicit Types e: expr.
 Implicit Types r v: val.
 
@@ -350,15 +351,19 @@ Qed.
 (** * Program specifications *)
 
 (* Even though we use hprop, for pure logic we can just wrap everything in \[P] *)
-Definition precond := hprop.
 Definition postcond := val -> hprop.
 
+Implicit Types H: hprop.
+Implicit Types Q: postcond.
+
 Inductive spec :=
-  | req : precond -> spec -> spec
+  | req : hprop -> spec -> spec
   | ens : postcond -> spec
   | sexists : forall A, (A -> spec) -> spec
   | sforall : forall A, (A -> spec) -> spec
-  | scase : spec -> spec -> spec.
+  | sintersect : spec -> spec -> spec.
+
+Implicit Types s: spec.
 
 Declare Scope spec_scope.
 Open Scope spec_scope.
@@ -374,7 +379,58 @@ Notation "'∀' x1 .. xn , H" :=
   (at level 39, x1 binder, H at level 50, right associativity,
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : spec_scope.
 
-(* Inductive spec_satisfies : expr -> spec -> Prop := *)
+Inductive spec_satisfies : heap -> heap -> val -> spec -> Prop :=
+
+  | s_req : forall h1 h2 r s H hp hr,
+    H hp ->
+    h1 = Fmap.union hr hp ->
+    Fmap.disjoint hr hp ->
+    spec_satisfies hr h2 r s ->
+    spec_satisfies h1 h2 r (req H s)
+
+  | s_ens : forall Q h1 h2 h3 r,
+    Q r h3 ->
+    h2 = Fmap.union h1 h3 ->
+    Fmap.disjoint h1 h3 ->
+    spec_satisfies h1 h2 r (ens Q)
+
+  | s_ex : forall h1 h2 r (A:Type) (f:A->spec),
+    (exists (b:A), spec_satisfies h1 h2 r (f b)) ->
+    spec_satisfies h1 h2 r (@sexists A f)
+
+  | s_all : forall h1 h2 r (A:Type) (f:A->spec),
+    (forall (b:A), spec_satisfies h1 h2 r (f b)) ->
+    spec_satisfies h1 h2 r (@sforall A f)
+
+  | s_intersect : forall h1 h2 r s1 s2,
+    spec_satisfies h1 h2 r s1 ->
+    spec_satisfies h1 h2 r s2 ->
+    spec_satisfies h1 h2 r (sintersect s1 s2)
+  .
+
+Definition ens_ H := ens (fun r => \[r = vunit] \* H).
+Definition empty := ens_ \[True].
+Notation req_ H := (req H empty).
+
+(** Semantics of triples *)
+Definition triple (s:spec) (e:expr) :=
+  forall h1 h2 r,
+    bigstep h1 e h2 r ->
+    spec_satisfies h1 h2 r s.
+
+(** Triples for program constructs *)
+Lemma triple_assert: forall b,
+  triple (req_ \[b = true])
+   (passert (pval (vbool b))).
+Proof.
+  intros.
+  unfold triple. introv Hb.
+  inverts Hb as Hb.
+  eapply s_req.
+  hintro. all: auto.
+  unfold empty. eapply s_ens.
+  hintro. splits*. hintro. all: auto.
+Qed.
 
 (*
 
@@ -385,8 +441,6 @@ TODO
 - variance: are the definitions of covariance and contravariance reasonable?
 - is covariance equivalent to invariant?
 - is contravariance just top?
-- spec semantics
-- meaning of triples
 - triples for program constructs
 - interesting examples
 
