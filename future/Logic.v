@@ -1531,12 +1531,12 @@ Proof.
   -
   intros.
   pose proof all_future_condition_has_futureSubtraction_linear. 
-  specialize (H0 f0 rho3). 
-
-  exists (ev0::nil) f'.
+  specialize (H0 f0 (ev0::nil)).
+  destr H0.  
+  exists (ev0::nil) f'0.
   split.
-  constructor.  
-  admit.
+  constructor. 
+  exact H1.   
   reflexivity. 
   -
   intros. 
@@ -1560,7 +1560,7 @@ Proof.
   exists (nil:rho) f0.
   split. rewrite List.app_nil_r. 
   constructor. exact H.  rewrite List.app_nil_r. reflexivity.
-Admitted. 
+Qed. 
 
 Axiom futureSubtraction_trace_model_futureSubtraction_linear:
 forall f_ctx t f_ctx' rho3 f3, 
@@ -1596,218 +1596,6 @@ Proof.
   - intros. constructor. exact H.
 Qed.      
 
-Axiom bigstep_framing_futureCond: forall h3 e h2 rho0 f1 v rho3 f_ctx f_ctx', 
-  bigstep h3 rho3 (fc_singleton trace_default) e h2 (rho3 ++ rho0)
-f1 v -> 
-  futureSubtraction_linear f_ctx rho0 f_ctx' -> 
-  exists f3, 
-  bigstep h3 rho3 f_ctx e h2 (rho3 ++ rho0)
-f3 v /\  f3 = fc_conj f_ctx' f1. 
-(* SYH TBD *)
-
-Axiom unionbigstep: forall h1 rho1 f1 e h2 rho2 f2 v f3 f4, 
-  bigstep h1 rho1 f1 e h2 rho2 f2 v ->
-  bigstep h1 rho1 f3 e h2 rho2 f4 v ->
-  bigstep h1 rho1 (fc_conj f1 f3) e h2 rho2 (fc_conj f2 f4) v. 
-(* SYH TBD *)
-
-Axiom generated_rho_enatil_forward_trace: 
-forall h3 f4 e h2 rho3 rho0 f0 v P Q t f f1, 
-  bigstep h3 rho3 f4 e h2 (rho3 ++ rho0) f0 v -> 
-  forward P emp f1 e Q t f -> 
-  trace_model rho0 t. 
-
-Axiom trace_model_futureSubtraction_linear: 
-forall rho0 t f4 f0 f3 f_ctx', 
-trace_model rho0 t -> 
-futureSubtraction (fc_conj f3 f4) t f_ctx' -> 
-futureCondEntail f_ctx' f0. 
-
-(* SYH TBD *)
-
-(* to prove the let rule *)
-Lemma strengthening_futureCond_from_pre: forall h3 rho3 f4 e h2 rho2 f0 v Q t2 f2 Q1 t3 f3 , 
-  bigstep h3 rho3 f4 e h2 rho2 f0 v -> 
-  forward Q t2 f2 e Q1 t3 f3 -> 
-  futureCondEntail f2 f4 -> 
-  exists x0, 
-  bigstep h3 rho3 f2 e h2 rho2 (fc_conj x0 f0) v /\ futureCondEntail f3 f0. 
-Proof. 
-  intros.
-  gen h3 rho3 f4 h2 rho2 f0 v. 
-  induction H0. 
-
-  -
-  intros. 
-  specialize (IHforward h3 rho3 f4 H4 h2 rho2 f0 v H5). 
-  destr IHforward. 
-  exists x0.
-  split.
-  exact H7.
-  pose proof futureCondEntail_trans.
-  specialize (H6 f f' f0 H3 H8). 
-  exact H6.
-
-  - 
-  intros.  
-  pose proof H3. 
-  invert H3. 
-  intros.
-  subst. 
-  specialize (IHforward h3 rho3 f4 H2 h0 rho0 f5 v0 H15 ).
-  destr IHforward.
-  specialize (H1 v0 h0 rho0 f5 H6 h2 rho2 f0 v H16). 
-  destr H1.
-  exists ((fc_singleton (trace_default))).
-  split.
-  pose futureCondEntailTrueISTrue as H3.
-  specialize (H3 f4 H2). subst. 
-  rewrite  f_conj_kleene_any_is_f.
-  exact H4. exact H7.
-
-
-  - 
-  intros.
-  pose futureCondEntailTrueISTrue as H0.
-  specialize (H0 f4 H1). subst. 
-  exists ((fc_singleton (trace_default))).
-  split.
-  rewrite  f_conj_kleene_any_is_f.
-  exact H. invert H.
-  intros. subst.
-  apply futureCondEntail_exact.
-  - 
-  intros.
-  pose proof futureCondEntailTrueISTrue.
-  specialize (H0 f4 H1). subst.
-  exists ((fc_singleton (trace_default))).
-  split.
-  rewrite  f_conj_kleene_any_is_f.
-  exact H. invert H.
-  intros. subst.
-  pose subtract_linear_FromTrueISTrue as H.
-  specialize (H ev0 f0 H5). subst.  
-  apply futureCondEntail_exact.
-  - intros.
-  induction b.
-  + 
-  invert H.
-  intros. subst.  
-  specialize (IHforward h3 rho3 f4 H1 h2 rho2 f0 v H11). 
-  destr IHforward. 
-  exists (x0).
-  split. constructor. exact H2. exact H3. 
-  + 
-  invert H.
-  intros. subst.  
-  specialize (IHforward h3 rho3 f4 H1 h2 rho2 f0 v H11). 
-  destr IHforward. 
-  exists (x0).
-  split. constructor. exact H2. exact H3.
-
-  - 
-  intros. 
-  invert H.
-  intros. subst.  
-  pose futureCondEntailTrueISTrue as H.
-  specialize (H f0 H1). subst. 
-  exists ((fc_singleton (trace_default))).
-  split.
-  rewrite  f_conj_kleene_any_is_f.
-  constructor. exact H5.
-  apply futureCondEntail_exact.
-
-  - intros.
-  invert H. intros. subst. 
-  exists ((fc_singleton (trace_default))).
-  rewrite  f_conj_kleene_any_is_f.
-  split. 
-  pose futureCondEntailTrueISTrue as H.
-  specialize (H f0 H1). subst. 
-  constructor.  exact H10.
-  exact H1.
-  - intros.
-  invert H. intros. subst. 
-  exists ((fc_singleton (trace_default))).
-  rewrite  f_conj_kleene_any_is_f.
-  pose futureCondEntailTrueISTrue as H.
-  specialize (H f4 H1). subst. 
-  split. 
-  constructor.
-  rewrite  f_conj_kleene_any_is_f. 
-  apply futureCondEntail_exact. 
-
-  - 
-  intros.  
-  invert H.  
-  intros. subst.   
-  specialize (IHforward h3 rho3 f4 H1 h2 rho2 f0 v H12). 
-  destr IHforward. 
-  exists x0.
-  pose futureCondEntailTrueISTrue as H.
-  specialize (H f4 H1). subst. 
-  split. 
-  constructor. 
-  exact H2. exact H3.       
-
-  - intros.
-  
-  pose proof futureCondEntail_indicate.
-  specialize (H3 f_ctx f4 H1). 
-  destr H3. subst.    
-   
-  specialize (IHforward h3 rho3 (fc_singleton (trace_default)) (futureCondEntail_exact (fc_singleton (trace_default)))).
-  pose proof future_frame_big_step_aux_aux. 
-  specialize (H3 h3 rho3 f4 e h2 rho2 f0 v nil fc_default H2 ).
-  destr H3. subst. 
-  pose proof bigstep_framing_trace.
-  specialize (H3 h3 e h2 rho0 f1 v rho3 nil (fc_default) H4). 
-  rewrite List.app_nil_r in H3. 
-  specialize (IHforward h2 (rho3++rho0) f1 v H3).
-  destr IHforward.   
-  pose proof bigstep_framing_futureCond.
-  specialize (H5 h3 e h2 rho0 f1 v rho3 ). 
-  pose proof all_future_condition_has_futureSubtraction_linear.
-  specialize (H8 f3 rho0).
-  destr H8.
-  specialize (H5 f3 f' H3 H9).   
-  destr H5. subst. 
-  exists (fc_conj f' f1). 
-  split.
-  pose proof unionbigstep.
-  specialize (H8 h3 rho3 f4 e h2 (rho3 ++ rho0) f0 v f3 (fc_conj f' f1) H2 H5) . 
-  rewrite (fc_comm f3 f4). 
-  rewrite (fc_comm (fc_conj f' f1)
-f0).
-  exact H8.
-  pose proof generated_rho_enatil_forward_trace.
-  specialize (H8 h3 f4 e h2 rho3 rho0 f0 v P Q t f (fc_singleton trace_default) H2 H0). 
-  pose proof trace_model_futureSubtraction_linear. 
-  specialize (H10 rho0 t f4 f0 f3 f_ctx' H8 H). 
-  apply futureCondEntail_conj_LHS_1.
-  exact H10.   
-Qed. 
-
-Lemma heap_disjoint_consequence: forall [A B : Type] (h1:Fmap.fmap A B) h2 h3 h4, 
-  Fmap.disjoint h1 h2 -> 
-  h1 = h3 \u h4 -> 
-  Fmap.disjoint h3 h2 /\ Fmap.disjoint h4 h2. 
-Proof.
-  Search (Fmap.disjoint _ _ -> _ ).
-  intros.
-  split.
-  (*
-  fmap_disjoint.
-  fmap_disjoint.
-  *)
-  eauto.
-  info_eauto. 
-  (*
-  disjoint_union_eq_l
-  disjoint_union_eq_r
-  disjoint_3_unfold : rew_disjoint.
-  *)
-Qed.
 
 Lemma heap_disjoint_consequence_aux: forall [A B : Type] (h1:Fmap.fmap A B) h2 h3, 
   Fmap.disjoint h1 h2 -> 
@@ -1821,7 +1609,10 @@ Proof.
 Qed. 
 
 
-
+Lemma f_entail_conj_indicate : forall f3 x0 f0, 
+  futureCondEntail f3 (fc_conj x0 f0) -> 
+  futureCondEntail f3 x0 /\ futureCondEntail f3 f0.
+Proof. Admitted.  
 
 
 Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
@@ -1861,16 +1652,18 @@ Proof.
   specialize (IHforward H3 rho3 f4 H15).
   destr IHforward.
   specialize (H0 v0). 
-  pose proof strengthening_futureCond_from_pre.
-  specialize (H5 h3 rho3 f4 (subst x v0 e2) h2 rho2 f0 v (Q v0) t2 f2 Q1 t3 f3 H16 H0 H7). 
-  destruct H5 as (x0&H5&H18). 
+  pose proof strenthen_futureCond_big_step.
+  specialize (H5 h3 rho3 f4 (subst x v0 e2) h2 rho2 f0 v f2 H16 H7). 
+  destruct H5 as (x0&H5). 
   specialize(H1 v0 h3 H4 v h2 rho3 H6 rho2 (fc_conj x0 f0) H5).
   destruct H1. destruct H8.
   split.
   exact H1.
   split.
   exact H8. 
-  exact H18. 
+  pose proof (f_entail_conj_indicate ).
+  specialize (H10 f3 x0 f0 H9). destr H10. exact H12.   
+
 
   - (* val *)
   intros.
