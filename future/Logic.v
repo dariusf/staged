@@ -1109,8 +1109,8 @@ Inductive futureSubtraction_linear : futureCond -> rho -> futureCond -> Prop :=
     futureSubtraction_linear f2 t f4 -> 
     futureSubtraction_linear (fc_conj f1 f2) t (fc_conj f3 f4)
 
-  | futureSubtraction_linear_base : forall t, 
-    futureSubtraction_linear (fc_singleton t) nil (fc_singleton t)
+  | futureSubtraction_linear_base : forall f, 
+    futureSubtraction_linear f nil f 
 
   | futureSubtraction_linear_induc : forall ev f f_der t t_der res, 
     fc_der f ev f_der -> 
@@ -1468,13 +1468,76 @@ Proof.
   exists t. reflexivity.
 Qed. 
 
+Axiom futureSubtraction_linear_segemented: forall f1 f2 f3 rho1 rho2, 
+  futureSubtraction_linear f1 rho1 f2 -> 
+  futureSubtraction_linear f2 rho2 f3 -> 
+  futureSubtraction_linear f1 (rho1++rho2) f3. 
 
-Axiom future_frame_big_step_aux_aux : forall h1 rho1 f1 e h2 rho2 f2 v, 
+
+Lemma future_frame_big_step_aux_aux : forall h1 rho1 f1 e h2 rho2 f2 v rho f, 
   bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
   exists rho3 f3, 
-  bigstep h1 nil (fc_singleton (trace_default)) e h2 rho3 f3 v /\ 
+  bigstep h1 rho f e h2 (rho++rho3) f3 v /\ 
   rho2 = rho1 ++ rho3 /\ 
   futureSubtraction_linear f1 rho3 f2. 
+Proof. 
+  intros. 
+  gen rho0 f.
+  induction H.
+  -
+  intros. 
+  specialize (IHbigstep1 rho0 f).
+  destr IHbigstep1.  
+  specialize (IHbigstep2 (rho0 ++ rho4) f0).
+  destr  IHbigstep2. 
+  exists (rho4++rho5) f4.
+  subst.
+  split. 
+  pose proof eval_plet.
+  specialize (H2 h1 h2 h3 x e1 e2 v r rho0 (rho0 ++ rho4) ((rho0 ++ rho4) ++ rho5) f f0 f4 H1 H3).
+  Search ((_ ++ _) ++ _ ).
+  rewrite List.app_assoc.
+  exact H2.
+  split. 
+  rewrite List.app_assoc. reflexivity.
+  pose proof futureSubtraction_linear_segemented.
+  specialize (H2 f1 f2 f3 rho4 rho5 H4 H7). exact H2.
+  -   
+  intros.
+  exists (nil:rho) f0.
+  split.
+  rewrite List.app_nil_r. 
+  constructor. 
+  split.
+  rewrite List.app_nil_r. reflexivity.
+  constructor.  
+  -  
+  intros. 
+  specialize (IHbigstep rho0 f0). 
+  destr IHbigstep. subst. 
+  exists rho3 f3.
+  split. 
+  constructor. exact H0. 
+  split. constructor. 
+  exact H3. 
+  -  
+  intros. 
+  specialize (IHbigstep rho0 f0). 
+  destr IHbigstep. subst. 
+  exists rho3 f3.
+  split. 
+  constructor. exact H0. 
+  split. constructor. 
+  exact H3.
+  -
+  intros. 
+  exists (nil:rho) (fc_conj f0 f_assume). 
+  split. 
+  rewrite List.app_nil_r.
+  constructor. 
+  split.
+  rewrite List.app_nil_r. reflexivity. 
+  Admitted.  
 (* SYH TBD *)
 
 Axiom futureSubtraction_trace_model_futureSubtraction_linear:
@@ -1528,11 +1591,10 @@ Axiom unionbigstep: forall h1 rho1 f1 e h2 rho2 f2 v f3 f4,
 (* SYH TBD *)
 
 Axiom generated_rho_enatil_forward_trace: 
-forall h3 f4 e h2 rho3 rho0 f0 v P Q t f, 
+forall h3 f4 e h2 rho3 rho0 f0 v P Q t f f1, 
   bigstep h3 rho3 f4 e h2 (rho3 ++ rho0) f0 v -> 
-  forward P emp (fc_singleton trace_default) e Q t f -> 
+  forward P emp f1 e Q t f -> 
   trace_model rho0 t. 
-(* SYH TBD *)
 
 Axiom trace_model_futureSubtraction_linear: 
 forall rho0 t f4 f0 f3 f_ctx', 
@@ -1676,7 +1738,7 @@ Proof.
    
   specialize (IHforward h3 rho3 (fc_singleton (trace_default)) (futureCondEntail_exact (fc_singleton (trace_default)))).
   pose proof future_frame_big_step_aux_aux. 
-  specialize (H3 h3 rho3 f4 e h2 rho2 f0 v H2 ).
+  specialize (H3 h3 rho3 f4 e h2 rho2 f0 v nil fc_default H2 ).
   destr H3. subst. 
   pose proof bigstep_framing_trace.
   specialize (H3 h3 e h2 rho0 f1 v rho3 nil (fc_default) H4). 
@@ -1699,7 +1761,7 @@ Proof.
 f0).
   exact H9.
   pose proof generated_rho_enatil_forward_trace.
-  specialize (H9 h3 f4 e h2 rho3 rho0 f0 v P Q t f H2 H0). 
+  specialize (H9 h3 f4 e h2 rho3 rho0 f0 v P Q t f (fc_singleton trace_default) H2 H0). 
   pose proof trace_model_futureSubtraction_linear. 
   specialize (H11 rho0 t f4 f0 f3 f_ctx' H9 H6 H). 
   apply futureCondEntail_conj_LHS_1.
@@ -1896,7 +1958,7 @@ Proof.
   intros. 
   specialize (IHforward h1 H1 v).  
   pose proof future_frame_big_step_aux_aux. 
-  specialize (H4 h1 rho1 f_ctx e h2 rho2 f3 v H3).  
+  specialize (H4 h1 rho1 f_ctx e h2 rho2 f3 v nil fc_default H3).  
   destr H4.  
   specialize (IHforward h2 nil tm_emp rho3 f0 H5). 
   destr IHforward.
