@@ -362,3 +362,16 @@ Notation "'∀' x1 .. xn , H" :=
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : spec_scope.
 
 (* Inductive spec_satisfies : expr -> spec -> Prop := *)
+
+(*
+
+TODO
+
+- is err in int? is err in not int?
+- variance: are the definitions of covariance and contravariance reasonable?
+- spec semantics
+- meaning of triples
+- triples for program constructs
+- interesting examples
+
+*)
