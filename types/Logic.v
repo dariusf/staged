@@ -161,10 +161,14 @@ Definition tbool : type := fun v => exists b, v = vbool b.
 
 Definition ttop : type := fun _ => True.
 Definition tbot : type := fun _ => False.
+
+(* TODO are errs part of singletons? *)
 Definition tsingle v1 : type := fun v => v = v1.
 
-Definition tforall A (f:A -> type) : type := fun v => forall x:A, (f x) v.
-Definition texists A (f:A -> type) : type := fun v => exists x:A, (f x) v.
+Definition tforall A (f:A -> type) : type := fun v =>
+  forall x:A, (f x) v.
+Definition texists A (f:A -> type) : type := fun v =>
+  exists x:A, (f x) v.
 
 Declare Scope typ_scope.
 Open Scope typ_scope.
@@ -180,7 +184,6 @@ Notation "'∀' x1 .. xn , H" :=
   (at level 39, x1 binder, H at level 50, right associativity,
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
 
-
 Definition tintersect t1 t2 : type := fun v => t1 v /\ t2 v.
 Definition tunion t1 t2 : type := fun v => t1 v \/ t2 v.
 Definition tnot t : type := fun v => not (t v).
@@ -194,7 +197,7 @@ Definition tany : type := tnot tabort.
 Definition vcons a b : val := vconstr2 "cons" a b.
 Definition vnil : val := vconstr0 "nil".
 
-(* the type of finite lists. can be coinductive to be infinite.
+(** The type of finite lists. can be coinductive to be infinite.
   non-inductive recursive types are ignored for now. *)
 Inductive tlist : type -> val -> Prop :=
   | tlist_nil : forall t,
@@ -204,7 +207,7 @@ Inductive tlist : type -> val -> Prop :=
     tlist t vt ->
     tlist t (vcons vh vt).
 
-(* unary logical relation on expressions *)
+(** Unary logical relation on expressions *)
 Definition E t := fun e =>
   forall h1 h2 r, bigstep h1 e h2 r -> t r.
 
@@ -213,7 +216,7 @@ Definition tarrow t1 t2 : type := fun vf =>
   forall v, t1 v ->
   E t2 (papp (pval (vfun x e)) (pval v)).
 
-(* dependent arrow *)
+(** Dependent arrow *)
 Definition tdarrow v t1 t2 : type := fun vf =>
   forall x e, vf = vfun x e ->
   t1 v ->
@@ -243,6 +246,20 @@ Proof.
   apply subtype_trans.
 Qed.
 
+Lemma function_variance: forall t1 t2 t3 t4,
+  t3 <: t1 ->
+  t2 <: t4 ->
+  tarrow t1 t2 <: tarrow t3 t4.
+Proof.
+  unfold subtype, tarrow, E. intros.
+  specializes H1 H2. clear H2.
+  apply H0. clear H0.
+  specializes H H3.
+  specializes H1 H H4.
+Qed.
+
+(** * Variance and mutability *)
+
 Definition tcov : type -> type := fun t1 v =>
   exists t2, t2 <: t1 -> t2 v.
 Definition tcontra : type -> type := fun t1 v =>
@@ -259,6 +276,38 @@ Proof.
   apply tlist_cons.
   unfold tint. eexists. reflexivity.
   apply tlist_nil.
+Qed.
+
+Definition id := vfun "x" (pvar "x").
+Definition id_type1 : type := ∀ t, tarrow t t.
+Definition id_type2 : type := ∀ v, tdarrow v ttop (tsingle v).
+
+Lemma id_has_type1 : id_type1 id.
+Proof.
+  unfold id, id_type1.
+  unfold tforall. intros.
+  unfold tarrow. intros.
+  unfold E. intros.
+  injects H.
+  inverts H1 as H1.
+  { injects H1.
+    inverts H6 as H6.
+    assumption. (* this is the key step *) }
+  { inverts H1 as H1. }
+Qed.
+
+Lemma id_has_type2 : id_type2 id.
+Proof.
+  unfold id, id_type2.
+  unfold tforall. intros.
+  unfold tdarrow. intros.
+  unfold tsingle, E. intros.
+  injects H.
+  inverts H1 as H1.
+  { injects H1.
+    inverts H6 as H6.
+    reflexivity. (* note the difference! *) }
+  { inverts H1 as H1. }
 Qed.
 
 End Examples.
@@ -298,42 +347,6 @@ Proof.
       specializes* IHtlist. }
 Qed.
 
-Module Examples1.
-
-Definition id := vfun "x" (pvar "x").
-Definition id_type1 : type := ∀ t, tarrow t t.
-Definition id_type2 : type := ∀ v, tdarrow v ttop (tsingle v).
-
-Lemma id_has_type1 : id_type1 id.
-Proof.
-  unfold id, id_type1.
-  unfold tforall. intros.
-  unfold tarrow. intros.
-  unfold E. intros.
-  injects H.
-  inverts H1 as H1.
-  { injects H1.
-    inverts H6 as H6.
-    assumption. (* this is the key step *) }
-  { inverts H1 as H1. }
-Qed.
-
-Lemma id_has_type2 : id_type2 id.
-Proof.
-  unfold id, id_type2.
-  unfold tforall. intros.
-  unfold tdarrow. intros.
-  unfold tsingle, E. intros.
-  injects H.
-  inverts H1 as H1.
-  { injects H1.
-    inverts H6 as H6.
-    reflexivity. (* note the difference! *) }
-  { inverts H1 as H1. }
-Qed.
-
-End Examples1.
-
 (** * Program specifications *)
 
 (* Even though we use hprop, for pure logic we can just wrap everything in \[P] *)
@@ -368,7 +381,10 @@ Notation "'∀' x1 .. xn , H" :=
 TODO
 
 - is err in int? is err in not int?
+- is err in singleton?
 - variance: are the definitions of covariance and contravariance reasonable?
+- is covariance equivalent to invariant?
+- is contravariance just top?
 - spec semantics
 - meaning of triples
 - triples for program constructs
