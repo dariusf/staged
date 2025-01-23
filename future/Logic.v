@@ -1478,8 +1478,7 @@ Lemma future_frame_big_step_aux_aux : forall h1 rho1 f1 e h2 rho2 f2 v rho f,
   bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
   exists rho3 f3, 
   bigstep h1 rho f e h2 (rho++rho3) f3 v /\ 
-  rho2 = rho1 ++ rho3 /\ 
-  futureSubtraction_linear f1 rho3 f2. 
+  rho2 = rho1 ++ rho3 . 
 Proof. 
   intros. 
   gen rho0 f.
@@ -1493,24 +1492,19 @@ Proof.
   exists (rho4++rho5) f4.
   subst.
   split. 
-  pose proof eval_plet.
-  specialize (H2 h1 h2 h3 x e1 e2 v r rho0 (rho0 ++ rho4) ((rho0 ++ rho4) ++ rho5) f f0 f4 H1 H3).
+  pose proof eval_plet. 
+  specialize (H3 h1 h2 h3 x e1 e2 v r rho0 (rho0 ++ rho4) ((rho0 ++ rho4) ++ rho5) f f0 f4 H1 H2).
   Search ((_ ++ _) ++ _ ).
   rewrite List.app_assoc.
-  exact H2.
-  split. 
+  exact H3.
   rewrite List.app_assoc. reflexivity.
-  pose proof futureSubtraction_linear_segemented.
-  specialize (H2 f1 f2 f3 rho4 rho5 H4 H7). exact H2.
   -   
   intros.
   exists (nil:rho) f0.
   split.
   rewrite List.app_nil_r. 
   constructor. 
-  split.
   rewrite List.app_nil_r. reflexivity.
-  constructor.  
   -  
   intros. 
   specialize (IHbigstep rho0 f0). 
@@ -1518,8 +1512,7 @@ Proof.
   exists rho3 f3.
   split. 
   constructor. exact H0. 
-  split. constructor. 
-  exact H3. 
+  reflexivity. 
   -  
   intros. 
   specialize (IHbigstep rho0 f0). 
@@ -1527,24 +1520,52 @@ Proof.
   exists rho3 f3.
   split. 
   constructor. exact H0. 
-  split. constructor. 
-  exact H3.
+  reflexivity. 
   -
   intros. 
   exists (nil:rho) (fc_conj f0 f_assume). 
   split. 
   rewrite List.app_nil_r.
-  constructor. 
+  constructor.
+  rewrite List.app_nil_r. reflexivity.
+  -
+  intros.
+  pose proof all_future_condition_has_futureSubtraction_linear. 
+  specialize (H0 f0 rho3). 
+
+  exists (ev0::nil) f'.
   split.
-  rewrite List.app_nil_r. reflexivity. 
-  Admitted.  
-(* SYH TBD *)
+  constructor.  
+  admit.
+  reflexivity. 
+  -
+  intros. 
+  exists (nil:rho) f0.
+  split. rewrite List.app_nil_r. 
+  constructor. exact H.  rewrite List.app_nil_r. reflexivity.
+  - 
+  intros. 
+  exists (nil:rho) f0.
+  split. rewrite List.app_nil_r. 
+  constructor. exact H.  rewrite List.app_nil_r. reflexivity.
+  -
+  intros.
+  specialize (IHbigstep rho0 f). 
+  destr IHbigstep. subst. 
+  exists (rho3) (f3).
+  split. constructor. exact H0.  
+  reflexivity.
+  - 
+  intros. 
+  exists (nil:rho) f0.
+  split. rewrite List.app_nil_r. 
+  constructor. exact H.  rewrite List.app_nil_r. reflexivity.
+Admitted. 
 
 Axiom futureSubtraction_trace_model_futureSubtraction_linear:
 forall f_ctx t f_ctx' rho3 f3, 
   futureSubtraction f_ctx t f_ctx' -> 
   trace_model rho3 t ->
-  futureSubtraction_linear f_ctx rho3 f3 ->
   futureCondEntail f_ctx' f3. 
 (* SYH TBD *)
 
@@ -1599,7 +1620,6 @@ forall h3 f4 e h2 rho3 rho0 f0 v P Q t f f1,
 Axiom trace_model_futureSubtraction_linear: 
 forall rho0 t f4 f0 f3 f_ctx', 
 trace_model rho0 t -> 
-futureSubtraction_linear f4 rho0 f0 -> 
 futureSubtraction (fc_conj f3 f4) t f_ctx' -> 
 futureCondEntail f_ctx' f0. 
 
@@ -1748,24 +1768,24 @@ Proof.
   pose proof bigstep_framing_futureCond.
   specialize (H5 h3 e h2 rho0 f1 v rho3 ). 
   pose proof all_future_condition_has_futureSubtraction_linear.
-  specialize (H9 f3 rho0).
-  destr H9.
-  specialize (H5 f3 f' H3 H10).   
+  specialize (H8 f3 rho0).
+  destr H8.
+  specialize (H5 f3 f' H3 H9).   
   destr H5. subst. 
   exists (fc_conj f' f1). 
   split.
   pose proof unionbigstep.
-  specialize (H9 h3 rho3 f4 e h2 (rho3 ++ rho0) f0 v f3 (fc_conj f' f1) H2 H5) . 
+  specialize (H8 h3 rho3 f4 e h2 (rho3 ++ rho0) f0 v f3 (fc_conj f' f1) H2 H5) . 
   rewrite (fc_comm f3 f4). 
   rewrite (fc_comm (fc_conj f' f1)
 f0).
-  exact H9.
+  exact H8.
   pose proof generated_rho_enatil_forward_trace.
-  specialize (H9 h3 f4 e h2 rho3 rho0 f0 v P Q t f (fc_singleton trace_default) H2 H0). 
+  specialize (H8 h3 f4 e h2 rho3 rho0 f0 v P Q t f (fc_singleton trace_default) H2 H0). 
   pose proof trace_model_futureSubtraction_linear. 
-  specialize (H11 rho0 t f4 f0 f3 f_ctx' H9 H6 H). 
+  specialize (H10 rho0 t f4 f0 f3 f_ctx' H8 H). 
   apply futureCondEntail_conj_LHS_1.
-  exact H11.   
+  exact H10.   
 Qed. 
 
 Lemma heap_disjoint_consequence: forall [A B : Type] (h1:Fmap.fmap A B) h2 h3 h4, 
@@ -1963,14 +1983,14 @@ Proof.
   specialize (IHforward h2 nil tm_emp rho3 f0 H5). 
   destr IHforward.
   split.
-  exact H6.
+  exact H4.
   split.
   subst.   
   constructor.
-  exact H2. exact H9.
+  exact H2. exact H8.
   subst.
   apply futureCondEntail_conj_LHS_1.
   pose proof futureSubtraction_trace_model_futureSubtraction_linear.
-  exact (H4 f_ctx t f_ctx' rho3 f3 H0 H9 H7).   
+  exact (H6 f_ctx t f_ctx' rho3 f3 H0 H8).   
 Qed. 
 
