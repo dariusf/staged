@@ -381,11 +381,12 @@ Notation "'∀' x1 .. xn , H" :=
 
 Inductive spec_satisfies : heap -> heap -> val -> spec -> Prop :=
 
-  | s_req : forall h1 h2 r s H hp hr,
-    H hp ->
-    h1 = Fmap.union hr hp ->
-    Fmap.disjoint hr hp ->
-    spec_satisfies hr h2 r s ->
+  | s_req : forall h1 h2 r s H,
+    (forall hp hr,
+      H hp ->
+      h1 = Fmap.union hr hp ->
+      Fmap.disjoint hr hp ->
+      spec_satisfies hr h2 r s) ->
     spec_satisfies h1 h2 r (req H s)
 
   | s_ens : forall Q h1 h2 h3 r,
@@ -424,7 +425,25 @@ Definition ens_ H := ens (fun r => \[r = vunit] \* H).
 Definition empty := ens_ \[True].
 Notation req_ H := (req H empty).
 
-(** Semantics of triples *)
+(** * Introduction/inversion lemmas *)
+Lemma req_pure_intro : forall h1 h2 r P s,
+  (P -> spec_satisfies h1 h2 r s) ->
+  spec_satisfies h1 h2 r (req \[P] s).
+Proof.
+  intros.
+  apply s_req. intros.
+  hinv H0. subst. rew_fmap.
+  apply* H.
+Qed.
+
+Lemma empty_intro: forall h,
+  spec_satisfies h h vunit empty.
+Proof.
+  unfold empty. intros. eapply s_ens.
+  hintro. splits*. hintro. all: auto.
+Qed.
+
+(** * Semantics of triples *)
 Definition triple (s:spec) (e:expr) :=
   forall h1 h2 r,
     bigstep h1 e h2 r ->
@@ -438,10 +457,8 @@ Proof.
   intros.
   unfold triple. introv Hb.
   inverts Hb as Hb.
-  eapply s_req.
-  hintro. all: auto.
-  unfold empty. eapply s_ens.
-  hintro. splits*. hintro. all: auto.
+  apply req_pure_intro. intros.
+  apply empty_intro.
 Qed.
 
 (*
