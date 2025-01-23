@@ -158,14 +158,35 @@ Implicit Types t: type.
 
 Definition tint : type := fun v => exists i, v = vint i.
 Definition tbool : type := fun v => exists b, v = vbool b.
+
 Definition ttop : type := fun _ => True.
 Definition tbot : type := fun _ => False.
 Definition tsingle v1 : type := fun v => v = v1.
+
 Definition tforall A (f:A -> type) : type := fun v => forall x:A, (f x) v.
 Definition texists A (f:A -> type) : type := fun v => exists x:A, (f x) v.
+
+Declare Scope typ_scope.
+Open Scope typ_scope.
+Bind Scope typ_scope with type.
+
+Notation "'∃' x1 .. xn , H" :=
+  (texists (fun x1 => .. (texists (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
+
+Notation "'∀' x1 .. xn , H" :=
+  (tforall (fun x1 => .. (tforall (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
+
+
 Definition tintersect t1 t2 : type := fun v => t1 v /\ t2 v.
 Definition tunion t1 t2 : type := fun v => t1 v \/ t2 v.
 Definition tnot t : type := fun v => not (t v).
+
+(* TODO err has to be in every type.
+  is it just in base types? in that case what about (¬ int)? *)
 Definition terr : type := tsingle verr.
 Definition tabort : type := tsingle vabort.
 Definition tany : type := tnot tabort.
@@ -173,34 +194,30 @@ Definition tany : type := tnot tabort.
 Definition vcons a b : val := vconstr2 "cons" a b.
 Definition vnil : val := vconstr0 "nil".
 
+(* the type of finite lists. can be coinductive to be infinite.
+  non-inductive recursive types are ignored for now. *)
 Inductive tlist : type -> val -> Prop :=
-
   | tlist_nil : forall t,
     tlist t vnil
-
   | tlist_cons : forall vh vt t,
     t vh ->
     tlist t vt ->
     tlist t (vcons vh vt).
 
+(* unary logical relation on expressions *)
+Definition E t := fun e =>
+  forall h1 h2 r, bigstep h1 e h2 r -> t r.
+
 Definition tarrow t1 t2 : type := fun vf =>
   forall x e, vf = vfun x e ->
   forall v, t1 v ->
-  forall h1 h2 r,
-  bigstep h1 (papp (pval (vfun x e)) (pval v)) h2 r -> t2 r.
+  E t2 (papp (pval (vfun x e)) (pval v)).
 
-Declare Scope type_scope.
-Open Scope type_scope.
-
-Notation "'∃' x1 .. xn , H" :=
-  (texists (fun x1 => .. (texists (fun xn => H)) ..))
-  (at level 39, x1 binder, H at level 50, right associativity,
-   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : type_scope.
-
-Notation "'∀' x1 .. xn , H" :=
-  (tforall (fun x1 => .. (tforall (fun xn => H)) ..))
-  (at level 39, x1 binder, H at level 50, right associativity,
-   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : type_scope.
+(* dependent arrow *)
+Definition tdarrow v t1 t2 : type := fun vf =>
+  forall x e, vf = vfun x e ->
+  t1 v ->
+  E t2 (papp (pval (vfun x e)) (pval v)).
 
 Definition subtype t1 t2 := forall v, t1 v -> t2 v.
 Notation "t1 '<:' t2" := (subtype t1 t2) (at level 40).
@@ -229,16 +246,9 @@ Qed.
 Definition tcov : type -> type := fun t1 v =>
   exists t2, t2 <: t1 -> t2 v.
 Definition tcontra : type -> type := fun t1 v =>
-  exists t2, t1 <: t2 -> t2 v.
+  forall t2, t1 <: t2 -> t2 v.
 Definition tinv : type -> type := fun t1 v => t1 v.
-Definition twild := ttop.
-
-(* Instance subtype_refl : Reflexive subtype.
-Proof.
-  unfold Reflexive, subtype.
-  intros.
-  exact H.
-Qed. *)
+Definition twild : type := ttop.
 
 Module Examples.
 
@@ -251,6 +261,8 @@ Proof.
   apply tlist_nil.
 Qed.
 
+End Examples.
+
 Lemma subtype_cov: forall t,
   t <: tcov t.
 Proof.
@@ -258,7 +270,7 @@ Proof.
   eauto.
 Qed.
 
-Lemma _list_covariant: forall t,
+Lemma list_covariant: forall t,
   tlist t <: tlist (tcov t).
 Proof.
   unfold subtype. intros.
@@ -269,7 +281,58 @@ Proof.
     { assumption. }
 Qed.
 
-End Examples.
+Lemma list_contravariant: forall t,
+  tlist (tcontra t) <: tlist t.
+Proof.
+  unfold subtype. intros.
+  remember (tcontra t) as t1 eqn:H1.
+  induction H.
+  - apply tlist_nil.
+  - apply tlist_cons.
+    { subst. unfold tcontra in H.
+      specializes* IHtlist.
+      apply H.
+      unfold subtype.
+      auto. }
+    { subst.
+      specializes* IHtlist. }
+Qed.
+
+Module Examples1.
+
+Definition id := vfun "x" (pvar "x").
+Definition id_type1 : type := ∀ t, tarrow t t.
+Definition id_type2 : type := ∀ v, tdarrow v ttop (tsingle v).
+
+Lemma id_has_type1 : id_type1 id.
+Proof.
+  unfold id, id_type1.
+  unfold tforall. intros.
+  unfold tarrow. intros.
+  unfold E. intros.
+  injects H.
+  inverts H1 as H1.
+  { injects H1.
+    inverts H6 as H6.
+    assumption. (* this is the key step *) }
+  { inverts H1 as H1. }
+Qed.
+
+Lemma id_has_type2 : id_type2 id.
+Proof.
+  unfold id, id_type2.
+  unfold tforall. intros.
+  unfold tdarrow. intros.
+  unfold tsingle, E. intros.
+  injects H.
+  inverts H1 as H1.
+  { injects H1.
+    inverts H6 as H6.
+    reflexivity. (* note the difference! *) }
+  { inverts H1 as H1. }
+Qed.
+
+End Examples1.
 
 (** * Program specifications *)
 
@@ -283,3 +346,19 @@ Inductive spec :=
   | sexists : forall A, (A -> spec) -> spec
   | sforall : forall A, (A -> spec) -> spec
   | scase : spec -> spec -> spec.
+
+Declare Scope spec_scope.
+Open Scope spec_scope.
+Bind Scope spec_scope with spec.
+
+Notation "'∃' x1 .. xn , H" :=
+  (texists (fun x1 => .. (texists (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'") : spec_scope.
+
+Notation "'∀' x1 .. xn , H" :=
+  (tforall (fun x1 => .. (tforall (fun xn => H)) ..))
+  (at level 39, x1 binder, H at level 50, right associativity,
+   format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : spec_scope.
+
+(* Inductive spec_satisfies : expr -> spec -> Prop := *)
