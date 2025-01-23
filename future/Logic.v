@@ -926,6 +926,10 @@ Axiom futureCondEntailTrueISTrue: forall f,
 Axiom futureCondEntail_indicate: forall f1 f2, futureCondEntail f1 f2 -> 
   exists f3, f1 = fc_conj f3 f2.  
 
+Axiom f_entail_conj_indicate : forall f3 x0 f0, 
+  futureCondEntail f3 (fc_conj x0 f0) -> 
+  futureCondEntail f3 x0 /\ futureCondEntail f3 f0.
+
 
 
 Theorem futureCond_sound : forall f1 f2 rho, 
@@ -1468,11 +1472,6 @@ Proof.
   exists t. reflexivity.
 Qed. 
 
-Axiom futureSubtraction_linear_segemented: forall f1 f2 f3 rho1 rho2, 
-  futureSubtraction_linear f1 rho1 f2 -> 
-  futureSubtraction_linear f2 rho2 f3 -> 
-  futureSubtraction_linear f1 (rho1++rho2) f3. 
-
 
 Lemma future_frame_big_step_aux_aux : forall h1 rho1 f1 e h2 rho2 f2 v rho f, 
   bigstep h1 rho1 f1 e h2 rho2 f2 v -> 
@@ -1609,10 +1608,6 @@ Proof.
 Qed. 
 
 
-Lemma f_entail_conj_indicate : forall f3 x0 f0, 
-  futureCondEntail f3 (fc_conj x0 f0) -> 
-  futureCondEntail f3 x0 /\ futureCondEntail f3 f0.
-Proof. Admitted.  
 
 
 Theorem soundness : forall P e Q t1 t2 rho1 rho2 h1 v h2 f1 f2 f3,
