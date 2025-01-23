@@ -227,25 +227,27 @@ Definition subtype t1 t2 := forall v, t1 v -> t2 v.
 Notation "t1 '<:' t2" := (subtype t1 t2) (at level 40).
 
 Instance subtype_refl : Reflexive subtype.
-Proof.
-  unfold Reflexive, subtype.
-  intros.
-  exact H.
-Qed.
+Proof. unfold Reflexive, subtype. intros. auto. Qed.
 
 Instance subtype_trans : Transitive subtype.
-Proof.
-  unfold Transitive, subtype.
-  intros.
-  auto.
-Qed.
+Proof. unfold Transitive, subtype. intros. auto. Qed.
 
 Instance subtype_preorder : PreOrder subtype.
-Proof.
-  constructor.
-  apply subtype_refl.
-  apply subtype_trans.
-Qed.
+Proof. constructor. apply subtype_refl. apply subtype_trans. Qed.
+
+Definition equiv t1 t2 := forall v, t1 v <-> t2 v.
+
+Instance equiv_refl : Reflexive equiv.
+Proof. unfold Reflexive, equiv. jauto. Qed.
+
+Instance equiv_trans : Transitive equiv.
+Proof. unfold Transitive, equiv. intros. split; rewrite H, H0; jauto. Qed.
+
+Instance equiv_sym : Symmetric equiv.
+Proof. unfold Symmetric, equiv. intros. split; rewrite H; jauto. Qed.
+
+Instance equiv_equiv : Equivalence equiv.
+Proof. constructor. apply equiv_refl. apply equiv_sym. apply equiv_trans. Qed.
 
 Lemma function_variance: forall t1 t2 t3 t4,
   t3 <: t1 ->
@@ -257,6 +259,26 @@ Proof.
   apply H0. clear H0.
   specializes H H3.
   specializes H1 H H4.
+Qed.
+
+(** top is the annihilator of union *)
+Lemma top_equiv: forall t,
+  equiv (tunion ttop t) ttop.
+Proof.
+  intros. iff H.
+  { unfold ttop. eauto. }
+  { unfold tunion, ttop. eauto. }
+Qed.
+
+(** These two disjuncts are included in the infinite set of disjuncts of the supertypes of t1 *)
+Lemma contra_disjuncts: forall t1 v,
+  (tunion ttop t1) v -> (exists t2, t1 <: t2 /\ t2 v).
+Proof.
+  unfold tunion, ttop, subtype.
+  intros.
+  destruct H.
+  - exists ttop. jauto.
+  - exists t1. jauto.
 Qed.
 
 (** * Variance and mutability *)
@@ -449,7 +471,7 @@ Definition triple (s:spec) (e:expr) :=
     bigstep h1 e h2 r ->
     spec_satisfies h1 h2 r s.
 
-(** Triples for program constructs *)
+(** * Triples for program constructs *)
 Lemma triple_assert: forall b,
   triple (req_ \[b = true])
    (passert (pval (vbool b))).
