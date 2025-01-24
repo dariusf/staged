@@ -2005,12 +2005,6 @@ Proof.
   apply s_ens. exs. splits*. fmap_disjoint. fmap_disjoint.
 Qed.
 
-Lemma remove_defun : forall s1 s2 h1 h2 R x u f,
-  (* ~ indom s1 x -> *)
-  satisfies s1 s2 h1 h2 R f ->
-  satisfies (Fmap.remove s1 x) s2 h1 h2 R (defun x u;; f).
-Proof.
-Admitted.
   (* intros.
   inverts H0 as H0; no_shift.
   inverts H0 as H0. *)
@@ -2031,6 +2025,18 @@ Proof.
   { case_if. reflexivity. }
 Qed.
 
+Lemma remove_defun : forall s1 s2 h1 h2 R x u f,
+  Fmap.indom s1 x ->
+  Fmap.read s1 x = u ->
+  satisfies s1 s2 h1 h2 R f ->
+  satisfies (Fmap.remove s1 x) s2 h1 h2 R (defun x u;; f).
+Proof.
+  intros.
+  eapply s_seq.
+  2: { apply H1. }
+  apply s_defun.
+  rewrites* (>> remove_add_cancel s1).
+Qed.
 
 Lemma ent_defun_both : forall x u f1 f2 s1,
   Fmap.indom s1 x ->
