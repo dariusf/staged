@@ -2005,6 +2005,24 @@ Proof.
   apply s_ens. exs. splits*. fmap_disjoint. fmap_disjoint.
 Qed. *)
 
+(* adding to both sides doesn't work *)
+
+(* Lemma satisfies_weaken_env : forall s1 s2 h1 h2 R f x u,
+  satisfies s1 s2 h1 h2 R f ->
+  satisfies (Fmap.update s1 x u) s2 h1 h2 R f.
+Proof.
+Admitted.
+
+Lemma ent_weaken_env : forall x u f1 f2 s1,
+  entails_under (Fmap.update s1 x u) f1 f2 ->
+  entails_under s1 f1 f2.
+Proof.
+  unfold entails_under, Fmap.update. intros.
+  lets: satisfies_weaken_env H0.
+  specializes H H1.
+  (* need strengthen for f2 *)
+Abort. *)
+
 Lemma remove_defun : forall s1 s2 h1 h2 R x u f,
   Fmap.indom s1 x ->
   Fmap.read s1 x = u ->
