@@ -157,3 +157,19 @@ Proof.
   apply Fmap.indom_union_l.
   apply Fmap.indom_single.
 Qed.
+
+Lemma cancel_update_remove : forall A (B:Type) {IB:Inhab B} (s1:fmap A B) (x:A) (u:B),
+  Fmap.indom s1 x ->
+  Fmap.read s1 x = u ->
+  Fmap.update (Fmap.remove s1 x) x u = s1.
+Proof.
+  unfold update, remove, single, read, indom, map_indom. intros.
+  applys fmap_extens. intros y. simpls.
+  unfold map_union, map_remove.
+  case_if.
+  { subst.
+    destruct (Fmap.fmap_data s1 y).
+    reflexivity.
+    rew_logic *. }
+  { case_if. reflexivity. }
+Qed.
