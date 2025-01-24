@@ -30,6 +30,7 @@ Definition foo r : flow :=
 
 Definition foo_spec : flow :=
   ∀ x a,
+  (* cannot quantify over something involving flow inside flow *)
   (* ∃ (uf:val->val->flow), defun "k" uf;; *)
 
   (* terrible defun workaround *)
