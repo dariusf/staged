@@ -1453,7 +1453,7 @@ Qed.
 (* Definition flow_res (f:flow) (v:val) : Prop :=
   forall s1 s2 h1 h2 R, satisfies s1 s2 h1 h2 R f -> R = norm v. *)
 
-Lemma ent_seq_defun_discard : forall x uf f s,
+(* Lemma ent_seq_defun_discard : forall x uf f s,
   (* flow_res f vunit -> *)
   shift_free f ->
   env_invariant x f ->
@@ -1481,7 +1481,7 @@ Proof.
 
   assumption.
   assumption.
-Qed.
+Qed. *)
 
 (* Lemma ent_seq_defun_discard1 : forall x uf f s,
   shift_free f ->
@@ -1528,7 +1528,16 @@ Proof.
   assumption.
 Qed. *)
 
-Definition env_independent2 x f := forall u s1 s2 h1 h2 R,
+Lemma ens_inv : forall s1 s2 h1 h2 R Q,
+  satisfies s1 s2 h1 h2 R (ens Q) ->
+  s1 = s2.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  reflexivity.
+Qed.
+
+(* Definition env_independent2 x f := forall u s1 s2 h1 h2 R,
   ~ Fmap.indom s1 x ->
   ~ Fmap.indom s2 x ->
   satisfies s1 s2 h1 h2 R f <->
@@ -1551,15 +1560,6 @@ Proof.
   apply H1 in H4.
   specializes H3 H4.
   specializes H2 H H0.
-Qed.
-
-Lemma ens_inv : forall s1 s2 h1 h2 R Q,
-  satisfies s1 s2 h1 h2 R (ens Q) ->
-  s1 = s2.
-Proof.
-  intros.
-  inverts H as H. destr H.
-  reflexivity.
 Qed.
 
 Lemma env_independent_ens : forall x Q,
@@ -1594,7 +1594,7 @@ Proof.
   inverts H1 as H1.
   rewrites (>> update_idem var ufun s1 H H0) in H9.
   assumption.
-Qed.
+Qed. *)
 
 (* Definition env_independent2 x f := forall u s1 s2 h1 h2 R,
   ~ Fmap.indom s1 x ->
@@ -1746,7 +1746,7 @@ Proof.
   exs. splits*.
 Qed.
 
-Lemma weaken_fn1 : forall xf v r,
+(* Lemma weaken_fn1 : forall xf v r,
   can_weaken_env (unk xf v r).
 Proof.
   unfold can_weaken_env. intros.
@@ -1788,16 +1788,16 @@ Proof.
   (* cannot express that these ufuns are functions are of a certain behavior,
     s.t. when a binding in the env other than theirs is changed,
     their behavior is still equiv *)
-Abort.
+Abort. *)
 
-Lemma weaken_fn : forall xf v r u,
+(* Lemma weaken_fn : forall xf v r u,
   can_weaken_env_with xf u (unk xf v r).
 Proof.
   unfold can_weaken_env_with. intros.
   inverts H as H.
   eapply s_unk.
   resolve_fn_in_env.
-Abort.
+Abort. *)
 
 (* Lemma weaken_defun1 : forall x u,
   can_weaken_env (defun x u).
@@ -1825,7 +1825,7 @@ Proof.
   apply* Fmap.disjoint_single_single.
 Qed. *)
 
-Lemma weaken_defun : forall x u,
+(* Lemma weaken_defun : forall x u,
   can_weaken_env (defun x u).
 Proof.
   unfold can_weaken_env. intros.
@@ -1834,10 +1834,10 @@ Proof.
   unfold Fmap.update.
   fmap_eq.
 (* Qed. *)
-Abort.
+Abort. *)
 
 
-Lemma weaken_defun3 : forall x u,
+(* Lemma weaken_defun3 : forall x u,
   can_weaken_env_with x u (defun x u).
 Proof.
   unfold can_weaken_env_with. intros.
@@ -1852,7 +1852,7 @@ Proof.
   resolve_fn_in_env.
   *)
 
-Qed.
+Qed. *)
 
 (* Lemma weaken_defun : forall x u,
   can_weaken_env_fresh (defun x u).
@@ -1870,7 +1870,7 @@ Proof.
     fmap_eq. }
 Qed. *)
 
-Lemma weaken_seq : forall f1 f2,
+(* Lemma weaken_seq : forall f1 f2,
   can_weaken_env f1 ->
   can_weaken_env f2 ->
   can_weaken_env (f1;; f2).
@@ -1909,9 +1909,9 @@ Proof.
   { apply s_rs_val.
     eauto. }
 (* Qed. *)
-Restart.
+Restart. *)
 
-  introv H.
+  (* introv H.
   unfold can_weaken_env. intros.
   dependent induction H0.
   { eapply s_rs_sh.
@@ -1934,9 +1934,9 @@ Restart.
   { apply s_rs_val.
     eauto. }
 
-Abort.
+Abort. *)
 
-Lemma weaken_with : forall f x u,
+(* Lemma weaken_with : forall f x u,
   can_weaken_env f ->
   can_weaken_env_with x u f.
 Proof.
@@ -1967,80 +1967,74 @@ Proof.
   apply s_fall. intros b.
   inverts H0 as H0. specializes H0 b.
   applys* H.
-Qed.
+Qed. *)
 
 Definition can_strengthen_env f := forall s1 s2 h1 h2 R x u,
+  ~ Fmap.indom s1 x ->
+  ~ Fmap.indom s2 x ->
   satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
   satisfies s1 s2 h1 h2 R f.
 
-Lemma ent_strengthen_env : forall s1 s2 h1 h2 R f x u,
-  (* ~ Fmap.indom s1 x ->
-  ~ Fmap.indom s2 x -> *)
-  satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
-  satisfies s1 s2 h1 h2 R f.
+
+Lemma strengthen_req : forall H f,
+  can_strengthen_env f ->
+  can_strengthen_env (req H f).
 Proof.
-  introv H.
-  induction H.
-  - apply s_req. intros.
-    specializes H0 H1 H2 H3.
-  - destr H.
-    admit.
-    (* apply s_ens. *)
-    (* exs. splits*. *)
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-Admitted.
+  unfold can_strengthen_env. intros.
+  apply s_req. intros.
+  inverts H3 as H3.
+  specializes H0 H1 H2.
+  (* inverts H1 as H1.
+  specializes H1 H2 H3 H4. *)
+Qed.
 
-Lemma ent_defun_left : forall x u f1 f2 s1,
-(* s2, *)
-  (* env_independent2 x f2 -> *)
-  (* entails_under2 (Fmap.update s1 x u) s2 f1 f2 -> *)
-  (* entails_under2 s1 s2 (defun x u;; f1) f2. *)
-  (* env_independent2 x f2 -> *)
-  can_weaken_env_with x u (defun x u;; f1) ->
+Lemma strengthen_ens : forall Q,
+  can_strengthen_env (ens Q).
+Proof.
+  unfold can_strengthen_env, Fmap.update. intros.
+  lets H2: Fmap.disjoint_single_of_not_indom H. rewrite disjoint_comm in H2.
+  lets H3: Fmap.disjoint_single_of_not_indom H0. rewrite disjoint_comm in H3.
+
+  lets: ens_inv H1. inverts H1 as H1. destr H1. clear H5.
+
+  lets: Fmap.union_eq_inv_of_disjoint H2 H3.
+  setoid_rewrite Fmap.union_comm_of_disjoint in H4.
+  specializes H5 H4.
+  subst.
+
+  apply s_ens. exs. splits*. fmap_disjoint. fmap_disjoint.
+Qed.
+
+Lemma ent_defun_right : forall x u f1 f2 s1,
+  (* ~ Fmap.indom s1 x -> *)
   can_strengthen_env f2 ->
 
-  entails_under (Fmap.update s1 x u) f1 f2 ->
+  entails_under s1 (defun x u;; f1) (defun x u;; f2) ->
   entails_under s1 (defun x u;; f1) f2.
 Proof.
+  unfold entails_under, can_strengthen_env. intros.
+  specializes H0 H1.
+  inverts H0 as H0; no_shift. inverts H0 as H0.
+  eapply H.
+  (* need assumption *)
+  admit.
+  (* need entails_under2 *)
+  admit.
+  admit.
 
-  unfold entails_under. intros.
-  (* eapply ent_weaken_env in H0. *)
-  eapply H in H2.
+  (* inverts H1 as H1.
+  inverts H1 as H1. *)
 
-  rewrite ent_defun_idem in H2.
-  apply H1 in H2.
-  eapply ent_strengthen_env.
+  (* inverts H2 as H2; no_shift.
+  inverts H2 as H2.
+  eapply H0.
   eassumption.
-  apply Fmap.indom_union_l. apply Fmap.indom_single.
-  resolve_fn_in_env.
-
-  (* 
-  inverts H1 as H1; no_shift.
-  inverts H1 as H1.
-  apply H0 in H9. clear H0.
-
-  lets (?&?&?): satisfies_retained H1 H9.
-  rewrite H2 in H9.
-  clear H2.
-
-  assert (env_independent2 x f2) as ?. admit.
-  unfold env_independent2 in H2.
-  specializes H2 H1 H0. *)
-
-Qed.
+  Fail eassumption. admit.
+  apply H1.
+  applys_eq H10.
+  admit. *)
+  (* Fail apply H10. admit. *)
+Abort.
 
 (* Lemma ent_defun_left2 : forall x u f1 f2 s1,
   env_independent2 x f2 ->
