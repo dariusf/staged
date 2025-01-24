@@ -2005,7 +2005,52 @@ Proof.
   apply s_ens. exs. splits*. fmap_disjoint. fmap_disjoint.
 Qed.
 
-Lemma ent_defun_right : forall x u f1 f2 s1,
+Lemma remove_defun : forall s1 s2 h1 h2 R x u f,
+  (* ~ indom s1 x -> *)
+  satisfies s1 s2 h1 h2 R f ->
+  satisfies (Fmap.remove s1 x) s2 h1 h2 R (defun x u;; f).
+Proof.
+Admitted.
+  (* intros.
+  inverts H0 as H0; no_shift.
+  inverts H0 as H0. *)
+
+Lemma remove_add_cancel : forall A (B:Type) {IB:Inhab B} (s1:fmap A B) (x:A) (u:B),
+  Fmap.indom s1 x ->
+  Fmap.read s1 x = u ->
+  Fmap.update (Fmap.remove s1 x) x u = s1.
+Proof.
+  unfold update, remove, single, read, indom, map_indom. intros.
+  applys fmap_extens. intros y. simpls.
+  unfold map_union, map_remove.
+  case_if.
+  { subst.
+    destruct (Fmap.fmap_data s1 y).
+    reflexivity.
+    rew_logic *. }
+  { case_if. reflexivity. }
+Qed.
+
+
+Lemma ent_defun_both : forall x u f1 f2 s1,
+  Fmap.indom s1 x ->
+  Fmap.read s1 x = u ->
+  entails_under (Fmap.remove s1 x) (defun x u;; f1) (defun x u;; f2) ->
+  entails_under s1 f1 f2.
+Proof.
+  unfold entails_under. intros.
+  eapply remove_defun in H2.
+  specializes H1 H2. clear H2.
+  inverts H1 as H1; no_shift.
+  inverts H1 as H1.
+  lets: remove_add_cancel s1 H H0.
+  rewrite H1 in H9.
+  assumption.
+Qed.
+
+
+
+(* Lemma ent_defun_right : forall x u f1 f2 s1,
   (* ~ Fmap.indom s1 x -> *)
   (* can_strengthen_env f2 -> *)
 
@@ -2043,7 +2088,7 @@ Proof.
   applys_eq H10.
   admit. *)
   (* Fail apply H10. admit. *)
-Abort.
+Abort. *)
 
 (* Lemma ent_defun_left2 : forall x u f1 f2 s1,
   env_independent2 x f2 ->
