@@ -1969,7 +1969,7 @@ Proof.
   applys* H.
 Qed. *)
 
-Definition can_strengthen_env f := forall s1 s2 h1 h2 R x u,
+(* Definition can_strengthen_env f := forall s1 s2 h1 h2 R x u,
   ~ Fmap.indom s1 x ->
   ~ Fmap.indom s2 x ->
   satisfies (Fmap.update s1 x u) (Fmap.update s2 x u) h1 h2 R f ->
@@ -2003,7 +2003,7 @@ Proof.
   subst.
 
   apply s_ens. exs. splits*. fmap_disjoint. fmap_disjoint.
-Qed.
+Qed. *)
 
 Lemma remove_defun : forall s1 s2 h1 h2 R x u f,
   Fmap.indom s1 x ->
