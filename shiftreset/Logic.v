@@ -2007,11 +2007,20 @@ Qed.
 
 Lemma ent_defun_right : forall x u f1 f2 s1,
   (* ~ Fmap.indom s1 x -> *)
-  can_strengthen_env f2 ->
+  (* can_strengthen_env f2 -> *)
 
   entails_under s1 (defun x u;; f1) (defun x u;; f2) ->
   entails_under s1 (defun x u;; f1) f2.
 Proof.
+  unfold entails_under. intros.
+  specializes H H0.
+  inverts H0 as H0; no_shift.
+  inverts H0 as H0.
+
+  inverts H as H; no_shift.
+  inverts H as H.
+
+
   unfold entails_under, can_strengthen_env. intros.
   specializes H0 H1.
   inverts H0 as H0; no_shift. inverts H0 as H0.
