@@ -297,6 +297,10 @@ Axiom disj_not_bot: forall t1 t2,
 Axiom seq_not_bot: forall t1 t2, 
   seq t1 t2 <> bot -> t1 <> bot /\ t2 <> bot.
 
+Axiom fc_conj_not_bot: forall f1 f2, 
+  fc_conj f1 f2 <> fc_singleton bot -> f1 <> fc_singleton bot /\ f2 <> fc_singleton bot.
+
+
 Axiom seq_not_bot_rev: forall t1 t2, 
   t1 <> bot /\ t2 <> bot -> seq t1 t2 <> bot. 
 
@@ -1584,41 +1588,66 @@ Proof.
   reflexivity.
 Qed.     
 
+  
 Lemma futureCondEntail_linear_distrbute: forall f f' f1 f2 rho, 
-  futureSubtraction_linear f rho  f' ->
+  futureSubtraction_linear f rho f' ->
   f = (fc_conj f1 f2) ->
   exists f1' f2',
   futureSubtraction_linear f1 rho f1' /\
   futureSubtraction_linear f2 rho f2' /\
   f' = (fc_conj f1' f2').
-Proof. 
+Proof.  
   intros.
   gen f1 f2.
   induction H.
   - 
-  intros. 
-  pose proof all_future_Cond_can_be_split_into_two_conjunctive_cases. 
-  specialize (H2 f1).
-  destr H2. 
-  pose proof all_future_Cond_can_be_split_into_two_conjunctive_cases. 
-  specialize (H3 f2).
-  destr H3. 
-  specialize (IHfutureSubtraction_linear1 f6 f7 H2). 
-  destr IHfutureSubtraction_linear1.
-  specialize (IHfutureSubtraction_linear2 f8 f9 H3).
-  destr IHfutureSubtraction_linear2.
-  admit. 
-  - 
-  intros. 
+  intros.  
+  invert H1.
+  intros. subst. 
+  pose proof identity. 
+  pose all_future_Cond_can_be_split_into_two_conjunctive_cases. 
+  specialize (e f0). 
+  destr e.
+  pose all_future_Cond_can_be_split_into_two_conjunctive_cases. 
+  specialize (e f5). 
+  destr e.
   subst. 
+  specialize (IHfutureSubtraction_linear1 f1 f2 (H1 futureCond (fc_conj f1 f2))).
+  destr IHfutureSubtraction_linear1.
+  specialize (IHfutureSubtraction_linear2 f6 f7 (H1 futureCond (fc_conj f6 f7))). 
+  destr IHfutureSubtraction_linear2.
+  exists f3 f4.
+  split. exact H. split. exact H0. reflexivity. 
+  -
+
+  intros. subst.
   exists f1 f2.
   split. constructor. split. constructor. reflexivity.
   -
   intros. subst.
-  specialize (IHfutureSubtraction_linear f1 f2 ).     
-
-  Admitted.  
-
+  pose proof all_future_Cond_can_be_split_into_two_conjunctive_cases.
+  specialize (H1 f_der). 
+  destr H1.
+  specialize (IHfutureSubtraction_linear f0 f3 H1). 
+  subst.  
+  pose fc_conj_not_bot. 
+  specialize (a  f0 f3 H0). 
+  destr a.
+  destr IHfutureSubtraction_linear.  
+  pose proof futureSubtraction_linear_induc. 
+  invert H.
+  intros. subst.
+    pose identity. 
+  exists f1' f2'.
+  split.
+  specialize (H6 ev0 f1 f0 (ev0 :: t_der) t_der f1' H12 H1 (e rho (ev0 :: t_der)) H4). 
+  exact H6.
+  split.
+  specialize (H6 ev0 f2 f3 (ev0 :: t_der) t_der f2' H14 H3 (e rho (ev0 :: t_der)) H5). 
+  exact H6. 
+  reflexivity.
+Qed.   
+    
 
 Lemma distrbuteBigStepLHS: forall h1 rho1 f f1 f2 e h2 rho2 f0 v, 
   bigstep h1 rho1 f e h2 rho2 f0 v -> 
