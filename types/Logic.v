@@ -552,6 +552,19 @@ Proof.
   eauto.
 Qed.
 
+(* Is this rule still true in separation logic? *)
+Lemma stronger_triple_subsumption: forall H1 H2 Q1 Q2 e,
+  triple H2 Q2 e ->
+  H1 ==> H2 ->
+  Q2 \*+ H1 ===> Q1 ->
+  triple H1 Q1 e.
+Proof.
+  unfold triple. intros.
+  apply H3.
+  specializes H H5.
+  eauto.
+Abort.
+
 (** * Specs for program constructs *)
 Lemma program_has_spec_assert: forall b,
   program_has_spec (req_ \[b = true])
