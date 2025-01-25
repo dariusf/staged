@@ -62,6 +62,9 @@ with expr : Type :=
   | passign (x: expr) (v: expr)
   .
 
+Implicit Types e: expr.
+Implicit Types r v: val.
+
 #[global]
 Instance Inhab_val : Inhab val.
 Proof.
@@ -107,6 +110,19 @@ Definition interpret_tag tag v : bool :=
   | _, _ => false
   end.
 
+(* [(Integer) i] *)
+Definition ptypecast tag (v:val) :=
+  plet "x" (ptypetest tag (pval v))
+    (pif (pvar "x") (pval v) (pval vabort)).
+
+Fixpoint pmatch v (cases: list (tag * expr)) : expr :=
+  match cases with
+  | nil => pval vabort
+  | (tag, e) :: cs =>
+    plet "x" (ptypetest tag (pval v))
+      (pif (pvar "x") e (pmatch v cs))
+  end.
+
 Module Val.
   Definition value := val.
 End Val.
@@ -114,8 +130,6 @@ End Val.
 Module Export Heap := HeapF.HeapSetup Val.
 
 Implicit Types h: heap.
-Implicit Types e: expr.
-Implicit Types r v: val.
 
 Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
   | eval_pval : forall h v,
