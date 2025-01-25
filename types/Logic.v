@@ -27,10 +27,10 @@ Inductive val :=
   | vfun : var -> expr -> val
   | vfix : var -> var -> expr -> val
   | vloc : loc -> val
-  | vtup : val -> val -> val
+  (* | vtup : val -> val -> val *)
   | vstr : string -> val
   | vbool : bool -> val
-  | vlist : list val -> val
+  (* | vlist : list val -> val *)
   | vconstr0 : string -> val
   | vconstr1 : string -> val -> val
   | vconstr2 : string -> val -> val -> val
@@ -41,18 +41,18 @@ with expr : Type :=
   | pvar (x: var)
   | pval (v: val)
   | plet (x: var) (e1 e2: expr)
-  | pfix (f: var) (x: var) (e: expr)
+  | pif (b: expr) (e1: expr) (e2: expr)
+  | papp (x: expr) (a: expr)
   | pfun (x: var) (e: expr)
-  | padd (x y: expr)
+  | pfix (f: var) (x: var) (e: expr)
   | pfst (t: expr)
   | psnd (t: expr)
   | pminus (x y: expr)
+  | padd (x y: expr)
   | passert (b: expr)
   | pref (v: expr)
   | pderef (v: expr)
   | passign (x: expr) (v: expr)
-  | pif (b: expr) (e1: expr) (e2: expr)
-  | papp (x: expr) (a: expr)
   .
 
 #[global]
@@ -503,19 +503,23 @@ Proof.
   hintro. splits*. hintro. all: auto.
 Qed.
 
-(** * Semantics of triples *)
-Definition triple (s:spec) (e:expr) :=
+(** * Semantics of program specs/triples *)
+Definition program_has_spec (s:spec) (e:expr) :=
   forall h1 h2 r,
     bigstep h1 e h2 r ->
     spec_satisfies h1 h2 r s.
 
-(** * Triples for program constructs *)
-Lemma triple_assert: forall b,
-  triple (req_ \[b = true])
+Definition triple H Q e :=
+  forall h1 h2 r,
+    H h1 -> bigstep h1 e h2 r -> Q r h2.
+
+(** * Specs for program constructs *)
+Lemma program_has_spec_assert: forall b,
+  program_has_spec (req_ \[b = true])
    (passert (pval (vbool b))).
 Proof.
   intros.
-  unfold triple. introv Hb.
+  unfold program_has_spec. introv Hb.
   inverts Hb as Hb.
   apply req_pure_intro. intros.
   apply empty_intro.
