@@ -424,6 +424,9 @@ Proof.
 Qed.        
 
 
+Axiom derivative_model_false : forall t1 ev0, 
+  theta_der t1 ev0 bot -> false. 
+
 
 
 Lemma derivative_model : forall t1 ev0 deriv1 rho0, 
@@ -1730,13 +1733,27 @@ Qed.
 
 
 
-Lemma big_step_nil_context: forall h1 rho1 f_ctx e h2 rho2 f3 v rho3 f0  f_ctx', 
+Axiom big_step_nil_context: forall h1 rho1 f_ctx e h2 h3 rho2 f3 v rho3 f0  f_ctx', 
   bigstep h1 rho1 f_ctx e h2 rho2 f3 v -> 
   rho2 = (rho1 ++ rho3) -> 
-  bigstep h1 nil fc_default e h2 rho3 f0 v -> 
+  bigstep h1 nil fc_default e h3 rho3 f0 v -> 
   futureSubtraction_linear f_ctx rho3 f_ctx' ->
   f3 = fc_conj f0 f_ctx'.
-Proof. Admitted. 
+
+Axiom fc_der_split_conj : forall f1 ev0 f2 f0 f3, 
+  fc_der f1 ev0 f2 ->
+  f1 = (fc_conj f0 f3) ->
+  exists f4 f5,
+  fc_der f0 ev0 f4 /\ fc_der f3 ev0 f5 /\ f2 = (fc_conj f4 f5).
+
+
+
+Axiom weakening_futureSubtraction_linear : forall  f1 rho3 f2 f3, 
+  futureSubtraction_linear f1 rho3 f2 -> 
+  futureCondEntail f1 f3 -> 
+  exists f4, 
+  futureSubtraction_linear f3 rho3 f4 /\ futureCondEntail f2 f4 . 
+
 
 Lemma futureSubtraction_strengthing_linear_res : 
   forall f_ctx t f_ctx' rho3,
@@ -1773,8 +1790,9 @@ Proof.
   pose proof (case_spliting_helper_bot t_der). 
   invert H4.
   intros. subst.
-  
-  admit.
+  pose proof derivative_model_false.
+  specialize (H4 t ev0 H1). 
+  false.  
   intros. subst.
   pose proof  derivative_model.
   specialize (H4 t ev0 t_der rho3 H1 H5 H3). 
@@ -1798,7 +1816,14 @@ Proof.
   intros.
   specialize (IHfutureSubtraction rho3 H1).
   destr IHfutureSubtraction.
-  admit.
+  pose proof weakening_futureSubtraction_linear. 
+  specialize (H2 f1 rho3 f_ctx'0 f3 H3 H0 ).
+  destr H2.
+  exists f4.
+  split. exact H2. 
+  pose proof (futureCondEntail_trans).
+  exact (H5 f2 f_ctx'0 f4 H4 H6). 
+
   -
   intros.
   pose proof inclusion_sound.
@@ -1808,7 +1833,7 @@ Proof.
   exists f_ctx'0. 
   split. exact H4. 
   exact H5.
-Admitted. 
+Qed. 
 
 
 Lemma futureSubtraction_trace_model_futureSubtraction_linear:
@@ -1825,7 +1850,7 @@ Proof.
   pose proof futureSubtraction_strengthing_linear_res. 
   specialize (H4 f_ctx t f_ctx' rho3 H H0). 
   destr H4. 
-  specialize (H3 h1 rho1 f_ctx e h2 (rho1 ++ rho3) f3 v rho3 f0 f_ctx'0 H1 (e0 rho (rho1++rho3)) H2 H4). subst.
+  specialize (H3 h1 rho1 f_ctx e h2 h2 (rho1 ++ rho3) f3 v rho3 f0 f_ctx'0 H1 (e0 rho (rho1++rho3)) H2 H4). subst.
   apply futureCondEntail_conj_RHS.
   apply futureCondEntail_conj_LHS_2. exact (futureCondEntail_exact f0) .
   apply futureCondEntail_conj_LHS_1. exact H6. 
