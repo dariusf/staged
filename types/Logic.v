@@ -213,6 +213,10 @@ Inductive tlist : type -> val -> Prop :=
     tlist t vt ->
     tlist t (vcons vh vt).
 
+Definition tnil : type := tunion terr (fun v => v = vnil).
+Definition tcons : type :=
+  tunion terr (fun v => forall v1 v2, v = vcons v1 v2).
+
 (** Unary logical relation on expressions *)
 Definition E t := fun e =>
   forall h1 h2 r, bigstep h1 e h2 r -> t r.
