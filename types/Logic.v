@@ -289,44 +289,7 @@ Proof.
   { unfold tunion, ttop. eauto. }
 Qed.
 
-(** These two disjuncts are included in the infinite set of disjuncts of the supertypes of t1 *)
-Lemma contra_disjuncts: forall t1 v,
-  (tunion ttop t1) v -> (exists t2, t1 <: t2 /\ t2 v).
-Proof.
-  unfold tunion, ttop, subtype.
-  intros.
-  destruct H.
-  - exists ttop. jauto.
-  - exists t1. jauto.
-Qed.
-
-Lemma contra_is_top: forall t1 v,
-  ttop v <-> (exists t2, t1 <: t2 /\ t2 v).
-Proof.
-  iff H.
-  { exists ttop. hint subtype_top. jauto. }
-  { destr H. apply top_intro. }
-Qed.
-
-(** * Variance and mutability *)
-
-Definition tcov : type -> type := fun t1 v =>
-  exists t2, t2 <: t1 -> t2 v.
-Definition tcontra : type -> type := fun t1 v =>
-  forall t2, t1 <: t2 -> t2 v.
-Definition tinv : type -> type := fun t1 v => t1 v.
-Definition twild : type := ttop.
-
 Module Examples.
-
-Example ex_list: (tlist tint) (vcons (vint 1) (vcons (vint 2) vnil)).
-Proof.
-  apply tlist_cons.
-  unfold tint. eexists. reflexivity.
-  apply tlist_cons.
-  unfold tint. eexists. reflexivity.
-  apply tlist_nil.
-Qed.
 
 Definition id := vfun "x" (pvar "x").
 Definition id_type1 : type := ∀ t, tarrow t t.
@@ -361,6 +324,43 @@ Proof.
 Qed.
 
 End Examples.
+
+(** * Variance and mutability *)
+
+(** These two disjuncts are included in the infinite set of disjuncts of the supertypes of t1 *)
+Lemma contra_disjuncts: forall t1 v,
+  (tunion ttop t1) v -> (exists t2, t1 <: t2 /\ t2 v).
+Proof.
+  unfold tunion, ttop, subtype.
+  intros.
+  destruct H.
+  - exists ttop. jauto.
+  - exists t1. jauto.
+Qed.
+
+Lemma contra_is_top: forall t1 v,
+  ttop v <-> (exists t2, t1 <: t2 /\ t2 v).
+Proof.
+  iff H.
+  { exists ttop. hint subtype_top. jauto. }
+  { destr H. apply top_intro. }
+Qed.
+
+Definition tcov : type -> type := fun t1 v =>
+  exists t2, t2 <: t1 -> t2 v.
+Definition tcontra : type -> type := fun t1 v =>
+  forall t2, t1 <: t2 -> t2 v.
+Definition tinv : type -> type := fun t1 v => t1 v.
+Definition twild : type := ttop.
+
+Example ex_list: (tlist tint) (vcons (vint 1) (vcons (vint 2) vnil)).
+Proof.
+  apply tlist_cons.
+  unfold tint. eexists. reflexivity.
+  apply tlist_cons.
+  unfold tint. eexists. reflexivity.
+  apply tlist_nil.
+Qed.
 
 Lemma subtype_cov: forall t,
   t <: tcov t.
