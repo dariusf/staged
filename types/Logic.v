@@ -150,6 +150,9 @@ Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
   | eval_passert : forall h,
     bigstep h (passert (pval (vbool true))) h vunit.
 
+Definition vcons a b : val := vconstr2 "cons" a b.
+Definition vnil : val := vconstr0 "nil".
+
 (** * Types *)
 Definition type := val -> Prop.
 Implicit Types t: type.
@@ -157,14 +160,18 @@ Implicit Types t: type.
 (* bot <: err <: t <: ok <: any <: top *)
 (* abort <: top *)
 
-Definition tint : type := fun v => exists i, v = vint i.
-Definition tbool : type := fun v => exists b, v = vbool b.
+Definition tsingle v1 : type := fun v => v = v1.
+Definition terr : type := tsingle verr.
+Definition tabort : type := tsingle vabort.
 
 Definition ttop : type := fun _ => True.
 Definition tbot : type := fun _ => False.
+Definition tintersect t1 t2 : type := fun v => t1 v /\ t2 v.
+Definition tunion t1 t2 : type := fun v => t1 v \/ t2 v.
+Definition tnot t : type := fun v => not (t v).
 
-(* TODO are errs part of singletons? *)
-Definition tsingle v1 : type := fun v => v = v1.
+Definition tint : type := tunion terr (fun v => exists i, v = vint i).
+Definition tbool : type := tunion terr (fun v => exists b, v = vbool b).
 
 Definition tforall A (f:A -> type) : type := fun v =>
   forall x:A, (f x) v.
@@ -185,22 +192,13 @@ Notation "'∀' x1 .. xn , H" :=
   (at level 39, x1 binder, H at level 50, right associativity,
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
 
-Definition tintersect t1 t2 : type := fun v => t1 v /\ t2 v.
-Definition tunion t1 t2 : type := fun v => t1 v \/ t2 v.
-Definition tnot t : type := fun v => not (t v).
-
-(* TODO err has to be in every type.
-  is it just in base types? in that case what about (¬ int)? *)
-Definition terr : type := tsingle verr.
-Definition tabort : type := tsingle vabort.
 Definition tany : type := tnot tabort.
-
-Definition vcons a b : val := vconstr2 "cons" a b.
-Definition vnil : val := vconstr0 "nil".
 
 (** The type of finite lists. can be coinductive to be infinite.
   non-inductive recursive types are ignored for now. *)
 Inductive tlist : type -> val -> Prop :=
+  | tlist_err : forall t,
+    tlist t verr
   | tlist_nil : forall t,
     tlist t vnil
   | tlist_cons : forall vh vt t,
@@ -363,9 +361,13 @@ Definition twild : type := ttop.
 Example ex_list: (tlist tint) (vcons (vint 1) (vcons (vint 2) vnil)).
 Proof.
   apply tlist_cons.
-  unfold tint. eexists. reflexivity.
+  unfold tint.
+  unfold tunion. right.
+  eexists. reflexivity.
   apply tlist_cons.
-  unfold tint. eexists. reflexivity.
+  unfold tint.
+  unfold tunion. right.
+  eexists. reflexivity.
   apply tlist_nil.
 Qed.
 
@@ -376,7 +378,7 @@ Proof.
   eauto.
 Qed.
 
-Lemma list_covariant: forall t,
+(* Lemma list_covariant: forall t,
   tlist t <: tlist (tcov t).
 Proof.
   unfold subtype. intros.
@@ -385,9 +387,9 @@ Proof.
   - apply tlist_cons.
     { unfold tcov. intros. exists t. auto. }
     { assumption. }
-Qed.
+Qed. *)
 
-Lemma list_contravariant: forall t,
+(* Lemma list_contravariant: forall t,
   tlist (tcontra t) <: tlist t.
 Proof.
   unfold subtype. intros.
@@ -402,7 +404,7 @@ Proof.
       auto. }
     { subst.
       specializes* IHtlist. }
-Qed.
+Qed. *)
 
 (** * Program specifications *)
 
@@ -539,8 +541,6 @@ Qed.
 
 TODO
 
-- is err in int? is err in not int?
-- is err in singleton?
 - variance: are the definitions of covariance and contravariance reasonable?
 - triples for program constructs
 - interesting examples
