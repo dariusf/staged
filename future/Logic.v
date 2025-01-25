@@ -1729,6 +1729,88 @@ Proof.
 Qed.  
 
 
+
+Lemma big_step_nil_context: forall h1 rho1 f_ctx e h2 rho2 f3 v rho3 f0  f_ctx', 
+  bigstep h1 rho1 f_ctx e h2 rho2 f3 v -> 
+  rho2 = (rho1 ++ rho3) -> 
+  bigstep h1 nil fc_default e h2 rho3 f0 v -> 
+  futureSubtraction_linear f_ctx rho3 f_ctx' ->
+  f3 = fc_conj f0 f_ctx'.
+Proof. Admitted. 
+
+Lemma futureSubtraction_strengthing_linear_res : 
+  forall f_ctx t f_ctx' rho3,
+  futureSubtraction f_ctx t f_ctx' -> 
+  trace_model rho3 t -> 
+  exists f_ctx'0,
+  futureSubtraction_linear f_ctx rho3 f_ctx'0  /\ futureCondEntail f_ctx' f_ctx'0.
+Proof. 
+  intros.
+  gen rho3. 
+  induction H.
+  -  
+  intros. invert H0.
+  -
+  intros. 
+  specialize (IHfutureSubtraction1 rho3 H1).    
+  specialize (IHfutureSubtraction2 rho3 H1).     
+  destr IHfutureSubtraction1.
+  destr IHfutureSubtraction2.
+  exists (fc_conj f_ctx'0 f_ctx'1).
+  split.
+  constructor. exact H3. exact H5. 
+  apply futureCondEntail_conj_RHS.
+  apply futureCondEntail_conj_LHS_1. exact H4.  
+  apply futureCondEntail_conj_LHS_2. exact H6.
+  -
+  intros. 
+  invert H0.
+  intros. subst. 
+  exists (fc_singleton t).
+  split. constructor. constructor. exact (inclusion_exact t).
+  -
+  intros.
+  pose proof (case_spliting_helper_bot t_der). 
+  invert H4.
+  intros. subst.
+  
+  admit.
+  intros. subst.
+  pose proof  derivative_model.
+  specialize (H4 t ev0 t_der rho3 H1 H5 H3). 
+  destr H4.
+  specialize (IHfutureSubtraction rho1 H7). 
+  destr IHfutureSubtraction.
+  pose proof futureSubtraction_linear_induc.
+  specialize (H6 ev0 f f_der rho3 rho1 f_ctx'0 H H0 H4 H8).   
+  exists f_ctx'0. 
+  split. exact H6. exact H9.
+  -
+  intros.
+  specialize (IHfutureSubtraction rho3 H1).
+  destr IHfutureSubtraction.
+  exists f_ctx'0. 
+  split. exact H3. 
+  pose (futureCondEntail_trans ).
+  specialize (f0 f2 f1 f_ctx'0 H0 H4).
+  exact f0.
+  -
+  intros.
+  specialize (IHfutureSubtraction rho3 H1).
+  destr IHfutureSubtraction.
+  admit.
+  -
+  intros.
+  pose proof inclusion_sound.
+  specialize (H2 t' t rho3 H0 H1). 
+  specialize (IHfutureSubtraction rho3 H2).
+  destr IHfutureSubtraction. 
+  exists f_ctx'0. 
+  split. exact H4. 
+  exact H5.
+Admitted. 
+
+
 Lemma futureSubtraction_trace_model_futureSubtraction_linear:
 forall f_ctx t f_ctx' rho3 h1 e h2 rho1 f3 v f0, 
   futureSubtraction f_ctx t f_ctx' -> 
@@ -1737,58 +1819,17 @@ forall f_ctx t f_ctx' rho3 h1 e h2 rho1 f3 v f0,
   bigstep h1 nil fc_default e h2 rho3 f0 v -> 
   futureCondEntail (fc_conj f_ctx' f0) f3. 
 Proof. 
-  
-  intros. 
-  gen rho3 h1 rho1 e h2 f3 v.
-  induction H.
-  - 
-  intros. invert H0.
-  - intros. 
-  specialize (IHfutureSubtraction1 rho3 H1 h1 rho1 e h2).   
-  specialize (IHfutureSubtraction2 rho3 H1 h1 rho1 e h2).   
-  pose proof distrbuteBigStepLHS. 
-  pose proof identity.
-  specialize (H5 futureCond (fc_conj f1 f2)).  
-  specialize (H4 h1 rho1 (fc_conj f1 f2) f1 f2 e h2 (rho1++rho3) f5 v H2  H5).
-  destr H4.
-  subst. 
-  specialize (IHfutureSubtraction1 f6 v H6 H3).   
-  specialize (IHfutureSubtraction2 f7 v H4 H3). 
-  apply futureCondEntail_conj_RHS. 
-  rewrite fc_comm. 
-  rewrite <- futureCond_distr. 
-  apply futureCondEntail_conj_LHS_1. exact (IHfutureSubtraction1). 
-  rewrite futureCond_distr1. 
-  apply futureCondEntail_conj_LHS_2. exact IHfutureSubtraction2.
-  -
   intros.
-  invert H0. 
-  intros. subst. 
-  rewrite List.app_nil_r in H1. 
-  admit. 
-  -
-  intros.  
-  pose proof case_spliting_helper_bot.
-  specialize (H6 t_der). 
-  invert H6.
-  intros. 
-  subst. 
-  admit. 
-  admit. 
-  - intros.
-  specialize (IHfutureSubtraction rho3 H1 h1 rho1 e h2 f3 v H2 H3). 
-  admit. 
-  -
-  intros. 
-  specialize (IHfutureSubtraction rho3 H1 h1 rho1 e h2). 
-  pose proof strenthen_futureCond_big_step.
-  admit. 
-  -
-  intros.
-  pose proof inclusion_sound.
-  admit.     
-Admitted. 
-
+  pose proof big_step_nil_context.
+  pose identity. 
+  pose proof futureSubtraction_strengthing_linear_res. 
+  specialize (H4 f_ctx t f_ctx' rho3 H H0). 
+  destr H4. 
+  specialize (H3 h1 rho1 f_ctx e h2 (rho1 ++ rho3) f3 v rho3 f0 f_ctx'0 H1 (e0 rho (rho1++rho3)) H2 H4). subst.
+  apply futureCondEntail_conj_RHS.
+  apply futureCondEntail_conj_LHS_2. exact (futureCondEntail_exact f0) .
+  apply futureCondEntail_conj_LHS_1. exact H6. 
+Qed. 
 
 Lemma bigstep_framing_trace: forall h3 e h2 rho0 f3 v rho3 rho1 f, 
   bigstep h3 rho1 f e h2 rho0 f3 v -> 
