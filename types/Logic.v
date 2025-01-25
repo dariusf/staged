@@ -221,6 +221,20 @@ Definition tdarrow v t1 t2 : type := fun vf =>
   t1 v ->
   E t2 (papp (pval (vfun x e)) (pval v)).
 
+(** All values are of type top *)
+Lemma top_intro: forall v,
+  ttop v.
+Proof.
+  unfold ttop. jauto.
+Qed.
+
+Lemma bot_inv: forall v,
+  not (tbot v).
+Proof.
+  jauto.
+Qed.
+
+(** * Subtyping *)
 Definition subtype t1 t2 := forall v, t1 v -> t2 v.
 Notation "t1 '<:' t2" := (subtype t1 t2) (at level 40).
 
@@ -259,18 +273,12 @@ Proof.
   specializes H1 H H4.
 Qed.
 
+(** The standard subsumption rule is a consequence of the semantic definition. *)
 Lemma subsumption: forall t1 t2 v,
   t1 v -> t1 <: t2 -> t2 v.
 Proof.
   unfold subtype. intros.
   eauto.
-Qed.
-
-(** All values are of type top *)
-Lemma top_intro: forall v,
-  ttop v.
-Proof.
-  unfold ttop. jauto.
 Qed.
 
 Lemma subtype_bot: forall t,
@@ -286,12 +294,20 @@ Proof.
 Qed.
 
 (** top is the annihilator of union *)
-Lemma top_equiv: forall t,
+Lemma tunion_ttop: forall t,
   equiv (tunion ttop t) ttop.
 Proof.
   intros. iff H.
   { unfold ttop. eauto. }
   { unfold tunion, ttop. eauto. }
+Qed.
+
+Lemma tintersect_tbot: forall t,
+  equiv (tintersect tbot t) tbot.
+Proof.
+  unfold tbot, tintersect. intros. iff H.
+  { destr H. false. }
+  { false. }
 Qed.
 
 Module Examples.
@@ -497,7 +513,7 @@ Fixpoint scase_ P v (cases:list ((val -> Prop) * spec)) : spec :=
 Definition scase v (cases:list ((val -> Prop) * spec)) : spec :=
   scase_ True v cases.
 
-(** * Introduction/inversion lemmas *)
+(** * Introduction/inversion lemmas, and other properties of specs *)
 Lemma req_pure_intro : forall h1 h2 r P s,
   (P -> spec_satisfies h1 h2 r s) ->
   spec_satisfies h1 h2 r (req \[P] s).
@@ -525,6 +541,17 @@ Definition triple H Q e :=
   forall h1 h2 r,
     H h1 -> bigstep h1 e h2 r -> Q r h2.
 
+Lemma triple_subsumption: forall H1 H2 Q1 Q2 e,
+  triple H2 Q2 e ->
+  H1 ==> H2 ->
+  Q2 ===> Q1 ->
+  triple H1 Q1 e.
+Proof.
+  unfold triple. intros.
+  apply H3.
+  eauto.
+Qed.
+
 (** * Specs for program constructs *)
 Lemma program_has_spec_assert: forall b,
   program_has_spec (req_ \[b = true])
@@ -542,7 +569,6 @@ Qed.
 TODO
 
 - variance: are the definitions of covariance and contravariance reasonable?
-- triples for program constructs
 - interesting examples
 
 *)
