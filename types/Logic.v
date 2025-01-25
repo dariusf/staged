@@ -27,10 +27,8 @@ Inductive val :=
   | vfun : var -> expr -> val
   | vfix : var -> var -> expr -> val
   | vloc : loc -> val
-  (* | vtup : val -> val -> val *)
   | vstr : string -> val
   | vbool : bool -> val
-  (* | vlist : list val -> val *)
   | vconstr0 : string -> val
   | vconstr1 : string -> val -> val
   | vconstr2 : string -> val -> val -> val
@@ -110,6 +108,15 @@ Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
 
   | eval_pminus : forall h x y,
     bigstep h (pminus (pval (vint x)) (pval (vint y))) h (vint (x - y))
+
+  | eval_pfst1 : forall x h v,
+    bigstep h (pfst (pval (vconstr1 x v))) h v
+
+  | eval_pfst2 : forall x h v1 v2,
+    bigstep h (pfst (pval (vconstr2 x v1 v2))) h v1
+
+  | eval_psnd2 : forall x h v1 v2,
+    bigstep h (psnd (pval (vconstr2 x v1 v2))) h v2
 
   | eval_pfun : forall h x e,
     bigstep h (pfun x e) h (vfun x e)
