@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html class="alectryon-standalone"><head><title>Automation.v</title><meta charset="utf-8"><meta content="Alectryon" name="generator"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="alectryon.css" rel="stylesheet"><link href="pygments.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/IBM-type/0.5.4/css/ibm-type.min.css" integrity="sha512-sky5cf9Ts6FY1kstGOBHSybfKqdHR41M0Ldb0BjNiv3ifltoQIsg0zIaQ+wwdwgQ0w9vKFW7Js50lxH9vqNSSw==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/5.2.0/fira_code.min.css" integrity="sha512-MbysAYimH1hH2xYzkkMHB6MqxBqfP0megxsCLknbYqHVwXTCg9IqHbk+ZP/vnhO8UEW6PaXAkKe2vQ+SWACxxA==" crossorigin="anonymous" /><script src="alectryon.js"></script></head><body><article class="alectryon-root alectryon-centered alectryon-coqdoc"><div class="alectryon-banner">Built with <a href="https://github.com/cpitclaudel/alectryon/">Alectryon</a>, running Coq+SerAPI v8.19.0+0.19.3. Bubbles (<span class="alectryon-bubble"></span>) indicate interactive fragments: hover for details, tap to reveal contents. Use <kbd>Ctrl+↑</kbd> <kbd>Ctrl+↓</kbd> to navigate, <kbd>Ctrl+🖱️</kbd> to focus. On Mac, use <kbd>⌘</kbd> instead of <kbd>Ctrl</kbd>.</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk0" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk0"><span class="kn">From</span> Staged <span class="kn">Require Import</span> Logic.</label><small class="alectryon-output"><div><div class="alectryon-messages"><blockquote class="alectryon-message">[Loading ML file ring_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file zify_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file micromega_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file btauto_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">funfold_hyp</span> H env f :=
+  rewrites (&gt;&gt; ent_unk env f) <span class="kr">in</span> H; [ <span class="nb">unfold</span> env; resolve_fn_in_env | ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">funfold_</span> env f :=
+  rewrites (&gt;&gt; ent_unk env f); [ <span class="nb">unfold</span> env; resolve_fn_in_env | ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span> norm_seq_ens_empty norm_seq_exists_distr_l norm_seq_forall_distr_l norm_reassoc : norm_db.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">norm</span> :=
+  <span class="nb">autorewrite with</span> norm_db.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Tactic Notation</span> <span class="s2">&quot;funfold&quot;</span> <span class="kp">constr</span>(env) <span class="kp">constr</span>(f) := funfold_ env f.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Tactic Notation</span> <span class="s2">&quot;funfold&quot;</span> <span class="kp">constr</span>(env) <span class="kp">constr</span>(f) <span class="s2">&quot;in&quot;</span> <span class="kp">constr</span>(H) := funfold_hyp H env f.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* TODO maybe this should be the interface, for working with sequents especially *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">funfold1</span> f :=
+  <span class="kr">lazymatch goal with</span>
+  | |- entails_under (<span class="nl">?env</span> <span class="nl">?a</span> <span class="nl">?b</span>) _ _ =&gt;
+    <span class="nb">rewrite</span> (@ent_unk (env a b) f); [ | <span class="nb">unfold</span> env; resolve_fn_in_env ]
+  | |- entails_under (<span class="nl">?env</span> <span class="nl">?a</span>) _ _ =&gt;
+    <span class="nb">rewrite</span> (@ent_unk (env a) f); [ | <span class="nb">unfold</span> env; resolve_fn_in_env ]
+  | |- entails_under <span class="nl">?env</span> _ _ =&gt;
+    <span class="nb">rewrite</span> (@ent_unk env f); [ | <span class="nb">unfold</span> env; resolve_fn_in_env ]
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* introduce variables *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fintro</span> x :=
+  <span class="kr">lazymatch goal with</span>
+  <span class="c">(* base cases *)</span>
+  | |- entails_under _ (<span class="kr">∃</span> <span class="nv">_</span>, _) _ =&gt;
+    <span class="c">(* let x := fresh y in *)</span>
+    <span class="nb">simple apply</span> ent_ex_l; <span class="nb">intros</span> x
+  | |- entails_under _ _ (<span class="kr">∀</span> <span class="nv">_</span>, _) =&gt;
+    <span class="c">(* let x := fresh y in *)</span>
+    <span class="nb">simple apply</span> ent_all_r; <span class="nb">intros</span> x
+
+  <span class="c">(* ex under an ens *)</span>
+  | |- entails_under _ (ens_ _;; <span class="kr">∃</span> <span class="nv">_</span>, _) _ =&gt;
+    <span class="nb">rewrite</span> norm_seq_exists_distr_l; fintro x
+  | |- entails_under _ (ens_ _;; <span class="kr">∃</span> <span class="nv">_</span>, _;; _) _ =&gt;
+    <span class="nb">rewrite</span> norm_seq_exists_distr_l; fintro x
+
+  <span class="c">(* SL exists *)</span>
+  | |- entails_under _ (ens_ (\<span class="kr">exists</span> <span class="nv">_</span>, _)) _ =&gt;
+    <span class="nb">rewrite</span> ent_seq_ens_sl_ex; fintro x
+  | |- entails_under _ (ens_ (\<span class="kr">exists</span> <span class="nv">_</span>, _);; _) _ =&gt;
+    <span class="nb">rewrite</span> ent_seq_ens_sl_ex; fintro x
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* instantiate an existential or specialize a forall *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">finst</span> a :=
+  <span class="kr">lazymatch goal with</span>
+  | |- entails_under _ (ens_ _;; <span class="kr">∀</span> <span class="nv">_</span>, _) _ =&gt;
+    <span class="nb">rewrite</span> norm_seq_forall_distr_l; finst a
+  | |- entails_under _ (ens_ _;; <span class="kr">∀</span> <span class="nv">_</span>, _;; _) _ =&gt;
+    <span class="nb">rewrite</span> norm_seq_forall_distr_l; finst a
+
+  | |- entails_under _ ((<span class="kr">∀</span> <span class="nv">_</span>, _);; _) _ =&gt;
+    <span class="nb">apply</span> ent_seq_all_l; <span class="kr">exists</span> <span class="nv">a</span>
+
+  | |- entails_under _ (<span class="kr">∀</span> <span class="nv">_</span>, _) _ =&gt;
+    <span class="nb">apply</span> ent_all_l; <span class="kr">exists</span> <span class="nv">a</span>
+  | |- entails_under _ _ (<span class="kr">∃</span> <span class="nv">_</span>, _) =&gt;
+    <span class="nb">apply</span> ent_ex_r; <span class="kr">exists</span> <span class="nv">a</span>
+  <span class="nv">end</span>.</span></span></pre><div class="doc">
+Move assumptions to the Coq context.
+  This is the rough eqiuvalent of xpull from SLF.
+  While we're comparing, xchange is replaced with rewriting and the use of lemmas around the covariance of <span class="inlinecode"><span class="id" title="var">ens_</span></span>. 
+</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fassume_</span> H :=
+  <span class="kr">lazymatch goal with</span>
+  | |- entails_under _ (ens_ \[_]) _ =&gt;
+    <span class="nb">apply</span> ent_ens_l; <span class="nb">intros</span> H
+  | |- entails_under _ (ens_ \[_];; _) _ =&gt;
+    <span class="nb">apply</span> ent_seq_ens_l; <span class="nb">intros</span> H
+  | |- entails_under _ _ (req \[_] _) =&gt;
+    <span class="nb">apply</span> ent_req_r; <span class="nb">apply</span> ent_seq_ens_l; <span class="nb">intros</span> H
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fassume_req</span> :=
+  <span class="kr">lazymatch goal with</span>
+  | |- entails_under _ _ (req _ _) =&gt;
+    <span class="nb">apply</span> ent_req_r
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Tactic Notation</span> <span class="s2">&quot;fassume&quot;</span> simple_intropattern(p) := fassume_ p.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Tactic Notation</span> <span class="s2">&quot;fassume&quot;</span> := fassume_req.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">ent_step</span> :=
+  <span class="kr">match goal with</span>
+
+  <span class="c">(* assume things on the left side *)</span>
+  | |- entails_under _ (disj _ _) _ =&gt;
+    <span class="nb">simple apply</span> ent_disj_l
+  | |- entails_under _ (fex (<span class="kr">fun</span> <span class="nv">y</span> =&gt; _)) _ =&gt;
+    <span class="kr">let</span> <span class="nv">x</span> := <span class="kp">fresh</span> y <span class="kr">in</span>
+    <span class="nb">simple apply</span> ent_ex_l; <span class="nb">intros</span> x
+  | |- entails_under _ (fex (<span class="kr">fun</span> <span class="nv">_</span> =&gt; _);; _) _ =&gt;
+    <span class="nb">rewrite</span> norm_seq_exists_distr_r
+  | |- entails_under _ (ens_ \[_];; _) _ =&gt;
+    <span class="kr">let</span> <span class="nv">H</span> := <span class="kp">fresh</span> <span class="s2">&quot;H&quot;</span> <span class="kr">in</span>
+    <span class="nb">simple apply</span> ent_seq_ens_l; <span class="nb">intros</span> H; destr H
+
+  <span class="c">(* if there is an IH, try to use it *)</span>
+  | IH: <span class="kp">context</span>[entails_under <span class="nl">?env</span> (unk _ _ _) _] |-
+    <span class="kp">context</span>[unk <span class="nl">?f</span> _ _] =&gt;
+
+    <span class="c">(* if it fails, try to resolve it from the environment *)</span>
+    <span class="kp">first</span> [
+      <span class="c">(* TODO unfortunately this immediately tries the IH. we need to delay it until we&#39;ve unfolded at least once *)</span>
+        <span class="nb">rewrite</span> IH; [ | <span class="nb">subst</span>; <span class="nb">auto</span> ]
+      <span class="c">(* | rewrite (@norm_unk env); [ | unfold env; resolve_fn_in_env ]; simpl *)</span>
+      <span class="c">(* | funfold env f *)</span>
+    ]
+
+  <span class="c">(* if there is no IH, try to resolve from the environment *)</span>
+  | |- entails_under <span class="nl">?env</span> (unk <span class="nl">?f</span> _ _) _ =&gt;
+    <span class="c">(* rewrite (@norm_unk env); [ | unfold env; resolve_fn_in_env ]; simpl *)</span>
+    funfold env f; <span class="nb">simpl</span>
+
+  <span class="c">(* try to work on the right side *)</span>
+  | |- entails_under _ _ (fex (<span class="kr">fun</span> <span class="nv">_</span> =&gt; _)) =&gt;
+    <span class="nb">simple apply</span> ent_ex_r; <span class="nb">eexists</span>
+  | |- entails_under _ (ens_ \[_]) (ens_ \[_]) =&gt;
+    <span class="nb">simple apply</span> ent_ens_single_pure; <span class="nb">subst</span>; <span class="nb">intuition</span>
+  | |- entails_under _ (ens_ _) (ens_ _) =&gt;
+    <span class="nb">simple apply</span> ent_ens_single; xsimpl; <span class="nb">subst</span>; <span class="nb">intuition</span>
+
+  <span class="c">(* if all else fails, try basic tactics to hopefully get other steps to apply *)</span>
+  | H: _ /\ _ |- _ =&gt;
+    <span class="nb">destruct</span> H
+  | _: <span class="nl">?v</span> = <span class="nl">?w</span> |- _ =&gt;
+    <span class="kp">first</span> [<span class="nb">subst</span> v | <span class="nb">subst</span> w]
+
+  <span class="c">(* after we&#39;ve tried everything, try to solve *)</span>
+  | |- _ = _ =&gt;
+    <span class="kp">solve</span> [<span class="nb">simpl</span>; <span class="nb">simple apply</span> eq_refl]
+    <span class="c">(* https://coq.inria.fr/doc/master/refman/proofs/writing-proofs/proof-mode.html#coq:flag.Solve-Unification-Constraints *)</span>
+    <span class="c">(* solve [solve_constraints; reflexivity] *)</span>
+
+  <span class="c">(* always have a no-match so we can repeat this *)</span>
+  | |- <span class="nl">?g</span> =&gt; <span class="kp">idtac</span> <span class="s2">&quot;no match&quot;</span>; <span class="kp">idtac</span> g; <span class="kp">fail</span>
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">solve_entailment</span> :=
+    <span class="kp">repeat</span> ent_step.</span></span></pre></article></body></html>
