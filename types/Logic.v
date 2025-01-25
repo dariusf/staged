@@ -123,6 +123,11 @@ Fixpoint pmatch v (cases: list (tag * expr)) : expr :=
       (pif (pvar "x") e (pmatch v cs))
   end.
 
+Definition pletcast x tag e1 e2 : expr :=
+  (plet x e1
+    (plet "xb" (ptypetest tag (pvar x))
+      (pif (pvar "xb") e2 (pval vabort)))).
+
 Module Val.
   Definition value := val.
 End Val.
