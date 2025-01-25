@@ -21,6 +21,14 @@ Definition var_eq := String.string_dec.
 
 Definition loc := nat.
 
+Inductive tag :=
+  | tag_int
+  | tag_bool
+  | tag_str
+  | tag_list
+  | tag_nil
+  | tag_cons.
+
 Inductive val :=
   | vunit : val
   | vint : Z -> val
@@ -47,6 +55,7 @@ with expr : Type :=
   | psnd (t: expr)
   | pminus (x y: expr)
   | padd (x y: expr)
+  | ptypetest (tag:tag) (e: expr)
   | passert (b: expr)
   | pref (v: expr)
   | pderef (v: expr)
@@ -78,8 +87,24 @@ Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
   | papp e v => papp e v
+  | ptypetest tag e => ptypetest tag e
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
   | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
+  end.
+
+Definition vcons a b : val := vconstr2 "cons" a b.
+Definition vnil : val := vconstr0 "nil".
+
+Definition interpret_tag tag v : bool :=
+  match tag, v with
+  | tag_int, vint _ => true
+  | tag_bool, vbool _ => true
+  | tag_str, vstr _ => true
+  | tag_nil, vconstr0 "nil" => true
+  | tag_cons, vconstr2 "cons" _ _ => true
+  | tag_list, vconstr0 "nil" => true
+  | tag_list, vconstr2 "cons" _ _ => true
+  | _, _ => false
   end.
 
 Module Val.
@@ -155,10 +180,12 @@ Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
     bigstep h (passign (pval (vloc p)) (pval v)) (Fmap.update h p v) vunit
 
   | eval_passert : forall h,
-    bigstep h (passert (pval (vbool true))) h vunit.
+    bigstep h (passert (pval (vbool true))) h vunit
 
-Definition vcons a b : val := vconstr2 "cons" a b.
-Definition vnil : val := vconstr0 "nil".
+  | eval_ptypetest : forall h tag v,
+    bigstep h (ptypetest tag (pval v)) h (vbool (interpret_tag tag v))
+
+  .
 
 (** * Types *)
 Definition type := val -> Prop.
