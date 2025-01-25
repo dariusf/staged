@@ -270,7 +270,8 @@ Definition E t := fun e =>
 Definition tarrow t1 t2 : type := fun vf =>
   forall x e, vf = vfun x e ->
   forall v, t1 v ->
-  E t2 (papp (pval (vfun x e)) (pval v)).
+  (* E t2 (papp (pval (vfun x e)) (pval v)). *)
+  E t2 (subst x v e).
 
 (** Dependent arrow *)
 Definition tdarrow v t1 t2 : type := fun vf =>
@@ -381,10 +382,7 @@ Proof.
   unfold E. intros.
   injects H.
   inverts H1 as H1.
-  { injects H1.
-    inverts H6 as H6.
-    assumption. (* this is the key step *) }
-  { inverts H1 as H1. }
+  assumption. (* this is the key step *)
 Qed.
 
 Lemma id_has_type2 : id_type2 id.
@@ -633,6 +631,30 @@ Proof.
   apply req_pure_intro. intros.
   apply empty_intro.
 Qed.
+
+(** Arrow type in terms of triples *)
+Definition tarrow_ t1 t2 : type := fun vf =>
+  forall x e, vf = vfun x e ->
+  forall v,
+    triple \[t1 v] (fun r => \[t2 r]) (subst x v e).
+
+(* are these equivalent? *)
+Lemma tarrow_triple: forall t1 t2,
+  equiv (tarrow t1 t2) (tarrow_ t1 t2).
+Proof.
+  unfold tarrow, tarrow_, triple, E. iff H.
+  {
+    intros.
+    specializes H H0.
+    hinv H1. subst.
+    specializes H H1 H2.
+    (* the heap has to be empty *)
+    admit. }
+  { intros.
+    specializes H H0.
+    (* same problem *)
+    admit. }
+Abort.
 
 (*
 
