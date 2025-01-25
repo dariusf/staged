@@ -21,16 +21,22 @@ Definition var_eq := String.string_dec.
 
 Definition loc := nat.
 
+Inductive tag :=
+  | tag_int
+  | tag_bool
+  | tag_str
+  | tag_list
+  | tag_nil
+  | tag_cons.
+
 Inductive val :=
   | vunit : val
   | vint : Z -> val
   | vfun : var -> expr -> val
   | vfix : var -> var -> expr -> val
   | vloc : loc -> val
-  | vtup : val -> val -> val
   | vstr : string -> val
   | vbool : bool -> val
-  | vlist : list val -> val
   | vconstr0 : string -> val
   | vconstr1 : string -> val -> val
   | vconstr2 : string -> val -> val -> val
@@ -41,19 +47,23 @@ with expr : Type :=
   | pvar (x: var)
   | pval (v: val)
   | plet (x: var) (e1 e2: expr)
-  | pfix (f: var) (x: var) (e: expr)
+  | pif (b: expr) (e1: expr) (e2: expr)
+  | papp (x: expr) (a: expr)
   | pfun (x: var) (e: expr)
-  | padd (x y: expr)
+  | pfix (f: var) (x: var) (e: expr)
   | pfst (t: expr)
   | psnd (t: expr)
   | pminus (x y: expr)
+  | padd (x y: expr)
+  | ptypetest (tag:tag) (e: expr)
   | passert (b: expr)
   | pref (v: expr)
   | pderef (v: expr)
   | passign (x: expr) (v: expr)
-  | pif (b: expr) (e1: expr) (e2: expr)
-  | papp (x: expr) (a: expr)
   .
+
+Implicit Types e: expr.
+Implicit Types r v: val.
 
 #[global]
 Instance Inhab_val : Inhab val.
@@ -80,9 +90,43 @@ Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
   | papp e v => papp e v
+  | ptypetest tag e => ptypetest tag e
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
   | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
   end.
+
+Definition vcons a b : val := vconstr2 "cons" a b.
+Definition vnil : val := vconstr0 "nil".
+
+Definition interpret_tag tag v : bool :=
+  match tag, v with
+  | tag_int, vint _ => true
+  | tag_bool, vbool _ => true
+  | tag_str, vstr _ => true
+  | tag_nil, vconstr0 "nil" => true
+  | tag_cons, vconstr2 "cons" _ _ => true
+  | tag_list, vconstr0 "nil" => true
+  | tag_list, vconstr2 "cons" _ _ => true
+  | _, _ => false
+  end.
+
+(* [(Integer) i] *)
+Definition ptypecast tag (v:val) :=
+  plet "x" (ptypetest tag (pval v))
+    (pif (pvar "x") (pval v) (pval vabort)).
+
+Fixpoint pmatch v (cases: list (tag * expr)) : expr :=
+  match cases with
+  | nil => pval vabort
+  | (tag, e) :: cs =>
+    plet "x" (ptypetest tag (pval v))
+      (pif (pvar "x") e (pmatch v cs))
+  end.
+
+Definition pletcast x tag e1 e2 : expr :=
+  (plet x e1
+    (plet "xb" (ptypetest tag (pvar x))
+      (pif (pvar "xb") e2 (pval vabort)))).
 
 Module Val.
   Definition value := val.
@@ -91,8 +135,6 @@ End Val.
 Module Export Heap := HeapF.HeapSetup Val.
 
 Implicit Types h: heap.
-Implicit Types e: expr.
-Implicit Types r v: val.
 
 Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
   | eval_pval : forall h v,
@@ -110,6 +152,15 @@ Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
 
   | eval_pminus : forall h x y,
     bigstep h (pminus (pval (vint x)) (pval (vint y))) h (vint (x - y))
+
+  | eval_pfst1 : forall x h v,
+    bigstep h (pfst (pval (vconstr1 x v))) h v
+
+  | eval_pfst2 : forall x h v1 v2,
+    bigstep h (pfst (pval (vconstr2 x v1 v2))) h v1
+
+  | eval_psnd2 : forall x h v1 v2,
+    bigstep h (psnd (pval (vconstr2 x v1 v2))) h v2
 
   | eval_pfun : forall h x e,
     bigstep h (pfun x e) h (vfun x e)
@@ -148,7 +199,12 @@ Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
     bigstep h (passign (pval (vloc p)) (pval v)) (Fmap.update h p v) vunit
 
   | eval_passert : forall h,
-    bigstep h (passert (pval (vbool true))) h vunit.
+    bigstep h (passert (pval (vbool true))) h vunit
+
+  | eval_ptypetest : forall h tag v,
+    bigstep h (ptypetest tag (pval v)) h (vbool (interpret_tag tag v))
+
+  .
 
 (** * Types *)
 Definition type := val -> Prop.
@@ -157,14 +213,18 @@ Implicit Types t: type.
 (* bot <: err <: t <: ok <: any <: top *)
 (* abort <: top *)
 
-Definition tint : type := fun v => exists i, v = vint i.
-Definition tbool : type := fun v => exists b, v = vbool b.
+Definition tsingle v1 : type := fun v => v = v1.
+Definition terr : type := tsingle verr.
+Definition tabort : type := tsingle vabort.
 
 Definition ttop : type := fun _ => True.
 Definition tbot : type := fun _ => False.
+Definition tintersect t1 t2 : type := fun v => t1 v /\ t2 v.
+Definition tunion t1 t2 : type := fun v => t1 v \/ t2 v.
+Definition tnot t : type := fun v => not (t v).
 
-(* TODO are errs part of singletons? *)
-Definition tsingle v1 : type := fun v => v = v1.
+Definition tint : type := tunion terr (fun v => exists i, v = vint i).
+Definition tbool : type := tunion terr (fun v => exists b, v = vbool b).
 
 Definition tforall A (f:A -> type) : type := fun v =>
   forall x:A, (f x) v.
@@ -185,28 +245,23 @@ Notation "'∀' x1 .. xn , H" :=
   (at level 39, x1 binder, H at level 50, right associativity,
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
 
-Definition tintersect t1 t2 : type := fun v => t1 v /\ t2 v.
-Definition tunion t1 t2 : type := fun v => t1 v \/ t2 v.
-Definition tnot t : type := fun v => not (t v).
-
-(* TODO err has to be in every type.
-  is it just in base types? in that case what about (¬ int)? *)
-Definition terr : type := tsingle verr.
-Definition tabort : type := tsingle vabort.
 Definition tany : type := tnot tabort.
-
-Definition vcons a b : val := vconstr2 "cons" a b.
-Definition vnil : val := vconstr0 "nil".
 
 (** The type of finite lists. can be coinductive to be infinite.
   non-inductive recursive types are ignored for now. *)
 Inductive tlist : type -> val -> Prop :=
+  | tlist_err : forall t,
+    tlist t verr
   | tlist_nil : forall t,
     tlist t vnil
   | tlist_cons : forall vh vt t,
     t vh ->
     tlist t vt ->
     tlist t (vcons vh vt).
+
+Definition tnil : type := tunion terr (fun v => v = vnil).
+Definition tcons : type :=
+  tunion terr (fun v => forall v1 v2, v = vcons v1 v2).
 
 (** Unary logical relation on expressions *)
 Definition E t := fun e =>
@@ -223,6 +278,20 @@ Definition tdarrow v t1 t2 : type := fun vf =>
   t1 v ->
   E t2 (papp (pval (vfun x e)) (pval v)).
 
+(** All values are of type top *)
+Lemma top_intro: forall v,
+  ttop v.
+Proof.
+  unfold ttop. jauto.
+Qed.
+
+Lemma bot_inv: forall v,
+  not (tbot v).
+Proof.
+  jauto.
+Qed.
+
+(** * Subtyping *)
 Definition subtype t1 t2 := forall v, t1 v -> t2 v.
 Notation "t1 '<:' t2" := (subtype t1 t2) (at level 40).
 
@@ -261,11 +330,12 @@ Proof.
   specializes H1 H H4.
 Qed.
 
-(** All values are of type top *)
-Lemma top_intro: forall v,
-  ttop v.
+(** The standard subsumption rule is a consequence of the semantic definition. *)
+Lemma subsumption: forall t1 t2 v,
+  t1 v -> t1 <: t2 -> t2 v.
 Proof.
-  unfold ttop. jauto.
+  unfold subtype. intros.
+  eauto.
 Qed.
 
 Lemma subtype_bot: forall t,
@@ -281,7 +351,7 @@ Proof.
 Qed.
 
 (** top is the annihilator of union *)
-Lemma top_equiv: forall t,
+Lemma tunion_ttop: forall t,
   equiv (tunion ttop t) ttop.
 Proof.
   intros. iff H.
@@ -289,44 +359,15 @@ Proof.
   { unfold tunion, ttop. eauto. }
 Qed.
 
-(** These two disjuncts are included in the infinite set of disjuncts of the supertypes of t1 *)
-Lemma contra_disjuncts: forall t1 v,
-  (tunion ttop t1) v -> (exists t2, t1 <: t2 /\ t2 v).
+Lemma tintersect_tbot: forall t,
+  equiv (tintersect tbot t) tbot.
 Proof.
-  unfold tunion, ttop, subtype.
-  intros.
-  destruct H.
-  - exists ttop. jauto.
-  - exists t1. jauto.
+  unfold tbot, tintersect. intros. iff H.
+  { destr H. false. }
+  { false. }
 Qed.
-
-Lemma contra_is_top: forall t1 v,
-  ttop v <-> (exists t2, t1 <: t2 /\ t2 v).
-Proof.
-  iff H.
-  { exists ttop. hint subtype_top. jauto. }
-  { destr H. apply top_intro. }
-Qed.
-
-(** * Variance and mutability *)
-
-Definition tcov : type -> type := fun t1 v =>
-  exists t2, t2 <: t1 -> t2 v.
-Definition tcontra : type -> type := fun t1 v =>
-  forall t2, t1 <: t2 -> t2 v.
-Definition tinv : type -> type := fun t1 v => t1 v.
-Definition twild : type := ttop.
 
 Module Examples.
-
-Example ex_list: (tlist tint) (vcons (vint 1) (vcons (vint 2) vnil)).
-Proof.
-  apply tlist_cons.
-  unfold tint. eexists. reflexivity.
-  apply tlist_cons.
-  unfold tint. eexists. reflexivity.
-  apply tlist_nil.
-Qed.
 
 Definition id := vfun "x" (pvar "x").
 Definition id_type1 : type := ∀ t, tarrow t t.
@@ -362,6 +403,47 @@ Qed.
 
 End Examples.
 
+(** * Variance and mutability *)
+
+(** These two disjuncts are included in the infinite set of disjuncts of the supertypes of t1 *)
+Lemma contra_disjuncts: forall t1 v,
+  (tunion ttop t1) v -> (exists t2, t1 <: t2 /\ t2 v).
+Proof.
+  unfold tunion, ttop, subtype.
+  intros.
+  destruct H.
+  - exists ttop. jauto.
+  - exists t1. jauto.
+Qed.
+
+Lemma contra_is_top: forall t1 v,
+  ttop v <-> (exists t2, t1 <: t2 /\ t2 v).
+Proof.
+  iff H.
+  { exists ttop. hint subtype_top. jauto. }
+  { destr H. apply top_intro. }
+Qed.
+
+Definition tcov : type -> type := fun t1 v =>
+  exists t2, t2 <: t1 -> t2 v.
+Definition tcontra : type -> type := fun t1 v =>
+  forall t2, t1 <: t2 -> t2 v.
+Definition tinv : type -> type := fun t1 v => t1 v.
+Definition twild : type := ttop.
+
+Example ex_list: (tlist tint) (vcons (vint 1) (vcons (vint 2) vnil)).
+Proof.
+  apply tlist_cons.
+  unfold tint.
+  unfold tunion. right.
+  eexists. reflexivity.
+  apply tlist_cons.
+  unfold tint.
+  unfold tunion. right.
+  eexists. reflexivity.
+  apply tlist_nil.
+Qed.
+
 Lemma subtype_cov: forall t,
   t <: tcov t.
 Proof.
@@ -369,7 +451,7 @@ Proof.
   eauto.
 Qed.
 
-Lemma list_covariant: forall t,
+(* Lemma list_covariant: forall t,
   tlist t <: tlist (tcov t).
 Proof.
   unfold subtype. intros.
@@ -378,9 +460,9 @@ Proof.
   - apply tlist_cons.
     { unfold tcov. intros. exists t. auto. }
     { assumption. }
-Qed.
+Qed. *)
 
-Lemma list_contravariant: forall t,
+(* Lemma list_contravariant: forall t,
   tlist (tcontra t) <: tlist t.
 Proof.
   unfold subtype. intros.
@@ -395,7 +477,7 @@ Proof.
       auto. }
     { subst.
       specializes* IHtlist. }
-Qed.
+Qed. *)
 
 (** * Program specifications *)
 
@@ -458,6 +540,14 @@ Inductive spec_satisfies : heap -> heap -> val -> spec -> Prop :=
     spec_satisfies h1 h2 r (sintersect s1 s2)
   .
 
+Definition subsumes s1 s2 := forall h1 h2 r,
+  spec_satisfies h1 h2 r s1 ->
+  spec_satisfies h1 h2 r s2.
+
+Definition ens_ H := ens (fun r => \[r = vunit] \* H).
+Definition empty := ens_ \[True].
+Notation req_ H := (req H empty).
+
 (*
   case v of
   | p1 => s1
@@ -470,11 +560,17 @@ Inductive spec_satisfies : heap -> heap -> val -> spec -> Prop :=
     (req (p2 v /\ not (p1 v)) (ens s2))
 *)
 
-Definition ens_ H := ens (fun r => \[r = vunit] \* H).
-Definition empty := ens_ \[True].
-Notation req_ H := (req H empty).
+Fixpoint scase_ P v (cases:list ((val -> Prop) * spec)) : spec :=
+  match cases with
+  | nil => empty
+  | (p, s) :: cs =>
+    sintersect (req \[p v /\ not P] s) (scase_ (p v /\ P) v cs)
+  end.
 
-(** * Introduction/inversion lemmas *)
+Definition scase v (cases:list ((val -> Prop) * spec)) : spec :=
+  scase_ True v cases.
+
+(** * Introduction/inversion lemmas, and other properties of specs *)
 Lemma req_pure_intro : forall h1 h2 r P s,
   (P -> spec_satisfies h1 h2 r s) ->
   spec_satisfies h1 h2 r (req \[P] s).
@@ -492,19 +588,47 @@ Proof.
   hintro. splits*. hintro. all: auto.
 Qed.
 
-(** * Semantics of triples *)
-Definition triple (s:spec) (e:expr) :=
+(** * Semantics of program specs/triples *)
+Definition program_has_spec (s:spec) (e:expr) :=
   forall h1 h2 r,
     bigstep h1 e h2 r ->
     spec_satisfies h1 h2 r s.
 
-(** * Triples for program constructs *)
-Lemma triple_assert: forall b,
-  triple (req_ \[b = true])
+Definition triple H Q e :=
+  forall h1 h2 r,
+    H h1 -> bigstep h1 e h2 r -> Q r h2.
+
+Lemma triple_subsumption: forall H1 H2 Q1 Q2 e,
+  triple H2 Q2 e ->
+  H1 ==> H2 ->
+  Q2 ===> Q1 ->
+  triple H1 Q1 e.
+Proof.
+  unfold triple. intros.
+  apply H3.
+  eauto.
+Qed.
+
+(* Is this rule still true in separation logic? *)
+Lemma stronger_triple_subsumption: forall H1 H2 Q1 Q2 e,
+  triple H2 Q2 e ->
+  H1 ==> H2 ->
+  Q2 \*+ H1 ===> Q1 ->
+  triple H1 Q1 e.
+Proof.
+  unfold triple. intros.
+  apply H3.
+  specializes H H5.
+  eauto.
+Abort.
+
+(** * Specs for program constructs *)
+Lemma program_has_spec_assert: forall b,
+  program_has_spec (req_ \[b = true])
    (passert (pval (vbool b))).
 Proof.
   intros.
-  unfold triple. introv Hb.
+  unfold program_has_spec. introv Hb.
   inverts Hb as Hb.
   apply req_pure_intro. intros.
   apply empty_intro.
@@ -514,12 +638,7 @@ Qed.
 
 TODO
 
-- is err in int? is err in not int?
-- is err in singleton?
 - variance: are the definitions of covariance and contravariance reasonable?
-- is covariance equivalent to invariant?
-- is contravariance just top?
-- triples for program constructs
 - interesting examples
 
 *)
