@@ -261,6 +261,13 @@ Proof.
   specializes H1 H H4.
 Qed.
 
+Lemma subsumption: forall t1 t2 v,
+  t1 v -> t1 <: t2 -> t2 v.
+Proof.
+  unfold subtype. intros.
+  eauto.
+Qed.
+
 (** All values are of type top *)
 Lemma top_intro: forall v,
   ttop v.
@@ -458,6 +465,10 @@ Inductive spec_satisfies : heap -> heap -> val -> spec -> Prop :=
     spec_satisfies h1 h2 r (sintersect s1 s2)
   .
 
+Definition subsumes s1 s2 := forall h1 h2 r,
+  spec_satisfies h1 h2 r s1 ->
+  spec_satisfies h1 h2 r s2.
+
 (*
   case v of
   | p1 => s1
@@ -517,8 +528,6 @@ TODO
 - is err in int? is err in not int?
 - is err in singleton?
 - variance: are the definitions of covariance and contravariance reasonable?
-- is covariance equivalent to invariant?
-- is contravariance just top?
 - triples for program constructs
 - interesting examples
 
