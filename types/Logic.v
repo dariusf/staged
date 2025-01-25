@@ -469,6 +469,10 @@ Definition subsumes s1 s2 := forall h1 h2 r,
   spec_satisfies h1 h2 r s1 ->
   spec_satisfies h1 h2 r s2.
 
+Definition ens_ H := ens (fun r => \[r = vunit] \* H).
+Definition empty := ens_ \[True].
+Notation req_ H := (req H empty).
+
 (*
   case v of
   | p1 => s1
@@ -481,9 +485,15 @@ Definition subsumes s1 s2 := forall h1 h2 r,
     (req (p2 v /\ not (p1 v)) (ens s2))
 *)
 
-Definition ens_ H := ens (fun r => \[r = vunit] \* H).
-Definition empty := ens_ \[True].
-Notation req_ H := (req H empty).
+Fixpoint scase_ P v (cases:list ((val -> Prop) * spec)) : spec :=
+  match cases with
+  | nil => empty
+  | (p, s) :: cs =>
+    sintersect (req \[p v /\ not P] s) (scase_ (p v /\ P) v cs)
+  end.
+
+Definition scase v (cases:list ((val -> Prop) * spec)) : spec :=
+  scase_ True v cases.
 
 (** * Introduction/inversion lemmas *)
 Lemma req_pure_intro : forall h1 h2 r P s,
