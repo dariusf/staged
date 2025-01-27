@@ -700,7 +700,16 @@ Proof.
   apply empty_intro.
 Qed.
 
-(** * Triples *)
+(** * Structural rules *)
+Lemma triple_extract_pure_r: forall H P Q e,
+  (P -> triple H Q e) ->
+  triple (H \* \[P]) Q e.
+Proof.
+  unfold triple. intros.
+  hinv H1. hinv H3. subst. rew_fmap *.
+Qed.
+
+(** * Triples for program constructs *)
 Lemma triple_val: forall H v,
   triple H (fun r => H \* \[r = v])
    (pval v).
@@ -735,9 +744,9 @@ Proof.
   specializes H0 H2 H3.
 Qed.
 
-Lemma triple_pif_true: forall H Q1 Q2 e1 e2,
-  triple H Q2 e1 ->
-  triple H Q2 (pif (pval (vbool true)) e1 e2).
+Lemma triple_pif_true: forall H Q e1 e2,
+  triple H Q e1 ->
+  triple H Q (pif (pval (vbool true)) e1 e2).
 Proof.
   unfold triple. intros.
   inverts H2 as H2.
@@ -753,23 +762,14 @@ Proof.
   eauto.
 Qed.
 
-Lemma triple_ptypecast_success: forall H tag v,
-  interpret_tag tag v = true ->
-  triple H (fun r => H \* \[interpret_tag tag v = true])
-    (ptypecast tag v).
+Lemma triple_ptypetest: forall H tag v,
+  triple H (fun r => H \* \[r = vbool (interpret_tag tag v)])
+    (ptypetest tag (pval v)).
 Proof.
   unfold triple. intros.
-  hintro. splits*.
-  (* start looking at the program, ensuring that
-    it's a no-op on the heap if it doesn't abort *)
-  inverts H2 as H2.
-  simpl in H9.
-  inverts H9 as H9.
-  { inverts H2 as H2.
-    inverts H9 as H9.
-    assumption. }
-  { inverts H2 as H2.
-    false. }
+  hintro.
+  inverts H1 as H1.
+  jauto.
 Qed.
 
 Lemma triple_ptypecast_failure: forall H tag v,
@@ -787,6 +787,23 @@ Proof.
   { inverts H2 as H2.
     inverts H9 as H9.
     splits*. }
+Qed.
+
+(** Use triples in the proof instead of unfolding everything *)
+Lemma triple_ptypecast_success: forall H tag v,
+  interpret_tag tag v = true ->
+  triple H (fun r => H \* \[r = v /\ interpret_tag tag v = true])
+    (ptypecast tag v).
+Proof.
+  unfold ptypecast. intros.
+  eapply triple_plet.
+  { apply triple_ptypetest. }
+  { intros. simpl.
+    apply triple_extract_pure_r. intros. subst. rewrite H0.
+    apply triple_pif_true.
+    applys_eq triple_val.
+    apply fun_ext_dep. intros.
+    xsimpl; jauto. }
 Qed.
 
 (** Arrow type in terms of triples *)
