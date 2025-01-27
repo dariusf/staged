@@ -615,10 +615,22 @@ Definition program_has_spec (s:spec) (e:expr) :=
 
 Definition triple H Q e :=
   forall h1, H h1 ->
-  exists h2 r, bigstep h1 e h2 r /\ Q r h2.
+  forall h2 r, bigstep h1 e h2 r -> Q r h2.
 
 Definition pure_triple P (Q:val->Prop) e :=
-  P -> exists r, bigstep empty_heap e empty_heap r /\ Q r.
+  P -> forall r, bigstep empty_heap e empty_heap r -> Q r.
+
+Definition triple_to_pure_triple : forall P (Q:val->Prop) e,
+  triple \[P] (fun r => \[Q r]) e ->
+  pure_triple P Q e.
+Proof.
+  unfold pure_triple, triple. intros.
+  specializes H empty_heap.
+  forward H. hintro. assumption.
+  specializes H H1.
+  hinv H.
+  assumption.
+Qed.
 
 Definition pure_triple_to_triple : forall P (Q:val->Prop) e,
   pure_triple P Q e ->
@@ -627,12 +639,8 @@ Proof.
   unfold pure_triple, triple. intros.
   hinv H0. subst h1.
   specializes H H0.
-  destr H.
-  exists empty_heap r. intros.
-  splits*.
-  hintro.
-  assumption.
-Qed.
+  (* for arbitrary e, we cannot ensure that the heap after execution is empty. pure triples only describe programs which don't use heap operations. *)
+Abort.
 
 Lemma triple_subsumption: forall H1 H2 Q1 Q2 e,
   triple H2 Q2 e ->
@@ -643,9 +651,8 @@ Proof.
   unfold triple. intros.
   apply H0 in H4.
   specializes H h1 H4. destr H.
-  exists h2 r. intros.
-  splits*.
-  apply~ H3.
+  apply H3.
+  eauto.
 Qed.
 
 (** This rule is only true in Hoare logic. In separation logic it requires frame inference, which the semantic [==>] does not do. *)
@@ -657,9 +664,7 @@ Lemma stronger_triple_subsumption: forall P1 P2 (Q1 Q2:val->Prop) e,
 Proof.
   unfold pure_triple. intros.
   specializes H0 H2.
-  specializes H H0.
-  destr H. exists r.
-  eauto.
+  specializes H H0 H3.
 Qed.
 
 (** * Specs for program constructs *)
@@ -680,24 +685,25 @@ Definition tarrow_ t1 t2 : type := fun vf =>
   forall v,
     pure_triple (t1 v) (fun r => t2 r) (subst x v e).
 
-(* are these equivalent? *)
+(** Type assertions talk about strictly fewer executions. *)
 Lemma tarrow_triple: forall t1 t2,
-  equiv (tarrow t1 t2) (tarrow_ t1 t2).
+  tarrow t1 t2 <: tarrow_ t1 t2.
 Proof.
-  unfold tarrow, tarrow_. unfold pure_triple. iff H.
-  {
-    intros.
-    specializes H H0.
-    (* hinv H1. subst. *)
-    specializes H H1.
-    exs.
-    (* the heap has to be empty *)
-    admit. }
-  { intros.
-    specializes H H0 H1.
-    destr H.
-    (* same problem *)
-    admit. }
+  unfold tarrow, tarrow_. unfold subtype, pure_triple.
+  intros.
+  specializes H H0.
+  specializes H H1 H2.
+Qed.
+
+Lemma tarrow_triple_conv: forall t1 t2,
+  tarrow_ t1 t2 <: tarrow t1 t2.
+Proof.
+  unfold tarrow, tarrow_. unfold subtype, pure_triple.
+  intros.
+  specializes H H0 H1 r.
+  apply H.
+  (* same reason pure_triple_to_triple isn't true *)
+  admit.
 Abort.
 
 Definition tail := vfun "x"
@@ -763,6 +769,7 @@ Proof.
   unfold tarrow in H.
   specializes H x e.
   forward H by reflexivity.
+  (* we now have to prove that given v0:Any, v0:List Any *)
 Abort.
 
 Lemma tail_sp6_sp7:
