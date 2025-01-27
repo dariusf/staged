@@ -250,8 +250,6 @@ Notation "'∀' x1 .. xn , H" :=
   (at level 39, x1 binder, H at level 50, right associativity,
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : typ_scope.
 
-Definition tany : type := tnot tabort.
-
 (** The type of finite lists. can be coinductive to be infinite.
   non-inductive recursive types are ignored for now. *)
 Inductive tlist : type -> val -> Prop :=
@@ -268,14 +266,20 @@ Definition tnil : type := tunion terr (fun v => v = vnil).
 Definition tcons t1 t2 : type :=
   tunion terr (fun v => forall v1 v2, v = vcons v1 v2 /\ t1 v /\ t2 v2).
 
+
+(* This nonconstructive definition is not useful *)
+Definition tany_nonconstructive : type := tnot tabort.
+Definition tany : type :=
+  ∀ t t1 t2,
+    tunion tint (tunion tbool (tunion (tlist t) (tunion (tcons t1 t2) tnil))).
+
 (** Unary logical relation on expressions *)
-Definition E t := fun e =>
-  forall h1 h2 r, bigstep h1 e h2 r -> t r.
+Notation E t := (fun e =>
+  forall h1 h2 r, bigstep h1 e h2 r -> t r).
 
 Definition tarrow t1 t2 : type := fun vf =>
   forall x e, vf = vfun x e ->
   forall v, t1 v ->
-  (* E t2 (papp (pval (vfun x e)) (pval v)). *)
   E t2 (subst x v e).
 
 (** Dependent arrow *)
@@ -324,16 +328,15 @@ Proof. unfold Symmetric, equiv. intros. split; rewrite H; jauto. Qed.
 Instance equiv_equiv : Equivalence equiv.
 Proof. constructor. apply equiv_refl. apply equiv_sym. apply equiv_trans. Qed.
 
+(** * Properties of subtyping *)
 Lemma function_variance: forall t1 t2 t3 t4,
   t3 <: t1 ->
   t2 <: t4 ->
   tarrow t1 t2 <: tarrow t3 t4.
 Proof.
-  unfold subtype, tarrow, E. intros.
-  specializes H1 H2. clear H2.
-  apply H0. clear H0.
+  unfold subtype, tarrow. intros.
   specializes H H3.
-  specializes H1 H H4.
+  specializes H1 H2 H h1.
 Qed.
 
 (** The standard subsumption rule is a consequence of the semantic definition. *)
@@ -354,6 +357,17 @@ Lemma subtype_top: forall t,
   t <: ttop.
 Proof.
   unfold ttop, subtype. constructor.
+Qed.
+
+Lemma subtype_terr_tany:
+  terr <: tany.
+Proof.
+  unfold terr, tany, subtype.
+  intros.
+  unfold tforall. intros.
+  unfold tunion. left.
+  unfold tint. left.
+  assumption.
 Qed.
 
 (** top is the annihilator of union *)
@@ -384,8 +398,8 @@ Proof.
   unfold id, id_type1.
   unfold tforall. intros.
   unfold tarrow. intros.
-  unfold E. intros.
   injects H.
+  simpl in H1.
   inverts H1 as H1.
   assumption. (* this is the key step *)
 Qed.
@@ -395,13 +409,14 @@ Proof.
   unfold id, id_type2.
   unfold tforall. intros.
   unfold tdarrow. intros.
-  unfold tsingle, E. intros.
+  unfold tsingle. intros.
   injects H.
   inverts H1 as H1.
-  { injects H1.
+  - injects H1.
+    simpl in H6.
     inverts H6 as H6.
-    reflexivity. (* note the difference! *) }
-  { inverts H1 as H1. }
+    reflexivity. (* note the difference! *)
+  - inverts H1 as H1.
 Qed.
 
 End Examples.
@@ -487,6 +502,7 @@ Qed. *)
 (* Even though we use hprop, for pure logic we can just wrap everything in \[P] *)
 Definition postcond := val -> hprop.
 
+Implicit Types P: Prop.
 Implicit Types H: hprop.
 Implicit Types Q: postcond.
 
@@ -598,8 +614,25 @@ Definition program_has_spec (s:spec) (e:expr) :=
     spec_satisfies h1 h2 r s.
 
 Definition triple H Q e :=
-  forall h1 h2 r,
-    H h1 -> bigstep h1 e h2 r -> Q r h2.
+  forall h1, H h1 ->
+  exists h2 r, bigstep h1 e h2 r /\ Q r h2.
+
+Definition pure_triple P (Q:val->Prop) e :=
+  P -> exists r, bigstep empty_heap e empty_heap r /\ Q r.
+
+Definition pure_triple_to_triple : forall P (Q:val->Prop) e,
+  pure_triple P Q e ->
+  triple \[P] (fun r => \[Q r]) e.
+Proof.
+  unfold pure_triple, triple. intros.
+  hinv H0. subst h1.
+  specializes H H0.
+  destr H.
+  exists empty_heap r. intros.
+  splits*.
+  hintro.
+  assumption.
+Qed.
 
 Lemma triple_subsumption: forall H1 H2 Q1 Q2 e,
   triple H2 Q2 e ->
@@ -608,22 +641,26 @@ Lemma triple_subsumption: forall H1 H2 Q1 Q2 e,
   triple H1 Q1 e.
 Proof.
   unfold triple. intros.
-  apply H3.
-  eauto.
+  apply H0 in H4.
+  specializes H h1 H4. destr H.
+  exists h2 r. intros.
+  splits*.
+  apply~ H3.
 Qed.
 
-(* Is this rule still true in separation logic? *)
-Lemma stronger_triple_subsumption: forall H1 H2 Q1 Q2 e,
-  triple H2 Q2 e ->
-  H1 ==> H2 ->
-  Q2 \*+ H1 ===> Q1 ->
-  triple H1 Q1 e.
+(** This rule is only true in Hoare logic. In separation logic it requires frame inference, which the semantic [==>] does not do. *)
+Lemma stronger_triple_subsumption: forall P1 P2 (Q1 Q2:val->Prop) e,
+  pure_triple P2 Q2 e ->
+  (P1 -> P2) ->
+  (forall r, Q2 r /\ P1 -> Q1 r) ->
+  pure_triple P1 Q1 e.
 Proof.
-  unfold triple. intros.
-  apply H3.
-  specializes H H5.
+  unfold pure_triple. intros.
+  specializes H0 H2.
+  specializes H H0.
+  destr H. exists r.
   eauto.
-Abort.
+Qed.
 
 (** * Specs for program constructs *)
 Lemma program_has_spec_assert: forall b,
@@ -641,22 +678,24 @@ Qed.
 Definition tarrow_ t1 t2 : type := fun vf =>
   forall x e, vf = vfun x e ->
   forall v,
-    triple \[t1 v] (fun r => \[t2 r]) (subst x v e).
+    pure_triple (t1 v) (fun r => t2 r) (subst x v e).
 
 (* are these equivalent? *)
 Lemma tarrow_triple: forall t1 t2,
   equiv (tarrow t1 t2) (tarrow_ t1 t2).
 Proof.
-  unfold tarrow, tarrow_, triple, E. iff H.
+  unfold tarrow, tarrow_. unfold pure_triple. iff H.
   {
     intros.
     specializes H H0.
-    hinv H1. subst.
-    specializes H H1 H2.
+    (* hinv H1. subst. *)
+    specializes H H1.
+    exs.
     (* the heap has to be empty *)
     admit. }
   { intros.
-    specializes H H0.
+    specializes H H0 H1.
+    destr H.
     (* same problem *)
     admit. }
 Abort.
@@ -713,6 +752,37 @@ Definition tail_sp6 := ∀ t (ys:type),
     (tarrow (tnot (tcons t (tlist t))) terr).
 
 Definition tail_sp7 := tarrow tany tany.
+
+Lemma tail_sp1_sp7:
+  tail_sp1 <: tail_sp7.
+Proof.
+  unfold subtype, tail_sp1, tail_sp7.
+  intros.
+  specializes H tany.
+  unfold tarrow. intros. subst.
+  unfold tarrow in H.
+  specializes H x e.
+  forward H by reflexivity.
+Abort.
+
+Lemma tail_sp6_sp7:
+  tail_sp6 <: tail_sp7.
+Proof.
+  unfold subtype, tail_sp6, tail_sp7.
+  intros.
+  specializes H tany tany.
+  destruct H.
+  unfold tarrow. intros. subst.
+  destruct (classic (tcons tany (tlist tany) v0)).
+  - specializes H H1.
+    reflexivity.
+    eauto.
+  - specializes H0 H1.
+    reflexivity.
+    specializes H0 H3.
+    applys~ subtype_terr_tany.
+Qed.
+(* Print Assumptions tail_sp6_sp7. *)
 
 (*
 
