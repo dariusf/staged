@@ -700,6 +700,95 @@ Proof.
   apply empty_intro.
 Qed.
 
+(** * Triples *)
+Lemma triple_val: forall H v,
+  triple H (fun r => H \* \[r = v])
+   (pval v).
+Proof.
+  unfold triple. intros.
+  hintro.
+  inverts H1 as H1.
+  splits*.
+Qed.
+
+Lemma triple_err: forall H v,
+  triple H (fun r => H \* \[r = verr])
+   (pval verr).
+Proof.
+  intros. applys triple_val verr.
+Qed.
+
+Lemma triple_abort: forall H v,
+  triple H (fun r => H \* \[r = vabort])
+   (pval vabort).
+Proof.
+  intros. applys triple_val vabort.
+Qed.
+
+Lemma triple_plet: forall H Q1 Q2 x e1 e2,
+  triple H Q1 e1 ->
+  (forall v, triple (Q1 v) Q2 (subst x v e2)) ->
+  triple H Q2 (plet x e1 e2).
+Proof.
+  unfold triple. intros.
+  inverts H3 as H3.
+  specializes H0 H2 H3.
+Qed.
+
+Lemma triple_pif_true: forall H Q1 Q2 e1 e2,
+  triple H Q2 e1 ->
+  triple H Q2 (pif (pval (vbool true)) e1 e2).
+Proof.
+  unfold triple. intros.
+  inverts H2 as H2.
+  eauto.
+Qed.
+
+Lemma triple_pif_false: forall H Q1 Q2 e1 e2,
+  triple H Q2 e2 ->
+  triple H Q2 (pif (pval (vbool false)) e1 e2).
+Proof.
+  unfold triple. intros.
+  inverts H2 as H2.
+  eauto.
+Qed.
+
+Lemma triple_ptypecast_success: forall H tag v,
+  interpret_tag tag v = true ->
+  triple H (fun r => H \* \[interpret_tag tag v = true])
+    (ptypecast tag v).
+Proof.
+  unfold triple. intros.
+  hintro. splits*.
+  (* start looking at the program, ensuring that
+    it's a no-op on the heap if it doesn't abort *)
+  inverts H2 as H2.
+  simpl in H9.
+  inverts H9 as H9.
+  { inverts H2 as H2.
+    inverts H9 as H9.
+    assumption. }
+  { inverts H2 as H2.
+    false. }
+Qed.
+
+Lemma triple_ptypecast_failure: forall H tag v,
+  interpret_tag tag v = false ->
+  triple H (fun r => H \* \[r = vabort])
+    (ptypecast tag v).
+Proof.
+  unfold triple. intros.
+  hintro.
+  inverts H2 as H2.
+  simpl in H9.
+  inverts H9 as H9.
+  { inverts H2 as H2.
+    false. }
+  { inverts H2 as H2.
+    inverts H9 as H9.
+    splits*. }
+Qed.
+
 (** Arrow type in terms of triples *)
 Definition tarrow_ t1 t2 : type := fun vf =>
   forall x e, vf = vfun x e ->
@@ -849,12 +938,3 @@ Proof.
   - specializes H0 H1 H4 H3.
   - specializes H H1 H4 H3.
 Abort.
-
-(*
-
-TODO
-
-- variance: are the definitions of covariance and contravariance reasonable?
-- interesting examples
-
-*)
