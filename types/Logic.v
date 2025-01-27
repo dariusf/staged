@@ -289,16 +289,30 @@ Definition tdarrow v t1 t2 : type := fun vf =>
   E t2 (papp (pval (vfun x e)) (pval v)).
 
 (** All values are of type top *)
-Lemma top_intro: forall v,
+Lemma ttop_intro: forall v,
   ttop v.
 Proof.
   unfold ttop. jauto.
 Qed.
 
-Lemma bot_inv: forall v,
+Lemma tbot_inv: forall v,
   not (tbot v).
 Proof.
   jauto.
+Qed.
+
+Lemma terr_intro:
+  terr verr.
+Proof.
+  unfold terr, tsingle.
+  reflexivity.
+Qed.
+
+Lemma tsingle_inv: forall v1 v2,
+  tsingle v1 v2 -> v1 = v2.
+Proof.
+  unfold tsingle. intros.
+  congruence.
 Qed.
 
 (** * Subtyping *)
@@ -362,12 +376,19 @@ Qed.
 Lemma subtype_terr_tany:
   terr <: tany.
 Proof.
-  unfold terr, tany, subtype.
-  intros.
+  unfold terr, tany, subtype. intros.
   unfold tforall. intros.
   unfold tunion. left.
   unfold tint. left.
   assumption.
+Qed.
+
+Lemma subtype_terr_tlist: forall t,
+  terr <: tlist t.
+Proof.
+  unfold terr, subtype. intros.
+  apply tsingle_inv in H. subst v.
+  apply tlist_err.
 Qed.
 
 (** top is the annihilator of union *)
@@ -439,7 +460,7 @@ Lemma contra_is_top: forall t1 v,
 Proof.
   iff H.
   { exists ttop. hint subtype_top. jauto. }
-  { destr H. apply top_intro. }
+  { destr H. apply ttop_intro. }
 Qed.
 
 Definition tcov : type -> type := fun t1 v =>
@@ -695,6 +716,7 @@ Proof.
   specializes H H1 H2.
 Qed.
 
+(** This is not true for the same reason [pure_triple_to_triple] isn't true. *)
 Lemma tarrow_triple_conv: forall t1 t2,
   tarrow_ t1 t2 <: tarrow t1 t2.
 Proof.
@@ -702,8 +724,6 @@ Proof.
   intros.
   specializes H H0 H1 r.
   apply H.
-  (* same reason pure_triple_to_triple isn't true *)
-  admit.
 Abort.
 
 Definition tail := vfun "x"
@@ -743,7 +763,7 @@ Definition tail_sp2 := ∀ t, tarrow (tlist t) (tunion (tlist t) tabort).
 Definition tail_sp3 := ∀ t, tarrow (tcons t (tlist t)) (tlist t).
 Definition tail_sp4 := ∀ t,
   tintersect
-    (∃ t1, tarrow t1 tabort)
+    (tarrow (tnot (tcons t (tlist t))) tabort)
     (tarrow (tcons t (tlist t)) (tlist t)).
 
 (* case is encoded manually. too much of a pain to do it with dependent arrows *)
@@ -754,8 +774,8 @@ Definition tail_sp5 := ∀ t,
 
 Definition tail_sp6 := ∀ t (ys:type),
   tintersect
-    (tarrow (tcons t (tlist ys)) ys)
-    (tarrow (tnot (tcons t (tlist t))) terr).
+    (tarrow (tcons t ys) ys)
+    (tarrow (tnot (tcons t ys)) terr).
 
 Definition tail_sp7 := tarrow tany tany.
 
@@ -775,12 +795,10 @@ Abort.
 Lemma tail_sp6_sp7:
   tail_sp6 <: tail_sp7.
 Proof.
-  unfold subtype, tail_sp6, tail_sp7.
-  intros.
-  specializes H tany tany.
-  destruct H.
-  unfold tarrow. intros. subst.
-  destruct (classic (tcons tany (tlist tany) v0)).
+  unfold subtype, tail_sp6, tail_sp7. intros.
+  specializes H tany tany. destruct H.
+  unfold tarrow. intros. subst v.
+  destruct (classic (tcons tany tany v0)).
   - specializes H H1.
     reflexivity.
     eauto.
@@ -790,6 +808,47 @@ Proof.
     applys~ subtype_terr_tany.
 Qed.
 (* Print Assumptions tail_sp6_sp7. *)
+
+Lemma tail_sp6_sp1:
+  tail_sp6 <: tail_sp1.
+Proof.
+  unfold subtype, tail_sp6, tail_sp1. intros.
+  unfold tforall. intros t1.
+  specializes H t1 (tlist t1). destruct H.
+  unfold tarrow. intros.
+  destruct (classic (tcons t1 (tlist t1) v0)).
+  - specializes H H1 H4 H3.
+  - specializes H0 H1 H4 H3.
+    apply~ subtype_terr_tlist.
+Qed.
+
+Lemma tail_sp4_sp2:
+  tail_sp4 <: tail_sp2.
+Proof.
+  unfold subtype, tail_sp4, tail_sp2. intros.
+  unfold tforall. intros t1.
+  specializes H t1. destruct H.
+  unfold tarrow. intros.
+  destruct (classic (tcons t1 (tlist t1) v0)).
+  - specializes H0 H1 H4 H3.
+    left.
+    assumption.
+  - specializes H H1 H4 H3.
+    right.
+    assumption.
+Qed.
+
+Lemma tail_sp4_sp3:
+  tail_sp4 <: tail_sp3.
+Proof.
+  unfold subtype, tail_sp4, tail_sp3. intros.
+  unfold tforall. intros t1.
+  specializes H t1. destruct H.
+  unfold tarrow. intros.
+  destruct (classic (tcons t1 (tlist t1) v0)).
+  - specializes H0 H1 H4 H3.
+  - specializes H H1 H4 H3.
+Abort.
 
 (*
 
