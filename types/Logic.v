@@ -78,21 +78,21 @@ Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
-  | padd x y => padd x y
-  | pminus x y => pminus x y
-  | pfst x => pfst x
-  | psnd x => psnd x
+  | padd e1 e2 => padd (aux e1) (aux e2)
+  | pminus e1 e2 => pminus (aux e1) (aux e2)
+  | pfst e => pfst (aux e)
+  | psnd e => psnd (aux e)
   | pvar x => if_y_eq x (pval w) e
-  | passert b => passert b
-  | pderef r => pderef r
-  | passign x y => passign x y
-  | pref v => pref v
+  | passert e => passert (aux e)
+  | pderef e => pderef (aux e)
+  | passign e1 e2 => passign (aux e1) (aux e2)
+  | pref e => pref (aux e)
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
-  | papp e v => papp e v
-  | ptypetest tag e => ptypetest tag e
+  | papp e1 e2 => papp (aux e1) (aux e2)
+  | ptypetest tag e => ptypetest tag (aux e)
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
-  | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
+  | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2)
   end.
 
 Definition vcons a b : val := vconstr2 "cons" a b.
@@ -115,24 +115,29 @@ Definition ptypecast tag (v:val) :=
   plet "x" (ptypetest tag (pval v))
     (pif (pvar "x") (pval v) (pval vabort)).
 
-Fixpoint pmatch v (cases: list (tag * expr)) : expr :=
+Fixpoint pmatch_ x (cases: list (tag * expr)) : expr :=
   match cases with
   | nil => pval vabort
-  | (tag, e) :: cs =>
-    plet "x" (ptypetest tag (pval v))
-      (pif (pvar "x") e (pmatch v cs))
+  | (tag, eb) :: cs =>
+    plet "_b" (ptypetest tag x)
+      (pif (pvar "_b") eb (pmatch_ x cs))
   end.
+
+Definition pmatch e (cases: list (tag * expr)) : expr :=
+  (plet "_scr" e (pmatch_ (pvar "_scr") cases)).
 
 Definition pletcast x tag e1 e2 : expr :=
   (plet x e1
-    (plet "xb" (ptypetest tag (pvar x))
-      (pif (pvar "xb") e2 (pval vabort)))).
+    (plet "_xb" (ptypetest tag (pvar x))
+      (pif (pvar "_xb") e2 (pval vabort)))).
 
 Module Val.
   Definition value := val.
 End Val.
 
 Module Export Heap := HeapF.HeapSetup Val.
+
+Definition empty_heap : heap := Fmap.empty.
 
 Implicit Types h: heap.
 
@@ -655,6 +660,38 @@ Proof.
     (* same problem *)
     admit. }
 Abort.
+
+Definition tail := vfun "x"
+  (pmatch (pvar "x") (
+    (tag_nil, pval verr) ::
+    (tag_cons, (plet "y" (psnd (pvar "x")) (pvar "y"))) ::
+    nil)).
+
+(* sanity check for big-step semantics, pmatch, ANF *)
+Example ex_tail: exists r,
+  bigstep empty_heap (papp (pval tail) (pval (vcons (vint 1) vnil))) empty_heap r /\ r = vnil.
+Proof.
+  unfold tail. simpl. eexists.
+  split.
+  { eapply eval_app_fun. reflexivity.
+    simpl.
+    eapply eval_plet.
+    apply eval_pval.
+    simpl.
+    eapply eval_plet.
+    apply eval_ptypetest.
+    simpl.
+    apply eval_pif_false.
+    eapply eval_plet.
+    apply eval_ptypetest.
+    simpl.
+    apply eval_pif_true.
+    eapply eval_plet.
+    apply eval_psnd2.
+    simpl.
+    apply eval_pval. }
+  { reflexivity. }
+Qed.
 
 (*
 
