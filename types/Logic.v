@@ -265,8 +265,8 @@ Inductive tlist : type -> val -> Prop :=
     tlist t (vcons vh vt).
 
 Definition tnil : type := tunion terr (fun v => v = vnil).
-Definition tcons : type :=
-  tunion terr (fun v => forall v1 v2, v = vcons v1 v2).
+Definition tcons t1 t2 : type :=
+  tunion terr (fun v => forall v1 v2, v = vcons v1 v2 /\ t1 v /\ t2 v2).
 
 (** Unary logical relation on expressions *)
 Definition E t := fun e =>
@@ -692,6 +692,27 @@ Proof.
     apply eval_pval. }
   { reflexivity. }
 Qed.
+
+Definition tail_sp1 := ∀ t, tarrow (tlist t) (tlist t).
+Definition tail_sp2 := ∀ t, tarrow (tlist t) (tunion (tlist t) tabort).
+Definition tail_sp3 := ∀ t, tarrow (tcons t (tlist t)) (tlist t).
+Definition tail_sp4 := ∀ t,
+  tintersect
+    (∃ t1, tarrow t1 tabort)
+    (tarrow (tcons t (tlist t)) (tlist t)).
+
+(* case is encoded manually. too much of a pain to do it with dependent arrows *)
+Definition tail_sp5 := ∀ t,
+  tintersect
+    (tarrow (tcons t (tlist t)) (tlist t))
+    (tarrow tnil terr).
+
+Definition tail_sp6 := ∀ t (ys:type),
+  tintersect
+    (tarrow (tcons t (tlist ys)) ys)
+    (tarrow (tnot (tcons t (tlist t))) terr).
+
+Definition tail_sp7 := tarrow tany tany.
 
 (*
 
