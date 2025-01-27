@@ -73,6 +73,15 @@ Proof.
   constructor.
 Qed.
 
+(* Fixpoint val_dec (x y : val) : { x = y } + { x <> y }
+with expr_dec (x y : expr) : { x = y } + { x <> y }.
+Proof.
+  hint Z.eq_dec, var_eq, Nat.eq_dec, Bool.bool_dec.
+  hint string_dec.
+  intros. decide equality; jauto. apply expr_dec.
+Qed.
+Defined. *)
+
 Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   let aux t := subst y w t in
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
@@ -112,8 +121,8 @@ Definition interpret_tag tag v : bool :=
 
 (* [(Integer) i] *)
 Definition ptypecast tag (v:val) :=
-  plet "x" (ptypetest tag (pval v))
-    (pif (pvar "x") (pval v) (pval vabort)).
+  plet "_ok" (ptypetest tag (pval v))
+    (pif (pvar "_ok") (pval v) (pval vabort)).
 
 Fixpoint pmatch_ x (cases: list (tag * expr)) : expr :=
   match cases with
@@ -148,9 +157,14 @@ Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
   (* there is no var rule *)
 
   | eval_plet : forall h1 h3 h2 x e1 e2 v Re,
-    bigstep h1 e1 h3 v ->
+    bigstep h1 e1 h3 v -> v <> vabort ->
     bigstep h3 (subst x v e2) h2 Re ->
     bigstep h1 (plet x e1 e2) h2 Re
+
+  | eval_plet_abort : forall h1 h2 x e1 e2 v,
+    bigstep h1 e1 h2 v -> v = vabort ->
+    (* bigstep h2 (pval v) h2 v -> *)
+    bigstep h1 (plet x e1 e2) h2 v
 
   | eval_padd : forall h x y,
     bigstep h (padd (pval (vint x)) (pval (vint y))) h (vint (x + y))
@@ -628,12 +642,24 @@ Proof.
   hintro. splits*. hintro. all: auto.
 Qed.
 
-(** * Semantics of program specs/triples *)
+(** * Semantics of program specs *)
 Definition program_has_spec (s:spec) (e:expr) :=
   forall h1 h2 r,
     bigstep h1 e h2 r ->
     spec_satisfies h1 h2 r s.
 
+Lemma program_has_spec_assert: forall b,
+  program_has_spec (req_ \[b = true])
+   (passert (pval (vbool b))).
+Proof.
+  intros.
+  unfold program_has_spec. introv Hb.
+  inverts Hb as Hb.
+  apply req_pure_intro. intros.
+  apply empty_intro.
+Qed.
+
+(** * Semantics of triples *)
 Definition triple H Q e :=
   forall h1, H h1 ->
   forall h2 r, bigstep h1 e h2 r -> Q r h2.
@@ -641,6 +667,7 @@ Definition triple H Q e :=
 Definition pure_triple P (Q:val->Prop) e :=
   P -> forall r, bigstep empty_heap e empty_heap r -> Q r.
 
+(** * Relation to pure triples *)
 Definition triple_to_pure_triple : forall P (Q:val->Prop) e,
   triple \[P] (fun r => \[Q r]) e ->
   pure_triple P Q e.
@@ -663,17 +690,18 @@ Proof.
   (* for arbitrary e, we cannot ensure that the heap after execution is empty. pure triples only describe programs which don't use heap operations. *)
 Abort.
 
-Lemma triple_subsumption: forall H1 H2 Q1 Q2 e,
-  triple H2 Q2 e ->
-  H1 ==> H2 ->
-  Q2 ===> Q1 ->
-  triple H1 Q1 e.
+(** * Structural rules *)
+(** Triple subsumption, or the rule of consequence *)
+Lemma triple_conseq: forall H1 H2 Q1 Q2 e,
+  triple H1 Q1 e ->
+  H2 ==> H1 ->
+  Q1 ===> Q2 ->
+  triple H2 Q2 e.
 Proof.
   unfold triple. intros.
-  apply H0 in H4.
-  specializes H h1 H4. destr H.
-  apply H3.
-  eauto.
+  specializes H0 H4.
+  specializes H H0 H5.
+  specializes~ H3 H.
 Qed.
 
 (** This rule is only true in Hoare logic. In separation logic it requires frame inference, which the semantic [==>] does not do. *)
@@ -688,19 +716,6 @@ Proof.
   specializes H H0 H3.
 Qed.
 
-(** * Specs for program constructs *)
-Lemma program_has_spec_assert: forall b,
-  program_has_spec (req_ \[b = true])
-   (passert (pval (vbool b))).
-Proof.
-  intros.
-  unfold program_has_spec. introv Hb.
-  inverts Hb as Hb.
-  apply req_pure_intro. intros.
-  apply empty_intro.
-Qed.
-
-(** * Structural rules *)
 Lemma triple_extract_pure_r: forall H P Q e,
   (P -> triple H Q e) ->
   triple (H \* \[P]) Q e.
@@ -734,14 +749,55 @@ Proof.
   intros. applys triple_val vabort.
 Qed.
 
+(** The statement of this rule is a bit strange, but it's to allow
+  the rule to be appllied even if the postcondition does not unify
+  exactly with what is given.
+
+  Changing it to [Q2 = ...] would be stronger/less general,
+  which can't be derived from this rule via consequence. *)
 Lemma triple_plet: forall H Q1 Q2 x e1 e2,
   triple H Q1 e1 ->
-  (forall v, triple (Q1 v) Q2 (subst x v e2)) ->
+  (forall v,
+    v <> vabort ->
+    triple (Q1 v) Q2 (subst x v e2)) ->
+  (forall v,
+    v = vabort ->
+    (fun r => Q1 v \* \[r = vabort]) ===> Q2) ->
+  triple H Q2 (plet x e1 e2).
+Proof.
+  unfold triple. intros.
+  inverts H4 as H4.
+  { specializes H0 H3 H4. }
+  { clear H1.
+    specializes H0 H3 H4.
+    specializes H2 vabort.
+    forward H2 by reflexivity.
+    apply H2.
+    hintro.
+    splits*. }
+Qed.
+
+(** This definition is provable but harder to work with *)
+Lemma triple_plet1: forall H Q1 Q2 x e1 e2,
+  triple H Q1 e1 ->
+  (forall v,
+    If Q1 v ==> Q1 v \* \[v = vabort]
+    then Q2 = (fun r => Q1 r \* \[r = vabort])
+    else triple (Q1 v) Q2 (subst x v e2)) ->
   triple H Q2 (plet x e1 e2).
 Proof.
   unfold triple. intros.
   inverts H3 as H3.
-  specializes H0 H2 H3.
+  { specializes H0 H2 H3.
+    specialize (H1 v). case_if.
+    { specializes C H0. hinv C. hinv H5. false. }
+    { specializes H1 H0 H11. } }
+  { specializes H0 H2 H3.
+    specializes H1 vabort. case_if.
+    { subst Q2. hintro. splits*. }
+    { exfalso. apply C.
+      xsimpl.
+      reflexivity. } }
 Qed.
 
 Lemma triple_pif_true: forall H Q e1 e2,
@@ -753,13 +809,27 @@ Proof.
   eauto.
 Qed.
 
-Lemma triple_pif_false: forall H Q1 Q2 e1 e2,
-  triple H Q2 e2 ->
-  triple H Q2 (pif (pval (vbool false)) e1 e2).
+Lemma triple_pif_false: forall H Q e1 e2,
+  triple H Q e2 ->
+  triple H Q (pif (pval (vbool false)) e1 e2).
 Proof.
   unfold triple. intros.
   inverts H2 as H2.
   eauto.
+Qed.
+
+(** This combined rule also works *)
+Lemma triple_pif: forall H Q e1 e2 (b:bool),
+  (b = true -> triple H Q e1) ->
+  (b = false -> triple H Q e2) ->
+  triple H Q (pif (pval (vbool b)) e1 e2).
+Proof.
+  unfold triple. intros.
+  destruct b; intros.
+  - inverts H3 as H3.
+    specializes H0 H2 H3.
+  - inverts H3 as H3.
+    specializes H1 H2 H3.
 Qed.
 
 Lemma triple_ptypetest: forall H tag v,
@@ -772,27 +842,26 @@ Proof.
   jauto.
 Qed.
 
-Lemma triple_ptypecast_failure: forall H tag v,
-  interpret_tag tag v = false ->
-  triple H (fun r => H \* \[r = vabort])
-    (ptypecast tag v).
-Proof.
-  unfold triple. intros.
-  hintro.
-  inverts H2 as H2.
-  simpl in H9.
-  inverts H9 as H9.
-  { inverts H2 as H2.
-    false. }
-  { inverts H2 as H2.
-    inverts H9 as H9.
-    splits*. }
-Qed.
-
 (** Use triples in the proof instead of unfolding everything *)
 Lemma triple_ptypecast_success: forall H tag v,
   interpret_tag tag v = true ->
-  triple H (fun r => H \* \[r = v /\ interpret_tag tag v = true])
+  triple H (fun r => H \* \[r = v])
+    (ptypecast tag v).
+Proof.
+  unfold ptypecast. intros.
+  eapply triple_plet.
+  { apply triple_ptypetest. }
+  { intros.
+    simpl.
+    apply triple_extract_pure_r. intros. subst. rewrite H0.
+    apply triple_pif_true.
+    apply triple_val. }
+  { intros. xsimpl. }
+Qed.
+
+Lemma triple_ptypecast_failure: forall H tag v,
+  interpret_tag tag v = false ->
+  triple H (fun r => H \* \[r = vabort])
     (ptypecast tag v).
 Proof.
   unfold ptypecast. intros.
@@ -800,10 +869,28 @@ Proof.
   { apply triple_ptypetest. }
   { intros. simpl.
     apply triple_extract_pure_r. intros. subst. rewrite H0.
-    apply triple_pif_true.
-    applys_eq triple_val.
-    apply fun_ext_dep. intros.
-    xsimpl; jauto. }
+    apply triple_pif_false.
+    apply triple_val. }
+  { intros. xsimpl. }
+Qed.
+
+(* semantic reasoning also works *)
+Lemma triple_ptypecast_failure1: forall H tag v,
+  interpret_tag tag v = false ->
+  triple H (fun r => H \* \[r = vabort])
+    (ptypecast tag v).
+Proof.
+  unfold triple. intros.
+  hintro.
+  inverts H2 as H2.
+  simpl in H10.
+  inverts H10 as H10.
+  { inverts H2 as H2.
+    false. }
+  { inverts H2 as H2.
+    inverts H10 as H10.
+    splits*. }
+  { inverts H2 as H2. }
 Qed.
 
 (** Arrow type in terms of triples *)
@@ -848,18 +935,22 @@ Proof.
     simpl.
     eapply eval_plet.
     apply eval_pval.
+    unfold vcons, not. intros. inverts H as H.
     simpl.
     eapply eval_plet.
     apply eval_ptypetest.
     simpl.
+    unfold not. intros. inverts H as H.
     apply eval_pif_false.
     eapply eval_plet.
     apply eval_ptypetest.
     simpl.
+    unfold not. intros. inverts H as H.
     apply eval_pif_true.
     eapply eval_plet.
     apply eval_psnd2.
     simpl.
+    unfold vnil, not. intros. inverts H as H.
     apply eval_pval. }
   { reflexivity. }
 Qed.
