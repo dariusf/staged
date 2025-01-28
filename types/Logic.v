@@ -749,12 +749,13 @@ Proof.
   intros. applys triple_val vabort.
 Qed.
 
-(** The statement of this rule is a bit strange, but it's to allow
-  the rule to be appllied even if the postcondition does not unify
-  exactly with what is given.
+(** Why is the statement of this rule this way?
 
-  Changing it to [Q2 = ...] would be stronger/less general,
-  which can't be derived from this rule via consequence. *)
+  In the value case, the use of Q1 in the precondition allows us to know what value e1 returns.
+
+  In the abort case, we don't have a triple, but still need a way to assume what e1 returns - hence the use of an entailment, to put the assumption back in positive position.
+
+  Suppose we used an equality with Q2. As the equality is in negative position, we would then have to prove the equality, without knowledge of what e1 returns. *)
 Lemma triple_plet: forall H Q1 Q2 x e1 e2,
   triple H Q1 e1 ->
   (forall v,
@@ -775,29 +776,6 @@ Proof.
     apply H2.
     hintro.
     splits*. }
-Qed.
-
-(** This definition is provable but harder to work with *)
-Lemma triple_plet1: forall H Q1 Q2 x e1 e2,
-  triple H Q1 e1 ->
-  (forall v,
-    If Q1 v ==> Q1 v \* \[v = vabort]
-    then Q2 = (fun r => Q1 r \* \[r = vabort])
-    else triple (Q1 v) Q2 (subst x v e2)) ->
-  triple H Q2 (plet x e1 e2).
-Proof.
-  unfold triple. intros.
-  inverts H3 as H3.
-  { specializes H0 H2 H3.
-    specialize (H1 v). case_if.
-    { specializes C H0. hinv C. hinv H5. false. }
-    { specializes H1 H0 H11. } }
-  { specializes H0 H2 H3.
-    specializes H1 vabort. case_if.
-    { subst Q2. hintro. splits*. }
-    { exfalso. apply C.
-      xsimpl.
-      reflexivity. } }
 Qed.
 
 Lemma triple_pif_true: forall H Q e1 e2,
@@ -856,7 +834,7 @@ Proof.
     apply triple_extract_pure_r. intros. subst. rewrite H0.
     apply triple_pif_true.
     apply triple_val. }
-  { intros. xsimpl. }
+  { intros. xsimpl. } (* vacuous; abort cannot happen as result is bool *)
 Qed.
 
 Lemma triple_ptypecast_failure: forall H tag v,
