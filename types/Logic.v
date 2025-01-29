@@ -291,16 +291,19 @@ Definition tany : type :=
 Notation E t := (fun e =>
   forall h1 h2 r, bigstep h1 e h2 r -> t r).
 
+Notation is_fn vf :=
+  (exists xf x e, vf = vfun x e \/ vf = vfix xf x e).
+
 Definition tarrow t1 t2 : type := fun vf =>
-  forall x e, vf = vfun x e ->
+  is_fn vf ->
   forall v, t1 v ->
-  E t2 (subst x v e).
+  E t2 (papp (pval vf) (pval v)).
 
 (** Dependent arrow *)
 Definition tdarrow v t1 t2 : type := fun vf =>
-  forall x e, vf = vfun x e ->
+  is_fn vf ->
   t1 v ->
-  E t2 (papp (pval (vfun x e)) (pval v)).
+  E t2 (papp (pval vf) (pval v)).
 
 (** All values are of type top *)
 Lemma ttop_intro: forall v,
@@ -433,10 +436,11 @@ Proof.
   unfold id, id_type1.
   unfold tforall. intros.
   unfold tarrow. intros.
-  injects H.
-  simpl in H1.
   inverts H1 as H1.
-  assumption. (* this is the key step *)
+  { injects H1.
+    inverts H7 as H7.
+    assumption. (* this is the key step *) }
+  { inverts H1 as H1. }
 Qed.
 
 Lemma id_has_type2 : id_type2 id.
@@ -445,11 +449,10 @@ Proof.
   unfold tforall. intros.
   unfold tdarrow. intros.
   unfold tsingle. intros.
-  injects H.
+  (* injects H. *)
   inverts H1 as H1.
   - injects H1.
-    simpl in H6.
-    inverts H6 as H6.
+    inverts H7 as H7.
     reflexivity. (* note the difference! *)
   - inverts H1 as H1.
 Qed.
@@ -873,9 +876,9 @@ Qed.
 
 (** Arrow type in terms of triples *)
 Definition tarrow_ t1 t2 : type := fun vf =>
-  forall x e, vf = vfun x e ->
+  is_fn vf ->
   forall v,
-    pure_triple (t1 v) (fun r => t2 r) (subst x v e).
+    pure_triple (t1 v) (fun r => t2 r) (papp (pval vf) (pval v)).
 
 (** Type assertions talk about strictly fewer executions. *)
 Lemma tarrow_triple: forall t1 t2,
@@ -883,8 +886,7 @@ Lemma tarrow_triple: forall t1 t2,
 Proof.
   unfold tarrow, tarrow_. unfold subtype, pure_triple.
   intros.
-  specializes H H0.
-  specializes H H1 H2.
+  specializes H H0 H1.
 Qed.
 
 (** This is not true for the same reason [pure_triple_to_triple] isn't true. *)
@@ -962,8 +964,7 @@ Proof.
   specializes H tany.
   unfold tarrow. intros. subst.
   unfold tarrow in H.
-  specializes H x e.
-  forward H by reflexivity.
+  specializes H H0.
   (* we now have to prove that given v0:Any, v0:List Any *)
 Abort.
 
@@ -972,14 +973,10 @@ Lemma tail_sp6_sp7:
 Proof.
   unfold subtype, tail_sp6, tail_sp7. intros.
   specializes H tany tany. destruct H.
-  unfold tarrow. intros. subst v.
+  unfold tarrow. intros.
   destruct (classic (tcons tany tany v0)).
-  - specializes H H1.
-    reflexivity.
-    eauto.
-  - specializes H0 H1.
-    reflexivity.
-    specializes H0 H3.
+  - specializes H H1 H4.
+  - specializes H0 H1 H3.
     applys~ subtype_terr_tany.
 Qed.
 (* Print Assumptions tail_sp6_sp7. *)
@@ -1032,3 +1029,40 @@ Definition apply_spec := forall (f x:val) (b:type),
   triple \[(tarrow (tsingle x) b) f]
     (fun r => \[b r])
     (pval apply).
+
+Lemma apply_has_type1:
+  apply_type1 apply.
+Proof.
+  unfold apply_type1, apply. intros.
+  unfold tforall. intros a b.
+
+  (* assume v, the value eventually bound to f, has function type.
+    then confirm using the big-step semantics. *)
+  unfold tarrow at 1. intros.
+  inverts H1 as H1. 2: { invert H1. } injects H1.
+  inverts H7 as H7.
+  clear H H7.
+
+  (* do the same for v0/x *)
+  unfold tarrow. intros.
+  inverts H2 as H2. 2: { invert H2. } injects H2.
+  clear H. simpl in H8.
+
+  (* we know v is of function type, so we have to handle
+    both cases when using the big-step semantics *)
+  inverts H8 as H8.
+
+  { unfold tarrow in H0.
+    forward H0. exists "_". exs. left. reflexivity.
+    specializes H0 H1.
+    eapply H0.
+    eapply eval_app_fun. reflexivity.
+    eassumption. }
+
+  { unfold tarrow in H0.
+    forward H0. exs. right. reflexivity.
+    specializes H0 H1.
+    eapply H0.
+    eapply eval_app_fix. reflexivity.
+    eassumption. }
+Qed.
