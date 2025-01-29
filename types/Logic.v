@@ -1024,3 +1024,11 @@ Proof.
   - specializes H0 H1 H4 H3.
   - specializes H H1 H4 H3.
 Abort.
+
+Definition apply := vfun "f" (pfun "x" (papp (pvar "f") (pvar "x"))).
+Definition apply_type1 := ∀ a b, tarrow (tarrow a b) (tarrow a b).
+Definition apply_type2 := ∀ b x, tarrow (tdarrow x (tsingle x) b) (tarrow ttop b).
+Definition apply_spec := forall (f x:val) (b:type),
+  triple \[(tarrow (tsingle x) b) f]
+    (fun r => \[b r])
+    (pval apply).
