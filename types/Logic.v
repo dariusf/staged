@@ -689,7 +689,7 @@ Definition pure_triple_to_triple : forall P (Q:val->Prop) e,
 Proof.
   unfold pure_triple, triple. intros.
   hinv H0. subst h1.
-  specializes H H0.
+  specializes H H0 r.
   (* for arbitrary e, we cannot ensure that the heap after execution is empty. pure triples only describe programs which don't use heap operations. *)
 Abort.
 
@@ -1024,16 +1024,17 @@ Abort.
 
 Definition apply := vfun "f" (pfun "x" (papp (pvar "f") (pvar "x"))).
 Definition apply_type1 := ∀ a b, tarrow (tarrow a b) (tarrow a b).
-Definition apply_type2 := ∀ b x, tarrow (tdarrow x (tsingle x) b) (tarrow ttop b).
+Definition apply_type2 := ∀ b x, tarrow (tarrow (tsingle x) b) (tdarrow x ttop b).
 Definition apply_spec := forall (f x:val) (b:type),
-  triple \[(tarrow (tsingle x) b) f]
+  triple \[is_fn f /\ (tarrow (tsingle x) b) f]
     (fun r => \[b r])
-    (pval apply).
+      (plet "applyf" (papp (pval apply) (pval f))
+       (papp (pvar "applyf") (pval x))).
 
 Lemma apply_has_type1:
   apply_type1 apply.
 Proof.
-  unfold apply_type1, apply. intros.
+  unfold apply_type1, apply.
   unfold tforall. intros a b.
 
   (* assume v, the value eventually bound to f, has function type.
@@ -1065,4 +1066,78 @@ Proof.
     eapply H0.
     eapply eval_app_fix. reflexivity.
     eassumption. }
+Qed.
+
+Lemma apply_has_type2:
+  apply_type2 apply.
+Proof.
+  unfold apply_type2, apply.
+  unfold tforall. intros b x.
+
+  (* assume v, the value eventually bound to f, has function type.
+    then confirm using the big-step semantics. *)
+  unfold tarrow at 1. intros.
+  inverts H1 as H1. 2: { invert H1. } injects H1.
+  inverts H7 as H7.
+  clear H H7.
+
+  (* do the same for v0/x *)
+  unfold tdarrow. intros.
+  inverts H2 as H2. 2: { invert H2. } injects H2.
+  simpl in H8. clear H.
+
+  (* we know v is of function type, so we have to handle
+    both cases when using the big-step semantics *)
+  inverts H8 as H8.
+
+  { unfold tarrow, tsingle in H0.
+    forward H0. exists "_". exs. left. reflexivity.
+    specializes H0 x.
+    forward H0 by reflexivity.
+    specializes H0 h0 h0 r.
+    apply H0.
+    eapply eval_app_fun. reflexivity.
+    eassumption. }
+
+  { unfold tarrow, tsingle in H0.
+    forward H0. exs. right. reflexivity.
+    specializes H0 x.
+    forward H0 by reflexivity.
+    specializes H0 h0 h0 r.
+    apply H0.
+    eapply eval_app_fix. reflexivity.
+    eassumption. }
+Qed.
+
+Lemma apply_has_spec:
+  apply_spec.
+Proof.
+  unfold apply_spec, apply. unfold triple. intros.
+  hinv H. subst h1. destruct H.
+
+  (* use the arrow type. given f is a function, and we supply the singleton, we know the result is of b *)
+  unfold tarrow, tsingle in H1.
+  specializes H1 H x. forward H1 by reflexivity.
+
+  inverts H0 as H0.
+  2: { (* the case where the let produces an abort *)
+    inverts H0 as H0.
+    { injects H0. simpl in H7. inverts H7 as H7. }
+    { inverts H0 as H0. }
+  }
+  clear H8.
+  simpl in H9.
+  (* H0 is the execution of e1, which applies apply to f.
+    H9 is e2, which applies the result to x. *)
+
+  inverts H0 as H0. 2: { inverts H0 as H0. } injects H0.
+  simpl in H7.
+  inverts H7 as H7.
+
+  (* now we know that e1 returned a function.
+    continue symbolically executing e2. *)
+  inverts H9 as H9. 2: { invert H9. } injects H9.
+  simpl in H7.
+  hintro.
+  eauto.
 Qed.
