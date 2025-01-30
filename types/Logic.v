@@ -1188,7 +1188,7 @@ Definition length_list := vfix "length" "xs"
         (padd (pval (vint 1)) (pvar "r1")))) ::
     nil)).
 
-Definition length_list_type := ∀ t, tarrow (tlist t) (tunion tint tabort).
+Definition length_list_type := ∀ t, tarrow (tlist t) tint.
 
 Lemma length_list_has_type:
   length_list_type length_list.
@@ -1213,7 +1213,7 @@ Proof.
     inverts H5 as H5. 2: { false. }
     clear H5.
     inverts H7 as H7.
-    left. apply tint_intro.
+    apply tint_intro.
   }
   {
     (* inductive case *)
@@ -1232,8 +1232,8 @@ Proof.
       inverts H9 as H9.
       specializes IHHt H8.
       destruct IHHt.
-      left. apply tint_intro.
-      inverts H1 as H1.
+      apply tint_intro.
+      apply tint_intro.
     }
     {
       (* if it aborts *)
