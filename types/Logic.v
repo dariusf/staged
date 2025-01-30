@@ -332,6 +332,28 @@ Proof.
   congruence.
 Qed.
 
+Lemma tsingle_intro: forall v,
+  tsingle v v.
+Proof.
+  unfold tsingle.
+  congruence.
+Qed.
+
+Lemma tabort_intro:
+  tabort vabort.
+Proof.
+  unfold tabort.
+  apply tsingle_intro.
+Qed.
+
+Lemma tint_intro: forall n,
+  tint (vint n).
+Proof.
+  unfold tint.
+  right.
+  jauto.
+Qed.
+
 (** * Subtyping *)
 Definition subtype t1 t2 := forall v, t1 v -> t2 v.
 Notation "t1 '<:' t2" := (subtype t1 t2) (at level 40).
@@ -1140,4 +1162,85 @@ Proof.
   simpl in H7.
   hintro.
   eauto.
+Qed.
+
+Definition length_list := vfix "length" "xs"
+  (pmatch (pvar "xs")
+    ((tag_nil, pval (vint 0)) ::
+    (tag_cons,
+      plet "tail" (psnd (pvar "xs"))
+      (plet "r1" (papp (pvar "length") (pvar "tail"))
+        (padd (pval (vint 1)) (pvar "r1")))) ::
+    nil)).
+
+Definition length_list_type := ∀ t, tarrow (tlist t) (tunion tint tabort).
+
+Lemma length_list_has_type:
+  length_list_type length_list.
+Proof.
+  unfold length_list_type, length_list.
+  unfold tforall. intros t.
+  unfold tarrow. intros _ v Ht.
+  (* induction on the structure of the type of the input list *)
+  induction Ht; intros * Hb.
+  {
+    (* err base case *)
+    inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
+    simpl in H5.
+    inverts H5 as H5. 2: { inverts H5 as H5. } simpl in H7.
+    clear H6.
+    inverts H5 as H5.
+    inverts H7 as H7. clear H6. 2: { inverts H7 as H7. }
+    inverts H7 as H7. simpl in H0.
+    inverts H0 as H0.
+    inverts H0 as H0. 2: { inverts H0 as H0. } clear H6.
+    inverts H0 as H0. simpl in H7.
+    inverts H7 as H7.
+    inverts H7 as H7.
+    right. apply tabort_intro.
+  }
+  {
+    (* empty list base case *)
+    inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
+    simpl in H5.
+    inverts H5 as H5. 2: { inverts H5 as H5. } simpl in H7.
+    clear H6.
+    inverts H5 as H5.
+    inverts H7 as H7. clear H6. 2: { inverts H7 as H7. }
+    inverts H7 as H7. simpl in H0.
+    inverts H0 as H0.
+    inverts H0 as H0. left. apply tint_intro.
+  }
+  {
+    (* inductive case *)
+    inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
+    simpl in H6.
+    inverts H6 as H6. 2: { inverts H6 as H6. } simpl in H7.
+    clear H7.
+    inverts H6 as H6.
+    inverts H8 as H8. clear H7. 2: { inverts H8 as H8. }
+    inverts H8 as H8. simpl in H0.
+    inverts H0 as H0.
+    inverts H0 as H0. clear H7. 2: { inverts H0 as H0. }
+    inverts H0 as H0. simpl in H8.
+    inverts H8 as H8.
+    inverts H8 as H8. clear H7.
+    2: { inverts H8 as H8. inverts Ht as Ht. }
+    inverts H8 as H8. simpl in H0.
+    (* recursive call *)
+    inverts H0 as H0.
+    {
+      (* if it doesn't abort *)
+      specializes IHHt H0.
+      clear H0.
+      destruct IHHt. 2: { false. }
+      inverts H8 as H8.
+      left. apply tint_intro.
+    }
+    {
+      (* if it aborts *)
+      specializes IHHt H0.
+      assumption.
+    }
+  }
 Qed.
