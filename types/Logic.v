@@ -48,6 +48,7 @@ with expr : Type :=
   | pval (v: val)
   | plet (x: var) (e1 e2: expr)
   | pif (b: expr) (e1: expr) (e2: expr)
+  | pmatch (e: expr) (cases: list (tag * expr))
   | papp (x: expr) (a: expr)
   | pfun (x: var) (e: expr)
   | pfix (f: var) (x: var) (e: expr)
@@ -55,7 +56,7 @@ with expr : Type :=
   | psnd (t: expr)
   | pminus (x y: expr)
   | padd (x y: expr)
-  | ptypetest (tag:tag) (e: expr)
+  | ptypetest (tag: tag) (e: expr)
   | passert (b: expr)
   | pref (v: expr)
   | pderef (v: expr)
@@ -84,6 +85,7 @@ Defined. *)
 
 Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   let aux t := subst y w t in
+  let sub_case c := match c with | (tag, eb) => (tag, aux eb) end in
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
@@ -102,6 +104,7 @@ Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   | ptypetest tag e => ptypetest tag (aux e)
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
   | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2)
+  | pmatch e cases => pmatch (aux e) (List.map sub_case cases)
   end.
 
 Definition vcons a b : val := vconstr2 "cons" a b.
@@ -123,17 +126,6 @@ Definition interpret_tag tag v : bool :=
 Definition ptypecast tag (v:val) :=
   plet "_ok" (ptypetest tag (pval v))
     (pif (pvar "_ok") (pval v) (pval vabort)).
-
-Fixpoint pmatch_ x (cases: list (tag * expr)) : expr :=
-  match cases with
-  | nil => pval vabort
-  | (tag, eb) :: cs =>
-    plet "_b" (ptypetest tag x)
-      (pif (pvar "_b") eb (pmatch_ x cs))
-  end.
-
-Definition pmatch e (cases: list (tag * expr)) : expr :=
-  (plet "_scr" e (pmatch_ (pvar "_scr") cases)).
 
 Definition pletcast x tag e1 e2 : expr :=
   (plet x e1
@@ -222,6 +214,20 @@ Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
 
   | eval_ptypetest : forall h tag v,
     bigstep h (ptypetest tag (pval v)) h (vbool (interpret_tag tag v))
+
+  (* the meaning of an empty match is undefined.
+    it is ensured externally that matches are always non-empty,
+    by completing them with an abort case. *)
+
+  | eval_pmatch : forall h1 h2 v tag eb cs r,
+    interpret_tag tag v = true ->
+    bigstep h1 eb h2 r ->
+    bigstep h1 (pmatch (pval v) ((tag, eb)::cs)) h2 r
+
+  | eval_pmatch_skip : forall h1 h2 v tag eb cs r,
+    interpret_tag tag v = false ->
+    bigstep h1 (pmatch (pval v) cs) h2 r ->
+    bigstep h1 (pmatch (pval v) ((tag, eb)::cs)) h2 r
 
   .
 
@@ -896,6 +902,27 @@ Proof.
   { inverts H2 as H2. }
 Qed.
 
+Lemma triple_pmatch: forall vscr cases H Q H1 Q1,
+  Forall (fun c => match c with | (tag, eb) =>
+      triple (H \* \[interpret_tag tag vscr = true]) Q eb
+    end) cases ->
+  triple H Q (pmatch (pval vscr) cases).
+Proof.
+  intros.
+  induction H0.
+  { unfold triple. intros.
+    inverts H2 as H2. }
+  { destruct x as [tag eb]. clear H2.
+    unfold triple. intros.
+    inverts H3 as H3.
+    { unfold triple in H0.
+      eapply H0.
+      - hintro. jauto.
+      - assumption. }
+    { unfold triple in IHForall.
+      specializes IHForall H2 H11. } }
+Qed.
+
 (** Arrow type in terms of triples *)
 Definition tarrow_ t1 t2 : type := fun vf =>
   is_fn vf ->
@@ -935,20 +962,8 @@ Proof.
   split.
   { eapply eval_app_fun. reflexivity.
     simpl.
-    eapply eval_plet.
-    apply eval_pval.
-    unfold vcons, not. intros. inverts H as H.
-    simpl.
-    eapply eval_plet.
-    apply eval_ptypetest.
-    simpl.
-    unfold not. intros. inverts H as H.
-    apply eval_pif_false.
-    eapply eval_plet.
-    apply eval_ptypetest.
-    simpl.
-    unfold not. intros. inverts H as H.
-    apply eval_pif_true.
+    eapply eval_pmatch_skip. simpl. reflexivity.
+    eapply eval_pmatch. simpl. reflexivity.
     eapply eval_plet.
     apply eval_psnd2.
     simpl.
@@ -1187,59 +1202,43 @@ Proof.
     (* err base case *)
     inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
     simpl in H5.
-    inverts H5 as H5. 2: { inverts H5 as H5. } simpl in H7.
-    clear H6.
-    inverts H5 as H5.
-    inverts H7 as H7. clear H6. 2: { inverts H7 as H7. }
-    inverts H7 as H7. simpl in H0.
-    inverts H0 as H0.
-    inverts H0 as H0. 2: { inverts H0 as H0. } clear H6.
-    inverts H0 as H0. simpl in H7.
-    inverts H7 as H7.
-    inverts H7 as H7.
-    right. apply tabort_intro.
+    inverts H5 as H5. { false. }
+    inverts H7 as H7. { false. }
+    inverts H8 as H8.
   }
   {
     (* empty list base case *)
     inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
     simpl in H5.
-    inverts H5 as H5. 2: { inverts H5 as H5. } simpl in H7.
-    clear H6.
-    inverts H5 as H5.
-    inverts H7 as H7. clear H6. 2: { inverts H7 as H7. }
-    inverts H7 as H7. simpl in H0.
-    inverts H0 as H0.
-    inverts H0 as H0. left. apply tint_intro.
+    inverts H5 as H5. 2: { false. }
+    clear H5.
+    inverts H7 as H7.
+    left. apply tint_intro.
   }
   {
     (* inductive case *)
     inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
     simpl in H6.
-    inverts H6 as H6. 2: { inverts H6 as H6. } simpl in H7.
-    clear H7.
-    inverts H6 as H6.
-    inverts H8 as H8. clear H7. 2: { inverts H8 as H8. }
-    inverts H8 as H8. simpl in H0.
-    inverts H0 as H0.
-    inverts H0 as H0. clear H7. 2: { inverts H0 as H0. }
-    inverts H0 as H0. simpl in H8.
+    inverts H6 as H6. { false. }
+    inverts H8 as H8. 2: { false. }
+    clear H6 H8.
+    inverts H9 as H9. 2: { inverts H9 as H9. inverts Ht as Ht. } simpl in H8.
     inverts H8 as H8.
-    inverts H8 as H8. clear H7.
-    2: { inverts H8 as H8. inverts Ht as Ht. }
-    inverts H8 as H8. simpl in H0.
     (* recursive call *)
-    inverts H0 as H0.
     {
       (* if it doesn't abort *)
-      specializes IHHt H0.
-      clear H0.
-      destruct IHHt. 2: { false. }
-      inverts H8 as H8.
+      clear H7.
+      inverts H10 as H10.
+      inverts H9 as H9.
+      specializes IHHt H8.
+      destruct IHHt.
       left. apply tint_intro.
+      inverts H1 as H1.
     }
     {
       (* if it aborts *)
-      specializes IHHt H0.
+      inverts H9 as H9.
+      specializes IHHt H8.
       assumption.
     }
   }
