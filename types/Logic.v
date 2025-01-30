@@ -455,6 +455,7 @@ Qed.
 
 Module Examples.
 
+(* BEGIN ID *)
 Definition id := vfun "x" (pvar "x").
 Definition id_type1 : type := ∀ t, tarrow t t.
 Definition id_type2 : type := ∀ v, tdarrow v ttop (tsingle v).
@@ -484,6 +485,7 @@ Proof.
     reflexivity. (* note the difference! *)
   - inverts H1 as H1.
 Qed.
+(* END ID *)
 
 End Examples.
 
@@ -948,6 +950,7 @@ Proof.
   apply H.
 Abort.
 
+(* BEGIN TAIL *)
 Definition tail := vfun "x"
   (pmatch (pvar "x") (
     (tag_nil, pval verr) ::
@@ -1057,8 +1060,10 @@ Proof.
   destruct (classic (tcons t1 (tlist t1) v0)).
   - specializes H0 H1 H4 H3.
   - specializes H H1 H4 H3.
-Abort.
+Qed.
+(* END TAIL *)
 
+(* BEGIN APPLY *)
 Definition apply := vfun "f" (pfun "x" (papp (pvar "f") (pvar "x"))).
 Definition apply_type1 := ∀ a b, tarrow (tarrow a b) (tarrow a b).
 Definition apply_type2 := ∀ b x, tarrow (tarrow (tsingle x) b) (tdarrow x ttop b).
@@ -1178,7 +1183,9 @@ Proof.
   hintro.
   eauto.
 Qed.
+(* END APPLY *)
 
+(* BEGIN LENGTH *)
 Definition length_list := vfix "length" "xs"
   (pmatch (pvar "xs")
     ((tag_nil, pval (vint 0)) ::
@@ -1198,25 +1205,20 @@ Proof.
   unfold tarrow. intros _ v Ht.
   (* induction on the structure of the type of the input list *)
   induction Ht; intros * Hb.
-  {
-    (* err base case *)
+  { (* err base case *)
     inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
     simpl in H5.
     inverts H5 as H5. { false. }
     inverts H7 as H7. { false. }
-    inverts H8 as H8.
-  }
-  {
-    (* empty list base case *)
+    inverts H8 as H8. }
+  { (* empty list base case *)
     inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
     simpl in H5.
     inverts H5 as H5. 2: { false. }
     clear H5.
     inverts H7 as H7.
-    apply tint_intro.
-  }
-  {
-    (* inductive case *)
+    apply tint_intro. }
+  { (* inductive case *)
     inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
     simpl in H6.
     inverts H6 as H6. { false. }
@@ -1225,21 +1227,17 @@ Proof.
     inverts H9 as H9. 2: { inverts H9 as H9. inverts Ht as Ht. } simpl in H8.
     inverts H8 as H8.
     (* recursive call *)
-    {
-      (* if it doesn't abort *)
+    { (* if it doesn't abort *)
       clear H7.
       inverts H10 as H10.
       inverts H9 as H9.
       specializes IHHt H8.
       destruct IHHt.
       apply tint_intro.
-      apply tint_intro.
-    }
-    {
-      (* if it aborts *)
+      apply tint_intro. }
+    { (* if it aborts *)
       inverts H9 as H9.
       specializes IHHt H8.
-      assumption.
-    }
-  }
+      assumption. } }
 Qed.
+(* END LENGTH *)
