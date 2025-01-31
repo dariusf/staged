@@ -66,20 +66,25 @@ with expr : Type :=
   | pval (v: val)
   | pevent  (ev:event) 
   | pif (b: expr) (e1: expr) (e2: expr)
-  | pref (v: expr)
-  | pderef (v: expr)
   | passign (x: expr) (v: expr)
   | passume (f:futureCond)
   | papp (f: expr) (e: expr)
   | pseq (e1:expr) (e2:expr)
-  | plet (x: var) (e1 e2: expr). 
+  | plet (x: var) (e1 e2: expr)
+  | pref (v: expr)
+  | pderef (v: expr)
+  | pfree (e:expr)
+  | popen (x: val)
+  | pclose (e:expr)
+  . 
 
 
 
 Definition trace_default := (kleene (theta_singleton any)). 
 Definition fc_default := fc_singleton(kleene (theta_singleton any)). 
 
-
+Definition trace_finally ev := (seq trace_default (theta_singleton ev)). 
+Definition fc_finally ev := fc_singleton (trace_finally ev). 
 
 #[global]
 Instance Inhab_val : Inhab val.
@@ -116,6 +121,9 @@ Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   | passign t1 t2 =>  passign (aux t1) (aux t2)
   | pseq t1 t2 =>  pseq (aux t1) (aux t2)
   | pref t1 => pref (aux t1)
+  | pfree t1 => pfree (aux t1)
+  | popen x => e
+  | pclose t1 => pclose (aux t1)
   end.
 
 (** SLF's heap theory as a functor. *)
@@ -942,7 +950,7 @@ Axiom futureCondEntail_rev : forall t1 t2 ev1 deriv0 deriv,
 
 Axiom futureCondEntail_exact : forall f, futureCondEntail f f .
 Axiom futureCondEntailTrueISTrue: forall f, 
-  futureCondEntail (fc_singleton (trace_default)) f -> f = (fc_singleton (trace_default)).
+  futureCondEntail fc_default f -> f = fc_default.
 Axiom futureCondEntail_indicate: forall f1 f2, futureCondEntail f1 f2 -> 
   exists f3, f1 = fc_conj f3 f2.  
 
@@ -1180,12 +1188,12 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
   . 
 
 Axiom subtractFromTrueISTrue: forall ev f, 
-  futureSubtraction (fc_singleton (trace_default))
-(theta_singleton ev) f -> f = (fc_singleton (trace_default)).
+  futureSubtraction fc_default
+(theta_singleton ev) f -> f = fc_default.
 
 Axiom subtract_linear_FromTrueISTrue: forall ev f, 
-  futureSubtraction_linear (fc_singleton (trace_default))
-(ev::nil) f -> f = (fc_singleton (trace_default)).
+  futureSubtraction_linear fc_default
+(ev::nil) f -> f = fc_default.
 
   
 Axiom all_future_condition_has_futureSubtraction_linear: forall f rho, 
@@ -1290,11 +1298,10 @@ Inductive bigstep : heap -> rho -> futureCond -> expr -> heap -> rho -> futureCo
     bigstep h1 rho1 f1 (subst fromal_arg actual_arg e) h2 rho2 f2 v -> 
     bigstep h1 rho1 f1 (papp (pval (vfun fromal_arg e)) (pval actual_arg)) h2 rho2 f2 v
 
-  | eval_pref : forall h r f loc v,
+  | eval_malloc : forall h r f loc v f',
     ~ Fmap.indom h loc ->
-    bigstep h r f (pref (pval v)) (Fmap.update h loc v) r f (vloc loc)
-
-
+    futureSubtraction_linear f ((ev "malloc" (vloc loc))::nil) f' -> 
+    bigstep h r f (pref (pval v)) (Fmap.update h loc v) (r++((ev "malloc" (vloc loc))::nil)) (fc_conj f' (fc_finally (ev "free" (vloc loc)))) (vloc loc)
 . 
 
 
@@ -1303,45 +1310,48 @@ Inductive forward : hprop -> theta -> futureCond -> expr -> (val -> hprop) -> th
 
 
   | fw_consequence: forall P1 P2 P3 P4 t' f' t f e, 
-    forward P3 emp (fc_singleton (trace_default)) e P4 t' f' -> 
+    forward P3 emp fc_default e P4 t' f' -> 
     P1 ==> P3 -> 
     P4 ===> P2 -> 
     inclusion t' t -> 
     futureCondEntail f f' -> 
-    forward P1 emp (fc_singleton (trace_default)) e P2 t f
+    forward P1 emp fc_default e P2 t f
 
   | fw_let : forall x e1 e2 P Q Q1 t2 t3 f2 f3, 
-    forward P emp (fc_singleton (trace_default)) e1 Q t2 f2  -> 
+    forward P emp fc_default e1 Q t2 f2  -> 
     (forall v, forward (Q v) t2 f2 (subst x v e2) Q1 t3 f3 ) -> 
-    forward P emp (fc_singleton (trace_default)) (plet x e1 e2) Q1 t3 f3
+    forward P emp fc_default (plet x e1 e2) Q1 t3 f3
   
   | fw_val: forall v P ,
-    forward P emp (fc_singleton (trace_default)) (pval v) (fun res => P \* \[res = v]) emp (fc_singleton (trace_default))
+    forward P emp fc_default (pval v) (fun res => P \* \[res = v]) emp fc_default
 
   | fw_event: forall P (ev:event) ,
-    forward P emp (fc_singleton (trace_default)) (pevent ev) (fun res => P \* \[res = vunit]) (theta_singleton ev) (fc_singleton (trace_default))
+    forward P emp fc_default (pevent ev) (fun res => P \* \[res = vunit]) (theta_singleton ev) fc_default
 
   | fw_cond : forall (b:bool) e1 e2 t f P Q, 
-    forward P emp (fc_singleton (trace_default)) (if b then e1 else e2) Q t f -> 
-    forward P emp (fc_singleton (trace_default)) (pif (pval (vbool b)) e1 e2) Q t f
+    forward P emp fc_default (if b then e1 else e2) Q t f -> 
+    forward P emp fc_default (pif (pval (vbool b)) e1 e2) Q t f
 
   | fw_deref : forall loc v, 
-    forward (loc ~~> v) emp (fc_singleton (trace_default)) (pderef (pval(vloc loc))) (fun res => (loc ~~> v) \* \[res = v]) emp (fc_singleton (trace_default))
+    forward (loc ~~> v) emp fc_default (pderef (pval(vloc loc))) (fun res => (loc ~~> v) \* \[res = v]) emp fc_default
 
   | fw_assign : forall loc v v', 
-    forward (loc ~~> v') emp (fc_singleton (trace_default)) (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  emp (fc_singleton (trace_default))
+    forward (loc ~~> v') emp fc_default (passign (pval(vloc loc)) (pval v)) (fun res => (loc ~~> v) \* \[res = vunit])  emp fc_default
 
   | fw_assume : forall P f1, 
-    forward P emp (fc_singleton (trace_default)) (passume f1) (fun res => P \* \[res = vunit]) emp f1
+    forward P emp fc_default (passume f1) (fun res => P \* \[res = vunit]) emp f1
 
   | fw_app : forall fromal_arg e actual_arg P Q t f, 
-    forward P emp (fc_singleton (trace_default)) (subst fromal_arg actual_arg e) Q t f  -> 
-    forward P emp (fc_singleton (trace_default)) (papp (pval (vfun fromal_arg e)) (pval actual_arg)) Q t f
+    forward P emp fc_default (subst fromal_arg actual_arg e) Q t f  -> 
+    forward P emp fc_default (papp (pval (vfun fromal_arg e)) (pval actual_arg)) Q t f
 
   | fw_structural: forall P Q t f f_ctx t_ctx f_ctx' e, 
-    forward P emp (fc_singleton (trace_default)) e Q t f -> 
+    forward P emp fc_default e Q t f -> 
     futureSubtraction f_ctx t f_ctx' -> 
     forward P t_ctx f_ctx e Q (seq t_ctx t) (fc_conj f_ctx' f)
+
+  | fw_malloc : forall P v h, 
+    forward P emp fc_default (pref (pval (v))) (fun res => P \* h ~~> v \* \[res = (vloc h)]) (theta_singleton (ev "malloc" (vloc h))) (fc_singleton(seq (trace_default) (theta_singleton (ev "free" (vloc h)))))
 
 .
 
@@ -1447,9 +1457,18 @@ Proof.
   -
   intros.
   pose futureCondEntail_indicate.
-  specialize (e f3 f H0 ). 
+  specialize (e f3 f H1). 
   destr e. subst.
-  exists f0. constructor. exact H.
+  pose proof all_future_condition_has_futureSubtraction_linear.
+  specialize (H2 f0 (ev "malloc" (vloc loc0) :: nil)).
+  destr H2.  
+  exists (f'0).  
+  rewrite <- futureCond_distr. 
+  constructor. exact H. 
+  rewrite fc_comm.  
+  constructor. 
+  exact H0.
+  exact H3.  
 
 Qed. 
 
@@ -1491,6 +1510,10 @@ Proof.
   rewrite normal_emp. reflexivity.
   -
   exists t. reflexivity.
+  - 
+  exists (theta_singleton (ev "malloc" (vloc h))).
+  rewrite normal_emp.
+  reflexivity.   
 Qed. 
 
 
@@ -1577,9 +1600,13 @@ Proof.
   reflexivity.
   - 
   intros. 
-  exists (nil:rho) f0.
-  split. rewrite List.app_nil_r. 
-  constructor. exact H.  rewrite List.app_nil_r. reflexivity.
+  exists (ev "malloc" (vloc loc0) :: nil).
+  pose proof all_future_condition_has_futureSubtraction_linear.
+  specialize (H1 f0 (ev "malloc" (vloc loc0) :: nil)).
+  destr H1. 
+  exists (fc_conj f'0 (fc_finally (ev "free" (vloc loc0)))). 
+  split.    
+  constructor. exact H. exact H2. reflexivity.
 Qed. 
 
 Axiom identity : forall [A: Type] (x:A), x = x.
@@ -1600,7 +1627,16 @@ Proof.
   subst.
   exists (fc_conj f0 f3) (fc_conj f4 f5).
   reflexivity.
-Qed.     
+Qed.   
+
+Axiom distribute_futureSubtraction: forall f1 f2 t f3, 
+  futureSubtraction_linear (fc_conj f1 f2) t
+f3 -> 
+exists f4 f5, 
+    futureSubtraction_linear f1 t f4 /\ 
+    futureSubtraction_linear f2 t f5 /\ 
+    f3 = fc_conj f4 f5. 
+
 
   
 Lemma futureCondEntail_linear_distrbute: forall f f' f1 f2 rho, 
@@ -1738,28 +1774,23 @@ Proof.
   split. constructor. exact H1. split. constructor. exact H2. reflexivity.
   - 
   intros. subst. 
-  exists f1 f2.  
-  split. constructor. exact H.  split. constructor. exact H.  reflexivity.
+  pose proof distribute_futureSubtraction. 
+  specialize (H1 f1 f2 (ev "malloc" (vloc loc0) :: nil) f' H0). destr H1. 
+  subst.    
+  exists (fc_conj f4 (fc_finally (ev "free" (vloc loc0)))) (fc_conj f5 (fc_finally (ev "free" (vloc loc0)))).  
+  split. constructor. exact H.  exact H2. split. constructor. exact H.
+  exact H1. rewrite futureCond_distr2.  reflexivity.
+
 Qed.  
 
 
-
-Lemma big_step_nil_context: forall h1 rho1 f_ctx e h2 h3 rho2 f3 v rho3 f0  f_ctx', 
+Axiom big_step_nil_context: forall h1 rho1 f_ctx e h2 h3 rho2 f3 v rho3 f0  f_ctx', 
   bigstep h1 rho1 f_ctx e h2 rho2 f3 v -> 
   rho2 = (rho1 ++ rho3) -> 
   bigstep h1 nil fc_default e h3 rho3 f0 v -> 
   futureSubtraction_linear f_ctx rho3 f_ctx' ->
   f3 = fc_conj f0 f_ctx'.
-Proof. 
-  intros.
-  gen rho1 f_ctx h2 rho2 f3 f_ctx' . 
-  induction H1.
-  - intros. subst.
-  invert H.
-  intros. subst. 
-  pose identity. 
-  specialize (IHbigstep1 rho0 f_ctx h5 rho5 ).
-Admitted. 
+
 
 
 Axiom futureCondEntail_fc_der_indicate: forall f f3 ev0 f_der, 
@@ -1950,7 +1981,9 @@ Proof.
   - intros. constructor. exact H.
   - intros. constructor. exact H.
   - intros. constructor. exact (IHbigstep rho3).
-  - intros. constructor. exact H.
+  - intros. 
+    rewrite List.app_assoc. 
+   constructor. exact H. exact H0. 
 Qed.      
 
 
@@ -1964,6 +1997,8 @@ Proof.
     pose proof  disjoint_union_eq_r. 
   info_eauto.
 Qed. 
+
+Axiom h_subst_pure: forall (t1:loc) t2, t1 = t2.  
 
 
 
@@ -2144,7 +2179,49 @@ Proof.
   apply futureCondEntail_conj_RHS. 
   apply futureCondEntail_conj_LHS_1. exact (futureCondEntail_exact f_ctx'). 
   apply futureCondEntail_conj_LHS_2. exact H9.   
-  exact H6.     
+  exact H6.  
+
+  - 
+  intros.
+  invert H2.
+  intros. subst.
+  pose proof h_subst_pure.
+  specialize (H loc0 h).
+  subst.  
+  split.
+  Search (~ Fmap.indom _ _).
+  admit. 
+
+
+  split.
+  rewrite <- normal_emp.
+  constructor.
+  exact H1. 
+  constructor. 
+  reflexivity.
+  pose proof subtract_linear_FromTrueISTrue.
+  specialize (H (ev "malloc" (vloc h)) f' H7).
+  subst.
+  constructor.
+  pose proof anything_future_entail_default.
+  exact (H (fc_singleton (seq trace_default (theta_singleton (ev "free" (vloc h)))))).
+  unfold  fc_finally. unfold trace_finally. 
+  exact (futureCondEntail_exact (fc_singleton (seq trace_default (theta_singleton (ev "free" (vloc h)))))).          
+
+Admitted. 
+
+Module Examples.
+
+Definition e1 := (pval vunit). 
+
+Example forward_e1: 
+  forward hempty emp fc_default e1 (fun res : val => \[] \* \[res = vunit]) emp fc_default. 
+Proof.
+  pose proof fw_val.
+  specialize (H vunit \[] ). 
+  exact H.  
 Qed. 
 
+Definition e2 := (pval vunit). 
 
+End Examples.
