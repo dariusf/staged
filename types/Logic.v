@@ -231,12 +231,89 @@ Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
 
   .
 
+Inductive bigstep_pure : expr -> val -> Prop :=
+  | pure_pval : forall v,
+    bigstep_pure (pval v) v
+
+  (* there is no var rule *)
+
+  | pure_plet : forall x e1 e2 v Re,
+    bigstep_pure e1 v -> v <> vabort ->
+    bigstep_pure (subst x v e2) Re ->
+    bigstep_pure (plet x e1 e2) Re
+
+  | pure_plet_abort : forall x e1 e2 v,
+    bigstep_pure e1 v -> v = vabort ->
+    (* bigstep_pure h2 (pval v) h2 v -> *)
+    bigstep_pure (plet x e1 e2) v
+
+  | pure_padd : forall x y,
+    bigstep_pure (padd (pval (vint x)) (pval (vint y))) (vint (x + y))
+
+  | pure_pminus : forall x y,
+    bigstep_pure (pminus (pval (vint x)) (pval (vint y))) (vint (x - y))
+
+  | pure_pfst1 : forall x v,
+    bigstep_pure (pfst (pval (vconstr1 x v))) v
+
+  | pure_pfst2 : forall x v1 v2,
+    bigstep_pure (pfst (pval (vconstr2 x v1 v2))) v1
+
+  | pure_psnd2 : forall x v1 v2,
+    bigstep_pure (psnd (pval (vconstr2 x v1 v2))) v2
+
+  | pure_pfun : forall x e,
+    bigstep_pure (pfun x e) (vfun x e)
+
+  | pure_pfix : forall x e xf,
+    bigstep_pure (pfix xf x e) (vfix xf x e)
+
+  | pure_app_fun : forall v1 v2 x e Re,
+    v1 = vfun x e ->
+    bigstep_pure (subst x v2 e) Re ->
+    bigstep_pure (papp (pval v1) (pval v2)) Re
+
+  | pure_app_fix : forall v1 v2 x e Re xf,
+    v1 = vfix xf x e ->
+    bigstep_pure (subst x v2 (subst xf v1 e)) Re ->
+    bigstep_pure (papp (pval v1) (pval v2)) Re
+
+  | pure_pif_true : forall Re e1 e2,
+    bigstep_pure e1 Re ->
+    bigstep_pure (pif (pval (vbool true)) e1 e2) Re
+
+  | pure_pif_false : forall Re e1 e2,
+    bigstep_pure e2 Re ->
+    bigstep_pure (pif (pval (vbool false)) e1 e2) Re
+
+  | pure_passert :
+    bigstep_pure (passert (pval (vbool true))) vunit
+
+  | pure_ptypetest : forall tag v,
+    bigstep_pure (ptypetest tag (pval v)) (vbool (interpret_tag tag v))
+
+  (* the meaning of an empty match is undefined.
+    it is ensured externally that matches are always non-empty,
+    by completing them with an abort case. *)
+
+  | pure_pmatch : forall v tag eb cs r,
+    interpret_tag tag v = true ->
+    bigstep_pure eb r ->
+    bigstep_pure (pmatch (pval v) ((tag, eb)::cs)) r
+
+  | pure_pmatch_skip : forall v tag eb cs r,
+    interpret_tag tag v = false ->
+    bigstep_pure (pmatch (pval v) cs) r ->
+    bigstep_pure (pmatch (pval v) ((tag, eb)::cs)) r
+
+  .
+
 (** * Types *)
 Definition type := val -> Prop.
 Implicit Types t: type.
 
 (* bot <: err <: t <: ok <: any <: top *)
-(* abort <: top *)
+(* bot <: abort <: top *)
 
 Definition tsingle v1 : type := fun v => v = v1.
 Definition terr : type := tsingle verr.
@@ -295,7 +372,7 @@ Definition tany : type :=
 
 (** Unary logical relation on expressions *)
 Notation E t := (fun e =>
-  forall h1 h2 r, bigstep h1 e h2 r -> t r).
+  forall r, bigstep_pure e r -> t r).
 
 Notation is_fn vf :=
   (exists xf x e, vf = vfun x e \/ vf = vfix xf x e).
@@ -395,7 +472,7 @@ Lemma function_variance: forall t1 t2 t3 t4,
 Proof.
   unfold subtype, tarrow. intros.
   specializes H H3.
-  specializes H1 H2 H h1.
+  specializes H1 H2 H.
 Qed.
 
 (** The standard subsumption rule is a consequence of the semantic definition. *)
@@ -467,7 +544,7 @@ Proof.
   unfold tarrow. intros.
   inverts H1 as H1.
   { injects H1.
-    inverts H7 as H7.
+    inverts H5 as H5.
     assumption. (* this is the key step *) }
   { inverts H1 as H1. }
 Qed.
@@ -481,7 +558,7 @@ Proof.
   (* injects H. *)
   inverts H1 as H1.
   - injects H1.
-    inverts H7 as H7.
+    inverts H5 as H5.
     reflexivity. (* note the difference! *)
   - inverts H1 as H1.
 Qed.
@@ -698,10 +775,10 @@ Definition triple H Q e :=
   forall h2 r, bigstep h1 e h2 r -> Q r h2.
 
 Definition pure_triple P (Q:val->Prop) e :=
-  P -> forall r, bigstep empty_heap e empty_heap r -> Q r.
+  P -> forall r, bigstep_pure e r -> Q r.
 
 (** * Relation to pure triples *)
-Definition triple_to_pure_triple : forall P (Q:val->Prop) e,
+(* Definition triple_to_pure_triple : forall P (Q:val->Prop) e,
   triple \[P] (fun r => \[Q r]) e ->
   pure_triple P Q e.
 Proof.
@@ -721,7 +798,7 @@ Proof.
   hinv H0. subst h1.
   specializes H H0 r.
   (* for arbitrary e, we cannot ensure that the heap after execution is empty. pure triples only describe programs which don't use heap operations. *)
-Abort.
+Abort. *)
 
 (** * Structural rules *)
 (** Triple subsumption, or the rule of consequence *)
@@ -940,15 +1017,14 @@ Proof.
   specializes H H0 H1.
 Qed.
 
-(** This is not true for the same reason [pure_triple_to_triple] isn't true. *)
+(** This would not be provable if we had heaps in the big-step semantics, but since we don't, it's fine. *)
 Lemma tarrow_triple_conv: forall t1 t2,
   tarrow_ t1 t2 <: tarrow t1 t2.
 Proof.
   unfold tarrow, tarrow_. unfold subtype, pure_triple.
   intros.
   specializes H H0 H1 r.
-  apply H.
-Abort.
+Qed.
 
 (* BEGIN TAIL *)
 Definition tail := vfun "x"
@@ -1068,8 +1144,8 @@ Definition apply := vfun "f" (pfun "x" (papp (pvar "f") (pvar "x"))).
 Definition apply_type1 := ∀ a b, tarrow (tarrow a b) (tarrow a b).
 Definition apply_type2 := ∀ b x, tarrow (tarrow (tsingle x) b) (tdarrow x ttop b).
 Definition apply_spec := forall (f x:val) (b:type),
-  triple \[is_fn f /\ (tarrow (tsingle x) b) f]
-    (fun r => \[b r])
+  pure_triple (is_fn f /\ (tarrow (tsingle x) b) f)
+    (fun r => b r)
       (plet "applyf" (papp (pval apply) (pval f))
        (papp (pvar "applyf") (pval x))).
 
@@ -1083,30 +1159,30 @@ Proof.
     then confirm using the big-step semantics. *)
   unfold tarrow at 1. intros.
   inverts H1 as H1. 2: { invert H1. } injects H1.
-  inverts H7 as H7.
-  clear H H7.
+  inverts H5 as H5.
+  clear H.
 
   (* do the same for v0/x *)
   unfold tarrow. intros.
   inverts H2 as H2. 2: { invert H2. } injects H2.
-  clear H. simpl in H8.
+  clear H. simpl in H6.
 
   (* we know v is of function type, so we have to handle
     both cases when using the big-step semantics *)
-  inverts H8 as H8.
+  inverts H6 as H6.
 
   { unfold tarrow in H0.
     forward H0. exists "_". exs. left. reflexivity.
     specializes H0 H1.
     eapply H0.
-    eapply eval_app_fun. reflexivity.
+    eapply pure_app_fun. reflexivity.
     eassumption. }
 
   { unfold tarrow in H0.
     forward H0. exs. right. reflexivity.
     specializes H0 H1.
     eapply H0.
-    eapply eval_app_fix. reflexivity.
+    eapply pure_app_fix. reflexivity.
     eassumption. }
 Qed.
 
@@ -1120,42 +1196,42 @@ Proof.
     then confirm using the big-step semantics. *)
   unfold tarrow at 1. intros.
   inverts H1 as H1. 2: { invert H1. } injects H1.
-  inverts H7 as H7.
-  clear H H7.
+  inverts H5 as H5.
+  clear H.
 
   (* do the same for v0/x *)
   unfold tdarrow. intros.
   inverts H2 as H2. 2: { invert H2. } injects H2.
-  simpl in H8. clear H.
+  simpl in H6. clear H.
 
   (* we know v is of function type, so we have to handle
     both cases when using the big-step semantics *)
-  inverts H8 as H8.
+  inverts H6 as H6.
 
   { unfold tarrow, tsingle in H0.
     forward H0. exists "_". exs. left. reflexivity.
     specializes H0 x.
     forward H0 by reflexivity.
-    specializes H0 h0 h0 r.
+    specializes H0 r.
     apply H0.
-    eapply eval_app_fun. reflexivity.
+    eapply pure_app_fun. reflexivity.
     eassumption. }
 
   { unfold tarrow, tsingle in H0.
     forward H0. exs. right. reflexivity.
     specializes H0 x.
     forward H0 by reflexivity.
-    specializes H0 h0 h0 r.
+    specializes H0 r.
     apply H0.
-    eapply eval_app_fix. reflexivity.
+    eapply pure_app_fix. reflexivity.
     eassumption. }
 Qed.
 
 Lemma apply_has_spec:
   apply_spec.
 Proof.
-  unfold apply_spec, apply. unfold triple. intros.
-  hinv H. subst h1. destruct H.
+  unfold apply_spec, apply. unfold pure_triple. intros.
+  destruct H.
 
   (* use the arrow type. given f is a function, and we supply the singleton, we know the result is of b *)
   unfold tarrow, tsingle in H1.
@@ -1164,11 +1240,11 @@ Proof.
   inverts H0 as H0.
   2: { (* the case where the let produces an abort *)
     inverts H0 as H0.
-    { injects H0. simpl in H7. inverts H7 as H7. }
+    { injects H0. simpl in H5. inverts H5 as H5. }
     { inverts H0 as H0. }
   }
-  clear H8.
-  simpl in H9.
+  clear H6.
+  simpl in H7.
   (* H0 is the execution of e1, which applies apply to f.
     H9 is e2, which applies the result to x. *)
 
@@ -1178,9 +1254,9 @@ Proof.
 
   (* now we know that e1 returned a function.
     continue symbolically executing e2. *)
-  inverts H9 as H9. 2: { invert H9. } injects H9.
+  2: { invert H5. }
+  inverts H5 as H5.
   simpl in H7.
-  hintro.
   eauto.
 Qed.
 (* END APPLY *)
@@ -1207,37 +1283,36 @@ Proof.
   induction Ht; intros * Hb.
   { (* err base case *)
     inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
-    simpl in H5.
+    simpl in H3.
+    inverts H3 as H3. { false. }
     inverts H5 as H5. { false. }
-    inverts H7 as H7. { false. }
-    inverts H8 as H8. }
+    inverts H6 as H6. }
   { (* empty list base case *)
     inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
-    simpl in H5.
-    inverts H5 as H5. 2: { false. }
-    clear H5.
-    inverts H7 as H7.
+    simpl in H3.
+    inverts H3 as H3. 2: { false. }
+    inverts H5 as H5.
     apply tint_intro. }
   { (* inductive case *)
     inverts Hb as Hb. { inverts Hb as Hb. } injects Hb.
-    simpl in H6.
-    inverts H6 as H6. { false. }
-    inverts H8 as H8. 2: { false. }
-    clear H6 H8.
-    inverts H9 as H9. 2: { inverts H9 as H9. inverts Ht as Ht. } simpl in H8.
-    inverts H8 as H8.
+    simpl in H4.
+    inverts H4 as H4. { false. }
+    inverts H6 as H6. 2: { false. }
+    clear H4 H6.
+    inverts H7 as H7. 2: { inverts H7 as H7. inverts Ht as Ht. } simpl in H6.
+    inverts H6 as H6.
     (* recursive call *)
     { (* if it doesn't abort *)
-      clear H7.
-      inverts H10 as H10.
-      inverts H9 as H9.
-      specializes IHHt H8.
+      clear H5.
+      inverts H8 as H8.
+      inverts H7 as H7.
+      specializes IHHt H6.
       destruct IHHt.
       apply tint_intro.
       apply tint_intro. }
     { (* if it aborts *)
-      inverts H9 as H9.
-      specializes IHHt H8.
+      inverts H7 as H7.
+      specializes IHHt H6.
       assumption. } }
 Qed.
 (* END LENGTH *)
