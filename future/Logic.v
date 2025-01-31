@@ -286,8 +286,6 @@ Qed.
 
 
 Axiom normal_emp : forall t, seq emp t = t. 
-Axiom normal_bot : forall t, seq bot t = bot. 
-Axiom normal_kleene : forall t, kleene t = disj emp (seq t (kleene t)).
 Axiom disj_not_bot: forall t1 t2, 
   disj t1 t2 <> bot -> 
   (t1 <> bot /\ t1=bot) \/ 
@@ -336,6 +334,8 @@ Axiom futureCond_excahnge : forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1.
 Axiom f_conj_kleene_any_is_f : forall f, fc_conj (fc_default) f = f. 
 
 Axiom fc_comm: forall f1 f2, fc_conj f1 f2 = fc_conj f2 f1. 
+Axiom fc_exact: forall f, fc_conj f f = f. 
+
 Axiom fc_assio: forall f1 f2 f3, fc_conj f1 (fc_conj f2 f3) = fc_conj (fc_conj f1 f2) f3. 
 
 
@@ -697,6 +697,7 @@ Axiom inclusion_rev : forall t1 t2 ev1 deriv0 deriv,
   theta_der t1 ev1 deriv0 -> 
   inclusion deriv0 deriv.   
 
+
 Axiom emp_is_not_bot : emp <> bot. 
 Axiom kleene_bot_is_emp : kleene bot = emp. 
 Axiom kleene_emp_is_bot : kleene emp = bot. 
@@ -742,7 +743,8 @@ Proof.
   exists (seq deriv (kleene t)).
   constructor.
   exact H.
-Qed.         
+Qed.    
+
 
 
 
@@ -930,6 +932,14 @@ Inductive futureCondEntail : futureCond -> futureCond -> Prop :=
     futureCondEntail f1 f3
  .
 
+
+(* by definition *)
+Axiom futureCondEntail_rev : forall t1 t2 ev1 deriv0 deriv, 
+  futureCondEntail t1 t2 ->
+  fc_der t1 ev1 deriv0 -> 
+  fc_der t1 ev1 deriv0 -> 
+  futureCondEntail deriv0 deriv.   
+
 Axiom futureCondEntail_exact : forall f, futureCondEntail f f .
 Axiom futureCondEntailTrueISTrue: forall f, 
   futureCondEntail (fc_singleton (trace_default)) f -> f = (fc_singleton (trace_default)).
@@ -1079,6 +1089,7 @@ Proof.
   invert H.
   intros. subst. split. exact H3. exact H4.
 Qed.     
+
 
 
 
@@ -1733,27 +1744,86 @@ Qed.
 
 
 
-Axiom big_step_nil_context: forall h1 rho1 f_ctx e h2 h3 rho2 f3 v rho3 f0  f_ctx', 
+Lemma big_step_nil_context: forall h1 rho1 f_ctx e h2 h3 rho2 f3 v rho3 f0  f_ctx', 
   bigstep h1 rho1 f_ctx e h2 rho2 f3 v -> 
   rho2 = (rho1 ++ rho3) -> 
   bigstep h1 nil fc_default e h3 rho3 f0 v -> 
   futureSubtraction_linear f_ctx rho3 f_ctx' ->
   f3 = fc_conj f0 f_ctx'.
+Proof. 
+  intros.
+  gen rho1 f_ctx h2 rho2 f3 f_ctx' . 
+  induction H1.
+  - intros. subst.
+  invert H.
+  intros. subst. 
+  pose identity. 
+  specialize (IHbigstep1 rho0 f_ctx h5 rho5 ).
+Admitted. 
 
-Axiom fc_der_split_conj : forall f1 ev0 f2 f0 f3, 
-  fc_der f1 ev0 f2 ->
-  f1 = (fc_conj f0 f3) ->
-  exists f4 f5,
-  fc_der f0 ev0 f4 /\ fc_der f3 ev0 f5 /\ f2 = (fc_conj f4 f5).
+
+Axiom futureCondEntail_fc_der_indicate: forall f f3 ev0 f_der, 
+  futureCondEntail f f3 ->  fc_der f ev0 f_der -> 
+  f_der <> fc_singleton bot -> 
+  exists deriv, fc_der f3 ev0 deriv /\ deriv <> fc_singleton bot. 
+
+Axiom fc_singleton_is_not_conj : forall t f1 f2, 
+  fc_singleton t <> fc_conj f1 f2. 
+
+Axiom futureCondEntail_conj_left_indicates: forall f f0 f1 f2, 
+  futureCondEntail f f0 ->  f = (fc_conj f1 f2) -> 
+  futureCondEntail f1 f0 \/ futureCondEntail f2 f0.
 
 
-
-Axiom weakening_futureSubtraction_linear : forall  f1 rho3 f2 f3, 
+Lemma weakening_futureSubtraction_linear : forall  f1 rho3 f2 f3, 
   futureSubtraction_linear f1 rho3 f2 -> 
   futureCondEntail f1 f3 -> 
   exists f4, 
   futureSubtraction_linear f3 rho3 f4 /\ futureCondEntail f2 f4 . 
-
+Proof. 
+  intros. 
+  gen f3.
+  induction H. 
+  -
+  intros. 
+  pose identity.
+  pose proof futureCondEntail_conj_left_indicates. 
+  specialize ( H2 (fc_conj f1 f2) f0 f1 f2 H1 (e futureCond (fc_conj f1 f2))). 
+  invert H2.
+  intros. 
+  specialize (IHfutureSubtraction_linear1 f0 H3). 
+  destr IHfutureSubtraction_linear1.
+  exists f5.
+  split. exact H4. 
+  apply futureCondEntail_conj_LHS_1. exact H5.
+  intros.
+  specialize (IHfutureSubtraction_linear2 f0 H3). 
+  destr IHfutureSubtraction_linear2.
+  exists f5.
+  split. exact H4. 
+  apply futureCondEntail_conj_LHS_2. exact H5.
+  -
+  intros.
+  exists f3.
+  split. constructor. exact H0.
+  -
+  intros.
+  pose proof futureCondEntail_fc_der_indicate.
+  specialize (H4 f f3 ev0 f_der H3 H H0).
+  destr H4.
+  specialize (IHfutureSubtraction_linear deriv). 
+  pose proof futureCondEntail_rev.
+  specialize (H5 f f3 ev0 f_der deriv H3 H H).    
+  specialize (IHfutureSubtraction_linear H5). 
+  destr IHfutureSubtraction_linear.
+  pose futureSubtraction_linear_induc.
+  pose identity. 
+  specialize (f0 ev0 f3 deriv (ev0::t_der) t_der f4 H4 H6 (e rho (ev0::t_der)) H8).  
+  exists f4.
+  split.
+  subst.
+  exact f0. exact H9.
+Qed. 
 
 Lemma futureSubtraction_strengthing_linear_res : 
   forall f_ctx t f_ctx' rho3,
@@ -2076,4 +2146,5 @@ Proof.
   apply futureCondEntail_conj_LHS_2. exact H9.   
   exact H6.     
 Qed. 
+
 
