@@ -21,14 +21,18 @@ Definition var_eq := String.string_dec.
 
 Definition loc := nat.
 
+(** Runtime representation of types, for match and type testing/casts.
+  Very lossy - for example, list only checks that the topmost constructor is nil
+  or cons, and arrows cannot talk about the arity, or types of arguments and
+  return value. *)
 Inductive tag :=
   | tag_int
   | tag_bool
   | tag_str
-  | tag_list
+  | tag_arrow (* maybe add arity *)
   | tag_nil
-  | tag_arrow
-  | tag_cons.
+  | tag_cons
+  | tag_list.
 
 Inductive val :=
   | vunit : val
@@ -118,6 +122,7 @@ Definition interpret_tag tag v : bool :=
   | tag_str, vstr _ => true
   | tag_nil, vconstr0 "nil" => true
   | tag_cons, vconstr2 "cons" _ _ => true
+  (* match is aware of subtyping at runtime *)
   | tag_list, vconstr0 "nil" => true
   | tag_list, vconstr2 "cons" _ _ => true
   | _, _ => false
@@ -1043,6 +1048,8 @@ Proof.
   jauto.
 Qed.
 
+(** This does not require the typical [mod(e) ∩ free(P) = \emptyset]
+  because of immutability. *)
 Lemma type_triple_constancy: forall P P1 (Q1:val->Prop) e,
   pure_triple P1 Q1 e ->
   pure_triple (P1 /\ P) (fun r => P /\ Q1 r) e.
