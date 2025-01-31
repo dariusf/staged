@@ -375,6 +375,9 @@ Definition tany : type :=
 Notation E t := (fun e =>
   forall r, bigstep_pure e r -> t r).
 
+Notation E_heap t := (fun e =>
+  forall h1 h2 r, bigstep h1 e h2 r -> t r).
+
 Notation is_fn vf :=
   (exists xf x e, vf = vfun x e \/ vf = vfix xf x e).
 
@@ -789,12 +792,15 @@ Definition triple H Q e :=
 Definition pure_triple P (Q:val->Prop) e :=
   P -> forall r, bigstep_pure e r -> Q r.
 
+Definition pure_triple_heap P (Q:val->Prop) e :=
+  P -> forall r, bigstep empty_heap e empty_heap r -> Q r.
+
 (** * Relation to pure triples *)
-(* Definition triple_to_pure_triple : forall P (Q:val->Prop) e,
+Definition triple_to_pure_triple : forall P (Q:val->Prop) e,
   triple \[P] (fun r => \[Q r]) e ->
-  pure_triple P Q e.
+  pure_triple_heap P Q e.
 Proof.
-  unfold pure_triple, triple. intros.
+  unfold pure_triple_heap, triple. intros.
   specializes H empty_heap.
   forward H. hintro. assumption.
   specializes H H1.
@@ -803,14 +809,14 @@ Proof.
 Qed.
 
 Definition pure_triple_to_triple : forall P (Q:val->Prop) e,
-  pure_triple P Q e ->
+  pure_triple_heap P Q e ->
   triple \[P] (fun r => \[Q r]) e.
 Proof.
-  unfold pure_triple, triple. intros.
+  unfold pure_triple_heap, triple. intros.
   hinv H0. subst h1.
   specializes H H0 r.
   (* for arbitrary e, we cannot ensure that the heap after execution is empty. pure triples only describe programs which don't use heap operations. *)
-Abort. *)
+Abort.
 
 (** * Structural rules *)
 (** Triple subsumption, or the rule of consequence *)
@@ -1198,6 +1204,11 @@ Definition tarrow_ t1 t2 : type := fun vf =>
   is_fn vf ->
   forall v,
     pure_triple (t1 v) (fun r => t2 r) (papp (pval vf) (pval v)).
+
+Definition tarrow_heap_ t1 t2 : type := fun vf =>
+  is_fn vf ->
+  forall v,
+    triple \[t1 v] (fun r => \[t2 r]) (papp (pval vf) (pval v)).
 
 (** Type assertions talk about strictly fewer executions. *)
 Lemma tarrow_triple: forall t1 t2,
