@@ -1610,6 +1610,8 @@ Proof.
 Qed. 
 
 Axiom identity : forall [A: Type] (x:A), x = x.
+Axiom identity1 : forall  (x:Prop) (y:Prop), (x = y) -> y -> x.
+
 
 Lemma all_future_Cond_can_be_split_into_two_conjunctive_cases: forall f, 
   exists f1 f2, 
@@ -2190,9 +2192,31 @@ Proof.
   subst.  
   split.
   Search (~ Fmap.indom _ _).
-  admit. 
-
-
+  unfold Fmap.update.
+  Search (_ \u _). 
+  pose proof Fmap.union_comm_of_disjoint. 
+  specialize (H loc val (Fmap.single h v) h1). 
+  Search (~ Fmap.indom _ _).
+  pose proof Fmap.disjoint_single_of_not_indom.
+  specialize (H2 loc val h1 h v H3). 
+  specialize (H H2). 
+  Search ( _ \* _ = _ \* _).
+  rewrite hstar_comm. 
+  apply* hstar_intro.
+  Search (Fmap.single _ _). 
+  pose proof hsingle_intro. 
+  specialize (H4 h v). 
+  Search (_ \* _).
+  pose proof hstar_hpure_l. 
+  Search (_ \* _). 
+  rewrite hstar_comm. 
+  specialize (H5 (vloc h = vloc h) (h ~~> v) (Fmap.single h v)).
+  pose proof identity1.
+  specialize (H6 ((\[vloc h = vloc h] \* h ~~> v) (Fmap.single h v)) (vloc h = vloc h /\
+(h ~~> v) (Fmap.single h v)) H5).  
+  apply H6. 
+  split. reflexivity. 
+  exact H4.      
   split.
   rewrite <- normal_emp.
   constructor.
@@ -2208,7 +2232,7 @@ Proof.
   unfold  fc_finally. unfold trace_finally. 
   exact (futureCondEntail_exact (fc_singleton (seq trace_default (theta_singleton (ev "free" (vloc h)))))).          
 
-Admitted. 
+Qed. 
 
 Module Examples.
 
