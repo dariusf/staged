@@ -3,10 +3,10 @@ From Coq Require Morphisms Program.Basics.
 
 (* remove when https://github.com/coq/coq/pull/19673 is merged *)
 Set Warnings "-notation-incompatible-prefix".
-From Staged Require Export HeapF.
+From Lib Require Export HeapF.
 Set Warnings "notation-incompatible-prefix".
-From Staged Require Export LibFmap.
-From Staged Require Export ExtraTactics.
+From Lib Require Export LibFmap.
+From Lib Require Export ExtraTactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)

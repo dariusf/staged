@@ -1,13 +1,9 @@
 -docroot .
 -Q slf SLF
--Q staged Staged
--Q shiftreset ShiftReset
--Q future Future
+-Q lib Lib
 -Q types Types
 -arg -w 
 -arg -implicit-core-hint-db,-ambiguous-paths
 slf
-staged
-shiftreset
-future
+lib
 types
