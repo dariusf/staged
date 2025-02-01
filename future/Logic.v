@@ -173,6 +173,7 @@ Inductive fc_model : rho -> futureCond -> Prop :=
     .
 
 
+
 Inductive nullable: theta -> Prop :=
   | nullable_emp : nullable emp 
   | nullable_seq : forall t1 t2, 
@@ -282,6 +283,10 @@ Inductive fc_der : futureCond -> event -> futureCond  -> Prop :=
     fc_der (fc_conj f1 f2) ev (fc_conj f_der1 f_der2 )
     . 
 
+Axiom fc_model_rev: forall  f ev0 f_der rho0', 
+  fc_der f ev0 f_der -> 
+  fc_model rho0' f_der -> 
+  fc_model (ev0 :: rho0') f. 
 
 
 Lemma nullable_trans : forall t1 t2, 
@@ -1187,6 +1192,87 @@ Inductive futureSubtraction : futureCond -> theta -> futureCond -> Prop :=
     futureSubtraction f1 t' f2
   . 
 
+Fixpoint concate_trace_fc (t:theta) (f:futureCond)  : futureCond :=
+  match f with 
+  | fc_singleton t1 => fc_singleton (seq t t1)
+  | fc_conj f1 f2 => fc_conj (concate_trace_fc t f1) (concate_trace_fc t f2)
+  end. 
+
+Axiom concate_trace_fc_bot: forall f, concate_trace_fc bot f = fc_singleton bot. 
+Axiom concate_trace_fc_emp: forall f, concate_trace_fc emp f = f. 
+Axiom concate_trace_fc_ev: forall t res rho0 ev0 t_der, 
+  fc_model rho0 (concate_trace_fc t res) -> theta_der t ev0 t_der -> 
+  exists rho0', fc_model rho0' (concate_trace_fc t_der res) /\ rho0 = ev0 :: rho0'. 
+
+Axiom concate_trace_fc_model: forall f2 f1 rho0 t, 
+  futureCondEntail f2 f1 -> 
+  fc_model rho0 (concate_trace_fc t f2) -> fc_model rho0 (concate_trace_fc t f1). 
+
+Axiom concate_trace_inclusion_sound: forall f1 rho0 t t', 
+  inclusion t' t -> 
+  fc_model rho0 (concate_trace_fc t' f1) -> fc_model rho0 (concate_trace_fc t f1). 
+
+
+Theorem futureSubtraction_sound: forall f f' t rho, 
+  futureSubtraction f t f' -> 
+  fc_model rho (concate_trace_fc t f') -> 
+  fc_model rho f.
+Proof.
+  intros.
+  gen rho0.
+  induction H.
+  - 
+  intros.
+  rewrite  concate_trace_fc_bot in H0. 
+  invert H0.
+  intros.  subst.  
+  invert H2.
+  - 
+  intros. 
+  unfold concate_trace_fc in H1. 
+  fold concate_trace_fc in H1.
+  invert H1.
+  intros. subst. 
+  specialize (IHfutureSubtraction1 rho0 H5).
+  specialize (IHfutureSubtraction2 rho0 H6).
+  constructor.
+  exact IHfutureSubtraction1. exact IHfutureSubtraction2.
+  -
+  intros.   
+  rewrite  concate_trace_fc_emp in H0.
+  exact H0.
+  - 
+  intros.
+  pose proof concate_trace_fc_ev. 
+  specialize (H4 t res rho0 ev0 t_der H3 H1). 
+  destr H4. 
+  subst. 
+  specialize (IHfutureSubtraction rho0' H4). 
+  pose proof fc_model_rev.
+  specialize (H5 f ev0 f_der rho0' H IHfutureSubtraction). 
+  exact H5.  
+  -
+  intros.
+  pose proof  concate_trace_fc_model.
+  specialize (H2 f2 f1 rho0 t H0 H1). 
+  specialize (IHfutureSubtraction rho0 H2). 
+  exact IHfutureSubtraction.
+  -
+  intros.
+  specialize (IHfutureSubtraction rho0 H1). 
+  pose proof futureCond_sound.
+  specialize (H2 f1 f3 rho0 H0 IHfutureSubtraction). 
+  exact H2.
+  -
+  intros.
+  pose proof concate_trace_inclusion_sound. 
+  specialize ( H2 f2 rho0 t t' H0 H1). 
+  specialize (IHfutureSubtraction rho0 H2). 
+  exact IHfutureSubtraction.
+Qed. 
+
+     
+
 Axiom subtractFromTrueISTrue: forall ev f, 
   futureSubtraction fc_default
 (theta_singleton ev) f -> f = fc_default.
@@ -1200,11 +1286,7 @@ Axiom all_future_condition_has_futureSubtraction_linear: forall f rho,
   exists f', futureSubtraction_linear f rho f'. 
 
 
-Fixpoint concate_trace_fc (t:theta) (f:futureCond)  : futureCond :=
-  match f with 
-  | fc_singleton t1 => fc_singleton (seq t t1)
-  | fc_conj f1 f2 => fc_conj (concate_trace_fc t f1) (concate_trace_fc t f2)
-  end. 
+
 
 Lemma futureCondEntail_fc_model_indicate : forall f2 f1 t rho0, 
   futureCondEntail f2 f1 -> 
