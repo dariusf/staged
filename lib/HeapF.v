@@ -3,7 +3,7 @@ From SLF Require Export LibString LibCore.
 From SLF Require Export LibSepTLCbuffer.
 From SLF Require LibSepSimpl.
 
-From Staged Require Import LibFmap.
+From Lib Require Import LibFmap.
 
 Module Type Params.
 
