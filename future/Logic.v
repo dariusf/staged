@@ -586,7 +586,7 @@ Proof.
   exact H5.
   intros. subst.
   specialize (IHtheta_der2 rho1 H3).
-  Search (nil++ _ ). 
+  (* Search (nil++ _ ).  *)
   pose proof List.app_nil_l.
   specialize (H0 event (ev0 :: rho1)). 
   rewrite <- H0.
@@ -823,7 +823,7 @@ Proof.
   constructor.
   intros. 
   apply inc_emp. 
-  Search (_ ++ _ =nil).  
+  (* Search (_ ++ _ =nil).   *)
   pose proof List.app_eq_nil.
   specialize (H2 event rho1 rho2 H3). 
   destr H2. 
@@ -1616,7 +1616,7 @@ Proof.
   split. 
   pose proof eval_plet. 
   specialize (H3 h1 h2 h3 x e1 e2 v r rho0 (rho0 ++ rho4) ((rho0 ++ rho4) ++ rho5) f f0 f4 H1 H2).
-  Search ((_ ++ _) ++ _ ).
+  (* Search ((_ ++ _) ++ _ ). *)
   rewrite List.app_assoc.
   exact H3.
   rewrite List.app_assoc. reflexivity.
@@ -2076,7 +2076,8 @@ Lemma heap_disjoint_consequence_aux: forall [A B : Type] (h1:Fmap.fmap A B) h2 h
 Proof. 
   intros.
     pose proof  disjoint_union_eq_r. 
-  info_eauto.
+  (* info_eauto. *)
+  eauto.
 Qed. 
 
 Axiom h_subst_pure: forall (t1:loc) t2, t1 = t2.  
@@ -2158,7 +2159,7 @@ Proof.
   pose proof trace_model_emp_must_nil.
   specialize (H rho1 H1).
   subst.
-  Search (nil ++ _). 
+  (* Search (nil ++ _).  *)
   rewrite List.app_nil_l. 
   constructor. reflexivity.
   pose subtract_linear_FromTrueISTrue as H. 
@@ -2206,7 +2207,7 @@ Proof.
   apply hsingle_inv in H0.
   rewrite H0.
   rewrite Fmap.update_single.
-  Search (Fmap.single _ _ ). 
+  (* Search (Fmap.single _ _ ).  *)
   apply hsingle_intro. 
   reflexivity. 
   split.  exact H1. 
@@ -2270,24 +2271,24 @@ Proof.
   specialize (H loc0 h).
   subst.  
   split.
-  Search (~ Fmap.indom _ _).
+  (* Search (~ Fmap.indom _ _). *)
   unfold Fmap.update.
-  Search (_ \u _). 
+  (* Search (_ \u _).  *)
   pose proof Fmap.union_comm_of_disjoint. 
   specialize (H loc val (Fmap.single h v) h1). 
-  Search (~ Fmap.indom _ _).
+  (* Search (~ Fmap.indom _ _). *)
   pose proof Fmap.disjoint_single_of_not_indom.
   specialize (H2 loc val h1 h v H3). 
   specialize (H H2). 
-  Search ( _ \* _ = _ \* _).
+  (* Search ( _ \* _ = _ \* _). *)
   rewrite hstar_comm. 
   apply* hstar_intro.
-  Search (Fmap.single _ _). 
+  (* Search (Fmap.single _ _).  *)
   pose proof hsingle_intro. 
   specialize (H4 h v). 
-  Search (_ \* _).
+  (* Search (_ \* _). *)
   pose proof hstar_hpure_l. 
-  Search (_ \* _). 
+  (* Search (_ \* _).  *)
   rewrite hstar_comm. 
   specialize (H5 (vloc h = vloc h) (h ~~> v) (Fmap.single h v)).
   pose proof identity1.
