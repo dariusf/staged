@@ -1859,10 +1859,65 @@ Proof.
   assumption.
 Qed.
 
+Lemma transpose_pts_diff : forall Ha H1 H2 Hf f x a y b,
+  entails (ens_ H1;; req H2 f) (req Ha (ens_ Hf;; f)) ->
+  entails
+    (ens_ (x ~~> a \* H1);; req (y ~~> b \* H2) f)
+    (req (y ~~> b \* Ha) (ens_ (x ~~> a \* Hf);; f)).
+Proof.
+  (* the idea of this proof is to demonstrate that we can commute adding x~~>a and removing y~~>b, by showing that: we can start from a heap without x~~>a (using the lemma ens_reduce_frame), perform the operations, and arrive at the same result. *)
+
+  unfold entails. intros.
+  finv H0.
+
+  (* extract everything we can first. start with x->a *)
+  rewrite norm_ens_ens_void in H0. finv H0. finv H0. hinv H0. hinv H0.
+
+  (* and y->b and Ha *)
+  rewrite norm_req_req.
+  apply s_req. intros.
+  apply s_req. intros.
+
+  (* now, start supplying stuff. x->a is easy *)
+  rewrite norm_ens_ens_void.
+  rewrite <- norm_seq_assoc.
+  applys s_seq (hr0 \u x1) (norm vunit).
+  apply s_ens. exists vunit x1. splits*. hintro. jauto.
+
+  (* supply y->b. to do this, we need to find h3-h(y->b).
+    h3 = h(H1) + h0
+       = h(H1) + h(x->a) + h1
+       = h(H1) + h(x->a) + hr + h(y->b)
+
+    h3 - h(y->b) = h(H1) + h(x->a) + hr
+  *)
+  pose proof H10. finv H18. hinv H18. hinv H18. (* find out h(H1) *)
+  rewrite norm_req_req in H9.
+  inverts H9 as H9. specializes H9 hp (x1 \u hr \u x3) H12.
+  forward H9 by fmap_eq. forward H9 by fmap_disjoint.
+
+  (* now we are trying to supply the premise of H. to do this
+    we need to remove h(y->2) from both sides of H10. *)
+  subst h0 h3 h1.
+  lets: ens_reduce_frame (hr \u h4) x3 hp H21.
+  forward H4 by fmap_disjoint.
+  specializes H4. applys_eq H10. fmap_eq. fmap_eq.
+  clear H10.
+
+  (* finally, we can use H. build a seq to do that *)
+  lets: s_seq H4. specializes H10. applys_eq H9. fmap_eq. clear H4 H9.
+  specializes H H10. clear H10.
+
+  (* Ha is in the way, but otherwise we are done *)
+  subst. rew_fmap *.
+  inverts H as H.
+  specializes H hp0 H15.
+Qed.
+
 (** The [Float Pre] rule (compaction 6) from the paper. *)
 Lemma norm_ens_req_transpose : forall H1 H2 Ha Hf f,
   biab Ha H1 H2 Hf ->
-  entails (ens_ H1;; (req H2 f))
+  entails (ens_ H1;; req H2 f)
     (req Ha (ens_ Hf;; f)).
 Proof.
   unfold entails.
@@ -1899,67 +1954,9 @@ Proof.
 
   { (* b_pts_diff *)
     introv H3.
-    (* the idea of this proof is to demonstrate that we can commute adding x~~>a and removing y~~>b by showing that we can start from a heap without x~~>a (using the lemma ens_reduce_frame), perform the operations, and arrive at the same result. reasoning semantically is quite nasty. maybe we can come up with a way to push y~~>b past H0? *)
-
-    (* h4 -(+h7)-> h3 -(-hyb)-> h5+hxa+h7 -> h2
-                  ||
-                  h4+h7
-                = (h5+hyb+hxa)+h7 *)
-
-    (* extract x~~>a *)
-    inverts H3 as H3. rename H8 into H4, R1 into r0.
-    rewrite norm_ens_ens_void in H3.
-    inverts H3 as H3. rename H9 into H5, h0 into h4.
-    inverts H3 as H3. destr H3.
-    hinv H0. hinv H0. rename x1 into hxa.
-
-    (* extract y~~>b *)
-    rewrite norm_req_req.
-    constructor; intros hyb h5. intros.
-    constructor; intros hHa h6. intros H14. intros.
-
-    (* supply x~~>a *)
-    rewrite norm_ens_ens_void.
-    rewrite <- norm_seq_assoc.
-    applys s_seq (h6 \u hxa) (norm vunit).
-    { constructor. exists vunit. exists hxa.
-      intuition. rewrite hstar_hpure_l. intuition. }
-
-    (* need to subtract a heap from both sides of H5 *)
-    (* that heap is y~~>2 *)
-
-    (* find out about the heap we need *)
-    pose proof H5 as HensH0. (* copy, as we're about to invert and destroy this *)
-    inverts H5 as H5. destr H5.
-    rewrite hstar_hpure_l in H5. rename H20 into H21. destruct H5 as (?&H20).
-
-    (* reduce ens on the left *)
-    pose proof (ens_reduce_frame) as Hreduce.
-    specializes Hreduce env (h5 \u hxa) h7 hyb.
-    specializes Hreduce r0 H20.
-    forward Hreduce. fmap_disjoint.
-    asserts_rewrite (h4 = hyb \u h5 \u hxa) in HensH0. fmap_eq.
-    asserts_rewrite (h3 = hyb \u (h5 \u hxa) \u h7) in HensH0. fmap_eq.
-    apply Hreduce in HensH0.
-    clear Hreduce.
-
-    (* provide the heap for y~~>b *)
-    rewrite norm_req_req in H4.
-    inverts H4 as H4.
-    specializes H4 hyb (h5 \u hxa \u h7) H11 ___.
-
-    lets Hseq: s_seq env (ens_ H1) (req H2 f) (h5 \u hxa) h2.
-    forwards: Hseq R.
-    applys HensH0.
-    applys_eq H4. fmap_eq.
-    (* got the seq... now we can use the IH *)
-    clear Hseq.
-
-    forwards H22: IHHbi env (h5 \u hxa) H19.
-    inverts H22 as H26.
-    applys H26 H14.
-    fmap_eq.
-    fmap_disjoint. }
+    pose proof transpose_pts_diff.
+    unfold entails in H.
+    specializes H IHHbi H3. }
 Qed.
 
 Module BiabductionExamples.
