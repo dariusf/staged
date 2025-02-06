@@ -645,7 +645,7 @@ Lemma ens_empty_intro : forall env h1 R,
   satisfies env h1 h1 R (ens (fun r => \[])).
 Proof.
   intros.
-  constructor.
+  apply s_ens.
   destruct R.
   exists v.
   exists empty_heap.
@@ -1859,7 +1859,7 @@ Proof.
   assumption.
 Qed.
 
-Lemma transpose_pts_diff : forall Ha H1 H2 Hf f x a y b,
+Lemma transpose_pts_diff : forall Ha H1 H2 Hf f x y a b,
   entails (ens_ H1;; req H2 f) (req Ha (ens_ Hf;; f)) ->
   entails
     (ens_ (x ~~> a \* H1);; req (y ~~> b \* H2) f)

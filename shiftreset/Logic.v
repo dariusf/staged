@@ -2499,6 +2499,111 @@ Proof.
     { constructor. exists v x. jauto. } }
 Qed.
 
+Lemma satisfies_ens_ens_void_split : forall H1 H2 s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R (ens_ (H1 \* H2)) ->
+  satisfies s1 s2 h1 h2 R (ens_ H1;; ens_ H2).
+Proof.
+  intros.
+  inverts H as H. destruct H as (v&h3&H3&H4&H5&H6).
+  rewrite hstar_hpure_l in H4. destruct H4 as (H4&H7).
+  (* h3 is the heap that H1 and H2 together add *)
+  (* find the intermediate heap *)
+  apply hstar_inv in H7. destruct H7 as (h0&h4&H8&H9&H10&H11).
+  (* H1 h0, H2 h4 *)
+  applys s_seq.
+  { constructor. exists vunit. exists h0. intuition. rewrite hstar_hpure_l. intuition. }
+  { constructor. exists v. exists h4. intuition. rewrite hstar_hpure_l. intuition. }
+Qed.
+
+Lemma satisfies_ens_ens_void_combine : forall H1 H2 s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R (ens_ H1;; ens_ H2) ->
+  satisfies s1 s2 h1 h2 R (ens_ (H1 \* H2)).
+Proof.
+  intros.
+  inverts H as H; no_shift. destr H.
+  (* give up on careful reasoning *)
+  inverts H as H. destr H.
+  inverts H9 as H9. destr H9.
+  hinv H. hinv H. hinv H6. hinv H6.
+  constructor. exists v0. exists (h0 \u h4).
+  splits*.
+  rewrite <- hstar_assoc.
+  subst. rew_fmap *.
+  hintro; jauto.
+  hintro; jauto.
+Qed.
+
+Lemma norm_ens_ens_void_split : forall H1 H2,
+  entails (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2).
+Proof.
+  unfold entails. apply satisfies_ens_ens_void_split.
+Qed.
+
+Lemma norm_ens_ens_void_combine : forall H1 H2,
+  entails (ens_ H1;; ens_ H2) (ens_ (H1 \* H2)).
+Proof.
+  unfold entails; apply satisfies_ens_ens_void_combine.
+Qed.
+Lemma norm_ens_ens_void : forall H1 H2,
+  bientails (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2).
+Proof.
+  intros; split.
+  - apply norm_ens_ens_void_split.
+  - apply norm_ens_ens_void_combine.
+Qed.
+
+Lemma norm_req_sep_combine : forall H1 H2 f,
+  entails (req H1 (req H2 f)) (req (H1 \* H2) f).
+Proof.
+  unfold entails.
+  intros.
+  (* contravariance means we start reasoning from the assumptions in the goal *)
+  apply s_req.
+  intros hb hr. intros.
+  apply hstar_inv in H0 as (hH1&hH2&?&?&?&?).
+
+  (* start reasoning forward *)
+  inverts H as H.
+  forwards: (H hH1 (hr \u hH2) H0).
+  fmap_eq.
+  fmap_disjoint.
+
+  inverts H8 as H8.
+  specialize (H8 _ hr H5).
+  forward H8. fmap_eq.
+  forward H8. fmap_disjoint.
+
+  assumption.
+Qed.
+
+Lemma norm_req_sep_split : forall H1 H2 f,
+  entails (req (H1 \* H2) f) (req H1 (req H2 f)).
+Proof.
+  unfold entails.
+  intros.
+
+  apply s_req.
+  intros hH1 hH2r. intros.
+  apply s_req.
+  intros hH2 hr. intros.
+
+  inverts H as H.
+  specialize (H (hH1 \u hH2) hr ltac:(apply hstar_intro; auto)).
+  forward H. fmap_eq.
+  forward H. fmap_disjoint.
+
+  auto.
+Qed.
+
+Lemma norm_req_req : forall H1 H2 f,
+  bientails (req (H1 \* H2) f) (req H1 (req H2 f)).
+Proof.
+  intros.
+  split.
+  - apply norm_req_sep_split.
+  - apply norm_req_sep_combine.
+Qed.
+
 Lemma norm_rs_req : forall H f r,
   entails (rs (req H f) r) (req H (rs f r)).
 Proof.
@@ -2558,11 +2663,270 @@ Proof.
   apply b_base_empty.
 Qed.
 
+Lemma ens_reduce_frame : forall s1 s2 h1 h hf R H,
+  H h ->
+  Fmap.disjoint h (hf \u h1) ->
+  satisfies s1 s2 (hf \u h1) (hf \u h1 \u h) R (ens_ H) ->
+  satisfies s1 s2 h1 (h1 \u h) R (ens_ H).
+Proof.
+  introv H0 Hd. intros.
+  inverts H1 as H1. destr H1.
+  rewrite hstar_hpure_l in H1. destr H1.
+
+  constructor. exists v. exists h3.
+  intuition.
+  rewrite hstar_hpure_l. intuition.
+  fmap_eq.
+
+  forwards: Fmap.union_eq_inv_of_disjoint (hf \u h1) h h3.
+  fmap_disjoint.
+  fmap_disjoint.
+  { asserts_rewrite (h \u hf \u h1 = hf \u h1 \u h). fmap_eq.
+    asserts_rewrite (h3 \u hf \u h1 = (hf \u h1) \u h3). fmap_eq.
+    assumption. }
+
+  assumption.
+Qed.
+
+Lemma transpose_pts_diff : forall Ha H1 H2 Hf f (x y:loc) (a b:val),
+  entails (ens_ H1;; req H2 f) (req Ha (ens_ Hf;; f)) ->
+  entails
+    (ens_ (x ~~> a \* H1);; req (y ~~> b \* H2) f)
+    (req (y ~~> b \* Ha) (ens_ (x ~~> a \* Hf);; f)).
+Proof.
+  (* the idea of this proof is to demonstrate that we can commute adding x~~>a and removing y~~>b, by showing that: we can start from a heap without x~~>a (using the lemma ens_reduce_frame), perform the operations, and arrive at the same result. *)
+
+  unfold entails. intros.
+  inverts H0 as H0; no_shift.
+
+  (* extract everything we can first. start with x->a *)
+  rewrite norm_ens_ens_void in H0.
+  inverts H0 as H0.
+  inverts H0 as H0. destr H0.
+  hinv H0. hinv H0.
+
+  (* and y->b and Ha *)
+  rewrite norm_req_req.
+  apply s_req. intros.
+  apply s_req. intros.
+
+  (* now, start supplying stuff. x->a is easy *)
+  rewrite norm_ens_ens_void.
+  rewrite <- norm_seq_assoc; shiftfree.
+  applys s_seq (hr0 \u x1) vunit.
+  apply s_ens. exists vunit x1. splits*. hintro. jauto.
+
+  (* supply y->b. to do this, we need to find h3-h(y->b).
+    h3 = h(H1) + h0
+       = h(H1) + h(x->a) + h1
+       = h(H1) + h(x->a) + hr + h(y->b)
+
+    h3 - h(y->b) = h(H1) + h(x->a) + hr
+  *)
+  pose proof H11.
+
+  inverts H11 as H11. destr H11. hinv H11. hinv H11. (* find out h(H1) *)
+  rewrite norm_req_req in H10.
+  inverts H10 as H10. specializes H10 hp (x1 \u hr \u x3) H12.
+  forward H10 by fmap_eq. forward H10 by fmap_disjoint.
+
+  (* now we are trying to supply the premise of H. to do this
+    we need to remove h(y->2) from both sides of H10. *)
+  (* subst. rew_fmap *. *)
+  subst h0 h3 h1 h5. lets: ens_reduce_frame (hr \u h4) x3 hp H21.
+  forward H4 by fmap_disjoint.
+  specializes H4. applys_eq H18. fmap_eq. fmap_eq.
+  clear H18.
+
+  (* finally, we can use H. build a seq to do that *)
+  lets: s_seq H4. specializes H13. applys_eq H10. fmap_eq. clear H4 H10.
+
+  specializes H H13. clear H13.
+
+  (* Ha is in the way, but otherwise we are done *)
+  subst. rew_fmap *.
+  inverts H as H.
+  specializes H hp0 H15.
+Qed.
+
+Lemma ens_req_inv : forall s1 s2 h1 h2 R H f,
+  satisfies s1 s2 h1 h2 R (ens_ H;; req H f) ->
+  satisfies s1 s2 h1 h2 R f.
+Proof.
+  intros.
+  inverts H0 as H0; no_shift.
+  inverts H0 as H0. destr H0. hinv H0. hinv H0.
+  inverts H8 as H8. specializes H8 H3.
+  subst. rew_fmap *.
+Qed.
+
+Lemma req_empty_inv : forall s1 s2 h1 h2 R f,
+  satisfies s1 s2 h1 h2 R (req \[] f) ->
+  satisfies s1 s2 h1 h2 R f.
+Proof.
+  intros.
+  inverts H as H. specializes H empty_heap h1 ___.
+  apply hempty_intro.
+Qed.
+
+Lemma req_empty_intro : forall s1 s2 h1 h2 R f,
+  satisfies s1 s2 h1 h2 R f ->
+  satisfies s1 s2 h1 h2 R (req \[] f).
+Proof.
+  intros.
+  apply s_req. intros.
+  hinv H0.
+  subst. rew_fmap *.
+Qed.
+
+Lemma norm_seq_req_emp : forall f,
+  bientails (req \[] f) f.
+Proof.
+  unfold entails. split; intros.
+  { apply req_empty_inv in H. assumption. }
+  { apply req_empty_intro. assumption. }
+Qed.
+
+Lemma ens_empty_intro : forall s1 h1 r,
+  satisfies s1 s1 h1 h1 (norm r) (ens (fun r => \[])).
+Proof.
+  intros.
+  apply s_ens.
+  exists r empty_heap.
+  intuition fmap_eq.
+  constructor.
+Qed.
+
+Lemma ens_void_empty_intro : forall s1 h1,
+  satisfies s1 s1 h1 h1 (norm vunit) (ens_ \[]).
+Proof.
+  intros.
+  constructor.
+  exs.
+  splits*.
+  hintro.
+  splits*.
+  hintro.
+  rew_fmap.
+  reflexivity.
+Qed.
+
+Lemma satisfies_ens_void : forall H1 H2 s1 s2 h1 h2 R,
+  H1 ==> H2 ->
+  satisfies s1 s2 h1 h2 R (ens_ H1) ->
+  satisfies s1 s2 h1 h2 R (ens_ H2).
+Proof.
+  intros.
+  inverts H0 as H3. destruct H3 as (v&h3&?&?&?&?).
+  constructor. exists v. exists h3.
+  intuition.
+  rewrite hstar_hpure_l in H3.
+  rewrite hstar_hpure_l.
+  intuition.
+Qed.
+
+Lemma entails_ens_seq : forall H1 H2 f1 f2,
+  H1 ==> H2 ->
+  entails f1 f2 ->
+  entails (ens_ H1;; f1) (ens_ H2;; f2).
+Proof.
+  unfold entails.
+  intros.
+  inverts H3 as H3; no_shift. destr H3.
+  apply (satisfies_ens_void H) in H3.
+  applys* s_seq h3.
+Qed.
+
+Lemma norm_seq_ens_empty : forall f,
+  bientails (ens_ \[];; f) f.
+Proof.
+  unfold bientails. intros.
+  iff H.
+  { inverts H as H; no_shift.
+    inverts H as H. destr H.
+    hinv H. hinv H. hinv H2.
+    subst. rew_fmap *. }
+  { eapply s_seq.
+    eapply ens_void_empty_intro.
+    assumption. }
+Qed.
+
+Lemma biab_single_h : forall H s1 s2 h1 h2 R H1 H2 f,
+  satisfies s1 s2 h1 h2 R (ens_ (H \* H1);; req (H \* H2) f) ->
+  satisfies s1 s2 h1 h2 R (ens_ H1;; req H2 f).
+Proof.
+  intros.
+  inverts H0 as H0; no_shift. destr H0.
+  (* ens adds a location to the heap *)
+  inverts H0 as H0.
+  (* use that to figure out what is in h3 *)
+  destr H0. hinv H0. hinv H0. hinv H5. subst h0 h3 x0 x. rew_fmap *.
+
+  (* prove just the first part *)
+  rewrite norm_req_req in H10.
+  inverts H10 as H10. specializes H10 x1 (h1 \u x2) ___.
+
+  applys s_seq (h1 \u x2) vunit.
+  { constructor. exists vunit. exists x2.
+    splits*. hintro; jauto. }
+  { assumption. }
+Qed.
+
+(** Biabduction for a single location. *)
+Lemma biab_single : forall (x:loc) (a:val) s1 s2 h1 h2 R H1 H2 f,
+  satisfies s1 s2 h1 h2 R (ens_ (x~~>a \* H1);; req (x~~>a \* H2) f)->
+  satisfies s1 s2 h1 h2 R (ens_ H1;; req H2 f).
+Proof.
+  intros.
+  applys* biab_single_h (x~~>a).
+Qed.
+
 (* This is proved elsewhere *)
-Axiom norm_ens_req_transpose : forall H1 H2 Ha Hf f,
+Lemma norm_ens_req_transpose : forall H1 H2 Ha Hf f,
   biab Ha H1 H2 Hf ->
-  entails (ens_ H1;; (req H2 f))
+  entails (ens_ H1;; req H2 f)
     (req Ha (ens_ Hf;; f)).
+Proof.
+  unfold entails.
+  introv Hbi.
+  induction Hbi.
+
+  { (* trivial *)
+    introv H2.
+    apply ens_req_inv in H2.
+    rewrite norm_seq_req_emp.
+    rewrite norm_seq_ens_empty.
+    assumption. }
+
+  { (* base case *)
+    fold entails.
+    introv H2.
+    rewrite norm_seq_req_emp.
+    pose proof entails_ens_seq. specializes H Hf Hf H2.
+    rewrite norm_seq_req_emp.
+    apply entails_refl. }
+
+  { (* b_pts_match *)
+    intros.
+
+    (* use the req *)
+    rewrite norm_req_req.
+    constructor. intros. hinv H0. subst. rew_fmap.
+
+    apply (IHHbi s1 s2).
+    apply (biab_single H). }
+
+  { (* b_any_match *)
+    intros.
+    apply IHHbi.
+    applys* biab_single_h H. }
+
+  { (* b_pts_diff *)
+    introv H3.
+    pose proof transpose_pts_diff.
+    unfold entails in H.
+    specializes H IHHbi H3. }
+Qed.
 
 (** * Entailment sequent *)
 
