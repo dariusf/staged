@@ -10,7 +10,6 @@ From Staged Require Export LibFmap.
 From Staged Require Export ExtraTactics.
 
 Local Open Scope string_scope.
-(* Local Open Scope nat_scope. *)
 Local Open Scope Z_scope.
 Local Open Scope list_scope.
 
@@ -24,60 +23,56 @@ Definition var_eq := String.string_dec.
 Definition loc := nat.
 
 Inductive val :=
-  | vunit : val
-  | vint : Z -> val
-  | vfun : var -> expr -> val
-  | vfix : var -> var -> expr -> val
-  | vloc : loc -> val
-  | vtup : val -> val -> val
-  | vstr : string -> val
-  | vbool : bool -> val
-  | vlist : list val -> val
+| vunit : val
+| vint : Z -> val
+| vbool : bool -> val
+| vstr : string -> val
+| vloc : loc -> val
+| vtup : val -> val -> val
+| vfun : var -> expr -> val
+| vfix : var -> var -> expr -> val                                 
 
 with expr : Type :=
-  | pvar (x: var)
-  | pval (v: val)
-  | plet (x: var) (e1 e2: expr)
-  | pfix (f: var) (x: var) (e: expr)
-  | pfun (x: var) (e: expr)
-  | padd (x y: expr)
-  | pfst (t: expr)
-  | psnd (t: expr)
-  | pminus (x y: expr)
-  | passert (b: expr)
-  | pref (v: expr)
-  | pderef (v: expr)
-  | passign (x: expr) (v: expr)
-  | pif (b: expr) (e1: expr) (e2: expr)
-  | papp (x: expr) (a: expr).
+| pvar (x : var)
+| pval (v : val)
+| plet (x : var) (e1 e2 : expr)
+| pif (e1 e2 e3 : expr)
+| pfun (x : var) (e : expr)
+| pfix (f x : var) (e : expr)
+| papp (e1 e2 : expr)
+| padd (e1 e2 : expr)
+| pfst (e : expr)
+| psnd (e : expr)
+| passert (e : expr)
+| pref (e : expr)
+| pderef (e : expr)
+| passign (e1 e2 : expr).
 
-#[global]
-Instance Inhab_val : Inhab val.
+#[global] Instance Inhab_val : Inhab val.
 Proof.
   constructor.
   exists vunit.
   constructor.
 Qed.
 
-Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
-  let aux t := subst y w t in
-  let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
+Fixpoint subst (y : var) (w : val) (e : expr) : expr :=
+  let aux := subst y w in
+  let if_y_eq x e1 e2 := if var_eq x y then e1 else e2 in
   match e with
-  | pval v => pval v
-  | padd x y => padd x y
-  | pminus x y => pminus x y
-  | pfst x => pfst x
-  | psnd x => psnd x
   | pvar x => if_y_eq x (pval w) e
-  | passert b => passert b
-  | pderef r => pderef r
-  | passign x y => passign x y
-  | pref v => pref v
-  | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
-  | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
-  | papp e v => papp e v
-  | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
-  | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
+  | pval v => pval v
+  | plet x e1 e2 => plet x (aux e1) (if_y_eq x e2 (aux e2))
+  | pif e1 e2 e3 => pif (aux e1) (aux e2) (aux e3)
+  | pfun x e' => pfun x (if_y_eq x e' (aux e'))
+  | pfix f x e' => pfix f x (if_y_eq f e' (if_y_eq x e' (aux e')))
+  | papp e1 e2 => papp (aux e1) (aux e2)
+  | padd e1 e2 => padd (aux e1) (aux e2)
+  | pfst e' => pfst (aux e')
+  | psnd e' => psnd (aux e')
+  | passert e' => passert (aux e')
+  | pref e' => pref (aux e')
+  | pderef e' => pderef (aux e')
+  | passign e1 e2 => passign (aux e1) (aux e2)
   end.
 
 Module Val.
@@ -89,53 +84,39 @@ Module Export Heap := HeapF.HeapSetup Val.
 
 Definition empty_heap : heap := Fmap.empty.
 
-Definition precond := hprop.
-Definition postcond := val -> hprop.
-
-Inductive result : Type :=
-  | norm : val -> result.
-
 (** * Staged formulae *)
-(** Deeply embedded due to uninterpreted functions, which cannot immediately be given a semantics without an environment. If we make [flow] a function of an [senv], the type of [flow] will be [flow : (var -> (val -> val -> flow)) -> ... -> Prop], which cannot be defined. *)
+(** Deeply embedded due to uninterpreted functions, which cannot immediately be given a semantics without an environment. *)
 Inductive flow :=
-  | req : precond -> flow -> flow
-  | ens : postcond -> flow
-  | seq : flow -> flow -> flow
-  | fex : forall A, (A -> flow) -> flow
-  | fall : forall A, (A -> flow) -> flow
-  | unk : var -> val -> val -> flow
-  | intersect : flow -> flow -> flow
-  | disj : flow -> flow -> flow.
+| req : hprop -> flow
+| ens : hprop -> flow
+| seq : flow -> flow -> flow
+| fex : forall A, (A -> flow) -> flow
+| fall : forall A, (A -> flow) -> flow
+| unk : var -> val -> val -> flow
+| intersect : flow -> flow -> flow
+| disj : flow -> flow -> flow.
 
-(** An [ens] which doesn't have a useful return value. This carries more information than [ens (fun _ => H)], which has an #<i>arbitrary</i># return value. *)
-(** In practice, it is much easier to use this to talk about results which are universally quantified externally; the result of a staged formula is mainly useful only for defining its semantics and in triples. *)
-(** Consequently, key lemmas like [norm_ens_req_transpose] are defined using this. This can to some extent be considered an implementation deficiency around the use of HOAS. *)
-Definition ens_ H := ens (fun r => \[r = vunit] \* H).
-
-Definition empty := ens_ \[True].
-
-Notation req_ H := (req H empty).
+Definition spec : Type := val -> flow.
 
 (** Function environments, for interpreting unknown functions. [ufun] is a HOAS way of substituting into a staged formula, which otherwise doesn't support this due to the shallow embedding that [hprop] uses. *)
-Definition ufun := val -> val -> flow.
 
-#[global]
-Instance Inhab_ufun : Inhab ufun.
+#[global] Instance Inhab_ufun : Inhab (val -> val -> flow).
 Proof.
   constructor.
-  exists (fun (r v:val) => ens_ \[r = v]).
+  exists (fun (r v : val) => ens \[r = v]).
   constructor.
 Qed.
 
-Definition senv := Fmap.fmap var ufun.
+Definition senv := Fmap.fmap var (val -> val -> flow).
 
-Definition empty_env : senv := Fmap.empty.
+Definition empty_senv : senv := Fmap.empty.
 
 Declare Scope flow_scope.
 Open Scope flow_scope.
 
 Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 
+(*
 Notation "'∃' x1 .. xn , H" :=
   (fex (fun x1 => .. (fex (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
@@ -148,164 +129,111 @@ Notation "'∀' x1 .. xn , H" :=
 
 Notation "f '$' '(' x ',' r ')'" := (unk f x r)
   (at level 80, format "f '$' '(' x ','  r ')'", only printing) : flow_scope.
-
-(* Notation "'ens' '[' r ']' Q" := (ens (fun r => Q))
-  (at level 80, format "'ens' '\[' r '\]' Q" , only printing) : flow_scope. *)
-(* square brackets will conflict with format notation for boxes https://coq.inria.fr/doc/V8.20.0/refman/user-extensions/syntax-extensions.html#displaying-symbolic-notations:~:text=well%2Dbracketed%20pairs%20of%20tokens%20of%20the%20form%20%27%5B%20%27%20and%20%27%5D%27 *)
-
-Notation "'ens' r '.' Q" := (ens (fun r => Q))
-  (at level 80, format "'ens'  r '.'  Q" , only printing) : flow_scope.
-
-(* Some tests *)
-
-(* Check (fex (fun x => ens_ \[x = vint 1];; empty)).
-Check (fex (fun x => ens_ \[x = vint 1]);; empty).
-Check (req \[] (ens_ \[];; empty)).
-Check (ens_ \[];; req \[] empty). *)
-
-Implicit Types s : senv.
-Implicit Types h : heap.
-Implicit Types H : hprop.
-Implicit Types Q : postcond.
-Implicit Types uf fn : ufun.
-Implicit Types c : val -> flow.
-Implicit Types f : flow.
-Implicit Types a v r : val.
-Implicit Types R : result.
-Implicit Types e : expr.
-(* Implicit Types x y z : var. *)
+*)
 
 (** * Interpretation of a staged formula *)
 (** An [Inductive] definition is used because the rule for unknown functions is not structurally recursive. *)
-Inductive satisfies : senv -> heap -> heap -> result -> flow -> Prop :=
+Inductive satisfies : senv -> heap -> heap -> flow -> Prop :=
+| s_req env p h1 h2 hp :
+  p hp ->
+  h1 = Fmap.union hp h2 ->
+  Fmap.disjoint hp h2 ->
+  satisfies env h1 h2 (req p)
 
-  | s_req s p (h1 h2:heap) R f
-    (H: forall (hp hr:heap), (* the heap satisfying p, and the remaining heap *)
-      p hp ->
-      h1 = Fmap.union hr hp ->
-      Fmap.disjoint hr hp ->
-      satisfies s hr h2 R f) :
-    satisfies s h1 h2 R (req p f)
+| s_ens env q h1 h2 hq :
+  q hq ->
+  h2 = Fmap.union h1 hq ->
+  Fmap.disjoint h1 hq ->
+  satisfies env h1 h2 (ens q)
 
-  | s_ens s q h1 h2 R
-    (H: exists v h3,
-      R = norm v /\
-      q v h3 /\
-      h2 = Fmap.union h1 h3 /\
-      Fmap.disjoint h1 h3) :
-    satisfies s h1 h2 R (ens q)
+| s_seq env f1 f2 h1 h2 hi :
+  satisfies env h1 hi f1 ->
+  satisfies env hi h2 f2 ->
+  satisfies env h1 h2 (seq f1 f2)
 
-  | s_seq h3 R1 s f1 f2 h1 h2 R :
-    satisfies s h1 h3 R1 f1 ->
-    satisfies s h3 h2 R f2 ->
-    satisfies s h1 h2 R (seq f1 f2)
+| s_fex env (A : Type) (f : A -> flow) h1 h2 :
+  (exists a, satisfies env h1 h2 (f a)) ->
+  satisfies env h1 h2 (fex f)
 
-  | s_fex s h1 h2 R (A:Type) (f:A->flow)
-    (H: exists b,
-      satisfies s h1 h2 R (f b)) :
-    satisfies s h1 h2 R (@fex A f)
+| s_fall env (A : Type) (f : A -> flow) h1 h2 :
+  (forall a, satisfies env h1 h2 (f a)) ->
+  satisfies env h1 h2 (fall f)
 
-  | s_fall s h1 h2 R (A:Type) (f:A->flow)
-    (H: forall b,
-      satisfies s h1 h2 R (f b)) :
-    satisfies s h1 h2 R (@fall A f)
+| s_unk env f x v h1 h2 fn :
+  Fmap.read env f = fn ->
+  satisfies env h1 h2 (fn x v) ->
+  satisfies env h1 h2 (unk f x v)
 
-  | s_unk s h1 h2 r xf fn a
-    (He: Fmap.read s xf = fn)
-    (Hr: satisfies s h1 h2 (norm r) (fn a r)) :
-    satisfies s h1 h2 (norm r) (unk xf a r)
+| s_intersect env f1 f2 h1 h2 :
+  satisfies env h1 h2 f1 ->
+  satisfies env h1 h2 f2 ->
+  satisfies env h1 h2 (intersect f1 f2)
+            
+| s_disj_l env f1 f2 h1 h2 :
+  satisfies env h1 h2 f1 ->
+  satisfies env h1 h2 (disj f1 f2)
 
-  | s_intersect s h1 h2 R f1 f2
-    (H1: satisfies s h1 h2 R f1)
-    (H2: satisfies s h1 h2 R f2) :
-    satisfies s h1 h2 R (intersect f1 f2)
+| s_disj_r env f1 f2 h1 h2 :
+  satisfies env h1 h2 f2 ->
+  satisfies env h1 h2 (disj f1 f2).
 
-  | s_disj_l s h1 h2 R f1 f2
-    (H: satisfies s h1 h2 R f1) :
-    satisfies s h1 h2 R (disj f1 f2)
+Definition satisfies_with_result env h1 h2 v (phi : spec) :=
+  satisfies env h1 h2 (phi v).
 
-  | s_disj_r s h1 h2 R f1 f2
-    (H: satisfies s h1 h2 R f2) :
-    satisfies s h1 h2 R (disj f1 f2).
+Notation "env ','  h1 ','  h2 '|=' f" :=
+  (satisfies env h1 h2 f) (at level 30, only printing).
 
-Notation "s ','  h1 ','  h2 ','  R  '|=' f" :=
-  (satisfies s h1 h2 R f) (at level 30, only printing).
+Notation "env ','  h1 ','  h2 ',' v '|=' phi" :=
+  (satisfies_with_result env h1 h2 v phi) (at level 30, only printing).
 
+(*
 (** The result of a staged formula, written in the paper as [Φ[r]]. Because it relates a formula and a value here (and not a variable, as in the paper), we need a model for the formula to talk about the value. *)
-Definition flow_res (f:flow) (v:val) : Prop :=
-  forall h1 h2 env R, satisfies env h1 h2 R f -> R = norm v.
+Definition flow_res (f : flow) (v : val) : Prop :=
+  forall env h1 h2 r, satisfies env h1 h2 r f -> r = norm v.
 
-Definition flow_res_in_env (f:flow) (v:val) env : Prop :=
-  forall h1 h2 v1, satisfies env h1 h2 (norm v1) f -> v1 = v.
+Definition flow_res_in_env (f : flow) (v : val) env : Prop :=
+  forall h1 h2 r, satisfies env h1 h2 r f -> r = norm v.
 
-Definition has_no_result f :=
+Definition flow_res_unit f :=
   flow_res f vunit.
+*)
 
 (** * Entailment *)
 (** This sequent is useful for (interactive) proofs involving functions. *)
 Definition entails_under env f1 f2 :=
-  forall h1 h2 R,
-    satisfies env h1 h2 R f1 -> satisfies env h1 h2 R f2.
+  forall h1 h2, satisfies env h1 h2 f1 -> satisfies env h1 h2 f2.
+
+Definition entails_with_result_under env phi1 phi2 :=
+  forall h1 h2 v, satisfies_with_result env h1 h2 v phi1 -> satisfies_with_result env h1 h2 v phi2.
 
 (* see [ent_unk_conv] for why there is no bientails_under *)
 
 (** General entailments which work for arbitrary environments. *)
-Definition entails (f1 f2:flow) : Prop :=
-  forall env h1 h2 R, satisfies env h1 h2 R f1 -> satisfies env h1 h2 R f2.
+Definition entails f1 f2 :=
+  forall env h1 h2, satisfies env h1 h2 f1 -> satisfies env h1 h2 f2.
 
-Definition bientails (f1 f2:flow) : Prop :=
-  forall h1 h2 R env,
-    satisfies env h1 h2 R f1 <-> satisfies env h1 h2 R f2.
+Definition entails_with_result phi1 phi2 :=
+  forall env h1 h2 v, satisfies_with_result env h1 h2 v phi1 -> satisfies_with_result env h1 h2 v phi2.
 
-Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
+Definition bientails f1 f2 : Prop :=
+  forall env h1 h2, satisfies env h1 h2 f1 <-> satisfies env h1 h2 f2.
 
-Notation "env '⊢' f1 '⊑' f2" :=
-  (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
-
-(** * Top and bottom *)
-Definition top := req_ \[False].
-Definition bot := ens_ \[False].
-Definition error := req \[False] (ens_ \[False]).
-Definition post_sat (Q:postcond) := exists v h, Q v h.
-Definition flow_sat f := exists s h1 h2 R, satisfies s h1 h2 R f.
-Definition okay P Q := ens_ \[post_sat Q];; req P (ens Q).
-
-(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-(* Check (forall f1 f2 f3, f1 ;; f3 ⊑ f2). *)
+Definition bientails_with_result phi1 phi2 :=
+  forall env h1 h2 v, satisfies_with_result env h1 h2 v phi1 <-> satisfies_with_result env h1 h2 v phi2.
 
 (** * Rewriting *)
-Instance entails_refl : Reflexive entails.
-Proof.
-  unfold Reflexive, entails.
-  intros.
-  exact H.
-Qed.
 
-Instance entails_trans : Transitive entails.
-Proof.
-  unfold Transitive, entails.
-  intros.
-  auto.
-Qed.
-
-Instance entails_preorder : PreOrder entails.
-Proof.
-  constructor.
-  apply entails_refl.
-  apply entails_trans.
-Qed.
+(* ********** *)
 
 Instance entails_under_refl : forall env, Reflexive (entails_under env).
 Proof.
   unfold Reflexive, entails_under.
-  intros.
-  exact H.
+  auto.
 Qed.
 
 Instance entails_under_trans : forall env, Transitive (entails_under env).
 Proof.
   unfold Transitive, entails_under.
-  intros.
   auto.
 Qed.
 
@@ -316,22 +244,83 @@ Proof.
   apply entails_under_trans.
 Qed.
 
+(* ********** *)
+
+Instance entails_with_result_under_refl : forall env, Reflexive (entails_with_result_under env).
+Proof.
+  unfold Reflexive, entails_with_result_under.
+  auto.
+Qed.
+
+Instance entails_with_result_under_trans : forall env, Transitive (entails_with_result_under env).
+Proof.
+  unfold Transitive, entails_with_result_under.
+  auto.
+Qed.
+
+Instance entails_with_result_under_preorder : forall env, PreOrder (entails_with_result_under env).
+Proof.
+  constructor.
+  apply entails_with_result_under_refl.
+  apply entails_with_result_under_trans.
+Qed.
+
+(* ********** *)
+
+Instance entails_refl : Reflexive entails.
+Proof.
+  unfold Reflexive, entails.
+  auto.
+Qed.
+
+Instance entails_trans : Transitive entails.
+Proof.
+  unfold Transitive, entails.
+  auto.
+Qed.
+
+Instance entails_preorder : PreOrder entails.
+Proof.
+  constructor.
+  apply entails_refl.
+  apply entails_trans.
+Qed.
+
+(* ********** *)
+
+Instance bientails_refl : Reflexive bientails.
+Proof.
+  unfold Reflexive, bientails.
+  easy.
+Qed.
+
+Instance bientails_symm : Symmetric bientails.
+Proof.
+  unfold Symmetric, bientails.
+  easy.
+Qed.
+
+Instance bientails_trans : Transitive bientails.
+Proof.
+  unfold Transitive, bientails.
+  intros x y z x_bientails_y y_bientails_z env h1 h2.
+  split.
+  - intros Hx.
+    apply y_bientails_z.
+    apply x_bientails_y.
+    exact Hx.
+  - intros Hz.
+    apply x_bientails_y.
+    apply y_bientails_z.
+    exact Hz.
+Qed.
+
 Instance bientails_equiv : Equivalence bientails.
 Proof.
   constructor.
-  - unfold Reflexive.
-    unfold bientails.
-    reflexivity.
-  - unfold Symmetric.
-    unfold bientails.
-    symmetry.
-    auto.
-  - unfold Transitive.
-    unfold bientails.
-    intros.
-    split.
-    + intros. apply H0. apply H. easy.
-    + intros. apply H. apply H0. easy.
+  apply bientails_refl.
+  apply bientails_symm.
+  apply bientails_trans.
 Qed.
 
 Infix "====>" := Morphisms.respectful (at level 80, right associativity).
@@ -340,6 +329,7 @@ Notation respectful := Morphisms.respectful.
 Notation impl := Program.Basics.impl.
 Notation flip := Basics.flip.
 
+(*
 (** Incantations for setoid rewriting *)
 Section Proprium.
 
@@ -434,7 +424,7 @@ Section Proprium.
     intros.
     inverts H0 as H0. destr H0.
     constructor.
-    exists b.
+    exists a.
     apply H.
     assumption.
   Qed.
@@ -492,6 +482,7 @@ Section Proprium.
       apply* H0. }
   Qed.
 
+  (*
   #[global]
   Instance Proper_req_entails : Proper (eq ====> entails ====> entails) req.
   Proof.
@@ -502,7 +493,9 @@ Section Proprium.
     inverts H1 as H1.
     specializes H1 H3 ___.
   Qed.
+   *)
 
+  (*
   #[global]
   Instance Proper_req_bi : Proper (eq ====> bientails ====> bientails) req.
   Proof.
@@ -520,9 +513,12 @@ Section Proprium.
       specializes H1 H3 ___.
       apply H0. assumption. }
   Qed.
+ *)
 
 End Proprium.
+*)
 
+(*
 (** * Inversion/introduction lemmas *)
 Lemma flow_res_inv: forall v v1 f h1 h2 env,
   satisfies env h1 h2 (norm v) f ->
@@ -535,9 +531,11 @@ Proof.
   injects H0.
   reflexivity.
 Qed.
+*)
 
+(*
 Lemma ens_ret_inv : forall env h1 h2 H R,
-  satisfies env h1 h2 R (ens_ H) ->
+  satisfies env h1 h2 R (ens H) ->
   R = norm vunit.
 Proof.
   intros.
@@ -545,7 +543,9 @@ Proof.
   rewrite hstar_hpure_l in H0. destruct H0.
   congruence.
 Qed.
+*)
 
+(*
 Lemma ens_void_pure_inv : forall P env h1 h2 R,
   satisfies env h1 h2 R (ens_ \[P]) -> P /\ h1 = h2 /\ R = norm vunit.
 Proof.
@@ -555,7 +555,9 @@ Proof.
   apply hpure_inv in H4. destr H4. subst.
   intuition.
 Qed.
+*)
 
+(*
 Lemma empty_inv : forall env h1 h2 R,
   satisfies env h1 h2 R empty ->
   h1 = h2 /\ R = norm vunit.
@@ -565,7 +567,9 @@ Proof.
   apply ens_void_pure_inv in H.
   intuition.
 Qed.
+*)
 
+(*
 Lemma empty_intro : forall env h1,
   satisfies env h1 h1 (norm vunit) empty.
 Proof.
@@ -580,7 +584,9 @@ Proof.
   apply hpure_intro.
   constructor.
 Qed.
+*)
 
+(*
 (* We get absolutely no info from top, so there is no top_inv.
   This is not the case for empty, which tells us that the heaps are empty. *)
 Lemma top_intro : forall s h1 h2 R,
@@ -592,7 +598,9 @@ Proof.
   hinv H.
   false.
 Qed.
+*)
 
+(*
 (* Conversely, there is no bot_intro because we should never be able to prove it. *)
 Lemma bot_inv : forall s h1 h2 R,
   satisfies s h1 h2 R bot -> False.
@@ -601,7 +609,9 @@ Proof.
   inverts H as H. destr H. hinv H. hinv H2.
   false.
 Qed.
+*)
 
+(*
 Lemma req_empty_inv : forall env h1 h2 R f,
   satisfies env h1 h2 R (req \[] f) ->
   satisfies env h1 h2 R f.
@@ -610,7 +620,9 @@ Proof.
   inverts H as H. specializes H empty_heap h1 ___.
   apply hempty_intro.
 Qed.
+*)
 
+(*
 Lemma req_empty_intro : forall env h1 h2 R f,
   satisfies env h1 h2 R f ->
   satisfies env h1 h2 R (req \[] f).
@@ -620,7 +632,9 @@ Proof.
   hinv H0.
   subst. rew_fmap *.
 Qed.
+*)
 
+(*
 Lemma req_void_empty_inv : forall env h1 h2 R,
   satisfies env h1 h2 R (req_ \[]) ->
   h1 = h2 /\ R = norm vunit.
@@ -640,7 +654,9 @@ Proof.
   apply hempty_inv in H. subst.
   fmap_eq.
 Qed.
+*)
 
+(*
 Lemma ens_empty_intro : forall env h1 R,
   satisfies env h1 h1 R (ens (fun r => \[])).
 Proof.
@@ -862,9 +878,11 @@ Proof.
   inverts H0 as H0.
   reflexivity.
 Qed.
+*)
 
 (** * Some tactics *)
 
+(*
 Ltac fdestr_rec H :=
   match type of H with
   | satisfies _ _ _ _ (fex (fun _ => _)) => inverts H as H; destr H
@@ -906,7 +924,9 @@ Ltac fintro :=
   | |- satisfies _ _ _ _ (req \[_] _) => apply req_pure_intro
   | |- satisfies _ _ _ _ (req _ _) => apply s_req; intros
   end.
+*)
 
+(*
 (** * Entailment and normalization rules *)
 Lemma entails_bot: forall f,
   entails bot f.
@@ -915,14 +935,18 @@ Proof.
   apply bot_inv in H.
   false.
 Qed.
+*)
 
+(*
 Lemma entails_top: forall f,
   entails f top.
 Proof.
   unfold entails. intros.
   apply top_intro.
 Qed.
+*)
 
+(*
 Lemma disentails_okay_error: forall P Q,
   entails (okay P Q) error.
 Proof.
@@ -930,7 +954,9 @@ Proof.
   unfold error.
   constructor. intros. hinv H0. false.
 Qed.
+*)
 
+(*
 Lemma disentails_error_okay: forall P Q,
   entails error (okay P Q).
 Proof.
@@ -938,24 +964,23 @@ Proof.
   applys s_seq h1 (norm vunit).
   (* we need to prove Q, but error is useless for this *)
 Abort.
+*)
 
-(** Covariance of ens *)
-Lemma entails_ens : forall Q1 Q2,
-  (forall v, Q1 v ==> Q2 v) ->
-  entails (ens Q1) (ens Q2).
+(** Covariance of req *)
+Lemma entails_req : forall p1 p2, p1 ==> p2 -> entails (req p1) (req p2).
 Proof.
-  unfold entails. intros.
-  intros.
-  inverts H0 as H3.
-  constructor.
-  destruct H3 as (v&h3&?&?&?&?).
-  exists v.
-  exists h3.
-  intuition.
-  apply H.
-  easy.
+  inversion 2.
+  eauto using s_req.
+Qed.
+  
+(** Covariance of ens *)
+Lemma entails_ens : forall q1 q2, q1 ==> q2 -> entails (ens q1) (ens q2).
+Proof.
+  inversion 2.
+  eauto using s_ens.
 Qed.
 
+(*
 Lemma satisfies_ens_void : forall H1 H2 env h1 h2 R,
   H1 ==> H2 ->
   satisfies env h1 h2 R (ens_ H1) ->
@@ -969,7 +994,9 @@ Proof.
   rewrite hstar_hpure_l.
   intuition.
 Qed.
+*)
 
+(*
 Lemma entails_ens_void : forall H1 H2,
   H1 ==> H2 ->
   entails (ens_ H1) (ens_ H2).
@@ -979,7 +1006,9 @@ Proof.
   apply (satisfies_ens_void H).
   assumption.
 Qed.
+*)
 
+(*
 (** Contravariance of req *)
 Lemma entails_req : forall H1 H2 f1 f2,
   (H2 ==> H1) ->
@@ -992,7 +1021,9 @@ Proof.
   inverts H3 as H3.
   specializes H3 hr H4.
 Qed.
+*)
 
+(*
 (** Reassociating req *)
 Lemma norm_reassoc : forall H f1 f2,
   entails (req H f1;; f2) (req H (f1;; f2)).
@@ -1009,10 +1040,11 @@ Proof.
   specializes H0 hp hr H1 ___.
   applys~ s_seq h3 R1.
 Qed.
+*)
 
 (** Properties of disjunction *)
-Lemma disj_comm : forall f1 f2,
-  bientails (disj f2 f1) (disj f1 f2).
+Lemma disj_comm :
+  forall f1 f2, bientails (disj f2 f1) (disj f1 f2).
 Proof.
   unfold bientails. intros.
   iff H.
@@ -1024,8 +1056,8 @@ Proof.
     apply s_disj_l. assumption. }
 Qed.
 
-Lemma disj_assoc : forall f1 f2 f3,
-  bientails (disj f1 (disj f2 f3)) (disj (disj f1 f2) f3).
+Lemma disj_assoc :
+  forall f1 f2 f3, bientails (disj f1 (disj f2 f3)) (disj (disj f1 f2) f3).
 Proof.
   unfold bientails. intros.
   iff H.
@@ -1050,6 +1082,7 @@ Proof.
   { apply* s_disj_l. }
 Qed.
 
+(*
 Lemma disj_unit : forall f,
   bientails (disj f bot) f.
 Proof.
@@ -1058,7 +1091,9 @@ Proof.
   { inverts H as H; auto. apply bot_inv in H. false. }
   { apply* s_disj_l. }
 Qed.
+*)
 
+(*
 Lemma disj_dom : forall f,
   bientails (disj f top) top.
 Proof.
@@ -1067,7 +1102,9 @@ Proof.
   { apply top_intro. }
   { apply* s_disj_r. }
 Qed.
+*)
 
+(*
 Lemma conj_comm : forall f1 f2,
   bientails (intersect f2 f1) (intersect f1 f2).
 Proof.
@@ -1124,7 +1161,9 @@ Proof.
   { finv H. assumption. }
   { apply* s_intersect. apply bot_inv in H. false. }
 Qed.
+*)
 
+(*
 (* Properties of sequencing *)
 Lemma seq_disj_distr : forall f1 f2 f3,
   bientails ((disj f1 f2) ;; f3) (disj (f1;; f3) (f2;; f3)).
@@ -1143,7 +1182,9 @@ Proof.
       eapply s_seq.
       apply* s_disj_r. assumption. }
 Qed.
+*)
 
+(*
 Lemma seq_assoc : forall env h1 h2 R f1 f2 f3,
   satisfies env h1 h2 R (f1;; f2;; f3) <->
   satisfies env h1 h2 R ((f1;; f2);; f3).
@@ -1157,32 +1198,34 @@ Proof.
     econstructor; jauto.
     econstructor; jauto. }
 Qed.
+*)
 
+(*
 Lemma norm_seq_assoc : forall f1 f2 f3,
   bientails (f1;; f2;; f3) ((f1;; f2);; f3).
 Proof.
   intros.
   split; intros; now apply seq_assoc.
 Qed.
+*)
 
 (** Compaction rule 1 from the paper *)
-Lemma norm_ens_false_l : forall f,
-  bientails (ens_ \[False]) (ens_ \[False];; f).
+Lemma norm_ens_false_l : forall f, bientails (ens \[False]) (ens \[False];; f).
 Proof.
   unfold bientails.
   iff H.
-  { apply ens_void_pure_inv in H. destr H. false. }
-  { finv H. apply ens_void_pure_inv in H. destr H.
-    false. }
+  { inversion H. subst. apply hpure_inv in H1. tauto. }
+  { inversion H. subst.
+    inversion H5. subst. apply hpure_inv in H1. tauto. }
 Qed.
 
-Lemma norm_ens_false : forall f,
-  entails (ens_ \[False]) f.
+Lemma norm_ens_false : forall f, entails (ens \[False]) f.
 Proof.
   intros.
-  apply entails_bot.
+  unfold entails. intros. inversion H. subst. apply hpure_inv in H1. tauto.
 Qed.
 
+(*
 Lemma norm_req_false : forall f f1,
   entails f (req \[False] f1).
 Proof.
@@ -1190,7 +1233,9 @@ Proof.
   apply req_pure_intro.
   intros. false.
 Qed.
+*)
 
+(*
 Lemma norm_req_pure_l : forall P f,
   P -> bientails (req \[P] f) f.
 Proof.
@@ -1201,7 +1246,9 @@ Proof.
     assumption. }
   { apply req_pure_intro. auto. }
 Qed.
+*)
 
+(*
 Lemma norm_ens_pure_r : forall P f,
   P -> bientails empty (ens_ \[P]).
 Proof.
@@ -1213,7 +1260,9 @@ Proof.
   { apply ens_void_pure_inv in H0. destr H0. subst.
     apply empty_intro. }
 Qed.
+*)
 
+(*
 Lemma norm_ens_pure_seq_r : forall P f,
   P -> bientails f (ens_ \[P];; f).
 Proof.
@@ -1226,7 +1275,9 @@ Proof.
   { fdestr H0. fdestr H0. subst.
     assumption. }
 Qed.
+*)
 
+(*
 Lemma norm_req_ens_empty : forall P f,
   entails empty (req \[P] (ens_ \[P])).
 Proof.
@@ -1249,7 +1300,9 @@ Proof.
     fintro.
     assumption. }
 Qed.
+*)
 
+(*
 (** Compaction rule 2 from the paper *)
 Lemma norm_empty_l : forall f,
   bientails (empty;; f) f.
@@ -1262,7 +1315,9 @@ Proof.
     apply ens_void_pure_intro; constructor.
     assumption. }
 Qed.
+*)
 
+(*
 Lemma norm_ens_no_result_r : forall f,
   has_no_result f ->
   bientails (f;; empty) f.
@@ -1278,7 +1333,9 @@ Proof.
     assumption.
     apply empty_intro. }
 Qed.
+*)
 
+(*
 Lemma norm_ens_empty_r : forall H,
   bientails (ens_ H;; empty) (ens_ H).
 Proof.
@@ -1286,7 +1343,9 @@ Proof.
   apply (@norm_ens_no_result_r (ens_ H)).
   apply ens_no_result.
 Qed.
+*)
 
+(*
 (** Compaction rule 3 from the paper. Stated this way to ensure [f] has no meaningful result. See [norm_ens_empty_r] for a better statement. *)
 Lemma norm_empty_r : forall f H,
   bientails (f;; ens_ H;; empty) (f;; ens_ H).
@@ -1298,7 +1357,9 @@ Proof.
   { rewrite norm_ens_empty_r.
     assumption. }
 Qed.
+*)
 
+(*
 Lemma norm_seq_req_emp : forall f,
   bientails (req \[] f) f.
 Proof.
@@ -1306,54 +1367,53 @@ Proof.
   { apply req_empty_inv in H. assumption. }
   { apply req_empty_intro. assumption. }
 Qed.
+*)
 
 (** Splitting and combining [req]s *)
-Lemma norm_req_sep_combine : forall H1 H2 f,
-  entails (req H1 (req H2 f)) (req (H1 \* H2) f).
+Lemma norm_req_sep_combine :
+  forall p1 p2, entails (req p1;; req p2) (req (p1 \* p2)).
 Proof.
   unfold entails.
   intros.
   (* contravariance means we start reasoning from the assumptions in the goal *)
-  apply s_req.
-  intros hb hr. intros.
-  apply hstar_inv in H0 as (hH1&hH2&?&?&?&?).
-
-  (* start reasoning forward *)
-  inverts H as H.
-  forwards: (H hH1 (hr \u hH2) H0).
-  fmap_eq.
-  fmap_disjoint.
-
-  inverts H8 as H8.
-  specialize (H8 _ hr H5).
-  forward H8. fmap_eq.
-  forward H8. fmap_disjoint.
-
-  assumption.
+  inversion H. subst.
+  inversion H5. subst.
+  inversion H6. subst.
+  clear H H5 H6.
+  Check (s_req).
+  Check (@s_req _ _ _ _ (hp0 \u hp)).
+  apply (@s_req _ _ _ _ (hp0 \u hp)).
+  - Search ((_ \* _) (_ \u _)).
+    Search (_ \u _ = _ \u _).
+    rewrite union_comm_of_disjoint.
+    apply hstar_intro; auto.
+    fmap_disjoint.
+  - fmap_eq.
+  - fmap_disjoint.
 Qed.
 
-Lemma norm_req_sep_split : forall H1 H2 f,
-  entails (req (H1 \* H2) f) (req H1 (req H2 f)).
+Lemma norm_req_sep_split : forall H1 H2,
+  entails (req (H1 \* H2)) (req H1;; req H2).
 Proof.
   unfold entails.
   intros.
-
-  apply s_req.
-  intros hH1 hH2r. intros.
-  apply s_req.
-  intros hH2 hr. intros.
-
-  inverts H as H.
-  specialize (H (hH1 \u hH2) hr ltac:(apply hstar_intro; auto)).
-  forward H. fmap_eq.
-  forward H. fmap_disjoint.
-
-  auto.
+  inversion H. subst. clear H.
+  Search ((_ \* _) _).
+  apply hstar_inv in H3 as (? & ? & ? & ? & ? & ?).
+  eapply s_seq.
+  - eapply (@s_req _ _ _ (h2 \u x0)).
+    exact H.
+    fmap_eq.
+    fmap_disjoint.
+  - eapply s_req.
+    exact H0.
+    fmap_eq.
+    fmap_disjoint.
 Qed.
 
 (** Compaction rule 4 from the paper *)
-Lemma norm_req_req : forall H1 H2 f,
-  bientails (req (H1 \* H2) f) (req H1 (req H2 f)).
+Lemma norm_req_req : forall H1 H2,
+  bientails (req (H1 \* H2)) (req H1;; req H2).
 Proof.
   intros.
   split.
@@ -1361,6 +1421,7 @@ Proof.
   - apply norm_req_sep_combine.
 Qed.
 
+(*
 (** Splitting and combining [ens_]s *)
 Lemma satisfies_ens_ens_void_split : forall H1 H2 env h1 h2 R,
   satisfies env h1 h2 R (ens_ (H1 \* H2)) ->
@@ -1424,33 +1485,31 @@ Proof.
   - apply norm_ens_ens_void_split.
   - apply norm_ens_ens_void_combine.
 Qed.
+*)
 
 (** Compaction rule 5 from the paper *)
 Lemma norm_ens_ens_void_l : forall H Q,
-  bientails (ens_ H;; ens Q) (ens (Q \*+ H)).
+  bientails (ens H;; ens Q) (ens (Q \* H)).
 Proof.
   unfold entails.
   split; intros.
-  { inverts H0 as H0. destr H0.
-    inverts H0 as H0. destr H0.
-    inverts H7 as H7. destr H7.
-    hinv H0. hinv H0.
-    constructor. exists v0. exists (h0 \u h4).
-    subst.
-    splits*.
-    rewrite hstar_comm.
-    hintro; jauto.
-    rew_fmap *. }
-  { inverts H0 as H0. destr H0.
-    hinv H0.
-    applys s_seq (h1 \u x0) (norm vunit).
-    { constructor. exists vunit. exists x0.
-      splits*.
-      hintro; jauto. }
-    { constructor. exists v. exists x.
-      jauto. } }
+  { inversion H0. subst.
+    inversion H7. subst.
+    inversion H6. subst.
+    clear H0 H7 H6. sort.
+    eapply s_ens.
+    Check hstar_intro.
+    apply hstar_intro; eauto.
+    fmap_eq.
+    fmap_disjoint. }
+  { inversion H0. subst.
+    apply hstar_inv in H2 as (? & ? & ? & ? & ? & ?).
+    eapply s_seq.
+    - eapply s_ens; eauto.
+    - eapply s_ens; eauto. fmap_eq. }
 Qed.
 
+(*
 (** Splitting and combining [ens] with results is more complex, and there does not seem to be a single equivalence. *)
 Lemma satisfies_ens_sep_combine : forall Q1 Q2 env h1 h2 R,
   satisfies env h1 h2 R (ens Q1;; ens Q2) ->
@@ -1470,7 +1529,9 @@ Proof.
   apply hstar_intro; auto.
   subst. injects H2. assumption.
 Qed.
+*)
 
+(*
 Lemma norm_ens_ens_combine : forall Q1 Q2,
   entails (ens Q1;; ens Q2) (ens (fun r => \exists r1, Q1 r1 \* Q2 r)).
 Proof.
@@ -1586,21 +1647,27 @@ Proof.
   intros.
   apply norm_ens_ens_void_comm.
 Qed.
+*)
 
 (** Rule EntEns from the paper *)
 Lemma entails_ens_seq : forall H1 H2 f1 f2,
   H1 ==> H2 ->
   entails f1 f2 ->
-  entails (ens_ H1;; f1) (ens_ H2;; f2).
+  entails (ens H1;; f1) (ens H2;; f2).
 Proof.
   unfold entails.
   intros.
-  inverts H3 as H3. destr H3.
+  inverts H3.
   (* eapply s_seq. *)
-  apply (satisfies_ens_void H) in H3.
-  applys* s_seq h3 R1.
+  eapply s_seq.
+  Check (entails_ens).
+  Check (entails_ens H).
+  apply (entails_ens H).
+  eauto.
+  eauto.
 Qed.
 
+(*
 (** Rule EntReq from the paper *)
 Lemma entails_req_seq : forall H1 H2 f1 f2,
   H2 ==> H1 ->
@@ -1612,7 +1679,9 @@ Proof.
   constructor. intros hH2 h3. intros.
   inverts H3 as H3. specializes H3 hH2 h3.
 Qed.
+*)
 
+(*
 (** Rule DisjLeft from the paper *)
 Lemma entails_disj_left : forall f1 f2 f3,
   entails f1 f3 ->
@@ -2574,14 +2643,14 @@ Proof.
   inverts H0 as H0. specializes H0 empty_heap h1 ___.
   apply hempty_intro.
 Qed.
+*)
 
 (** * Big-step semantics *)
 Inductive eresult : Type :=
-  | enorm : val -> eresult.
+| enorm : val -> eresult.
 
 (** Program environment *)
-#[global]
-Instance Inhab_val_expr : Inhab (val -> expr).
+#[global] Instance Inhab_val_expr : Inhab (val -> expr).
 Proof.
   constructor.
   exists (fun v => pval v).
@@ -2591,150 +2660,166 @@ Qed.
 Definition penv := Fmap.fmap var (val -> expr).
 Definition empty_penv : penv := Fmap.empty.
 
-Implicit Types Re : eresult.
-Implicit Types penv : penv.
-
 Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
-  | eval_pval : forall h v env,
-    bigstep env h (pval v) h (enorm v)
+| eval_pval env h v :
+  bigstep env h (pval v) h (enorm v)
 
   (* there is no var rule *)
 
-  | eval_plet : forall h1 h3 h2 x e1 e2 v Re env,
-    bigstep env h1 e1 h3 (enorm v) ->
-    bigstep env h3 (subst x v e2) h2 Re ->
-    bigstep env h1 (plet x e1 e2) h2 Re
+| eval_plet env h1 h2 x e1 e2 r hi v :
+  bigstep env h1 e1 hi (enorm v) ->
+  bigstep env hi (subst x v e2) h2 r ->
+  bigstep env h1 (plet x e1 e2) h2 r
 
-  | eval_padd : forall h x y env,
-    bigstep env h (padd (pval (vint x)) (pval (vint y))) h (enorm (vint (x + y)))
+| eval_padd env h x y :
+  bigstep env h (padd (pval (vint x)) (pval (vint y))) h (enorm (vint (x + y)))
 
-  | eval_pminus : forall h x y env,
-    bigstep env h (pminus (pval (vint x)) (pval (vint y))) h (enorm (vint (x - y)))
+| eval_pfun env h x e :
+  bigstep env h (pfun x e) h (enorm (vfun x e))
 
-  | eval_pfun : forall h x e env,
-    bigstep env h (pfun x e) h (enorm (vfun x e))
+| eval_pfix env h f x e :
+  bigstep env h (pfix f x e) h (enorm (vfix f x e))
 
-  | eval_pfix : forall h x e xf env,
-    bigstep env h (pfix xf x e) h (enorm (vfix xf x e))
+| eval_app_fun env h1 h2 x e v2 r :
+  bigstep env h1 (subst x v2 e) h2 r ->
+  bigstep env h1 (papp (pval (vfun x e)) (pval v2)) h2 r
 
-  | eval_app_fun : forall v1 v2 h x e Re env,
-    v1 = vfun x e ->
-    bigstep env h (subst x v2 e) h Re ->
-    bigstep env h (papp (pval v1) (pval v2)) h Re
+| eval_app_fix env h1 h2 v1 f x e v2 r :
+  v1 = vfix f x e ->
+  bigstep env h1 (subst x v2 (subst f v1 e)) h2 r ->
+  bigstep env h1 (papp (pval v1) (pval v2)) h2 r
 
-  | eval_app_fix : forall v1 v2 h x e Re xf env,
-    v1 = vfix xf x e ->
-    bigstep env h (subst x v2 (subst xf v1 e)) h Re ->
-    bigstep env h (papp (pval v1) (pval v2)) h Re
+| eval_app_unk env h1 h2 f v r fn :
+  Fmap.read env f = fn ->
+  bigstep env h1 (fn v) h2 r ->
+  bigstep env h1 (papp (pvar f) (pval v)) h2 r
 
-  | eval_app_unk : forall va h Re efn xf env,
-    Fmap.read env xf = efn ->
-    bigstep env h (efn va) h Re ->
-    bigstep env h (papp (pvar xf) (pval va)) h Re
+| eval_pif_true env h1 h2 e1 e2 r :
+  bigstep env h1 e1 h2 r ->
+  bigstep env h1 (pif (pval (vbool true)) e1 e2) h2 r
 
-  | eval_pif_true : forall h1 h2 Re e1 e2 env,
-    bigstep env h1 e1 h2 Re ->
-    bigstep env h1 (pif (pval (vbool true)) e1 e2) h2 Re
+| eval_pif_false env h1 h2 e1 e2 r :
+  bigstep env h1 e2 h2 r ->
+  bigstep env h1 (pif (pval (vbool false)) e1 e2) h2 r
 
-  | eval_pif_false : forall h1 h2 Re e1 e2 env,
-    bigstep env h1 e2 h2 Re ->
-    bigstep env h1 (pif (pval (vbool false)) e1 e2) h2 Re
+| eval_pref env h v p :
+  ~ Fmap.indom h p ->
+  bigstep env h (pref (pval v)) (Fmap.update h p v) (enorm (vloc p))
 
-  | eval_pref : forall h v p env,
-    ~ Fmap.indom h p ->
-    bigstep env h (pref (pval v)) (Fmap.update h p v) (enorm (vloc p))
+| eval_pderef env h p :
+  Fmap.indom h p ->
+  bigstep env h (pderef (pval (vloc p))) h (enorm (Fmap.read h p))
 
-  | eval_pderef : forall h p env,
-    Fmap.indom h p ->
-    bigstep env h (pderef (pval (vloc p))) h (enorm (Fmap.read h p))
+| eval_passign env h p v :
+  Fmap.indom h p ->
+  bigstep env h (passign (pval (vloc p)) (pval v)) (Fmap.update h p v) (enorm vunit)
 
-  | eval_passign : forall h p v env,
-    Fmap.indom h p ->
-    bigstep env h (passign (pval (vloc p)) (pval v)) (Fmap.update h p v) (enorm vunit)
-
-  | eval_passert : forall h env,
-    bigstep env h (passert (pval (vbool true))) h (enorm vunit).
-
-(* Definition compatible r1 r2 :=
-  match (r1, r2) with
-  | (norm r3, enorm r4) => r3 = r4
-end. *)
+| eval_passert env h :
+  bigstep env h (passert (pval (vbool true))) h (enorm vunit).
 
 (** * Program logic rules *)
-Inductive forward : expr -> flow -> Prop :=
-  | fw_val: forall n,
-    forward (pval n) (ens (fun res => \[res = n]))
+Inductive forward : expr -> spec -> Prop :=
+| fw_val v :
+  forward (pval v) (fun r => ens \[r = v])
 
-  (* there is no need for fw_var/a store because substitution will take care of it before it is reached *)
+(* there is no need for fw_var/a store because substitution will take care of it before it is reached *)
 
-  | fw_let: forall x e1 e2 f1 f2 v,
-    forward e1 f1 ->
-    flow_res f1 v ->
-    forward (subst x v e2) f2 ->
-    forward (plet x e1 e2) (f1 ;; f2)
+| fw_let x e1 e2 f1 f2 :
+  forward e1 f1 ->
+  (forall v, forward (subst x v e2) (f2 v)) ->
+  forward (plet x e1 e2) (fun r => fex (fun v => f1 v;; f2 v r))
 
-  | fw_if: forall b e1 e2 f1 f2,
-    forward e1 f1 ->
-    forward e2 f2 ->
-    forward (pif (pval (vbool b)) e1 e2)
-      (disj
-        (ens_ \[b = true];; f1)
-        (ens_ \[b = false];; f2))
+| fw_if b e1 e2 f1 f2 :
+  forward e1 f1 ->
+  forward e2 f2 ->
+  forward
+    (pif (pval (vbool b)) e1 e2)
+    (fun r => disj (req \[b = true];; f1 r) (req \[b = false];; f2 r))
 
-  | fw_deref: forall x,
-    forward (pderef (pval (vloc x)))
-      (fall (fun y => (req (x~~>y)
-        (ens (fun res => \[res = y] \* x~~>y)))))
+| fw_ref v :
+  forward
+    (pref (pval v))
+    (fun r => fex (fun p => ens (\[r = vloc p] \* p ~~> v)))
 
-  | fw_ref: forall v,
-    forward (pref (pval v)) (fex (fun y =>
-      (ens (fun r => \[r = vloc y] \* y~~>v))))
+| fw_deref p :
+  forward
+    (pderef (pval (vloc p)))
+    (fun r => fex (fun v => req (p ~~> v);; ens (\[r = v] \* p ~~> v)))
 
-  | fw_assign: forall x y v,
-    forward (passign (pval (vloc x)) (pval y))
-      (req (x~~>v) (ens_ (x~~>y)))
+| fw_assign p v :
+  forward
+    (passign (pval (vloc p)) (pval v))
+    (fun _ => fex (fun v' => req (p ~~> v');; ens (p ~~> v)))
 
-  | fw_assert: forall b,
-    forward (passert (pval (vbool b))) (req_ \[b = true])
+| fw_assert b :
+  forward (passert (pval (vbool b))) (fun _ => req \[b = true])
 
-  | fw_app_fun: forall vf x e va f,
+| fw_app_unk f v :
+  forward (papp (pvar f) (pval v)) (fun r => unk f v r).
+
+(*
+| fw_app_fun: forall vf x e va f,
     vf = vfun x e ->
     forward (subst x va e) f ->
     forward (papp (pval vf) (pval va)) f
 
-  | fw_app_fix: forall vf x e va f xf,
+| fw_app_fix: forall vf x e va f xf,
     vf = vfix xf x e ->
     forward (subst x va (subst xf vf e)) f ->
     forward (papp (pval vf) (pval va)) f
+*)
 
-  | fw_app_unk: forall xf va,
-    forward (papp (pvar xf) (pval va)) (fex (fun r => unk xf va r)).
+Module ForwardExamples.
+
+  (* let x = 1 in x *)
+  Definition e1_let := plet "x" (pval (vint 1)) (pvar "x").
+  Definition f1_let := fun r => fex (fun x => ens \[x = vint 1];; ens \[r = x]).
+
+  Example ex1 : forward e1_let f1_let.
+  Proof.
+    apply fw_let.
+    - apply fw_val.
+    - intro x.
+      simpl.
+      apply fw_val.
+  Qed.
+
+  (* let x = f 1 in x + 1 *)
+  Definition e2_let := plet "x" (papp (pvar "f") (pval (vint 1))) (pvar "x").
+  Definition f2_let := fun r => fex (fun x => unk "f" (vint 1) x;; ens \[r = x]).
+  
+  Example ex2 : forward e2_let f2_let.
+  Proof.
+    apply fw_let.
+    - apply fw_app_unk.
+    - intro x.
+      simpl.
+      apply fw_val.
+  Qed.
+
+End ForwardExamples.
 
 
 Module Soundness.
 
   (** * Specification assertions *)
   (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
-  Definition pair_valid_under penv env e f : Prop :=
-    forall h1 h2 v,
-      bigstep penv h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
+  Definition pair_valid_under penv senv e phi :=
+    forall h1 h2 v, bigstep penv h1 e h2 (enorm v) -> satisfies_with_result senv h1 h2 v phi.
 
   (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid specification assertion. *)
   Definition env_compatible penv env :=
     forall pfn xf x,
       Fmap.read penv xf = pfn ->
       exists sfn, Fmap.read env xf = sfn /\
-      forall v, pair_valid_under penv env (pfn x) (sfn x v).
+      pair_valid_under penv env (pfn x) (sfn x).
 
   (** The full definition requires compatible environments. *)
-  Definition spec_assert (e: expr) (f: flow) : Prop :=
-    forall penv env,
-      env_compatible penv env -> pair_valid_under penv env e f.
+  Definition spec_assert (e : expr) (phi : spec) :=
+    forall penv senv, env_compatible penv senv -> pair_valid_under penv senv e phi.
 
-  #[global]
-  Instance Proper_spec_assert : Proper
-    (eq ====> entails ====> impl)
-    spec_assert.
+  #[global] Instance Proper_spec_assert :
+    Proper (eq ====> entails_with_result ====> impl) spec_assert.
   Proof.
     unfold entails, Proper, respectful, impl, spec_assert, pair_valid_under.
     intros. subst.
@@ -2742,55 +2827,48 @@ Module Soundness.
   Qed.
 
   (** Structural rules *)
-  Lemma sem_consequence : forall f1 f2 e,
-    entails f1 f2 ->
-    spec_assert e f1 ->
-    spec_assert e f2.
+  Lemma sem_consequence :
+    forall phi1 phi2 e,
+      entails_with_result phi1 phi2 ->
+      spec_assert e phi1 ->
+      spec_assert e phi2.
   Proof.
     introv He H.
-    unfold spec_assert. intros.
+    unfold spec_assert. intros. sort.
     rewrite He in H.
     eauto.
   Qed.
 
   (** Rules for program constructs *)
-  Lemma sem_pval: forall n,
-    spec_assert (pval n) (ens (fun res => \[res = n])).
+  Lemma sem_pval :
+    forall v, spec_assert (pval v) (fun r => ens \[r = v]).
   Proof.
     unfold spec_assert. introv Hc Hb.
     (* appeal to how e executes to tell us about the heaps *)
     inverts Hb as Hb.
     (* justify that the staged formula describes the heap *)
-    apply ens_pure_intro.
-    reflexivity.
-  Qed.
+    admit. (* can be proven *)
+  Admitted.
 
-  Lemma sem_plet: forall x e1 e2 f1 f2 v,
-    spec_assert e1 f1 ->
-    flow_res f1 v ->
-    spec_assert (subst x v e2) f2 ->
-    spec_assert (plet x e1 e2) (f1;; f2).
+  Lemma sem_plet:
+    forall x e1 e2 f1 f2,
+      spec_assert e1 f1 ->
+      (forall v, spec_assert (subst x v e2) (f2 v)) ->
+      spec_assert (plet x e1 e2) (fun r => fex (fun v => f1 v;; f2 v r)).
   Proof.
-    intros.
-    unfold spec_assert, pair_valid_under. introv Hc Hb.
-
-    (* reason about how the let executes *)
-    inverts Hb as. introv He1 He2.
-
-    (* use the specification assertion we have about e1 *)
-    unfold spec_assert in H.
-    lets H3: H env He1. exact Hc. clear H He1. sort.
-
-    (* we need to know that spec value and program value are the same *)
-    specializes H0 H3. subst.
-    injects H0.
-
-    (* know about f2 *)
-    specializes H1 env h3 h2 v0 He2. clear He2.
-
-    applys* s_seq h3 (norm v).
+    unfold spec_assert, pair_valid_under.
+    intros x e1 e2 f1 f2 H_e1 H_e2.
+    intros penv senv H_compatible h1 h2 v H_bigstep. sort.
+    inversion H_bigstep. subst. clear H_bigstep.
+    specialize (H_e1 _ _ H_compatible _ _ _ H6).
+    specialize (H_e2 _ _ _ H_compatible _ _ _ H7).
+    clear H6 H7 H_compatible.
+    apply s_fex.
+    exists v0.
+    eapply s_seq; eauto.
   Qed.
 
+  (*
   Lemma sem_pif: forall b e1 e2 f1 f2,
     spec_assert e1 f1 ->
     spec_assert e2 f2 ->
@@ -2834,30 +2912,28 @@ Module Soundness.
       specializes Hf env Hb.
       now apply s_disj_r. }
   Qed.
+   *)
 
-  Lemma sem_pderef: forall x,
-    spec_assert (pderef (pval (vloc x)))
-      (fall (fun y => (req (x~~>y)
-        (ens (fun res => \[res = y] \* x~~>y))))).
+  Lemma sem_pderef:
+    forall p,
+      spec_assert
+        (pderef (pval (vloc p)))
+        (fun r => fex (fun v => req (p ~~> v);; ens (\[r = v] \* p ~~> v))).
   Proof.
-    intros. unfold spec_assert. introv Hc Hb.
-    inverts Hb as Hb.
-    constructor. intros v.
-    constructor. intros.
-    constructor. exists v. exists hp.
-    intuition.
-    { f_equal.
-      apply hsingle_inv in H.
-      rewrite H in H1.
-      subst.
-      rewrite Fmap.union_comm_of_disjoint; auto.
-      rewrite Fmap.read_union_l.
-      apply Fmap.read_single.
-      apply Fmap.indom_single. }
-    { rewrite hstar_hpure_l.
-      intuition. }
-  Qed.
+    unfold spec_assert, pair_valid_under.
+    intros p penv senv H_compatible h1 h2 v H_bigstep.
+    inversion H_bigstep. subst. clear H_bigstep.
+    apply s_fex.
+    exists (Fmap.read h2 p).
+    eapply s_seq.
+    - admit. (* Can be proven *)
+    - eapply s_ens.
+      + (* hold on a singleton heap p ~~> Fmap.read h2 p *) admit.
+      + admit. (* Can be proven *)
+      + admit. (* Can be proven *)
+  Admitted.
 
+  (*
   Lemma sem_pref: forall v,
     spec_assert (pref (pval v)) (fex (fun y =>
       (ens (fun r => \[r = vloc y] \* y~~>v)))).
@@ -2913,19 +2989,22 @@ Module Soundness.
       rewrite H.
       apply Fmap.indom_single. }
   Qed.
+   *)
 
-  Lemma sem_passert: forall b,
-    spec_assert (passert (pval (vbool b))) (req_ \[b = true]).
+  Lemma sem_passert:
+    forall b, spec_assert (passert (pval (vbool b))) (fun _ => req \[b = true]).
   Proof.
-    intros.
-    unfold spec_assert. introv Hc Hb.
-    inverts Hb as Hb.
-    constructor.
-    intros.
-    apply hpure_inv in H. destruct H. rewrite H2 in H0. rew_fmap. rewrite H0.
-    apply empty_intro.
+    unfold spec_assert, pair_valid_under.
+    intros b penv senv H_compatible h1 h2 v H_bigstep.
+    inversion H_bigstep. subst. clear H_bigstep.
+    eapply s_req.
+    apply hpure_intro.
+    reflexivity.
+    fmap_eq.
+    fmap_disjoint.
   Qed.
 
+  (*
   Lemma sem_papp_fun: forall vf x e va f,
     vf = vfun x e ->
     spec_assert (subst x va e) f ->
@@ -2966,10 +3045,12 @@ Module Soundness.
     eapply s_unk. { exact H0. }
     specializes H1 v H6.
   Qed.
+   *)
 
   Local Notation derivable := forward.
   Local Notation valid := spec_assert.
 
+  (*
   (** * Soundness *)
   Theorem soundness : forall e f,
     derivable e f -> valid e f.
@@ -2987,6 +3068,14 @@ Module Soundness.
     - eapply sem_papp_fix; eauto.
     - eapply sem_papp_unk.
   Qed.
+   *)
+  
+  (* what we want is to write "forward" as a FUNCTION instead,
+     in which we can just "compute" the strongest postcondition with
+     a single invocation of "simpl"
+     
+     And then we prove the soundness of such function.
+   *)
 
 End Soundness.
 
@@ -3002,19 +3091,19 @@ Module HistoryTriples.
       └───────────[f]──────────┘
   *)
   Definition hist_triple fh e f :=
-    forall penv env h0 h1 h2 v R,
-      satisfies env h0 h1 R fh ->
+    forall penv env h0 h1 h2 v r,
+      satisfies_with_result env h0 h1 r fh ->
       env_compatible penv env ->
       bigstep penv h1 e h2 (enorm v) ->
-      satisfies env h0 h2 (norm v) f.
+      satisfies_with_result env h0 h2 v f.
 
   (** History triples are contravariant in the history. *)
   #[global]
   Instance Proper_hist_triple : Proper
-    (flip entails ====> eq ====> entails ====> impl)
+    (flip entails_with_result ====> eq ====> entails_with_result ====> impl)
     hist_triple.
   Proof.
-    unfold entails, Proper, respectful, impl, hist_triple, flip.
+    unfold entails_with_result, Proper, respectful, impl, hist_triple, flip.
     intros. subst.
     apply H1.
     applys H2.
@@ -3026,7 +3115,7 @@ Module HistoryTriples.
 
   #[global]
   Instance Proper_hist_triple_bi : Proper
-    (bientails ====> eq ====> bientails ====> impl)
+    (bientails_with_result ====> eq ====> bientails_with_result ====> impl)
     hist_triple.
   Proof.
     unfold entails, Proper, respectful, impl, hist_triple, flip.
@@ -3041,16 +3130,20 @@ Module HistoryTriples.
 
   (** Structural rules *)
   Lemma hist_conseq : forall f1 f2 f3 f4 e,
-    entails f1 f3 ->
-    entails f4 f2 ->
+    entails_with_result f1 f3 ->
+    entails_with_result f4 f2 ->
     hist_triple f3 e f4 ->
     hist_triple f1 e f2.
   Proof.
     unfold hist_triple. introv He1 He2 H. introv Hf1 Hc.
+    admit.
+    (*
     rewrite He1 in Hf1.
     specializes H Hf1 Hc.
-  Qed.
+     *)
+  Abort.
 
+  (*
   Lemma hist_frame : forall fh fr f e,
     hist_triple fh e f ->
     hist_triple (fr;; fh) e (fr;; f).
@@ -3059,7 +3152,9 @@ Module HistoryTriples.
     inverts H0 as H0. destr H0.
     applys* s_seq.
   Qed.
+   *)
 
+  (*
   Lemma hist_sem : forall f e,
     spec_assert e f <->
     hist_triple empty e f.
@@ -3076,6 +3171,7 @@ Module HistoryTriples.
       apply H0.
       assumption. }
   Qed.
+   *)
 
   (** The (arbitrary) result of the history does not matter, enabling this rewriting. *)
   Lemma hist_pre_result : forall fh f e,
@@ -3247,30 +3343,6 @@ Module HistoryTriples.
   Qed.
 
 End HistoryTriples.
-
-Module ForwardExamples.
-
-  (* let x = 1 in x *)
-  Definition e1_let := (plet "x" (pval (vint 1)) (pvar "x")).
-  Definition f1 :=
-    ens (fun v => \[v = vint 1]) ;;
-    ens (fun r => \[r = vint 1]).
-
-  Example ex1:
-    forward e1_let f1.
-  Proof.
-    eapply fw_let.
-    - apply fw_val.
-    - unfold flow_res. intros.
-      destruct R.
-      apply ens_pure_inv in H.
-      destruct H.
-      subst. reflexivity.
-    - simpl.
-      apply fw_val.
-  Qed.
-
-End ForwardExamples.
 
 (** * Correspondence with the paper *)
 (** ** Section 2.1. A Simple Example *)
