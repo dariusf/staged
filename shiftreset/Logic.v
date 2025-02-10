@@ -509,8 +509,6 @@ Section Propriety.
     }
   Abort.
 
-  (* Definition sf_entails *)
-
   #[global]
   Instance Proper_seq_sf :
     Proper (entails ====> entails ====> entails) seq.
@@ -1135,6 +1133,28 @@ Proof.
   { specializes~ H H1. }
 Qed.
 
+(* Definition returns_value (f:flow) : Prop :=
+  forall s1 s2 h1 h2 v, satisfies s1 s2 h1 h2 (norm v) f.
+
+Lemma sf_seq_inv : forall f1 f2,
+  shift_free (f1;; f2) ->
+  shift_free f1 /\ (returns_value f1 -> shift_free f2).
+Proof.
+  unfold shift_free, not. intros.
+  split; intros.
+  { eapply H.
+    eapply s_seq_sh.
+    exact H0. }
+  { unfold returns_value in H0.
+  (* destr H0. *)
+    eapply H.
+    eapply s_seq.
+    2: eassumption.
+    apply H0.
+
+    }
+Qed. *)
+
 Lemma sf_fex : forall A (p:A->flow),
   (forall b, shift_free (p b)) ->
   shift_free (@fex A p).
@@ -1224,6 +1244,55 @@ Ltac intro_shs :=
     eapply s_seq; [ apply ens_void_pure_intro | ]
   | _ => fail
   end.
+
+Definition sf_entails f1 f2 :=
+  shift_free f1 -> shift_free f2 -> entails f1 f2.
+  (* shift_free f1 /\ entails f1 f2. *)
+
+Instance sf_entails_refl : Reflexive sf_entails.
+Proof.
+  unfold Reflexive, sf_entails.
+  intros.
+  apply entails_refl.
+Qed.
+
+(* Instance sf_entails_trans : Transitive sf_entails.
+Proof.
+  unfold Transitive, sf_entails.
+  intros.
+  apply H in H1.
+
+  apply H in H1.
+  auto.
+Qed. *)
+
+(* #[global]
+Instance Proper_seq_sf :
+  Proper (sf_entails ====> sf_entails ====> sf_entails) seq.
+Proof.
+  unfold Proper, respectful, sf_entails, entails. intros.
+  destr H. destr H0.
+  splits.
+  shiftfree.
+  shiftfree.
+  intros.
+  inverts H0 as H0. 2: { apply H1 in H0. false. }
+  apply* s_seq.
+Qed. *)
+
+(* #[global]
+Instance Proper_seq_sf :
+  Proper (sf_entails ====> sf_entails ====> sf_entails) seq.
+Proof.
+  unfold Proper, respectful, sf_entails, entails. intros.
+  destr H. destr H0.
+  splits.
+  shiftfree.
+  shiftfree.
+  intros.
+  inverts H0 as H0. 2: { apply H1 in H0. false. }
+  apply* s_seq.
+Qed. *)
 
 (** * Reduction rules *)
 Lemma red_normal : forall f r,
