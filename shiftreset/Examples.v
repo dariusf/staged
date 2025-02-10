@@ -38,6 +38,27 @@ Definition foo_spec : flow :=
   
   req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
 
+(* Lemma norm_rs_seq_seq_ens : forall s1 H x v1 v2 f r f1,
+  entails_under s1 (ens_ H;; rs (unk x v1 v2;; f) r) f1 ->
+  entails_under s1 (rs ((ens_ H;; unk x v1 v2);; f) r) f1.
+Proof.
+  unfold entails_under.
+  intros.
+Admitted. *)
+
+(* Qed. *)
+
+Lemma ent_rs_seq_assoc_unk : forall s1 x u v1 v2 f1 f2 f r,
+  (* entails_under s1 (ens_ H;; rs (unk x v1 v2;; f) r) f1 -> *)
+  entails_under (Fmap.update s1 x u) (rs ((f1;; u v1 v2);; f2) r) f ->
+  entails_under (Fmap.update s1 x u) (rs ((f1;; unk x v1 v2);; f2) r) f.
+Proof.
+  unfold entails_under. intros.
+
+(* Qed. *)
+Admitted.
+
+
 Theorem foo_summary : forall r, exists f,
   entails_under s_env (foo r) (f;; foo_spec).
 Proof.
@@ -103,6 +124,19 @@ rs
   rewrite norm_req_pure_l. 2: { reflexivity. }
   rewrite norm_seq_ens_empty.
 
+  apply ent_rs_seq_assoc_unk.
+
+  (* rewrite norm_ens_ens_. *)
+  rewrite red_normal.
+  (* setoid_rewrite red_normal at 2. *)
+
+
+  (* apply norm_rs_seq_seq_ens. *)
+
+  (* apply ent_seq_ens_req. *)
+
+  (* either prove k is sf, rewrite with sf_entails,
+    or have a special case rule *)
 
   (* need to prove k is shift free to reassoc, but cannot unfold it *)
   (* 2: {
@@ -112,10 +146,10 @@ rs
   (* ent_seq_ens_req. *)
   (* try to prove special case of proper if shift free *)
 
-  rewrite <- norm_seq_assoc.
+  (* rewrite <- norm_seq_assoc.
   2: {
     shiftfree.
-  }
+  } *)
 
 (* can only rewrite on the left of ;;, so we have to do things in this order *)
 

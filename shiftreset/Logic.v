@@ -509,6 +509,29 @@ Section Propriety.
     }
   Abort.
 
+  (* Definition sf_entails *)
+
+  #[global]
+  Instance Proper_seq_sf :
+    Proper (entails ====> entails ====> entails) seq.
+  Proof.
+    unfold Proper, entails, respectful.
+    intros.
+    inverts H1 as H1; destr H1.
+    { apply* s_seq. }
+    { apply H in H1.
+      pose proof s_seq_sh.
+      specializes H2 H1.
+      applys_eq H2. clear H2.
+      f_equal.
+      (* the proof is stuck here because we want y0 and x0 to be related by
+         something weaker than equality (entailment), but the relation
+         between results in the semantics is equality *)
+      admit.
+      (* TODO what if we can assume shift-freedom to get rid of this case? *)
+    }
+  Abort.
+
   #[global]
   Instance Proper_seq_entails_under_left : forall env,
     Proper (entails_under env ====> eq ====> entails_under env) seq.
