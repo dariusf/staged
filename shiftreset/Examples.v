@@ -49,7 +49,7 @@ Admitted. *)
 (* Qed. *)
 
 Lemma norm_rs_seq_distr : forall f1 f2 r,
-shift_free f1 ->
+  shift_free f1 ->
   entails (rs (f1;; f2) r) (∃ r1, rs f1 r1;; rs f2 r).
 Proof.
   unfold entails. intros.
@@ -66,13 +66,18 @@ Proof.
     eassumption.
     }
     {
+      (* unsure if this is needed, could relax *)
+      cont_eq.
+      (* apply s_fex. exs. *)
+      (* eapply s_seq. *)
+      (* eapply s_rs_sh. eassumption. *)
+      (* Fail apply H8. *)
+      (* applys_eq H8. *)
+
       apply H in H0. false.
 
       (* f1 is shift *)
     (* cont_eq.
-    apply s_fex. exs.
-    eapply s_seq.
-    eapply s_rs_sh. eassumption.
     (* exact H7. *)
     admit. *)
     (* eassumption. *)
@@ -195,6 +200,16 @@ rs
 
   rewrite norm_req_pure_l. 2: { reflexivity. }
   rewrite norm_seq_ens_empty.
+
+  rewrite norm_rs_seq_distr.
+  2: {
+    shiftfree.
+  }
+  fintro r0.
+  rewrite red_skip.
+  2: { shiftfree. }
+  2: { shiftfree. }
+
 
   (* apply ent_rs_seq_assoc_unk.
 
