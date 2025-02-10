@@ -94,18 +94,28 @@ rs
   } *)
 
   rewrite norm_reassoc.
-  (* need to prove k is shift free to reassoc, but cannot unfold it *)
-  (* 2: {
-    shiftfree.
-  } *)
-  rewrite <- norm_seq_assoc.
 
-(* can only rewrite on the left of ;;, so we have to do things in this order *)
+
   rewrite norm_rs_req.
   apply ent_req_r.
   rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
 
-  rewrite norm_req_pure_l.
+  rewrite norm_req_pure_l. 2: { reflexivity. }
+  rewrite norm_seq_ens_empty.
+
+
+  (* need to prove k is shift free to reassoc, but cannot unfold it *)
+  (* 2: {
+    shiftfree.
+  } *)
+
+
+  rewrite <- norm_seq_assoc.
+  2: {
+    shiftfree.
+  }
+
+(* can only rewrite on the left of ;;, so we have to do things in this order *)
 
   (* Search (req \[_] _). *)
 (* norm_seq_req_emp. *)

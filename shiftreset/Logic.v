@@ -2434,9 +2434,9 @@ Proof.
       destr H1.
       applys* s_seq.
       applys* s_seq. }
-    inverts H1 as H1. destr H1.
-    apply H0 in H9. false.
-    apply H in H1. false. }
+    { inverts H1 as H1. destr H1.
+      apply H0 in H9. false.
+      apply H in H1. false. } }
 Qed.
 
 Lemma norm_seq_assoc : forall f1 f2 f3,
@@ -2485,6 +2485,20 @@ Proof.
   inverts H0 as H0. destr H0.
   hinv H0. hinv H3. hinv H0. subst. injects H1.
   rew_fmap *.
+Qed.
+
+Lemma ent_seq_ens_req : forall env f f1 H,
+  entails_under env (ens_ H;; f1) f ->
+  entails_under env f1 (req H f).
+Proof.
+  unfold entails_under. intros.
+  apply s_req. intros.
+  apply H0.
+  eapply s_seq.
+  apply s_ens. exists vunit hp.
+  splits*.
+  hintro; jauto.
+  subst. assumption.
 Qed.
 
 Lemma ent_seq_ens_dep_l : forall env f f1 p,

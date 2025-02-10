@@ -2352,6 +2352,20 @@ Proof.
   auto.
 Qed.
 
+Lemma ent_seq_ens_req : forall env f f1 H,
+  entails_under env (ens_ H;; f1) f ->
+  entails_under env f1 (req H f).
+Proof.
+  unfold entails_under. intros.
+  apply s_req. intros.
+  apply H0.
+  eapply s_seq.
+  apply s_ens. exists vunit hp.
+  splits*.
+  hintro; jauto.
+  subst. assumption.
+Qed.
+
 Lemma ent_seq_ens_r : forall env f f1 P,
   P -> entails_under env f f1 ->
   entails_under env f (ens_ \[P];; f1).
