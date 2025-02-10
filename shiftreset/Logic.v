@@ -2837,6 +2837,17 @@ Proof.
   applys* s_seq h3.
 Qed.
 
+Lemma entails_seq : forall f f1 f2,
+  shift_free f ->
+  entails f1 f2 ->
+  entails (f;; f1) (f;; f2).
+Proof.
+  unfold entails.
+  intros.
+  inverts H1 as H1. 2: { apply H in H1. false. }
+  apply* s_seq.
+Qed.
+
 Lemma norm_seq_ens_empty : forall f,
   bientails (ens_ \[];; f) f.
 Proof.
@@ -2947,16 +2958,39 @@ Qed.
 
 Lemma ent_all_r : forall f A (fctx:A -> flow) env,
   (forall b, entails_under env f (fctx b)) ->
-  entails_under env f (fall (fun b => fctx b)).
+  entails_under env f (∀ b, fctx b).
 Proof.
   unfold entails_under. intros.
   constructor. intros b.
   auto.
 Qed.
 
+Lemma fall_intro : forall s1 s2 h1 h2 R A (fctx:A -> flow),
+  (forall b, satisfies s1 s2 h1 h2 R (fctx b)) ->
+  satisfies s1 s2 h1 h2 R (∀ b, fctx b).
+Proof.
+  intros.
+  constructor.
+  auto.
+Qed.
+
+(* Converse is not true because f1 could depend on b *)
+Lemma ent_seq_all_r : forall f f1 A (fctx:A -> flow) env,
+  shift_free f1 ->
+  entails_under env f (f1;; ∀ b, fctx b) ->
+  entails_under env f (∀ b, f1;; fctx b).
+Proof.
+  unfold entails_under. intros.
+  specializes H0 H1.
+  apply fall_intro. intros.
+  inverts H0 as H0. 2: { apply H in H0. false. }
+  inverts H9 as H9. specializes H9 b.
+  apply* s_seq.
+Qed.
+
 Lemma ent_all_l : forall f A (fctx:A -> flow) env,
   (exists b, entails_under env (fctx b) f) ->
-  entails_under env (fall (fun b => fctx b)) f.
+  entails_under env (∀ b, fctx b) f.
 Proof.
   unfold entails_under. intros.
   destr H.
@@ -2987,7 +3021,7 @@ Qed.
 
 Lemma ent_seq_all_l : forall f f1 A (fctx:A -> flow) env,
   (exists b, entails_under env (fctx b;; f1) f) ->
-  entails_under env (fall (fun b => fctx b);; f1) f.
+  entails_under env ((∀ b, fctx b);; f1) f.
 Proof.
   unfold entails_under. intros.
   destr H.
@@ -2997,6 +3031,35 @@ Proof.
     applys* s_seq. }
   { inverts H0 as H0. specializes H0 b.
     apply* s_seq_sh. }
+Qed.
+
+Lemma ent_seq_ex_l : forall f f1 A (fctx:A -> flow) env,
+  (forall b, shift_free (fctx b)) ->
+  (forall b, entails_under env (fctx b;; f1) f) ->
+  entails_under env ((∃ b, fctx b);; f1) f.
+Proof.
+  unfold entails_under. intros.
+  inverts H1 as H1.
+  2: { inverts H1 as H1. destr H1. specializes H H2. false. }
+  inverts H1 as H1. destr H1.
+  applys H0 b.
+  apply* s_seq.
+Qed.
+
+Lemma ent_seq_ex_r : forall f f1 A (fctx:A -> flow) env,
+  (forall b, shift_free (fctx b)) ->
+  (exists b, entails_under env f (fctx b;; f1)) ->
+  entails_under env f ((∃ b, fctx b);; f1).
+Proof.
+  unfold entails_under. intros.
+  destr H0.
+  specializes H2 H1.
+  inverts H2 as H2. 2: { apply H in H2. false. }
+  eapply s_seq.
+  apply s_fex.
+  exists b.
+  eassumption.
+  assumption.
 Qed.
 
 Lemma ent_req_r : forall f f1 H env,

@@ -34,37 +34,56 @@ Definition foo_spec : flow :=
   (* ∃ (uf:val->val->flow), defun "k" uf;; *)
 
   (* terrible defun workaround *)
-  ∃ b,
+  (* end terrible workarounds *)
+  
+  req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
+
+Theorem foo_summary : forall r, exists f,
+  entails_under s_env (foo r) (f;; foo_spec).
+Proof.
+  intros.
+
+(* eexists. *)
+  exists (∃ b,
 defun "k"
   (fun a0 r0 : val =>
 rs
   (ens_ \[vbool b = a0];;
 (ens (fun r1 => \[r1 = vbool b]));;
 (ens (fun r1 => \[b = true /\ r1 = vint 1 \/ b = false /\ r1 = vint 0])))
-  r0);;
-  (* end terrible workarounds *)
-  
-  req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
+  r0)).
 
-Theorem foo_summary : forall r,
-  entails_under s_env (foo r) foo_spec.
-Proof.
-  intros.
-  unfold foo_spec.
-  unfold foo.
+  unfold foo, foo_spec.
   rewrite norm_rs_ex. fintro x.
-  fintro x0. fintro a.
+  (* rewrite ent_seq_all_r. *)
+  (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+  (* eapply ent_seq_all_r. *)
+
+  (* Search (entails_under _ (_;; ∀ _, _) _). *)
+  (* Search (entails_under _ _ (_;; ∀ _, _)). *)
+  (* rewrite norm_rs_all. fintro x. *)
+  (* fintro x0. fintro a. *)
   funfold1 "s". unfold s.
   rewrite red_init.
   rewrite red_extend.
-  rewrite red_shift_elim.
-  2: { shiftfree. }
+  rewrite red_shift_elim. 2: { shiftfree. }
 
-  finst x.
+  (* Search (entails_under _ ((∃ _, _);; _) _). *)
+  (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+
+  apply ent_seq_ex_r. { intros. shiftfree. }
+  exists x.
+
+  (* eapply ent_seq_ex_l. *)
+
+  (* finst x. *)
   apply ent_seq_defun.
 
 
-  rewrite norm_rs_all. finst x0.
+  rewrite norm_rs_all.
+  fintro x0. finst x0.
+  fintro a.
+  (* finst x0. *)
   rewrite norm_rs_all. finst a.
   rewrite norm_rs_ex. fintro r1.
 
