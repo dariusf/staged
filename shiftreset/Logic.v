@@ -3154,6 +3154,38 @@ Proof.
     assumption. }
 Qed.
 
+Lemma req_pure_inv: forall s1 s2 h1 h2 R P f,
+  P ->
+  satisfies s1 s2 h1 h2 R (req \[P] f) ->
+  satisfies s1 s2 h1 h2 R f.
+Proof.
+  intros.
+  inverts H0 as H0.
+  specialize (H0 empty_heap h1). apply H0.
+  hintro. assumption. fmap_eq. fmap_disjoint.
+Qed.
+
+Lemma req_pure_intro : forall s1 s2 h1 h2 R P f,
+  (P -> satisfies s1 s2 h1 h2 R f) ->
+  satisfies s1 s2 h1 h2 R (req \[P] f).
+Proof.
+  intros.
+  apply s_req. intros.
+  hinv H0. subst. rew_fmap.
+  apply* H.
+Qed.
+
+Lemma norm_req_pure_l : forall P f,
+  P -> bientails (req \[P] f) f.
+Proof.
+  unfold bientails. intros.
+  iff H0.
+  { apply req_pure_inv in H0.
+    assumption.
+    assumption. }
+  { apply req_pure_intro. auto. }
+Qed.
+
 (** * Reduction example *)
 (**
   < (shift k. k i1) + (shift k1. k1 i2) >

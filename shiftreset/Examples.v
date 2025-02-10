@@ -80,23 +80,35 @@ rs
   apply ent_seq_defun.
 
 
-  rewrite norm_rs_all.
-  fintro x0. finst x0.
-  fintro a.
-  (* finst x0. *)
-  rewrite norm_rs_all. finst a.
+  fintro x0. rewrite norm_rs_all. finst x0.
+  fintro a. rewrite norm_rs_all. finst a.
   rewrite norm_rs_ex. fintro r1.
 
+(* 
+  funfold1 "k". unfold k.
+
+  rewrite red_normal.
+  2: {
+    shiftfree.
+    shiftfree.
+  } *)
+
   rewrite norm_reassoc.
+  (* need to prove k is shift free to reassoc, but cannot unfold it *)
+  (* 2: {
+    shiftfree.
+  } *)
   rewrite <- norm_seq_assoc.
 
 (* can only rewrite on the left of ;;, so we have to do things in this order *)
   rewrite norm_rs_req.
   apply ent_req_r.
-  rewrite norm_ens_req_transpose.
-  2: {
-    apply b_pts_single.
-  }
+  rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
+
+  rewrite norm_req_pure_l.
+
+  (* Search (req \[_] _). *)
+(* norm_seq_req_emp. *)
 
   
 
