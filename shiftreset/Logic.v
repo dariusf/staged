@@ -313,6 +313,21 @@ Ltac cont_eq :=
   | _ => idtac
   end.
 
+Definition res_weaker R1 R2 : Prop :=
+  match R1, R2 with
+  | norm v1, norm v2 => v1 = v2
+  | shft k1 f1 v1 c1, shft k2 f2 v2 c2 =>
+    k1 = k2 /\
+    (forall s1 s2 h1 h2 R,
+      satisfies s1 s2 h1 h2 R f1 ->
+      satisfies s1 s2 h1 h2 R f2) /\
+    v1 = v2 /\
+    (forall v s1 s2 h1 h2 R,
+      satisfies s1 s2 h1 h2 R (c1 v) ->
+      satisfies s1 s2 h1 h2 R (c2 v))
+  | _, _ => False
+  end.
+
 (** * Entailment *)
 Definition entails_under s1 f1 f2 :=
   forall h1 h2 s2 R,
@@ -321,6 +336,11 @@ Definition entails_under s1 f1 f2 :=
 Definition entails (f1 f2:flow) : Prop :=
   forall s1 s2 h1 h2 R,
     satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
+
+Definition entails1 (f1 f2:flow) : Prop :=
+  forall s1 s2 h1 h2 R1 R2,
+    res_weaker R1 R2 ->
+    satisfies s1 s2 h1 h2 R1 f1 -> satisfies s1 s2 h1 h2 R2 f2.
 
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 R s1 s2,
@@ -351,6 +371,33 @@ Proof.
   apply entails_refl.
   apply entails_trans.
 Qed.
+
+Instance entails1_refl : Reflexive entails1.
+Proof.
+  unfold Reflexive, entails1.
+  intros.
+  destruct R1; simpl in H.
+  { destruct R2. 2: { false. }
+    subst. assumption. }
+  { destruct R2. { false. }
+    destr H.
+    subst.
+    (* specializes H H0. *)
+    Abort.
+
+(* Instance entails1_trans : Transitive entails1.
+Proof.
+  unfold Transitive, entails1.
+  intros.
+  auto.
+Qed.
+
+Instance entails1_preorder : PreOrder entails1.
+Proof.
+  constructor.
+  apply entails1_refl.
+  apply entails1_trans.
+Qed. *)
 
 Instance entails_under_refl : forall env, Reflexive (entails_under env).
 Proof.
@@ -493,6 +540,26 @@ Section Propriety.
   Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
   Proof.
     unfold Proper, entails, respectful.
+    intros.
+    inverts H1 as H1; destr H1.
+    { apply* s_seq. }
+    { apply H in H1.
+      pose proof s_seq_sh.
+      specializes H2 H1.
+      applys_eq H2. clear H2.
+      f_equal.
+      (* the proof is stuck here because we want y0 and x0 to be related by
+         something weaker than equality (entailment), but the relation
+         between results in the semantics is equality *)
+      admit.
+      (* TODO what if we can assume shift-freedom to get rid of this case? *)
+    }
+  Abort.
+
+  #[global]
+  Instance Proper_seq : Proper (entails1 ====> entails1 ====> entails1) seq.
+  Proof.
+    unfold Proper, entails1, respectful.
     intros.
     inverts H1 as H1; destr H1.
     { apply* s_seq. }
