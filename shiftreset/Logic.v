@@ -1319,6 +1319,25 @@ Proof.
   applys_eq H7.
 Qed.
 
+(* try to prove the continuation is shift-free *)
+(* Lemma red_shift_elim1 : forall x v r fk fb a1 r1,
+  entails (rs (shs x fb v (fun r2 => rs fk r2)) r)
+    (defun x (fun a r =>
+      rs (ens_ \[v = a];; fk) r);; ens_ \[shift_free (unk x a1 r1)];; rs fb r).
+Proof.
+  unfold entails. intros.
+  inverts H as H. 2: { inverts H as H. destr H. vacuous. }
+  elim_shs H. clear H0.
+  inverts H8 as H8.
+  cont_eq.
+  eapply s_seq.
+  apply s_defun.
+  (* assumption. *)
+  reflexivity.
+  applys_eq H7.
+  (* eapply s_seq. *)
+Abort. *)
+
 (** * Entailment, entailment sequent, normalization *)
 Lemma norm_reassoc : forall H f1 f2,
   shift_free f1 ->
