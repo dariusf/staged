@@ -1340,27 +1340,30 @@ Abort. *)
 
 (** * Entailment, entailment sequent, normalization *)
 Lemma norm_reassoc : forall H f1 f2,
-  shift_free f1 ->
+  (* shift_free f1 -> *)
   entails (req H f1;; f2) (req H (f1;; f2)).
 Proof.
   unfold entails.
   intros.
-  inverts H1 as H1.
+  inverts H0 as H0.
   2: { (* handle shift. it may be possible to relax this *)
     apply s_req. intros.
-    inverts H1 as H1.
-    specializes H1 H2 H3 H4.
-    apply H0 in H1.
-    false.
+    inverts H0 as H0.
+    specializes H0 H1 H2 H3.
+    apply s_seq_sh.
+    assumption.
+    (* apply H0 in H1. *)
+    (* false. *)
   }
-  destr H1.
+
+  (* destr H1. *)
 
   (* find out about req *)
   constructor. intros hp hr. intros.
 
   (* prove the req *)
-  inverts H1 as H1.
-  specializes H1 hp hr H2 ___.
+  inverts H0 as H0.
+  specializes H0 hp hr H2 ___.
   applys* s_seq h3 r1.
 Qed.
 
