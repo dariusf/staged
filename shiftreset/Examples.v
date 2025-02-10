@@ -126,8 +126,24 @@ rs
 
   apply ent_rs_seq_assoc_unk.
 
+  rewrite <- norm_seq_assoc.
+  3: { shiftfree. }
+  2: { shiftfree. }
+
+
+(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+  (* Search (entails_under _ (rs (seq (ens _) _)) _). *)
+  (* rewrite <- red_skip. *)
+
+  (* rewrite red_normal. *)
+  (* rewrite norm_rs_rs. *)
+
+
+  (* apply ent_rs_ *)
+  (* Check 1. *)
+
   (* rewrite norm_ens_ens_. *)
-  rewrite red_normal.
+  (* rewrite red_normal. *)
   (* setoid_rewrite red_normal at 2. *)
 
 
@@ -146,10 +162,6 @@ rs
   (* ent_seq_ens_req. *)
   (* try to prove special case of proper if shift free *)
 
-  (* rewrite <- norm_seq_assoc.
-  2: {
-    shiftfree.
-  } *)
 
 (* can only rewrite on the left of ;;, so we have to do things in this order *)
 

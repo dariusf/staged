@@ -1333,6 +1333,24 @@ Proof.
     assumption. }
 Qed.
 
+Lemma red_skip2 : forall f1 f2 r,
+    shift_free f1 ->
+    bientails (rs (f1;; f2) r) (f1;; rs f2 r).
+Proof.
+  introv Hsf.
+  unfold bientails. iff H.
+  { apply* red_skip. }
+
+  inverts H as H. 2: { apply Hsf in H. false. }
+  inverts H7 as H7.
+  
+  { eapply s_rs_sh.
+    apply* s_seq.
+    assumption. }
+  { apply s_rs_val.
+    apply* s_seq. }
+Qed.
+
 Lemma red_init : forall x b r,
   entails (sh x b r)
     (shs x b r (fun r2 => rs (ens (fun r1 => \[r1 = r])) r2)).
