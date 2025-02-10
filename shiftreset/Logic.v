@@ -495,15 +495,15 @@ Section Propriety.
     unfold Proper, entails, respectful.
     intros.
     inverts H1 as H1; destr H1.
-    { eapply s_seq; eauto. }
+    { apply* s_seq. }
     { apply H in H1.
       pose proof s_seq_sh.
       specializes H2 H1.
       applys_eq H2. clear H2.
       f_equal.
-      (* the proof is stuck here because y0 and x0 are related by
-         something weaker than equality, but the rule in the semantics
-         requires them to be equal *)
+      (* the proof is stuck here because we want y0 and x0 to be related by
+         something weaker than equality (entailment), but the relation
+         between results in the semantics is equality *)
       admit.
       (* TODO what if we can assume shift-freedom to get rid of this case? *)
     }
