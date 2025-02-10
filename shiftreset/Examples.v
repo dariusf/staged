@@ -109,6 +109,8 @@ rs
     shiftfree.
   } *)
 
+  (* ent_seq_ens_req. *)
+  (* try to prove special case of proper if shift free *)
 
   rewrite <- norm_seq_assoc.
   2: {
