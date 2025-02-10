@@ -1333,6 +1333,22 @@ Proof.
     assumption. }
 Qed.
 
+Lemma red_skip_conv : forall f1 f2 r,
+    shift_free f1 ->
+    entails (f1;; rs f2 r) (rs (f1;; f2) r).
+Proof.
+  introv Hsf. unfold entails. intros.
+
+  inverts H as H. 2: { apply Hsf in H. false. }
+  inverts H7 as H7.
+  
+  { eapply s_rs_sh.
+    apply* s_seq.
+    assumption. }
+  { apply s_rs_val.
+    apply* s_seq. }
+Qed.
+
 Lemma red_skip2 : forall f1 f2 r,
     shift_free f1 ->
     bientails (rs (f1;; f2) r) (f1;; rs f2 r).

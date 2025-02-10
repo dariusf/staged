@@ -48,15 +48,87 @@ Admitted. *)
 
 (* Qed. *)
 
-Lemma ent_rs_seq_assoc_unk : forall s1 x u v1 v2 f1 f2 f r,
+Lemma norm_rs_seq_distr : forall f1 f2 r,
+shift_free f1 ->
+  entails (rs (f1;; f2) r) (∃ r1, rs f1 r1;; rs f2 r).
+Proof.
+  unfold entails. intros.
+  inverts H0 as H0.
+  {
+    (* f1;; f2 has a shift *)
+    inverts H0 as H0.
+    {
+      (* f1 is norm *)
+    apply s_fex. exists r1.
+    eapply s_seq.
+    apply s_rs_val. eassumption.
+    eapply s_rs_sh. eassumption.
+    eassumption.
+    }
+    {
+      apply H in H0. false.
+
+      (* f1 is shift *)
+    (* cont_eq.
+    apply s_fex. exs.
+    eapply s_seq.
+    eapply s_rs_sh. eassumption.
+    (* exact H7. *)
+    admit. *)
+    (* eassumption. *)
+    (* subst. *)
+    (* apply s_rs_val. eassumption. *)
+    (* eassumption. *)
+
+    (* applys_eq H7. *)
+
+    (* apply s_rs_val. eassumption. *)
+    (* eassumption. *)
+(* admit. *)
+    }
+  }
+  {
+    inverts H0 as H0.
+    apply s_fex. exists r1.
+    eapply s_seq.
+    apply s_rs_val.
+    eassumption.
+    apply s_rs_val.
+    eassumption.
+  }
+
+Qed.
+(* Abort. *)
+
+(* Lemma ent_rs_seq_assoc_unk : forall s1 x u v1 v2 f1 f2 f r,
   (* entails_under s1 (ens_ H;; rs (unk x v1 v2;; f) r) f1 -> *)
   entails_under (Fmap.update s1 x u) (rs ((f1;; u v1 v2);; f2) r) f ->
   entails_under (Fmap.update s1 x u) (rs ((f1;; unk x v1 v2);; f2) r) f.
 Proof.
   unfold entails_under. intros.
+  apply H.
+  inverts H0 as H0.
+  {
+    eapply s_rs_sh.
+
+    (* applys_eq H0. *)
+    admit.
+    admit.
+  }
+  {
+    apply s_rs_val.
+    assert (shift_free f1) as ?. admit.
+    inverts H0 as H0.
+    2: {
+
+    }
+
+
+  }
+
 
 (* Qed. *)
-Admitted.
+Admitted. *)
 
 
 Theorem foo_summary : forall r, exists f,
@@ -124,11 +196,26 @@ rs
   rewrite norm_req_pure_l. 2: { reflexivity. }
   rewrite norm_seq_ens_empty.
 
-  apply ent_rs_seq_assoc_unk.
+  (* apply ent_rs_seq_assoc_unk.
 
   rewrite <- norm_seq_assoc.
   3: { shiftfree. }
-  2: { shiftfree. }
+  2: { shiftfree. } *)
+
+  (* rewrite <- norm_seq_assoc.
+  3: { shiftfree. }
+  2: { shiftfree. } *)
+
+  (* rewrite (red_skip_conv _ (ens_ (x0 ~~> vint (a + 1)))). *)
+  (* pose proof red_skip_conv. *)
+  (* specializes H (ens_ (x0 ~~> vint (a + 1))). *)
+  (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+  (* rewrite H. *)
+
+
+  (* either prove k is sf, rewrite with sf_entails,
+    or have a special case rule *)
+
 
 
 (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
@@ -151,8 +238,6 @@ rs
 
   (* apply ent_seq_ens_req. *)
 
-  (* either prove k is sf, rewrite with sf_entails,
-    or have a special case rule *)
 
   (* need to prove k is shift free to reassoc, but cannot unfold it *)
   (* 2: {
