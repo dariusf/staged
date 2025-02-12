@@ -160,7 +160,7 @@ Implicit Types e : expr.
 
 Inductive satisfies : senv -> senv -> heap -> heap -> val -> flow -> flow -> Prop :=
 
-  | s_req1 : forall s1 s2 H h1 h2 v f f1,
+  | s_req : forall s1 s2 H h1 h2 v f f1,
     (forall (hp hr:heap),
       H hp ->
       h1 = Fmap.union hr hp ->
@@ -168,47 +168,47 @@ Inductive satisfies : senv -> senv -> heap -> heap -> val -> flow -> flow -> Pro
       satisfies s1 s2 hr h2 v f f1) ->
     satisfies s1 s2 h1 h2 v (req H f) f1
 
-  | s_ens1 : forall s1 Q h1 h2 v h3,
+  | s_ens : forall s1 Q h1 h2 v h3,
     Q v h3 ->
     h2 = Fmap.union h1 h3 ->
     Fmap.disjoint h1 h3 ->
     satisfies s1 s1 h1 h2 v (ens Q) fin
 
-  | s_seq_empty1 : forall v s1 h1 f2,
+  | s_seq_empty : forall v s1 h1 f2,
     satisfies s1 s1 h1 h1 v (seq fin f2) f2
 
-  | s_seq_step1 : forall v s1 s2 h1 h2 f1 f2 f3,
+  | s_seq_step : forall v s1 s2 h1 h2 f1 f2 f3,
     satisfies s1 s2 h1 h2 v f1 f3 ->
     satisfies s1 s2 h1 h2 v (seq f1 f2) (seq f3 f2)
 
-  | s_fex1 : forall s1 s2 h1 h2 v (A:Type) (c:A->flow) b,
+  | s_fex : forall s1 s2 h1 h2 v (A:Type) (c:A->flow) b,
     satisfies s1 s2 h1 h2 v (@fex A c) (c b)
 
-  | s_fall1 : forall s1 s2 h1 h2 v (A:Type) (c:A->flow) f1,
+  | s_fall : forall s1 s2 h1 h2 v (A:Type) (c:A->flow) f1,
     (forall b, satisfies s1 s2 h1 h2 v (c b) f1) ->
     satisfies s1 s2 h1 h2 v (@fall A c) f1
 
-  | s_intersect_step_l1 : forall s1 s2 h1 h2 v f1 f2 f3,
+  | s_intersect_step_l : forall s1 s2 h1 h2 v f1 f2 f3,
     satisfies s1 s2 h1 h2 v f1 f3 ->
     satisfies s1 s2 h1 h2 v (intersect f1 f2) (intersect f3 f2)
 
-  | s_intersect_step_r1 : forall s1 s2 h1 h2 v f1 f2 f3,
+  | s_intersect_step_r : forall s1 s2 h1 h2 v f1 f2 f3,
     satisfies s1 s2 h1 h2 v f1 f3 ->
     satisfies s1 s2 h1 h2 v (intersect f1 f2) (intersect f1 f3)
 
-  | s_intersect_elim_l1 : forall s1 h1 v f2,
+  | s_intersect_elim_l : forall s1 h1 v f2,
     satisfies s1 s1 h1 h1 v (intersect fin f2) f2
 
-  | s_intersect_elim_r1 : forall s1 h1 v f1,
+  | s_intersect_elim_r : forall s1 h1 v f1,
     satisfies s1 s1 h1 h1 v (intersect f1 fin) f1
 
-  | s_disj_l1 : forall s1 h1 v f1 f2,
+  | s_disj_l : forall s1 h1 v f1 f2,
     satisfies s1 s1 h1 h1 v (disj f1 f2) f1
 
-  | s_disj_r1 : forall s1 h1 v f1 f2,
+  | s_disj_r : forall s1 h1 v f1 f2,
     satisfies s1 s1 h1 h1 v (disj f1 f2) f2
 
-  | s_unk1 : forall s1 h1 h1 r xf uf a,
+  | s_unk : forall s1 h1 h1 r xf uf a,
     Fmap.read s1 xf = uf ->
     satisfies s1 s1 h1 h1 r (unk xf a r) (uf a r)
   .
@@ -279,17 +279,17 @@ Proof.
   intros. exs. intros.
 
   applys steps_step.
-  { applys s_seq_step1.
-    applys s_ens1.
+  { applys s_seq_step.
+    applys s_ens.
     - hintro. split. reflexivity. apply hsingle_intro.
     - fmap_eq. reflexivity.
     - fmap_disjoint. }
 
   applys steps_step.
-  { applys s_seq_empty1. }
+  { applys s_seq_empty. }
 
   applys steps_step.
-  { applys s_ens1.
+  { applys s_ens.
     - hintro. split. reflexivity. apply hsingle_intro.
     - reflexivity.
     - apply* Fmap.disjoint_single_single. }
@@ -345,31 +345,53 @@ Section Propriety.
     auto.
   Qed.
 
+  Lemma steps_seq_inv: forall s1 s2 s3 h1 h2 h3 v f1 f2,
+    steps s1 s2 h1 h2 v (f1;; f2) fin ->
+    steps s1 s3 h1 h3 v f1 fin /\ steps s3 s2 h3 h2 v f2 fin.
+  Proof.
+    intros.
+    split; dependent induction H.
+    {
+      (* the fin case is eliminated. the seq has to take a step, to f4 *)
+      (* find out what f4 is *)
+      inverts H as H.
+      { (* f1 is fin *)
+        applys IHsteps. 2: { reflexivity. }
+        admit.
+      }
+      { specializes IHsteps f5 f2. do 2 forward IHsteps by reflexivity.
+        applys steps_step H IHsteps. }
+    }
+    { admit. }
+  Admitted.
+
+  Lemma steps_seq_intro: forall s1 s2 s3 h1 h2 h3 v f1 f2,
+    steps s1 s3 h1 h3 v f1 fin ->
+    steps s3 s2 h3 h2 v f2 fin ->
+    steps s1 s2 h1 h2 v (f1;; f2) fin.
+  Proof.
+    intros.
+    dependent induction H.
+    { (* f1 is fin, so doesn't step *)
+      applys steps_step.
+      eapply s_seq_empty.
+      assumption. }
+    { (* f1 steps to f3, which goes to fin *)
+      applys steps_step.
+      { applys s_seq_step. eassumption. }
+        applys IHsteps H1.
+        reflexivity. }
+  Qed.
+
   #[global]
   Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
   Proof.
     unfold Proper, entails, respectful.
     intros.
-    inverts H1 as H1.
-    inverts H1 as H1.
-    {
-      (* x is fin *)
-      specializes H. apply steps_refl.
-      specializes H0 H2. clear H2.
-
-      (* applys steps_trans (y;; y0) (fin;; y0). *)
-      (* steps of step: ~> to ~>* *)
-      (* lets: steps_of_step s_seq_step1. *)
-      (* applys steps_step. *)
-      (* applys s_seq_step1. *)
-      (* applys s_seq_empty1. *)
-      admit.
-    }
-    {
-      admit.
-    }
-
-  (* Qed. *)
-  Abort.
+    eapply steps_seq_inv in H1. destr H1.
+    specializes H H2. clear H2.
+    specializes H0 H3. clear H3.
+    applys steps_seq_intro H H0.
+  Qed.
 
 End Propriety.
