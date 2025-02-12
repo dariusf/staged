@@ -345,25 +345,96 @@ Section Propriety.
     auto.
   Qed.
 
-  Lemma steps_seq_inv: forall s1 s2 s3 h1 h2 h3 v f1 f2,
+  (* Lemma steps_seq_inv: forall s1 s2 s3 h1 h2 h3 v f1 f2,
     steps s1 s2 h1 h2 v (f1;; f2) fin ->
-    steps s1 s3 h1 h3 v f1 fin /\ steps s3 s2 h3 h2 v f2 fin.
+    steps s1 s3 h1 h3 v f1 fin /\ steps s3 s2 h3 h2 v f2 fin. *)
+  Lemma steps_seq_inv: forall s1 s2 h1 h2 v f1 f2,
+    steps s1 s2 h1 h2 v (f1;; f2) fin ->
+    exists s3 h3, steps s1 s3 h1 h3 v f1 fin /\ steps s3 s2 h3 h2 v f2 fin.
   Proof.
+    (* intros s1 s2 h1 h2 v f1. *)
+    (* dependent induction f1; intros. *)
+
     intros.
-    split; dependent induction H.
+
+    inverts H as H.
+    (* inverts H as H. *)
+    dependent induction H.
+    (* induction H. *)
     {
-      (* the fin case is eliminated. the seq has to take a step, to f4 *)
-      (* find out what f4 is *)
+    exists s1 h1.
+    (* exists s2 h2. *)
+    split.
+    apply steps_refl.
+    assumption.
+    }
+    {
+      applys IHsatisfies.
+
+      (* inverts H as H. *)
+
+      (* specializes IHsatisfies f3 f2. *)
+
+    }
+
+
+
+
+(*
+    (* remember (f1;; f2) as f3.
+    remember fin as f4.
+    induction H.
+    false.
+    subst. *)
+    dependent induction H.
+    (* steps_refl case eliminated *)
+    pose proof H.
+    inverts H as H.
+    (* f1 is fin *)
+    clear IHsteps.
+    (* specializes IHsteps fin f4. *)
+    admit.
+    (* f1; f2 takes a step *)
+      specializes IHsteps f5 f2. do 2 forward IHsteps by reflexivity.
+      destr IHsteps.
+      exists s0 h0.
+      split. 2: { assumption. }
+      applys steps_step H H2.
+      (* applys s_seq_step. *)
+ *)
+
+Admitted.
+
+    (* exs.
+    split.
+    {
       inverts H as H.
-      { (* f1 is fin *)
-        applys IHsteps. 2: { reflexivity. }
-        admit.
-      }
-      { specializes IHsteps f5 f2. do 2 forward IHsteps by reflexivity.
-        applys steps_step H IHsteps. }
+      
+      admit.
     }
     { admit. }
-  Admitted.
+
+
+    (* split; dependent induction H.
+    {
+      (* f1 *)
+      (* the seq has to take a step, to f4 *)
+      (* pose proof H. *)
+      (* there are two cases. either f1 is fin or we take a step *)
+      inverts H as H.
+      { (* f1 is fin and f2 = f4 *)
+        clear IHsteps.
+        (* applys IHsteps. 2: { reflexivity. } *)
+        applys_eq steps_refl.
+        admit.
+        admit.
+      }
+      { (* f1 takes a step *)
+        specializes IHsteps f5 f2. do 2 forward IHsteps by reflexivity.
+        applys steps_step H IHsteps. }
+    }
+    { admit. } *)
+  Admitted. *)
 
   Lemma steps_seq_intro: forall s1 s2 s3 h1 h2 h3 v f1 f2,
     steps s1 s3 h1 h3 v f1 fin ->
