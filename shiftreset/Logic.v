@@ -1236,6 +1236,22 @@ Ltac intro_shs :=
     { apply H in H1. false. }
   Qed.
 
+  #[global]
+  Instance Proper_seq_sf1 : forall f1,
+    shift_free f1 ->
+    Proper (bientails ====> bientails) (seq f1).
+  Proof.
+    unfold Proper, bientails, respectful.
+    intros.
+    iff H1.
+    { inverts H1 as H1. 2: { apply H in H1. false. }
+      apply* s_seq.
+      rewrite* <- H0. }
+    { inverts H1 as H1. 2: { apply H in H1. false. }
+      apply* s_seq.
+      rewrite* H0. }
+  Qed.
+
 Definition sf_entails f1 f2 :=
   shift_free f1 -> shift_free f2 -> entails f1 f2.
   (* shift_free f1 /\ entails f1 f2. *)
@@ -3385,6 +3401,15 @@ Proof.
 
   rewrite (norm_seq_pure_l (fun r4 => r4 = vint i2)).
   apply entails_under_refl.
+Qed.
+
+Example ex_rewrite_right:
+  (* entails (ens_ \[True]) (ens_ \[True];; ens_ \[True]). *)
+  entails (ens_ \[True]) (ens_ \[True];; ens_ \[True];; ens_ \[True]).
+Proof.
+Set Typeclasses Debug.
+  rewrite <- norm_ens_ens_void.
+
 Qed.
 
 (** * Correspondence with the paper *)
