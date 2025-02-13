@@ -1040,6 +1040,9 @@ Definition shs x fb vr c : flow :=
 Notation "'shs' '(' k '.' fb ')' '(' vr '.' '⟨' fk '⟩' ')'" := (shs k fb vr (fun r => rs fk r))
   (at level 80, format "'shs'  '(' k '.'  fb ')'  '(' vr '.'  '⟨'  fk  '⟩' ')'", only printing) : flow_scope.
 
+(* Class ShiftFree (f:flow) : Prop :=
+  { ok: shift_free f }. *)
+
 Lemma sf_ens : forall Q,
   shift_free (ens Q).
 Proof.
@@ -1047,6 +1050,7 @@ Proof.
   inverts H as H. destr H.
   false.
 Qed.
+#[local] Hint Resolve sf_ens : typeclass_instances.
 (* #[local] Hint Resolve sf_ens : core. *)
 
 Lemma sf_defun : forall x uf,
@@ -3407,10 +3411,9 @@ Example ex_rewrite_right:
   (* entails (ens_ \[True]) (ens_ \[True];; ens_ \[True]). *)
   entails (ens_ \[True]) (ens_ \[True];; ens_ \[True];; ens_ \[True]).
 Proof.
-Set Typeclasses Debug.
+(* Set Typeclasses Debug. *)
   rewrite <- norm_ens_ens_void.
-
-Qed.
+Abort.
 
 (** * Correspondence with the paper *)
 (** ** Differences *)
