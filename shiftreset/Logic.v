@@ -3558,6 +3558,20 @@ Proof.
 
 Abort.
 
+Example ex_rewrite_right1:
+  entails_under (Fmap.update empty_env "k" (fun a r => ens_ \[a = r]))
+   (ens_ \[True];; unk "k" (vint 1) (vint 1)) (ens_ \[True]).
+Proof.
+  (* funfold1 "k". *)
+  pose proof (@ent_unk (Fmap.update empty_env "k" (fun a r => ens_ \[a = r])) "k").
+  specializes H (vint 1) (vint 1) ___.
+
+  rewrite H.
+  rew_fmap.
+
+Abort.
+
+
 (** * Correspondence with the paper *)
 (** ** Differences *)
 (** #<!-- this space is needed!!-->#
