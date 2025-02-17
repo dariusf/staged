@@ -231,7 +231,15 @@ rs
   rew_fmap *.
 
 (* Set Typeclasses Debug. *)
-  rewrite H.
+  rewrite H. clear H.
+
+  (* pose proof (red_nc). *)
+  lets: red_normal (vint r1).
+  rewrite H. 2: { shiftfree. }
+  clear H.
+
+  rewrite <- norm_ens_ens.
+
 
 (* HERE *)
 

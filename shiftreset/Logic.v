@@ -1181,6 +1181,17 @@ Proof.
   exact H1.
 Qed.
 
+Lemma sf_fall : forall A (p:A->flow) b,
+  shift_free (p b) ->
+  shift_free (@fall A p).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H0 as H0. destr H0.
+  specializes H0 b.
+  eapply H.
+  eassumption.
+Qed.
+
 Lemma sf_seq_inv : forall f1 f2,
   shift_free (f1;; f2) ->
   shift_free f1 /\ shift_free f2.
