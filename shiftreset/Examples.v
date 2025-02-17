@@ -161,6 +161,14 @@ rs
   (* Search (entails_under _ _ (_;; ∀ _, _)). *)
   (* rewrite norm_rs_all. fintro x. *)
   (* fintro x0. fintro a. *)
+  pose proof (@ent_unk s_env "s" vunit (vbool x) s).
+  specializes H. unfold s_env. fmap_eq. reflexivity.
+  (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+
+(* Set Typeclasses Debug. *)
+  (* rewrite H. *)
+
+
   funfold1 "s". unfold s.
   rewrite red_init.
   rewrite red_extend.
@@ -220,7 +228,7 @@ rs
   specializes H (vbool true) (vint r1) ___.
   rew_fmap *.
 
-Set Typeclasses Debug.
+(* Set Typeclasses Debug. *)
   rewrite H.
 
 

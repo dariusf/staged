@@ -509,7 +509,7 @@ Section Propriety.
     }
   Abort.
 
-  (* #[global]
+  #[global]
   Instance Proper_seq_entails_under_left : forall env,
     Proper (entails_under env ====> eq ====> entails_under env) seq.
   Proof.
@@ -519,7 +519,7 @@ Section Propriety.
     inverts H1 as H1; destr H1.
     { applys* s_seq. }
     { eapply s_seq_sh. jauto. }
-  Qed. *)
+  Qed.
 
   #[global]
   Instance Proper_rs : Proper (entails ====> eq ====> entails) rs.
@@ -3570,6 +3570,22 @@ Proof.
   rew_fmap.
 
 Abort.
+
+Example ex_rewrite_right1:
+  entails_under (Fmap.update empty_env "k" (fun a r => ens_ \[a = r]))
+   (unk "k" (vint 1) (vint 1);; ens_ \[True]) (ens_ \[True]).
+Proof.
+  (* funfold1 "k". *)
+  pose proof (@ent_unk (Fmap.update empty_env "k" (fun a r => ens_ \[a = r])) "k").
+  specializes H (vint 1) (vint 1) ___.
+
+(* Set Typeclasses Debug. *)
+  (* setoid_rewrite H. *)
+  rewrite H.
+  rew_fmap.
+
+Abort.
+
 
 
 (** * Correspondence with the paper *)
