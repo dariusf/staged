@@ -509,7 +509,7 @@ Section Propriety.
     }
   Abort.
 
-  #[global]
+  (* #[global]
   Instance Proper_seq_entails_under_left : forall env,
     Proper (entails_under env ====> eq ====> entails_under env) seq.
   Proof.
@@ -519,7 +519,7 @@ Section Propriety.
     inverts H1 as H1; destr H1.
     { applys* s_seq. }
     { eapply s_seq_sh. jauto. }
-  Qed.
+  Qed. *)
 
   #[global]
   Instance Proper_rs : Proper (entails ====> eq ====> entails) rs.
@@ -1040,8 +1040,8 @@ Definition shs x fb vr c : flow :=
 Notation "'shs' '(' k '.' fb ')' '(' vr '.' '⟨' fk '⟩' ')'" := (shs k fb vr (fun r => rs fk r))
   (at level 80, format "'shs'  '(' k '.'  fb ')'  '(' vr '.'  '⟨'  fk  '⟩' ')'", only printing) : flow_scope.
 
-(* Class ShiftFree (f:flow) : Prop :=
-  { ok: shift_free f }. *)
+Class ShiftFree (f:flow) : Prop :=
+  { shift_free_pf: shift_free f }.
 
 Lemma sf_ens : forall Q,
   shift_free (ens Q).
@@ -1050,14 +1050,29 @@ Proof.
   inverts H as H. destr H.
   false.
 Qed.
-#[local] Hint Resolve sf_ens : typeclass_instances.
+(* this works, but relies on typeclass internals *)
+(* #[local] Hint Resolve sf_ens : typeclass_instances. *)
+
+(* previous attempt at automation *)
 (* #[local] Hint Resolve sf_ens : core. *)
+
+Instance ShiftFreeEns : forall Q,
+  ShiftFree (ens Q).
+Proof.
+  intros. constructor. apply sf_ens.
+Qed.
 
 Lemma sf_defun : forall x uf,
   shift_free (defun x uf).
 Proof.
   unfold shift_free, not. intros.
   inverts H as H.
+Qed.
+
+Instance ShiftFreeDefun : forall x uf,
+  ShiftFree (defun x uf).
+Proof.
+  intros. constructor. apply sf_defun.
 Qed.
 
 Lemma sf_req : forall H f,
@@ -1105,6 +1120,13 @@ Proof.
   reflexivity.
 Qed.
 
+Instance ShiftFreeRs : forall f r,
+  ShiftFree (rs f r).
+Proof.
+  intros.
+  constructor. apply* sf_rs.
+Qed.
+
 Lemma sf_seq : forall f1 f2,
   shift_free f1 ->
   shift_free f2 ->
@@ -1114,6 +1136,17 @@ Proof.
   inverts H1 as H1; destr H1.
   { specializes~ H0 H9. }
   { specializes~ H H1. }
+Qed.
+
+Instance ShiftFreeSeq : forall f1 f2,
+  ShiftFree f1 ->
+  ShiftFree f2 ->
+  ShiftFree (f1;; f2).
+Proof.
+  intros.
+  inverts H as H.
+  inverts H0 as H0.
+  constructor. apply* sf_seq.
 Qed.
 
 (* Definition returns_value (f:flow) : Prop :=
@@ -1230,7 +1263,8 @@ Ltac intro_shs :=
 
   #[global]
   Instance Proper_seq_sf : forall f1,
-    shift_free f1 ->
+    (* shift_free f1 -> *)
+    ShiftFree f1 ->
     Proper (entails ====> entails) (seq f1).
   Proof.
     unfold Proper, entails, respectful.
@@ -1242,7 +1276,8 @@ Ltac intro_shs :=
 
   #[global]
   Instance Proper_seq_sf1 : forall f1,
-    shift_free f1 ->
+    (* shift_free f1 -> *)
+    ShiftFree f1 ->
     Proper (bientails ====> bientails) (seq f1).
   Proof.
     unfold Proper, bientails, respectful.
@@ -1254,6 +1289,35 @@ Ltac intro_shs :=
     { inverts H1 as H1. 2: { apply H in H1. false. }
       apply* s_seq.
       rewrite* H0. }
+  Qed.
+
+  #[global]
+  Instance Proper_seq_sf2 :
+  (* forall env f1, *)
+  forall f1,
+    ShiftFree f1 ->
+    (* Proper (entails_under env ====> entails_under env) (seq f1). *)
+    Proper ((fun f2 f3 => forall env, entails_under env f2 f3) ====> (fun f2 f3 => forall env, entails_under env f2 f3)) (seq f1).
+  Proof.
+  (* Check respectful. *)
+    unfold Proper, entails_under, respectful.
+    (* unfold Proper, entails_under. *)
+    intros.
+    inverts H1 as H1. 2: { apply H in H1. false. }
+    applys s_seq.
+    eassumption.
+
+    (* apply* s_seq. *)
+    applys_eq H0.
+    assumption.
+
+    (* admit.
+    applys_eq H9.
+    admit. *)
+    (* applys_eq H0. *)
+    (* admit. *)
+
+    (* apply* H0.  *)
   Qed.
 
 Definition sf_entails f1 f2 :=
@@ -3413,6 +3477,19 @@ Example ex_rewrite_right:
 Proof.
 (* Set Typeclasses Debug. *)
   rewrite <- norm_ens_ens_void.
+Abort.
+
+Example ex_rewrite_right1:
+  entails_under empty_env (ens_ \[True]) (ens_ \[True];; ens_ \[True];; ens_ \[True]).
+Proof.
+(* Set Typeclasses Debug. *)
+  rewrite <- norm_ens_ens_void.
+  (* Check norm_ens_ens_void . *)
+  assert (forall H1 H2, entails_under empty_env (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2)) as ?. admit.
+  (* rewrite norm_ens_ens_void. *)
+  (* Set Typeclasses Debug. *)
+  (* Fail rewrite H. *)
+
 Abort.
 
 (** * Correspondence with the paper *)

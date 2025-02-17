@@ -182,15 +182,6 @@ rs
   fintro a. rewrite norm_rs_all. finst a.
   rewrite norm_rs_ex. fintro r1.
 
-  pose proof ent_unk.
-  specializes H (Fmap.update s_env "k"
-  (fun a0 r0 : val =>
-rs
-  (ens_ \[vbool x = a0];;
-(ens (fun r2=> \[r2 = vbool x]));;
-(ens (fun r2=> \[x = true /\ r2 = vint 1 \/ x = false /\ r2 = vint 0])))
-  r0)) "k".
-
   (* rewrite H. *)
 
   (* rewrite (@ent_unk (env a b) f); [ | unfold env; resolve_fn_in_env ]. *)
@@ -215,17 +206,35 @@ rs
 
 (* HERE *)
 
+
+    (* rewrite (@ent_unk (env a b) f); [ | unfold env; resolve_fn_in_env ] *)
+
+  pose proof ent_unk.
+  specializes H (Fmap.update s_env "k"
+  (fun a0 r0 : val =>
+rs
+  (ens_ \[vbool x = a0];;
+(ens (fun r2=> \[r2 = vbool x]));;
+(ens (fun r2=> \[x = true /\ r2 = vint 1 \/ x = false /\ r2 = vint 0])))
+  r0)) "k".
+  specializes H (vbool true) (vint r1) ___.
+  rew_fmap *.
+
+Set Typeclasses Debug.
+  rewrite H.
+
+
   (* funfold1 "k". *)
   (* unfold k. *)
 
-  rewrite norm_rs_seq_distr.
+  (* rewrite norm_rs_seq_distr.
   2: {
     shiftfree.
   }
   fintro r0.
   rewrite red_skip.
   2: { shiftfree. }
-  2: { shiftfree. }
+  2: { shiftfree. } *)
 
 
   (* apply ent_rs_seq_assoc_unk.
