@@ -161,8 +161,10 @@ rs
   (* Search (entails_under _ _ (_;; ∀ _, _)). *)
   (* rewrite norm_rs_all. fintro x. *)
   (* fintro x0. fintro a. *)
-  pose proof (@ent_unk s_env "s" vunit (vbool x) s).
-  specializes H. unfold s_env. fmap_eq. reflexivity.
+
+  (* pose proof (@ent_unk s_env "s" vunit (vbool x) s).
+  specializes H. unfold s_env. fmap_eq. reflexivity. *)
+
   (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 
 (* Set Typeclasses Debug. *)
@@ -212,10 +214,10 @@ rs
   rewrite norm_req_pure_l. 2: { reflexivity. }
   rewrite norm_seq_ens_empty.
 
-(* HERE *)
-
 
     (* rewrite (@ent_unk (env a b) f); [ | unfold env; resolve_fn_in_env ] *)
+
+    (* funfold1 "k". *)
 
   pose proof ent_unk.
   specializes H (Fmap.update s_env "k"
@@ -230,6 +232,8 @@ rs
 
 (* Set Typeclasses Debug. *)
   rewrite H.
+
+(* HERE *)
 
 
   (* funfold1 "k". *)
