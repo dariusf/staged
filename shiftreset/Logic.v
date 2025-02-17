@@ -1291,6 +1291,7 @@ Ltac intro_shs :=
       rewrite* H0. }
   Qed.
 
+(* this is essentially the same as entails *)
   #[global]
   Instance Proper_seq_sf2 :
   (* forall env f1, *)
@@ -1318,6 +1319,69 @@ Ltac intro_shs :=
     (* admit. *)
 
     (* apply* H0.  *)
+  Qed.
+
+  Definition env_constant f :=
+    (* forall s h1 h2 R, satisfies s s h1 h2 R f. *)
+    forall s1 s2 h1 h2 R, satisfies s1 s2 h1 h2 R f -> s1 = s2.
+
+  Lemma env_constant_ens : forall Q,
+    env_constant (ens Q).
+  Proof.
+    unfold env_constant. intros.
+    inverts H as H. destr H.
+    reflexivity.
+  Qed.
+
+  Lemma env_constant_seq : forall f1 f2,
+    shift_free f1 ->
+    env_constant f1 ->
+    env_constant f2 ->
+    env_constant (f1;; f2).
+  Proof.
+    unfold env_constant. intros.
+    inverts H2 as H2. 2: { apply H in H2. false. }
+    specializes H0 H2.
+    specializes H1 H10.
+    congruence.
+  Qed.
+
+  Class EnvConstant f : Prop :=
+    { env_constant_pf :
+      forall s1 s2 h1 h2 R, satisfies s1 s2 h1 h2 R f -> s1 = s2 }.
+
+  #[global]
+  Instance EnvConstantEns : forall Q,
+    EnvConstant (ens Q).
+  Proof.
+    intros. constructor.
+    apply env_constant_ens.
+  Qed.
+
+  #[global]
+  Instance EnvConstantSeq : forall f1 f2,
+    ShiftFree f1 ->
+    EnvConstant f1 ->
+    EnvConstant f2 ->
+    EnvConstant (f1;; f2).
+  Proof.
+    constructor. apply env_constant_seq.
+    destruct* H.
+    destruct* H0.
+    destruct* H1.
+  Qed.
+
+  #[global]
+  Instance Proper_seq_sf3 : forall env f1,
+    ShiftFree f1 ->
+    EnvConstant f1 ->
+    Proper (entails_under env ====> entails_under env) (seq f1).
+  Proof.
+    unfold Proper, entails_under, respectful.
+    intros.
+    inverts H2 as H2. 2: { apply H in H2. false. }
+    destruct H0 as [H0]. specializes H0 H2. subst.
+    apply* s_seq.
   Qed.
 
 Definition sf_entails f1 f2 :=
@@ -3482,13 +3546,15 @@ Abort.
 Example ex_rewrite_right1:
   entails_under empty_env (ens_ \[True]) (ens_ \[True];; ens_ \[True];; ens_ \[True]).
 Proof.
-(* Set Typeclasses Debug. *)
-  rewrite <- norm_ens_ens_void.
-  (* Check norm_ens_ens_void . *)
+  assert (forall H1 H2, entails_under empty_env (ens_ H1;; ens_ H2) (ens_ (H1 \* H2))) as ?. admit.
   assert (forall H1 H2, entails_under empty_env (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2)) as ?. admit.
   (* rewrite norm_ens_ens_void. *)
   (* Set Typeclasses Debug. *)
-  (* Fail rewrite H. *)
+  (* rewrite H.
+  rewrite H0.
+  rewrite <- H. *)
+  rewrite <- H0.
+  rewrite <- H.
 
 Abort.
 
