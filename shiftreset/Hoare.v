@@ -89,17 +89,18 @@ Module Soundness.
   (** * Specification assertions *)
   (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
   Definition pair_valid_under p1 s1 e f : Prop :=
-    forall h1 h2 v p2 s2,
+    forall h1 h2 v,
+    exists p2 s2,
       bigstep p1 p2 h1 e h2 (enorm v) -> satisfies s1 s2 h1 h2 (norm v) f.
 
 (* TODO do we need to update the env due to fptrs? *)
 
   (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid specification assertion. *)
-  Definition env_compatible penv env :=
+  Definition env_compatible p1 s1 :=
     forall pfn xf x,
-      Fmap.read penv xf = pfn ->
-      exists sfn, Fmap.read env xf = sfn /\
-      forall v, pair_valid_under penv env (pfn x) (sfn x v).
+      Fmap.read p1 xf = pfn ->
+      exists sfn, Fmap.read s1 xf = sfn /\
+      forall v, pair_valid_under p1 s1 (pfn x) (sfn x v).
 
   (** The full definition requires compatible environments. *)
   Definition spec_assert (e: expr) (f: flow) : Prop :=
@@ -115,6 +116,8 @@ Module Soundness.
   Proof.
     unfold entails, Proper, respectful, impl, spec_assert, pair_valid_under.
     intros. subst.
+    specializes H1 H2 H3 h1 h2 v. destr H1.
+    exists p0 s0.
     eauto.
   Qed.
 
@@ -134,7 +137,13 @@ Module Soundness.
   Lemma sem_pval: forall n,
     spec_assert (pval n) (ens (fun res => \[res = n])).
   Proof.
-    unfold spec_assert. introv Hc1 Hc2 Hb.
+    unfold spec_assert.
+    unfold pair_valid_under.
+    (* introv Hc1 Hc2. *)
+    intros.
+    (* exists p2 s2. *)
+    exists p1 s1.
+    intros Hb.
     (* appeal to how e executes to tell us about the heaps *)
     inverts Hb as Hb.
     (* justify that the staged formula describes the heap *)
