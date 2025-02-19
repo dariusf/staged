@@ -15,81 +15,84 @@ Proof.
   constructor.
 Qed.
 
-
 Definition penv := Fmap.fmap var (val -> expr).
 Definition empty_penv : penv := Fmap.empty.
 
 Implicit Types Re : eresult.
-Implicit Types penv : penv.
+Implicit Types p : penv.
 
-Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
-  | eval_pval : forall h v env,
-    bigstep env h (pval v) h (enorm v)
+Inductive bigstep : penv -> penv -> heap -> expr -> heap -> eresult -> Prop :=
+  | eval_pval : forall h v p,
+    bigstep p p h (pval v) h (enorm v)
 
   (* there is no var rule *)
 
-  | eval_plet : forall h1 h3 h2 x e1 e2 v Re env,
-    bigstep env h1 e1 h3 (enorm v) ->
-    bigstep env h3 (subst x v e2) h2 Re ->
-    bigstep env h1 (plet x e1 e2) h2 Re
+  | eval_plet : forall h1 h3 h2 x e1 e2 v Re p1 p2 p3,
+    bigstep p1 p3 h1 e1 h3 (enorm v) ->
+    bigstep p3 p2 h3 (subst x v e2) h2 Re ->
+    bigstep p1 p2 h1 (plet x e1 e2) h2 Re
 
-  | eval_padd : forall h x y env,
-    bigstep env h (padd (pval (vint x)) (pval (vint y))) h (enorm (vint (x + y)))
+  | eval_padd : forall h x y p,
+    bigstep p p h (padd (pval (vint x)) (pval (vint y))) h (enorm (vint (x + y)))
 
-  | eval_pminus : forall h x y env,
-    bigstep env h (pminus (pval (vint x)) (pval (vint y))) h (enorm (vint (x - y)))
+  | eval_pminus : forall h x y p,
+    bigstep p p  h (pminus (pval (vint x)) (pval (vint y))) h (enorm (vint (x - y)))
 
-  | eval_pfun : forall h x e env,
-    bigstep env h (pfun x e) h (enorm (vfun x e))
+  | eval_pfun : forall h x e p,
+    bigstep p p h (pfun x e) h (enorm (vfun x e))
 
-  | eval_pfix : forall h x e xf env,
-    bigstep env h (pfix xf x e) h (enorm (vfix xf x e))
+  | eval_pfix : forall h x e xf p,
+    bigstep p p h (pfix xf x e) h (enorm (vfix xf x e))
 
-  | eval_app_fun : forall v1 v2 h x e Re env,
+  | eval_app_fun : forall v1 v2 h x e Re p p,
     v1 = vfun x e ->
-    bigstep env h (subst x v2 e) h Re ->
-    bigstep env h (papp (pval v1) (pval v2)) h Re
+    bigstep p p h (subst x v2 e) h Re ->
+    bigstep p p h (papp (pval v1) (pval v2)) h Re
 
-  | eval_app_fix : forall v1 v2 h x e Re xf env,
+  | eval_app_fix : forall v1 v2 h x e Re xf p,
     v1 = vfix xf x e ->
-    bigstep env h (subst x v2 (subst xf v1 e)) h Re ->
-    bigstep env h (papp (pval v1) (pval v2)) h Re
+    bigstep p p h (subst x v2 (subst xf v1 e)) h Re ->
+    bigstep p p h (papp (pval v1) (pval v2)) h Re
 
-  | eval_app_unk : forall va h Re efn xf env,
-    Fmap.read env xf = efn ->
-    bigstep env h (efn va) h Re ->
-    bigstep env h (papp (pvar xf) (pval va)) h Re
+  | eval_app_unk : forall va h Re efn xf p,
+    Fmap.read p xf = efn ->
+    bigstep p p h (efn va) h Re ->
+    bigstep p p h (papp (pvar xf) (pval va)) h Re
 
-  | eval_pif_true : forall h1 h2 Re e1 e2 env,
-    bigstep env h1 e1 h2 Re ->
-    bigstep env h1 (pif (pval (vbool true)) e1 e2) h2 Re
+  | eval_pif_true : forall h1 h2 Re e1 e2 p,
+    bigstep p p h1 e1 h2 Re ->
+    bigstep p p h1 (pif (pval (vbool true)) e1 e2) h2 Re
 
-  | eval_pif_false : forall h1 h2 Re e1 e2 env,
-    bigstep env h1 e2 h2 Re ->
-    bigstep env h1 (pif (pval (vbool false)) e1 e2) h2 Re
+  | eval_pif_false : forall h1 h2 Re e1 e2 p,
+    bigstep p p h1 e2 h2 Re ->
+    bigstep p p h1 (pif (pval (vbool false)) e1 e2) h2 Re
 
-  | eval_pref : forall h v p env,
-    ~ Fmap.indom h p ->
-    bigstep env h (pref (pval v)) (Fmap.update h p v) (enorm (vloc p))
+  | eval_pref : forall h v l p,
+    ~ Fmap.indom h l ->
+    bigstep p p h (pref (pval v)) (Fmap.update h l v) (enorm (vloc l))
 
-  | eval_pderef : forall h p env,
-    Fmap.indom h p ->
-    bigstep env h (pderef (pval (vloc p))) h (enorm (Fmap.read h p))
+  | eval_pderef : forall h l p,
+    Fmap.indom h l ->
+    bigstep p p h (pderef (pval (vloc l))) h (enorm (Fmap.read h l))
 
-  | eval_passign : forall h p v env,
-    Fmap.indom h p ->
-    bigstep env h (passign (pval (vloc p)) (pval v)) (Fmap.update h p v) (enorm vunit)
+  | eval_passign : forall h l v p,
+    Fmap.indom h l ->
+    bigstep p p h (passign (pval (vloc l)) (pval v)) (Fmap.update h l v) (enorm vunit)
 
-  | eval_passert : forall h env,
-    bigstep env h (passert (pval (vbool true))) h (enorm vunit).
+  | eval_passert : forall h p,
+    bigstep p p h (passert (pval (vbool true))) h (enorm vunit).
+
+(* TODO is a rule for function pointers needed? *)
 
 Module Soundness.
 
   (** * Specification assertions *)
   (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
-  Definition pair_valid_under penv env e f : Prop :=
-    forall h1 h2 v,
-      bigstep penv h1 e h2 (enorm v) -> satisfies env h1 h2 (norm v) f.
+  Definition pair_valid_under p1 s1 e f : Prop :=
+    forall h1 h2 v p2 s2,
+      bigstep p1 p2 h1 e h2 (enorm v) -> satisfies s1 s2 h1 h2 (norm v) f.
+
+(* TODO do we need to update the env due to fptrs? *)
 
   (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid specification assertion. *)
   Definition env_compatible penv env :=
@@ -100,8 +103,10 @@ Module Soundness.
 
   (** The full definition requires compatible environments. *)
   Definition spec_assert (e: expr) (f: flow) : Prop :=
-    forall penv env,
-      env_compatible penv env -> pair_valid_under penv env e f.
+    forall p1 p2 s1 s2,
+      env_compatible p1 s1 ->
+      env_compatible p2 s2 ->
+      pair_valid_under p1 s1 e f.
 
   #[global]
   Instance Proper_spec_assert : Proper
@@ -129,7 +134,7 @@ Module Soundness.
   Lemma sem_pval: forall n,
     spec_assert (pval n) (ens (fun res => \[res = n])).
   Proof.
-    unfold spec_assert. introv Hc Hb.
+    unfold spec_assert. introv Hc1 Hc2 Hb.
     (* appeal to how e executes to tell us about the heaps *)
     inverts Hb as Hb.
     (* justify that the staged formula describes the heap *)

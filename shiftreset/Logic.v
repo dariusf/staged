@@ -45,11 +45,11 @@ with expr : Type :=
   | pfst (e: expr)
   | psnd (e: expr)
   | pminus (e1 e2: expr)
-  | passert (v: val)
-  | pref (v: val)
-  | pderef (v: val)
-  | passign (e1: val) (e2: val)
-  | pif (v: val) (e1: expr) (e2: expr)
+  | passert (v: expr)
+  | pref (v: expr)
+  | pderef (v: expr)
+  | passign (e1: expr) (e2: expr)
+  | pif (v: expr) (e1: expr) (e2: expr)
   | papp (e1: expr) (e2: expr)
   | pshift (k: var) (e: expr)
   | preset (e: expr).
@@ -72,15 +72,15 @@ Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   | pfst x => pfst x
   | psnd x => psnd x
   | pvar x => if_y_eq x (pval v) e
-  | passert b => passert b
-  | pderef r => pderef r
-  | passign x z => passign x z
-  | pref v => pref v
+  | passert b => passert (aux b)
+  | pderef r => pderef (aux r)
+  | passign x z => passign (aux x) (aux z)
+  | pref v => pref (aux v)
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
   | papp e v => papp e v
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
-  | pif t0 t1 t2 => pif t0 (aux t1) (aux t2)
+  | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2)
   | pshift k e1 => pshift k (aux e1)
   | preset e => preset (aux e)
   end.
