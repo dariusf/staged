@@ -238,11 +238,11 @@ rs
   rewrite H. 2: { shiftfree. }
   clear H.
 
-  rewrite <- norm_ens_ens.
-
+  (* rewrite <- norm_ens_ens. *)
 
 (* HERE *)
 
+Abort.
 
   (* funfold1 "k". *)
   (* unfold k. *)
@@ -446,8 +446,8 @@ Check norm_reassoc.
 
   (* apply ent_discard. *)
 
-  admit.
-Abort.
+  (* admit.
+Abort. *)
 
 Definition toss : ufun := fun n' r' =>
   ∃ n r, ens_ \[vint n = n' /\ vint r = r'];;
