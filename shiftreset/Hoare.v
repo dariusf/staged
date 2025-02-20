@@ -91,9 +91,8 @@ Module Soundness.
 
   (** * Specification assertions *)
   (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
-  Definition pair_valid_under e f : Prop :=
+  Definition pair_valid_under p1 s1 e f : Prop :=
     forall h1 h2 v,
-    forall p1 s1,
       bigstep p1 h1 e h2 (enorm v) -> satisfies s1 s1 h1 h2 (norm v) f.
 
 (* TODO do we need to update the env due to fptrs? *)
@@ -103,14 +102,13 @@ Module Soundness.
     forall pfn xf x,
       Fmap.read p1 xf = pfn ->
       exists sfn, Fmap.read s1 xf = sfn /\
-      forall v, pair_valid_under (pfn x) (sfn x v).
+      forall v, pair_valid_under p1 s1 (pfn x) (sfn x v).
 
   (** The full definition requires compatible environments. *)
   Definition spec_assert (e: expr) (f: flow) : Prop :=
-    forall p1 p2 s1 s2,
+    forall p1 s1,
       env_compatible p1 s1 ->
-      env_compatible p2 s2 ->
-      pair_valid_under e f.
+      pair_valid_under p1 s1 e f.
 
   #[global]
   Instance Proper_spec_assert : Proper
@@ -140,7 +138,7 @@ Module Soundness.
   Proof.
     unfold spec_assert, pair_valid_under. intros.
     (* appeal to how e executes to tell us about the heaps *)
-    inverts H1 as H1.
+    inverts H0 as H0.
     (* justify that the staged formula describes the heap *)
     apply ens_pure_intro.
     reflexivity.
@@ -154,18 +152,15 @@ Module Soundness.
   Proof.
     intros.
     unfold spec_assert, pair_valid_under. intros.
-    (* exists s1. *)
-    (* exs.
-    intros Hb. *)
 
     (* reason about how the let executes *)
-    inverts H4 as. introv He1 He2.
+    inverts H3 as. introv He1 He2.
 
     (* use the specification assertion we have about e1 *)
     (* unfold spec_assert, pair_valid_under in H. *)
-    lets: H H2 H3 h1 h3 v1.
-    specializes H4 p0 s0 He1.
-    specializes H0 H4. injects H0.
+    lets: H H2 h1 h3 v1.
+    specializes H3 He1.
+    specializes H0 H3. injects H0.
 
     (* unfold spec_assert, pair_valid_under in H1. *)
     specializes H1 H2 h3 h2 v0.
@@ -185,36 +180,18 @@ Module Soundness.
     inverts Hb as Hb.
     { (* true *)
       unfold spec_assert in Ht.
-      specializes Ht env Hb.
+      specializes Ht Hc Hb.
       apply s_disj_l.
       eapply s_seq.
       apply ens_void_pure_intro. reflexivity.
       assumption. }
     { (* false *)
       unfold spec_assert in Hf.
-      specializes Hf env Hb.
+      specializes Hf Hc Hb.
       apply s_disj_r.
       eapply s_seq.
       apply ens_void_pure_intro. reflexivity.
       assumption. }
-  Qed.
-
-  Lemma sem_pif_ignore_cond: forall b e1 e2 f1 f2,
-    spec_assert e1 f1 ->
-    spec_assert e2 f2 ->
-    spec_assert (pif b e1 e2) (disj f1 f2).
-  Proof.
-    introv Ht Hf.
-    unfold spec_assert. introv Hc Hb.
-    inverts Hb as Hb.
-    { (* true *)
-      unfold spec_assert in Ht.
-      specializes Ht env Hb.
-      now apply s_disj_l. }
-    { (* false *)
-      unfold spec_assert in Hf.
-      specializes Hf env Hb.
-      now apply s_disj_r. }
   Qed.
 
   Lemma sem_pderef: forall x,
@@ -247,9 +224,9 @@ Module Soundness.
     intros.
     unfold spec_assert. introv Hc Hb.
     inverts Hb as Hb.
-    constructor. exists p.
-    constructor. exists (vloc p). exists (Fmap.single p v).
-    forwards H1: Fmap.disjoint_single_of_not_indom h1 p v.
+    constructor. exists l0.
+    constructor. exists (vloc l0). exists (Fmap.single l0 v).
+    forwards H1: Fmap.disjoint_single_of_not_indom h1 l0 v.
     { unfold not. exact Hb. }
 
     intuition.
@@ -317,9 +294,9 @@ Module Soundness.
     unfold spec_assert. introv Hc Hb.
     inverts Hb as.
     { introv H Hb.
-      injection H; intros; subst e0 x0; clear H.
+      injection Hb; intros; subst e0 x0; clear H.
       unfold spec_assert in H0.
-      specializes H0 env Hb. }
+      specializes H0 Hc H7. }
     { intros. false. }
   Qed.
 
@@ -334,7 +311,7 @@ Module Soundness.
     { intros. false. }
     { introv H Hb. injection H; intros; subst e0 x0 xf0; clear H.
       unfold spec_assert in H0.
-      specializes H0 env Hb. }
+      specializes H0 Hc Hb. }
   Qed.
 
   Lemma sem_papp_unk: forall xf va,
@@ -347,27 +324,6 @@ Module Soundness.
     unfold env_compatible in Hc. specializes Hc va ___. destr Hc.
     eapply s_unk. { exact H0. }
     specializes H1 v H6.
-  Qed.
-
-  Local Notation derivable := forward.
-  Local Notation valid := spec_assert.
-
-  (** * Soundness *)
-  Theorem soundness : forall e f,
-    derivable e f -> valid e f.
-  Proof.
-    introv H.
-    induction H.
-    - apply sem_pval.
-    - eapply sem_plet; eauto.
-    - apply sem_pif; auto.
-    - apply sem_pderef.
-    - apply sem_pref.
-    - apply sem_passign.
-    - apply sem_passert.
-    - eapply sem_papp_fun; eauto.
-    - eapply sem_papp_fix; eauto.
-    - eapply sem_papp_unk.
   Qed.
 
 End Soundness.
