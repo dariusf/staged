@@ -340,11 +340,11 @@ Module HistoryTriples.
       └───────────[f]──────────┘
   *)
   Definition hist_triple fh e f :=
-    forall penv env h0 h1 h2 v R,
-      satisfies env h0 h1 R fh ->
-      env_compatible penv env ->
-      bigstep penv h1 e h2 (enorm v) ->
-      satisfies env h0 h2 (norm v) f.
+    forall p1 s0 s1 h0 h1 h2 v R,
+      satisfies s0 s1 h0 h1 R fh ->
+      env_compatible p1 s1 ->
+      bigstep p1 h1 e h2 (enorm v) ->
+      satisfies s0 s1 h0 h2 (norm v) f.
 
   (** History triples are contravariant in the history. *)
   #[global]
@@ -390,12 +390,14 @@ Module HistoryTriples.
   Qed.
 
   Lemma hist_frame : forall fh fr f e,
+    shift_free fr ->
     hist_triple fh e f ->
     hist_triple (fr;; fh) e (fr;; f).
   Proof.
     unfold hist_triple. introv H. intros.
-    inverts H0 as H0. destr H0.
-    applys* s_seq.
+    inverts H1 as H1.
+    { applys* s_seq. }
+    { apply H in H1. false. }
   Qed.
 
   Lemma hist_sem : forall f e,
