@@ -3194,7 +3194,6 @@ Module HistoryTriples.
   Qed.
 
   (* TODO alternative formulation of if, which appends only *)
-  (* TODO sem_pif should treat conditions more precisely first *)
 
   Lemma hist_papp_fun: forall vf x e va f fh,
     vf = vfun x e ->

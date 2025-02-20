@@ -516,11 +516,12 @@ Module HistoryTriples.
     hist_triple (fh;; ens_ \[b = false]) e2 f2 ->
     hist_triple fh (pif (pval (vbool b)) e1 e2) (disj f1 f2).
   Proof.
-    introv He1 He2.
+    introv Hsf He1 He2.
     unfold hist_triple. intros.
+    destruct R. 2: { apply Hsf in H. false. }
     destruct b.
     { forwards: He1.
-      { applys s_seq h1 R.
+      { applys s_seq h1 v0.
         exact H.
         pose proof (ens_void_pure_intro).
         apply ens_void_pure_intro.
@@ -530,7 +531,7 @@ Module HistoryTriples.
       apply s_disj_l. assumption. }
 
     { forwards: He2.
-      { applys s_seq h1 R.
+      { applys s_seq h1 v0.
         exact H.
         pose proof (ens_void_pure_intro).
         apply ens_void_pure_intro.
@@ -540,9 +541,6 @@ Module HistoryTriples.
       apply s_disj_r. assumption. }
   Qed.
 
-  (* TODO alternative formulation of if, which appends only *)
-  (* TODO sem_pif should treat conditions more precisely first *)
-
   Lemma hist_papp_fun: forall vf x e va f fh,
     vf = vfun x e ->
     hist_triple fh (subst x va e) f ->
@@ -551,7 +549,7 @@ Module HistoryTriples.
     intros. subst.
     unfold hist_triple. intros.
     inverts H2 as H2.
-    { injects H2.
+    { injects H6.
       unfold hist_triple in H0.
       specializes H0 H H1 H9. }
     { false. }
@@ -572,11 +570,12 @@ Module HistoryTriples.
   Qed.
 
   Lemma hist_papp_unk: forall xf va fh,
+    shift_free_any fh ->
     hist_triple fh (papp (pvar xf) (pval va))
       (fh;; fex (fun r => unk xf va r)).
   Proof.
     intros.
-    applys hist_frame_sem fh (@sem_papp_unk xf va).
+    applys* hist_frame_sem fh (@sem_papp_unk xf va).
   Qed.
 
   Lemma hist_plet: forall fh e1 f1 e2 f2 v x,
