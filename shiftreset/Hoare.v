@@ -389,8 +389,13 @@ Module HistoryTriples.
     specializes H Hf1 Hc.
   Qed.
 
+  (* This version doesn't constrain the result to be of a certain form *)
+  Definition shift_free_any (f:flow) : Prop :=
+    forall s1 s2 h1 h2 k fk r fb,
+        not (satisfies s1 s2 h1 h2 (shft k fk r fb) f).
+
   Lemma hist_frame : forall fh fr f e,
-    shift_free fr ->
+    shift_free_any fr ->
     hist_triple fh e f ->
     hist_triple (fr;; fh) e (fr;; f).
   Proof.
@@ -419,28 +424,33 @@ Module HistoryTriples.
 
   (** The (arbitrary) result of the history does not matter, enabling this rewriting. *)
   Lemma hist_pre_result : forall fh f e,
-    shift_free fh ->
+    shift_free_any fh ->
     hist_triple (fh;; empty) e f ->
     hist_triple fh e f.
   Proof.
     unfold hist_triple. introv H. intros.
-    eapply H0.
-    -
-    applys s_seq. eassumption. apply empty_intro.
+    destruct R. 2: { apply H in H1. false. }
+    applys H0.
+    - applys s_seq.
+      eassumption.
+      apply empty_intro.
     - eassumption.
-    - assumption.
+    - eassumption.
   Qed.
 
   (** History triples which only append to history can be derived directly from the history-frame rule. *)
   Lemma hist_frame_sem: forall fh e f,
+    shift_free_any fh ->
     spec_assert e f ->
     hist_triple fh e (fh;; f).
   Proof.
     intros.
-    apply hist_sem in H.
-    lets H3: hist_frame fh H. clear H.
+    apply hist_sem in H0.
+    lets H3: hist_frame fh H0. clear H0.
+    assumption.
     apply hist_pre_result in H3.
-    exact H3.
+    apply H3.
+    assumption.
   Qed.
 
   (** Rules for program constructs *)
