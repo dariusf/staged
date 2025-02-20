@@ -631,6 +631,47 @@ Module HistoryTriples.
 
   Import SpecAssertions.
 
+  Definition res_compat (pres:eresult) (res:result) :=
+    match pres, res with
+    | enorm v1, norm v2 => v1 = v2
+    | eshft (vfun x1 eb) (vfun x2 ek),
+      shft k fb v1 fk =>
+      forall vb, spec_assert (subst x1 vb eb) fb /\
+        exists r, spec_assert (subst x2 v1 ek) (fk r)
+    | _, _ => False
+    end.
+  
+  (* < 1 + shift k. k 1 > *)
+  Definition e1p := eshft
+    (vfun "k" (papp (pvar "k") (pval (vint 1))))
+    (vfun "x" (pvar "x")).
+
+  Definition e1s vk := shft
+    "k" (∃ r, unk "k" (vint 1) (r))
+    vk (fun r => rs (ens (fun r1 => \[vk = r1])) r).
+
+  Example e1_compat: forall v,
+    res_compat e1p (e1s v).
+  Proof.
+    unfold e1p, e1s. simpl. intros.
+    unfold spec_assert, pair_valid_under.
+    split; intros.
+    { inverts H0 as H0.
+      apply s_fex. exists v0.
+      remember (Fmap.read p1 "k") as u eqn:H1. symmetry in H1.
+      unfold env_compatible in H. specializes H H1. destr H.
+      specializes H3 v0. unfold pair_valid_under in H3.
+      specializes H3 H0.
+      applys s_unk H.
+      assumption. }
+    { exs. intros.
+      inverts H0 as H0.
+      apply s_rs_val.
+      apply ens_pure_intro.
+      reflexivity.
+    }
+  Qed.
+
   (** * History triples *)
   (** A #<i>history triple</i># (i.e. not just a "triple", which typically refers to a Hoare triple) also constrains the history of a program. *)
   (* 
@@ -642,8 +683,8 @@ Module HistoryTriples.
     forall p1 s0 s1 h0 h1 h2 v R,
       satisfies s0 s1 h0 h1 R fh ->
       env_compatible p1 s1 ->
-      bigstep p1 h1 e h2 (enorm v) ->
-      satisfies s0 s1 h0 h2 (norm v) f.
+      bigstep p1 h1 e h2 R1 ->
+      satisfies s0 s1 h0 h2 R2 f.
 
   (** History triples are contravariant in the history. *)
   #[global]
