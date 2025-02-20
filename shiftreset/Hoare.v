@@ -406,7 +406,7 @@ Module HistoryTriples.
   Proof.
     iff H.
     { unfold hist_triple. intros.
-      apply empty_inv in H0. destruct H0. subst h0.
+      apply empty_inv in H0. destr H0. subst.
       unfold spec_assert, pair_valid_under in H.
       specializes H H1 H2. }
     { unfold spec_assert, pair_valid_under. intros.
@@ -419,13 +419,14 @@ Module HistoryTriples.
 
   (** The (arbitrary) result of the history does not matter, enabling this rewriting. *)
   Lemma hist_pre_result : forall fh f e,
+    shift_free fh ->
     hist_triple (fh;; empty) e f ->
     hist_triple fh e f.
   Proof.
-    unfold hist_triple.
-    introv H. intros.
-    eapply H.
-    - applys s_seq. eassumption. apply empty_intro.
+    unfold hist_triple. introv H. intros.
+    eapply H0.
+    -
+    applys s_seq. eassumption. apply empty_intro.
     - eassumption.
     - assumption.
   Qed.

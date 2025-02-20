@@ -734,21 +734,6 @@ Abort.
 End EnvEntailment.
 
 (** * Lemmas about satisfies *)
-Lemma empty_intro : forall s1 h1,
-  satisfies s1 s1 h1 h1 (norm vunit) empty.
-Proof.
-  intros.
-  unfold empty, ens_.
-  constructor.
-  exists vunit.
-  exists empty_heap.
-  splits*.
-  { rewrite hstar_hpure_l.
-    intuition.
-    apply hpure_intro.
-    constructor. }
-Qed.
-
 Lemma ens_void_pure_intro : forall P s h,
   P -> satisfies s s h h (norm vunit) (ens_ \[P]).
 Proof.
@@ -783,6 +768,31 @@ Proof.
   inverts H as H. destr H.
   rewrite hstar_hpure_l in H. destr H.
   apply hpure_inv in H4. destr H4. subst.
+  intuition.
+Qed.
+
+Lemma empty_intro : forall s1 h1,
+  satisfies s1 s1 h1 h1 (norm vunit) empty.
+Proof.
+  intros.
+  unfold empty, ens_.
+  constructor.
+  exists vunit.
+  exists empty_heap.
+  splits*.
+  { rewrite hstar_hpure_l.
+    intuition.
+    apply hpure_intro.
+    constructor. }
+Qed.
+
+Lemma empty_inv : forall s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R empty ->
+  s1 = s2 /\ h1 = h2 /\ R = norm vunit.
+Proof.
+  unfold empty.
+  intros.
+  apply ens_void_pure_inv in H.
   intuition.
 Qed.
 
