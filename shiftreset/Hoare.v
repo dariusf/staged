@@ -4,7 +4,8 @@ Local Open Scope string_scope.
 
 (** * Big-step semantics *)
 Inductive eresult : Type :=
-  | enorm : val -> eresult.
+  | enorm : val -> eresult
+  | eshft : val -> val -> eresult.
 
 (** Program environment *)
 #[global]
@@ -83,11 +84,32 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
     bigstep p h (passign (pval (vloc l)) (pval v)) (Fmap.update h l v) (enorm vunit)
 
   | eval_passert : forall h p,
-    bigstep p h (passert (pval (vbool true))) h (enorm vunit).
+    bigstep p h (passert (pval (vbool true))) h (enorm vunit)
+
+  | eval_pshift : forall h p k eb,
+    bigstep p h (pshift k eb) h (eshft (vfun k eb) (vfun "x" (pvar "x")))
+
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 x1 x2 xy xtmp eb ek,
+    bigstep p1 h1 e1 h2 (eshft (vfun x1 eb) (vfun x2 ek)) ->
+    bigstep p1 h1 (plet x e1 e2) h2
+      (eshft (vfun x1 eb)
+        (vfun xy (plet xtmp (papp (pval (vfun x2 ek)) (pvar xy))
+          (plet x (pvar xtmp) e2))))
+
+  | eval_preset_val : forall h1 h2 p e v,
+    bigstep p h1 e h2 (enorm v) ->
+    bigstep p h1 (preset e) h2 (enorm v)
+
+  | eval_preset_sh : forall h1 h2 h3 R p e x1 x2 eb ek,
+    bigstep p h1 e h3 (eshft (vfun x1 eb) (vfun x2 ek)) ->
+    bigstep p h3 (preset (* non-0 *) (subst x1 (vfun x2 ek) eb)) h2 R ->
+    bigstep p h1 (preset e) h2 R
+
+  .
 
 (* TODO is a rule for function pointers needed? *)
 
-Module Soundness.
+Module SpecAssertions.
 
   (** * Specification assertions *)
   (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
@@ -326,11 +348,288 @@ Module Soundness.
     specializes H1 v H6.
   Qed.
 
-End Soundness.
+End SpecAssertions.
+
+Module HistoryTriplesValues.
+
+  Import SpecAssertions.
+
+  (** * History triples *)
+  (** A #<i>history triple</i># (i.e. not just a "triple", which typically refers to a Hoare triple) also constrains the history of a program. *)
+  (* 
+      h0 ╶─[fh]──▶ h1 ╶─[e]──▶ h2
+      ╷                        ▲
+      └───────────[f]──────────┘
+  *)
+  Definition hist_triple fh e f :=
+    forall p1 s0 s1 h0 h1 h2 v R,
+      satisfies s0 s1 h0 h1 R fh ->
+      env_compatible p1 s1 ->
+      bigstep p1 h1 e h2 (enorm v) ->
+      satisfies s0 s1 h0 h2 (norm v) f.
+
+  (** History triples are contravariant in the history. *)
+  #[global]
+  Instance Proper_hist_triple : Proper
+    (flip entails ====> eq ====> entails ====> impl)
+    hist_triple.
+  Proof.
+    unfold entails, Proper, respectful, impl, hist_triple, flip.
+    intros. subst.
+    apply H1.
+    applys H2.
+    apply H.
+    exact H3.
+    exact H4.
+    exact H5.
+  Qed.
+
+  #[global]
+  Instance Proper_hist_triple_bi : Proper
+    (bientails ====> eq ====> bientails ====> impl)
+    hist_triple.
+  Proof.
+    unfold entails, Proper, respectful, impl, hist_triple, flip.
+    intros. subst.
+    apply H1.
+    applys H2.
+    apply H.
+    exact H3.
+    exact H4.
+    exact H5.
+  Qed.
+
+  (** Structural rules *)
+  Lemma hist_conseq : forall f1 f2 f3 f4 e,
+    entails f1 f3 ->
+    entails f4 f2 ->
+    hist_triple f3 e f4 ->
+    hist_triple f1 e f2.
+  Proof.
+    unfold hist_triple. introv He1 He2 H. introv Hf1 Hc.
+    rewrite He1 in Hf1.
+    specializes H Hf1 Hc.
+  Qed.
+
+  (* This version doesn't constrain the result to be of a certain form *)
+  Definition shift_free_any (f:flow) : Prop :=
+    forall s1 s2 h1 h2 k fk r fb,
+        not (satisfies s1 s2 h1 h2 (shft k fk r fb) f).
+
+  Lemma hist_frame : forall fh fr f e,
+    shift_free_any fr ->
+    hist_triple fh e f ->
+    hist_triple (fr;; fh) e (fr;; f).
+  Proof.
+    unfold hist_triple. introv H. intros.
+    inverts H1 as H1.
+    { applys* s_seq. }
+    { apply H in H1. false. }
+  Qed.
+
+  Lemma hist_sem : forall f e,
+    spec_assert e f <->
+    hist_triple empty e f.
+  Proof.
+    iff H.
+    { unfold hist_triple. intros.
+      apply empty_inv in H0. destr H0. subst.
+      unfold spec_assert, pair_valid_under in H.
+      specializes H H1 H2. }
+    { unfold spec_assert, pair_valid_under. intros.
+      unfold hist_triple in H.
+      applys H.
+      apply empty_intro.
+      apply H0.
+      assumption. }
+  Qed.
+
+  (** The (arbitrary) result of the history does not matter, enabling this rewriting. *)
+  Lemma hist_pre_result : forall fh f e,
+    shift_free_any fh ->
+    hist_triple (fh;; empty) e f ->
+    hist_triple fh e f.
+  Proof.
+    unfold hist_triple. introv H. intros.
+    destruct R. 2: { apply H in H1. false. }
+    applys H0.
+    - applys s_seq.
+      eassumption.
+      apply empty_intro.
+    - eassumption.
+    - eassumption.
+  Qed.
+
+  (** History triples which only append to history can be derived directly from the history-frame rule. *)
+  Lemma hist_frame_sem: forall fh e f,
+    shift_free_any fh ->
+    spec_assert e f ->
+    hist_triple fh e (fh;; f).
+  Proof.
+    intros.
+    apply hist_sem in H0.
+    lets H3: hist_frame fh H0. clear H0.
+    assumption.
+    apply hist_pre_result in H3.
+    apply H3.
+    assumption.
+  Qed.
+
+  (** Rules for program constructs *)
+  Lemma hist_pval: forall n fh,
+    shift_free_any fh ->
+    hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
+  Proof.
+    unfold hist_triple. intros * Hsf * Hh * Hc Hb.
+    destruct R. 2: { apply Hsf in Hh. false. }
+    applys s_seq h1 v0 Hh.
+    lets H: sem_pval n Hc.
+    unfold pair_valid_under, spec_assert in H.
+    apply H; auto.
+  Qed.
+
+  Remark hist_pval_via_frame: forall n fh,
+    shift_free_any fh ->
+    hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
+  Proof.
+    intros.
+    applys* hist_frame_sem (@sem_pval n).
+  Qed.
+
+  Lemma hist_pref: forall v fh,
+    shift_free_any fh ->
+    hist_triple fh (pref (pval v))
+      (fh;; fex (fun y =>(ens (fun r => \[r = vloc y] \* y ~~> v)))).
+  Proof.
+    intros.
+    applys* hist_frame_sem (@sem_pref v).
+  Qed.
+
+  Lemma hist_pderef: forall x fh,
+    shift_free_any fh ->
+    hist_triple fh (pderef (pval (vloc x)))
+      (fh;; fall (fun y =>
+        req (x ~~> y) (ens (fun res => \[res = y] \* x ~~> y)))).
+  Proof.
+    intros.
+    applys* hist_frame_sem (@sem_pderef x).
+  Qed.
+
+  Lemma hist_passign: forall x y v fh,
+    shift_free_any fh ->
+    hist_triple fh (passign (pval (vloc x)) (pval y))
+      (fh;; req (x ~~> v) (ens_ (x ~~> y))).
+  Proof.
+    intros.
+    applys* hist_frame_sem (@sem_passign x).
+  Qed.
+
+  Lemma hist_passert: forall fh b,
+    shift_free_any fh ->
+    hist_triple fh (passert (pval (vbool b))) (fh;; req_ \[b = true]).
+  Proof.
+    intros.
+    applys* hist_frame_sem (@sem_passert b).
+  Qed.
+
+  Lemma hist_pif: forall fh b e1 e2 f1 f2,
+    shift_free_any fh ->
+    hist_triple (fh;; ens_ \[b = true]) e1 f1 ->
+    hist_triple (fh;; ens_ \[b = false]) e2 f2 ->
+    hist_triple fh (pif (pval (vbool b)) e1 e2) (disj f1 f2).
+  Proof.
+    introv Hsf He1 He2.
+    unfold hist_triple. intros.
+    destruct R. 2: { apply Hsf in H. false. }
+    destruct b.
+    { forwards: He1.
+      { applys s_seq h1 v0.
+        exact H.
+        pose proof (ens_void_pure_intro).
+        apply ens_void_pure_intro.
+        reflexivity. }
+      { exact H0. }
+      { inverts H1 as H1. exact H1. }
+      apply s_disj_l. assumption. }
+
+    { forwards: He2.
+      { applys s_seq h1 v0.
+        exact H.
+        pose proof (ens_void_pure_intro).
+        apply ens_void_pure_intro.
+        reflexivity. }
+      { exact H0. }
+      { inverts H1 as H1. exact H1. }
+      apply s_disj_r. assumption. }
+  Qed.
+
+  Lemma hist_papp_fun: forall vf x e va f fh,
+    vf = vfun x e ->
+    hist_triple fh (subst x va e) f ->
+    hist_triple fh (papp (pval vf) (pval va)) f.
+  Proof.
+    intros. subst.
+    unfold hist_triple. intros.
+    inverts H2 as H2.
+    { injects H6.
+      unfold hist_triple in H0.
+      specializes H0 H H1 H9. }
+    { false. }
+  Qed.
+
+  Lemma hist_papp_fix: forall vf x e va f xf fh,
+    vf = vfix xf x e ->
+    hist_triple fh (subst x va (subst xf vf e)) f ->
+    hist_triple fh (papp (pval vf) (pval va)) f.
+  Proof.
+    intros. subst.
+    unfold hist_triple. intros.
+    inverts H2 as H2.
+    { false. }
+    { injects H2.
+      unfold hist_triple in H0.
+      specializes H0 H H1 H9. }
+  Qed.
+
+  Lemma hist_papp_unk: forall xf va fh,
+    shift_free_any fh ->
+    hist_triple fh (papp (pvar xf) (pval va))
+      (fh;; fex (fun r => unk xf va r)).
+  Proof.
+    intros.
+    applys* hist_frame_sem fh (@sem_papp_unk xf va).
+  Qed.
+
+  Lemma hist_plet: forall fh e1 f1 e2 f2 v x,
+    hist_triple fh e1 f1 ->
+    flow_res f1 v ->
+    hist_triple f1 (subst x v e2) f2 ->
+    hist_triple fh (plet x e1 e2) f2.
+  Proof.
+    introv He1 Hres He2.
+    unfold hist_triple. introv Hfh Hc Hb.
+
+    (* reason about how let executes, as the composition of e1 and e2 *)
+    inverts Hb as. introv Hb1 Hb2.
+
+    (* reason about the execution of e1 *)
+    unfold hist_triple in He1.
+    specializes He1 Hfh Hc Hb1.
+
+    (* reason about the result of e1 *)
+    specializes Hres He1. subst.
+    injects Hres.
+
+    (* reason about the execution of e2 *)
+    unfold hist_triple in He2.
+    specializes He2 He1 Hc.
+  Qed.
+
+End HistoryTriplesValues.
 
 Module HistoryTriples.
 
-  Import Soundness.
+  Import SpecAssertions.
 
   (** * History triples *)
   (** A #<i>history triple</i># (i.e. not just a "triple", which typically refers to a Hoare triple) also constrains the history of a program. *)
