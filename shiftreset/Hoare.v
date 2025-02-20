@@ -455,56 +455,63 @@ Module HistoryTriples.
 
   (** Rules for program constructs *)
   Lemma hist_pval: forall n fh,
+    shift_free_any fh ->
     hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
   Proof.
-    unfold hist_triple. introv Hh Hc Hb.
-    applys s_seq h1 R.
-    assumption.
+    unfold hist_triple. intros * Hsf * Hh * Hc Hb.
+    destruct R. 2: { apply Hsf in Hh. false. }
+    applys s_seq h1 v0 Hh.
     lets H: sem_pval n Hc.
     unfold pair_valid_under, spec_assert in H.
     apply H; auto.
   Qed.
 
   Remark hist_pval_via_frame: forall n fh,
+    shift_free_any fh ->
     hist_triple fh (pval n) (fh;; ens (fun res => \[res = n])).
   Proof.
     intros.
-    applys hist_frame_sem (@sem_pval n).
+    applys* hist_frame_sem (@sem_pval n).
   Qed.
 
   Lemma hist_pref: forall v fh,
+    shift_free_any fh ->
     hist_triple fh (pref (pval v))
       (fh;; fex (fun y =>(ens (fun r => \[r = vloc y] \* y ~~> v)))).
   Proof.
     intros.
-    applys hist_frame_sem (@sem_pref v).
+    applys* hist_frame_sem (@sem_pref v).
   Qed.
 
   Lemma hist_pderef: forall x fh,
+    shift_free_any fh ->
     hist_triple fh (pderef (pval (vloc x)))
       (fh;; fall (fun y =>
         req (x ~~> y) (ens (fun res => \[res = y] \* x ~~> y)))).
   Proof.
     intros.
-    applys hist_frame_sem (@sem_pderef x).
+    applys* hist_frame_sem (@sem_pderef x).
   Qed.
 
   Lemma hist_passign: forall x y v fh,
+    shift_free_any fh ->
     hist_triple fh (passign (pval (vloc x)) (pval y))
       (fh;; req (x ~~> v) (ens_ (x ~~> y))).
   Proof.
     intros.
-    applys hist_frame_sem (@sem_passign x).
+    applys* hist_frame_sem (@sem_passign x).
   Qed.
 
   Lemma hist_passert: forall fh b,
+    shift_free_any fh ->
     hist_triple fh (passert (pval (vbool b))) (fh;; req_ \[b = true]).
   Proof.
     intros.
-    applys hist_frame_sem (@sem_passert b).
+    applys* hist_frame_sem (@sem_passert b).
   Qed.
 
   Lemma hist_pif: forall fh b e1 e2 f1 f2,
+    shift_free_any fh ->
     hist_triple (fh;; ens_ \[b = true]) e1 f1 ->
     hist_triple (fh;; ens_ \[b = false]) e2 f2 ->
     hist_triple fh (pif (pval (vbool b)) e1 e2) (disj f1 f2).
