@@ -91,25 +91,26 @@ Module Soundness.
 
   (** * Specification assertions *)
   (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
-  Definition pair_valid_under p1 p2 s1 s2 e f : Prop :=
+  Definition pair_valid_under e f : Prop :=
     forall h1 h2 v,
+    forall p1 s1, exists p2 s2,
       bigstep p1 p2 h1 e h2 (enorm v) -> satisfies s1 s2 h1 h2 (norm v) f.
 
 (* TODO do we need to update the env due to fptrs? *)
 
   (** Roughly, this says that for every binding in the program environment, we can find a "corresponding" one in the spec environment, where "corresponding" means related by a valid specification assertion. *)
-  Definition env_compatible p1 s1 p2 s2 :=
+  Definition env_compatible (p1:penv) (s1:senv) :=
     forall pfn xf x,
       Fmap.read p1 xf = pfn ->
       exists sfn, Fmap.read s1 xf = sfn /\
-      forall v, pair_valid_under p1 s1 (pfn x) (sfn x v).
+      forall v, pair_valid_under (pfn x) (sfn x v).
 
   (** The full definition requires compatible environments. *)
   Definition spec_assert (e: expr) (f: flow) : Prop :=
     forall p1 p2 s1 s2,
       env_compatible p1 s1 ->
       env_compatible p2 s2 ->
-      pair_valid_under p1 s1 e f.
+      pair_valid_under e f.
 
   #[global]
   Instance Proper_spec_assert : Proper
@@ -119,6 +120,8 @@ Module Soundness.
     unfold entails, Proper, respectful, impl, spec_assert, pair_valid_under.
     intros. subst.
     specializes H1 H2 H3 h1 h2 v.
+    specializes H1 p0 s0.
+    jauto.
   Qed.
 
   (** Structural rules *)
@@ -139,6 +142,7 @@ Module Soundness.
   Proof.
     unfold spec_assert, pair_valid_under. intros.
     (* appeal to how e executes to tell us about the heaps *)
+    exists p2 s0. intros.
     inverts H1 as H1.
     (* justify that the staged formula describes the heap *)
     apply ens_pure_intro.
@@ -162,7 +166,9 @@ Module Soundness.
 
     (* use the specification assertion we have about e1 *)
     (* unfold spec_assert, pair_valid_under in H. *)
-    lets: H H2 H3 h1 h3 v1. destr H4. specializes H4 He1.
+    lets: H H2 H3 h1 h3 v1.
+    specializes H4 p0 s0.
+    destr H4. specializes H4 He1.
     specializes H0 H4. injects H0.
 
     (* unfold spec_assert, pair_valid_under in H1. *)
