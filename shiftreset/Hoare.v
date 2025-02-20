@@ -21,6 +21,9 @@ Definition empty_penv : penv := Fmap.empty.
 Implicit Types Re : eresult.
 Implicit Types p : penv.
 
+Definition flow_res (f:flow) (v:val) : Prop :=
+  forall s1 s2 h1 h2 R, satisfies s1 s2 h1 h2 R f -> R = norm v.
+
 Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
   | eval_pval : forall h v p,
     bigstep p h (pval v) h (enorm v)
@@ -104,9 +107,8 @@ Module Soundness.
 
   (** The full definition requires compatible environments. *)
   Definition spec_assert (e: expr) (f: flow) : Prop :=
-    forall p1 p2 s1 s2,
+    forall p1 s1,
       env_compatible p1 s1 ->
-      env_compatible p2 s2 ->
       pair_valid_under p1 s1 e f.
 
   #[global]
@@ -116,8 +118,8 @@ Module Soundness.
   Proof.
     unfold entails, Proper, respectful, impl, spec_assert, pair_valid_under.
     intros. subst.
-    specializes H1 H2 H3 h1 h2 v. destr H1.
-    exists s0.
+    specializes H1 H2 h1 h2 v. destr H1.
+    exists s2.
     eauto.
   Qed.
 
@@ -158,23 +160,35 @@ Module Soundness.
     spec_assert (plet x e1 e2) (f1;; f2).
   Proof.
     intros.
-    unfold spec_assert, pair_valid_under. introv Hc Hb.
+    unfold spec_assert, pair_valid_under. intros.
+    (* exists s1. *)
+    exs.
+    intros Hb.
 
     (* reason about how the let executes *)
     inverts Hb as. introv He1 He2.
 
     (* use the specification assertion we have about e1 *)
-    unfold spec_assert in H.
-    lets H3: H env He1. exact Hc. clear H He1. sort.
+    (* unfold spec_assert, pair_valid_under in H. *)
+    lets: H H2 h1 h3 v1. destr H3. specializes H4 He1.
+    specializes H0 H4. injects H0.
+
+    (* unfold spec_assert, pair_valid_under in H1. *)
+    specializes H1 H2 h3 h2 v0. destr H1. specializes H0 He2.
+
+
+    (* exact Hc. clear H He1. sort. *)
 
     (* we need to know that spec value and program value are the same *)
-    specializes H0 H3. subst.
-    injects H0.
+    (* specializes H0 H3. subst. *)
+    (* injects H0. *)
 
     (* know about f2 *)
-    specializes H1 env h3 h2 v0 He2. clear He2.
+    (* specializes H1 env h3 h2 v0 He2. clear He2. *)
 
-    applys* s_seq h3 (norm v).
+    applys* s_seq.
+    apply H0.
+
   Qed.
 
   Lemma sem_pif: forall b e1 e2 f1 f2,
