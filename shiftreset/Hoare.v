@@ -21,66 +21,66 @@ Definition empty_penv : penv := Fmap.empty.
 Implicit Types Re : eresult.
 Implicit Types p : penv.
 
-Inductive bigstep : penv -> penv -> heap -> expr -> heap -> eresult -> Prop :=
+Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
   | eval_pval : forall h v p,
-    bigstep p p h (pval v) h (enorm v)
+    bigstep p h (pval v) h (enorm v)
 
   (* there is no var rule *)
 
-  | eval_plet : forall h1 h3 h2 x e1 e2 v Re p1 p2 p3,
-    bigstep p1 p3 h1 e1 h3 (enorm v) ->
-    bigstep p3 p2 h3 (subst x v e2) h2 Re ->
-    bigstep p1 p2 h1 (plet x e1 e2) h2 Re
+  | eval_plet : forall h1 h3 h2 x e1 e2 v Re p,
+    bigstep p h1 e1 h3 (enorm v) ->
+    bigstep p h3 (subst x v e2) h2 Re ->
+    bigstep p h1 (plet x e1 e2) h2 Re
 
   | eval_padd : forall h x y p,
-    bigstep p p h (padd (pval (vint x)) (pval (vint y))) h (enorm (vint (x + y)))
+    bigstep p h (padd (pval (vint x)) (pval (vint y))) h (enorm (vint (x + y)))
 
   | eval_pminus : forall h x y p,
-    bigstep p p  h (pminus (pval (vint x)) (pval (vint y))) h (enorm (vint (x - y)))
+    bigstep p  h (pminus (pval (vint x)) (pval (vint y))) h (enorm (vint (x - y)))
 
   | eval_pfun : forall h x e p,
-    bigstep p p h (pfun x e) h (enorm (vfun x e))
+    bigstep p h (pfun x e) h (enorm (vfun x e))
 
   | eval_pfix : forall h x e xf p,
-    bigstep p p h (pfix xf x e) h (enorm (vfix xf x e))
+    bigstep p h (pfix xf x e) h (enorm (vfix xf x e))
 
   | eval_app_fun : forall v1 v2 h x e Re p p,
     v1 = vfun x e ->
-    bigstep p p h (subst x v2 e) h Re ->
-    bigstep p p h (papp (pval v1) (pval v2)) h Re
+    bigstep p h (subst x v2 e) h Re ->
+    bigstep p h (papp (pval v1) (pval v2)) h Re
 
   | eval_app_fix : forall v1 v2 h x e Re xf p,
     v1 = vfix xf x e ->
-    bigstep p p h (subst x v2 (subst xf v1 e)) h Re ->
-    bigstep p p h (papp (pval v1) (pval v2)) h Re
+    bigstep p h (subst x v2 (subst xf v1 e)) h Re ->
+    bigstep p h (papp (pval v1) (pval v2)) h Re
 
   | eval_app_unk : forall va h Re efn xf p,
     Fmap.read p xf = efn ->
-    bigstep p p h (efn va) h Re ->
-    bigstep p p h (papp (pvar xf) (pval va)) h Re
+    bigstep p h (efn va) h Re ->
+    bigstep p h (papp (pvar xf) (pval va)) h Re
 
   | eval_pif_true : forall h1 h2 Re e1 e2 p,
-    bigstep p p h1 e1 h2 Re ->
-    bigstep p p h1 (pif (pval (vbool true)) e1 e2) h2 Re
+    bigstep p h1 e1 h2 Re ->
+    bigstep p h1 (pif (pval (vbool true)) e1 e2) h2 Re
 
   | eval_pif_false : forall h1 h2 Re e1 e2 p,
-    bigstep p p h1 e2 h2 Re ->
-    bigstep p p h1 (pif (pval (vbool false)) e1 e2) h2 Re
+    bigstep p h1 e2 h2 Re ->
+    bigstep p h1 (pif (pval (vbool false)) e1 e2) h2 Re
 
   | eval_pref : forall h v l p,
     ~ Fmap.indom h l ->
-    bigstep p p h (pref (pval v)) (Fmap.update h l v) (enorm (vloc l))
+    bigstep p h (pref (pval v)) (Fmap.update h l v) (enorm (vloc l))
 
   | eval_pderef : forall h l p,
     Fmap.indom h l ->
-    bigstep p p h (pderef (pval (vloc l))) h (enorm (Fmap.read h l))
+    bigstep p h (pderef (pval (vloc l))) h (enorm (Fmap.read h l))
 
   | eval_passign : forall h l v p,
     Fmap.indom h l ->
-    bigstep p p h (passign (pval (vloc l)) (pval v)) (Fmap.update h l v) (enorm vunit)
+    bigstep p h (passign (pval (vloc l)) (pval v)) (Fmap.update h l v) (enorm vunit)
 
   | eval_passert : forall h p,
-    bigstep p p h (passert (pval (vbool true))) h (enorm vunit).
+    bigstep p h (passert (pval (vbool true))) h (enorm vunit).
 
 (* TODO is a rule for function pointers needed? *)
 
@@ -90,8 +90,8 @@ Module Soundness.
   (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
   Definition pair_valid_under p1 s1 e f : Prop :=
     forall h1 h2 v,
-    exists p2 s2,
-      bigstep p1 p2 h1 e h2 (enorm v) -> satisfies s1 s2 h1 h2 (norm v) f.
+    exists s2,
+      bigstep p1 h1 e h2 (enorm v) -> satisfies s1 s2 h1 h2 (norm v) f.
 
 (* TODO do we need to update the env due to fptrs? *)
 
@@ -117,7 +117,7 @@ Module Soundness.
     unfold entails, Proper, respectful, impl, spec_assert, pair_valid_under.
     intros. subst.
     specializes H1 H2 H3 h1 h2 v. destr H1.
-    exists p0 s0.
+    exists s0.
     eauto.
   Qed.
 
@@ -142,7 +142,7 @@ Module Soundness.
     (* introv Hc1 Hc2. *)
     intros.
     (* exists p2 s2. *)
-    exists p1 s1.
+    exists s1.
     intros Hb.
     (* appeal to how e executes to tell us about the heaps *)
     inverts Hb as Hb.
