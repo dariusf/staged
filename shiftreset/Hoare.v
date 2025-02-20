@@ -92,8 +92,7 @@ Module Soundness.
   (** * Specification assertions *)
   (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
   Definition pair_valid_under p1 s1 e f : Prop :=
-    forall h1 h2 v,
-    exists p2 s2,
+    forall h1 h2 v p2 s2,
       bigstep p1 p2 h1 e h2 (enorm v) -> satisfies s1 s2 h1 h2 (norm v) f.
 
 (* TODO do we need to update the env due to fptrs? *)
@@ -119,8 +118,7 @@ Module Soundness.
   Proof.
     unfold entails, Proper, respectful, impl, spec_assert, pair_valid_under.
     intros. subst.
-    specializes H1 H2 H3 h1 h2 v. destr H1.
-    eauto.
+    specializes H1 H2 H3 h1 h2 v.
   Qed.
 
   (** Structural rules *)
@@ -140,10 +138,8 @@ Module Soundness.
     spec_assert (pval n) (ens (fun res => \[res = n])).
   Proof.
     unfold spec_assert, pair_valid_under. intros.
-    exists p1 s1.
-    intros Hb.
     (* appeal to how e executes to tell us about the heaps *)
-    inverts Hb as Hb.
+    inverts H1 as H1.
     (* justify that the staged formula describes the heap *)
     apply ens_pure_intro.
     reflexivity.
