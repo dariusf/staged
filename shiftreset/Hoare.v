@@ -125,6 +125,11 @@ Module SpecAssertions.
       (* env_compatible n1 p1 s1 -> *)
       forall h1 h2,
 
+      (forall v,
+      bigstep p1 h1 e h2 (enorm v) -> False)
+      /\
+( 
+
       (* this is not complete either *)
       (* wrap the program cont with reset? *)
       (* why not use hoas for flow? *)
@@ -134,6 +139,7 @@ Module SpecAssertions.
 
       bigstep p1 h1 e h2 (eshft (vfun x1 eb) (vfun x2 ek)) ->
       satisfies s1 s1 h1 h2 (shft k fb v1 fk) f
+      )
     end
     .
   (* with env_compatible (n:nat) (p1:penv) (s1:senv) :=
@@ -153,18 +159,28 @@ Module SpecAssertions.
         forall v, spec_assert n1 (pfn x) (sfn x v)
     end. *)
 
-  Lemma sem_pval: forall n v,
-    spec_assert n (pval v) (ens (fun res => \[res = v])).
+  Lemma sem_pval: forall v,
+    spec_assert 0 (pval v) (ens (fun res => \[res = v])).
   Proof.
-    intros n.
+    (* intros n.
     induction n; intros.
-    {
+    { *)
       simpl. intros.
       inverts H as H.
-      apply ens_pure_intro. reflexivity. }
+      apply ens_pure_intro. reflexivity.
+      (* }
     {
       simpl. intros.
-      inverts H1 as H1. }
+      (* split; intros.
+      {
+
+        (* can't be proved if n is the number of shifts *)
+        (* if we weaken it to tbe upper bound on the number of shifts? *)
+        unfold not. intros.
+        inverts H as H.
+      } *)
+      { inverts H1. }
+    } *)
   Qed.
 
   Lemma sem_plet: forall n n1, n1 <= n ->
@@ -191,6 +207,28 @@ Module SpecAssertions.
     }
     {
       intros. simpl. intros.
+      split; intros.
+      {
+        (* since there is at least one shift according to n,
+        it cannot be that the let results in norm *)
+        inverts H3 as H3.
+        simpl in H2.
+        destruct n1.
+        {
+          (* if n1 is zero, f1 has no shift, f2 has shift, which it cannot *)
+          simpl in H0. specializes H0 H3. specializes H1 H0. injects H1.
+          clear H0.
+
+          simpl in H2. specializes H2. destruct H2 as [H2 _].
+          specializes H2 v0 H11.
+        }
+        {
+          (* if n1 is not zero, f1 has shifts, which it cannot have *)
+          simpl in H0.
+          specializes H0. destruct H0 as [H0 _].
+          jauto.
+        }
+      }
       (* the result of the let is a shift *)
         inverts H5 as H5.
         {
@@ -200,7 +238,10 @@ Module SpecAssertions.
           (* first case: use H0 H1 H2 *)
           specializes H0 H5.
           specializes H1 H0. injects H1.
+          simpl in H2.
+          specializes H2. destruct H2 as [_ H2].
           specializes H2 H3 H4 H13.
+
           (* TODO in order to do this, we need the constructive shift free continuation in exprs as well *)
           (* applys_eq s_seq_sh. *)
           (* apply* s_seq_sh. *)
@@ -211,10 +252,14 @@ Module SpecAssertions.
            {
             (* there is more than one shift in f1 *)
             (* we are just prevented from using H0 *)
-            (* simpl in H0. *)
-            simpl in H2.
+            simpl in H0.
+            specializes H0 p1 s1 h1 h3. destruct H0.
+            specializes H0 H5.
+            false.
+
+            (* simpl in H2. *)
             (* we need to spec assert to say that if the res is norm, false *)
-            admit.
+            (* admit. *)
           }
 
         }
