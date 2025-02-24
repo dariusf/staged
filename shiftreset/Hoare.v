@@ -132,11 +132,13 @@ Module SpecAssertions.
       /\
 ( 
 
-      (* this is not complete either *)
-      (* wrap the program cont with reset? *)
-      (* why not use hoas for flow? *)
-      forall x1 eb x2 ek k fb v1 fk vb r,
-        spec_assert n1 (subst x1 vb eb) fb ->
+      forall x1 eb x2 ek k fb v1 fk r,
+        (* k occurs in fb as a stage, not a value. we can't sub inside flow.
+          sub it into eb instead, as a vfptr, not a var. *)
+        spec_assert n1 (subst x1 (vfptr k) eb) fb ->
+        (* v1 occurs in fk as a value. we can sub this into ek. *)
+        (* not sure about r, might need to be existential,
+          as we can't get the result of ek *)
         spec_assert n1 (subst x2 v1 ek) (fk r) ->
 
       bigstep p1 h1 e h2 (eshft (vfun x1 eb) (vfun x2 ek)) ->
@@ -302,6 +304,8 @@ Module SpecAssertions.
 
     }
     Abort.
+End SpecAssertions.
+
 (*
 
   (** * Specification assertions *)
