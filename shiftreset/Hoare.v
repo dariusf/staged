@@ -88,7 +88,8 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
     bigstep p h (passert (pval (vbool true))) h (enorm vunit)
 
   | eval_pshift : forall h p k eb,
-    bigstep p h (pshift k eb) h (eshft (vfun k eb) (vfun "x" (pvar "x")))
+    bigstep p h (pshift k eb) h
+      (eshft (vfun k eb) (vfun "x" (preset (pvar "x"))))
 
   | eval_plet_sh : forall x e1 e2 h1 h2 p1 x1 x2 xy xtmp eb ek,
     bigstep p1 h1 e1 h2 (eshft (vfun x1 eb) (vfun x2 ek)) ->
@@ -103,7 +104,7 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
 
   | eval_preset_sh : forall h1 h2 h3 R p e x1 x2 eb ek,
     bigstep p h1 e h3 (eshft (vfun x1 eb) (vfun x2 ek)) ->
-    bigstep p h3 (preset (* non-0 *) (subst x1 (vfun x2 ek) eb)) h2 R ->
+    bigstep p h3 ((* non-0 *) (subst x1 (vfun x2 ek) eb)) h2 R ->
     bigstep p h1 (preset e) h2 R
 
   .
