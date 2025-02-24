@@ -112,7 +112,11 @@ Inductive flow : Type :=
 (** [vr] is the #<i>result</i># of the shift, which is the value a shift appears to evaluate to when a continuation is taken. [vr] will be equal to the value that the continuation will be resumed with, and can be depended on in anything sequenced after a [sh]. *)
   | shc : var -> flow -> val -> (val -> flow) -> flow
 (** [shc k fb vr fc] is a [sh] in CPS form, or the syntactic counterpart of [shft]. It carries a continuation whose argument is the equivalent of [sh]'s [r]. This continuation has a mixed first-/higher-order representation and has a [rs] as its topmost form. *)
-(** Example: the continuation [(λ vr. < fc >)] is represented as a tuple [(vr, fun r => rs fc r)]. *)
+(** Examples:
+- the formula [Sh#(k. fb, vr, Rs(fc, r))] is represented as
+  [shc "k" fb vr (fun r => rs fc r)]
+- the continuation [(λ vr. < fc >)] is represented as
+  a tuple [(vr, fun r => rs fc r)]. *)
   | rs : flow -> val -> flow
 (** [rs f vr] is a reset with body [f] and return value [vr]. *)
   | defun : var -> (val -> val -> flow) -> flow
