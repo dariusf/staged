@@ -117,6 +117,7 @@ Module SpecAssertions.
     match n with
     | O =>
     (* env compat *)
+    shift_free f /\
       forall p1 s1 h1 h2 v,
         bigstep p1 h1 e h2 (enorm v) ->
         satisfies s1 s1 h1 h2 (norm v) f
@@ -166,6 +167,7 @@ Module SpecAssertions.
     induction n; intros.
     { *)
       simpl. intros.
+      split; intros. { shiftfree. }
       inverts H as H.
       apply ens_pure_intro. reflexivity.
       (* }
@@ -195,17 +197,24 @@ Module SpecAssertions.
     (* induction_wf IH: wf_lt n. *)
     (* induction_wf IH: wf_peano_lt n. *)
     {
+      (* index is zero, so there are no shifts anywhere *)
     intros.
     inverts H as H.
     simpl in *.
     intros.
+    destr H0. destr H2.
+    split. shiftfree.
+    clear H H0.
+    intros.
+
     inverts H as. introv He1 He2.
-    specializes H0 He1. clear He1.
-    specializes H1 H0. injects H1.
-    specializes H2 He2. clear He2.
+    specializes H3 He1. clear He1.
+    specializes H1 H3. injects H1.
+    specializes H4 He2. clear He2.
     applys* s_seq.
     }
     {
+      (* index is nonzero, so there are shifts *)
       intros. simpl. intros.
       split; intros.
       {
@@ -216,7 +225,9 @@ Module SpecAssertions.
         destruct n1.
         {
           (* if n1 is zero, f1 has no shift, f2 has shift, which it cannot *)
-          simpl in H0. specializes H0 H3. specializes H1 H0. injects H1.
+          simpl in H0.
+          destruct H0 as [_ H0].
+          specializes H0 H3. specializes H1 H0. injects H1.
           clear H0.
 
           simpl in H2. specializes H2. destruct H2 as [H2 _].
@@ -229,6 +240,8 @@ Module SpecAssertions.
           jauto.
         }
       }
+      {
+
       (* the result of the let is a shift *)
         inverts H5 as H5.
         {
@@ -236,6 +249,7 @@ Module SpecAssertions.
           destruct n1.
           {
           (* first case: use H0 H1 H2 *)
+          simpl in H0. destruct H0 as [_ H0].
           specializes H0 H5.
           specializes H1 H0. injects H1.
           simpl in H2.
@@ -243,6 +257,7 @@ Module SpecAssertions.
           specializes H2 H3 H4 H13.
 
           (* TODO in order to do this, we need the constructive shift free continuation in exprs as well *)
+          (* TODO which might need similar cps hacks in expr. try to relax the ones in flow first *)
           (* applys_eq s_seq_sh. *)
           (* apply* s_seq_sh. *)
           admit.
@@ -264,9 +279,25 @@ Module SpecAssertions.
 
         }
         {
-          (* e1 has a shift *)
+          (* the result of let is shift, and the shift comes from e1 *)
+          (* n1 must be nonzero *)
+          destruct n1.
+          {
+            (* vacuous *)
+
+            (* can't use H0 *)
+            simpl in H0. destruct H0 as [? H0].
+            
+
             admit.
+          }
+          {
+            (* this case is ok *)
+          admit.
+          }
         }
+
+      }
 
     }
     Abort.
