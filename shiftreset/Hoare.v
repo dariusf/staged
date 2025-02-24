@@ -1,6 +1,7 @@
 
 From ShiftReset Require Import Logic.
 Local Open Scope string_scope.
+(* Require Import Coq.Program.Equality. *)
 
 (** * Big-step semantics *)
 Inductive eresult : Type :=
@@ -111,11 +112,127 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
 
 Module SpecAssertions.
 
+  (* n is the number of shifts that can be done *)
+  Fixpoint spec_assert (n:nat) (e: expr) (f: flow) : Prop :=
+    match n with
+    | O =>
+    (* env compat *)
+      forall p1 s1 h1 h2 v,
+        bigstep p1 h1 e h2 (enorm v) ->
+        satisfies s1 s1 h1 h2 (norm v) f
+    | S n1 =>
+      forall p1 s1,
+      (* env_compatible n1 p1 s1 -> *)
+      forall h1 h2,
+
+      (* this is not complete either *)
+      (* wrap the program cont with reset? *)
+      (* why not use hoas for flow? *)
+      forall x1 eb x2 ek k fb v1 fk vb r,
+        spec_assert n1 (subst x1 vb eb) fb ->
+        spec_assert n1 (subst x2 v1 ek) (fk r) ->
+
+      bigstep p1 h1 e h2 (eshft (vfun x1 eb) (vfun x2 ek)) ->
+      satisfies s1 s1 h1 h2 (shft k fb v1 fk) f
+    end
+    .
+  (* with env_compatible (n:nat) (p1:penv) (s1:senv) :=
+    match n with
+    | O =>
+      forall pfn xf x,
+        Fmap.read p1 xf = pfn ->
+        exists sfn, Fmap.read s1 xf = sfn /\
+      (* inlining defn from above *)
+        forall h1 h2 v, 
+          bigstep p1 h1 (pfn x) h2 (enorm v) ->
+          satisfies s1 s1 h1 h2 (norm v) (sfn x v)
+    | S n1 =>
+      forall pfn xf x,
+        Fmap.read p1 xf = pfn ->
+        exists sfn, Fmap.read s1 xf = sfn /\
+        forall v, spec_assert n1 (pfn x) (sfn x v)
+    end. *)
+
+  Lemma sem_pval: forall n v,
+    spec_assert n (pval v) (ens (fun res => \[res = v])).
+  Proof.
+    intros n.
+    induction n; intros.
+    {
+      simpl. intros.
+      inverts H as H.
+      apply ens_pure_intro. reflexivity. }
+    {
+      simpl. intros.
+      inverts H1 as H1. }
+  Qed.
+
+  Lemma sem_plet: forall n n1, n1 <= n ->
+    forall x e1 e2 f1 f2 v,
+    spec_assert n1 e1 f1 ->
+    flow_res f1 v ->
+    spec_assert (n-n1) (subst x v e2) f2 ->
+    spec_assert n (plet x e1 e2) (f1;; f2).
+  Proof.
+    intros n.
+    induction n.
+    (* induction_wf IH: wf_lt n. *)
+    (* induction_wf IH: wf_peano_lt n. *)
+    {
+    intros.
+    inverts H as H.
+    simpl in *.
+    intros.
+    inverts H as. introv He1 He2.
+    specializes H0 He1. clear He1.
+    specializes H1 H0. injects H1.
+    specializes H2 He2. clear He2.
+    applys* s_seq.
+    }
+    {
+      intros. simpl. intros.
+      (* the result of the let is a shift *)
+        inverts H5 as H5.
+        {
+          (* e1 is norm, e2 has a shift *)
+          destruct n1.
+          {
+          (* first case: use H0 H1 H2 *)
+          specializes H0 H5.
+          specializes H1 H0. injects H1.
+          specializes H2 H3 H4 H13.
+          (* TODO in order to do this, we need the constructive shift free continuation in exprs as well *)
+          (* applys_eq s_seq_sh. *)
+          (* apply* s_seq_sh. *)
+          admit.
+          }
+
+          (* second case, where there are shifts in f1, is vacuous *)
+           {
+            (* there is more than one shift in f1 *)
+            (* we are just prevented from using H0 *)
+            (* simpl in H0. *)
+            simpl in H2.
+            (* we need to spec assert to say that if the res is norm, false *)
+            admit.
+          }
+
+        }
+        {
+          (* e1 has a shift *)
+            admit.
+        }
+
+    }
+    Abort.
+(*
+
   (** * Specification assertions *)
   (** A #<i>specification assertion</i># is our equivalent of a (semantic) Hoare triple: a valid one ensures ensures that the given program satisfies the given specification. *)
   Definition pair_valid_under p1 s1 e f : Prop :=
-    forall h1 h2 v,
-      bigstep p1 h1 e h2 (enorm v) -> satisfies s1 s1 h1 h2 (norm v) f.
+    forall h1 h2 Re R,
+      res_compatible Re R ->
+      bigstep p1 h1 e h2 Re -> satisfies s1 s1 h1 h2 R f.
 
 (* TODO do we need to update the env due to fptrs? *)
 
@@ -126,11 +243,54 @@ Module SpecAssertions.
       exists sfn, Fmap.read s1 xf = sfn /\
       forall v, pair_valid_under p1 s1 (pfn x) (sfn x v).
 
+  Definition res_compatible (pres:eresult) (res:result) :=
+    match pres, res with
+    | enorm v1, norm v2 => v1 = v2
+    | eshft (vfun x1 eb) (vfun x2 ek),
+      shft k fb v1 fk =>
+      forall vb, spec_assert (subst x1 vb eb) fb /\
+        exists r, spec_assert (subst x2 v1 ek) (fk r)
+    | _, _ => False
+    end.
+
   (** The full definition requires compatible environments. *)
   Definition spec_assert (e: expr) (f: flow) : Prop :=
     forall p1 s1,
       env_compatible p1 s1 ->
       pair_valid_under p1 s1 e f.
+
+  Module TestRes.
+    (* < 1 + shift k. k 1 > *)
+    Definition e1p := eshft
+      (vfun "k" (papp (pvar "k") (pval (vint 1))))
+      (vfun "x" (pvar "x")).
+
+    Definition e1s vk := shft
+      "k" (∃ r, unk "k" (vint 1) (r))
+      vk (fun r => rs (ens (fun r1 => \[vk = r1])) r).
+
+    Example e1_compat: forall v,
+      res_compatible e1p (e1s v).
+    Proof.
+      unfold e1p, e1s. simpl. intros.
+      unfold spec_assert, pair_valid_under.
+      split; intros.
+      { inverts H0 as H0.
+        apply s_fex. exists v0.
+        remember (Fmap.read p1 "k") as u eqn:H1. symmetry in H1.
+        unfold env_compatible in H. specializes H H1. destr H.
+        specializes H3 v0. unfold pair_valid_under in H3.
+        specializes H3 H0.
+        applys s_unk H.
+        assumption. }
+      { exs. intros.
+        inverts H0 as H0.
+        apply s_rs_val.
+        apply ens_pure_intro.
+        reflexivity.
+      }
+    Qed.
+  End TestRes.
 
   #[global]
   Instance Proper_spec_assert : Proper
@@ -623,49 +783,6 @@ Module HistoryTriples.
 
   Import SpecAssertions.
 
-  Definition res_compatible (pres:eresult) (res:result) :=
-    match pres, res with
-    | enorm v1, norm v2 => v1 = v2
-    | eshft (vfun x1 eb) (vfun x2 ek),
-      shft k fb v1 fk =>
-      forall vb, spec_assert (subst x1 vb eb) fb /\
-        exists r, spec_assert (subst x2 v1 ek) (fk r)
-    | _, _ => False
-    end.
-
-  Module Test.
-    (* < 1 + shift k. k 1 > *)
-    Definition e1p := eshft
-      (vfun "k" (papp (pvar "k") (pval (vint 1))))
-      (vfun "x" (pvar "x")).
-
-    Definition e1s vk := shft
-      "k" (∃ r, unk "k" (vint 1) (r))
-      vk (fun r => rs (ens (fun r1 => \[vk = r1])) r).
-
-    Example e1_compat: forall v,
-      res_compatible e1p (e1s v).
-    Proof.
-      unfold e1p, e1s. simpl. intros.
-      unfold spec_assert, pair_valid_under.
-      split; intros.
-      { inverts H0 as H0.
-        apply s_fex. exists v0.
-        remember (Fmap.read p1 "k") as u eqn:H1. symmetry in H1.
-        unfold env_compatible in H. specializes H H1. destr H.
-        specializes H3 v0. unfold pair_valid_under in H3.
-        specializes H3 H0.
-        applys s_unk H.
-        assumption. }
-      { exs. intros.
-        inverts H0 as H0.
-        apply s_rs_val.
-        apply ens_pure_intro.
-        reflexivity.
-      }
-    Qed.
-  End Test.
-
   (** * History triples *)
   (** A #<i>history triple</i># (i.e. not just a "triple", which typically refers to a Hoare triple) also constrains the history of a program. *)
   (* 
@@ -933,3 +1050,4 @@ Module HistoryTriples.
   Qed.
 
 End HistoryTriples.
+*)
