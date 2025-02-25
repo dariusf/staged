@@ -26,6 +26,14 @@ Implicit Types p : penv.
 Definition flow_res (f:flow) (v:val) : Prop :=
   forall s1 s2 h1 h2 R, satisfies s1 s2 h1 h2 R f -> R = norm v.
 
+Definition flow_res1 (f:flow) (v:val) : Prop :=
+  forall s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R f ->
+  match R with
+  | norm v1 => v = v1
+  | shft _ _ v1 _ => v = v1
+  end.
+
 Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
   | eval_pval : forall h v p,
     bigstep p h (pval v) h (enorm v)
@@ -266,7 +274,7 @@ Module SpecAssertions.
   Lemma sem_plet: forall n n1, n1 <= n ->
     forall x e1 e2 f1 f2 v,
     spec_assert n1 e1 f1 ->
-    flow_res f1 v ->
+    flow_res1 f1 v ->
     spec_assert (n-n1) (subst x v e2) f2 ->
     spec_assert n (plet x e1 e2) (f1;; f2).
   Proof.
@@ -303,7 +311,7 @@ Module SpecAssertions.
 
     inverts H as. introv He1 He2.
     specializes H3 He1. clear He1.
-    specializes H1 H3. injects H1.
+    specializes H1 H3. subst.
     specializes H4 He2. clear He2.
     applys* s_seq.
     }
@@ -322,7 +330,7 @@ Module SpecAssertions.
           (* if n1 is zero, f1 has no shift, f2 has shift, which it cannot *)
           simpl in H0.
           destruct H0 as [_ H0].
-          specializes H0 H3. specializes H1 H0. injects H1.
+          specializes H0 H3. specializes H1 H0. subst.
           clear H0.
 
           simpl in H2. specializes H2. destruct H2 as [H2 _].
@@ -346,7 +354,7 @@ Module SpecAssertions.
           (* n1=0, e1 norm *)
           simpl in H0. destruct H0 as [_ H0].
           specializes H0 H5.
-          specializes H1 H0. injects H1.
+          specializes H1 H0. subst.
           simpl in H2.
           specializes H2. destruct H2 as [_ H2].
           specializes H2 H3 H4 H13.
@@ -382,16 +390,13 @@ Module SpecAssertions.
           destruct n1.
           {
             (* vacuous *)
+            simpl in H4.
+
             simpl in H0. destruct H0.
             (* since n1 is zero, we get to use the fact that f1 is
               shift free to get a contradiction *)
-            
-
-            simpl in H4.
 
             (* applys_eq s_seq_sh. *)
-            
-
             admit.
           }
           {
