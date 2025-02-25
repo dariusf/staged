@@ -193,11 +193,11 @@ Module SpecAssertions.
     match n with
     | O =>
     (* env compat *)
-    shift_free f /\
+    (* shift_free f /\ *)
 
       (* forall p1 s1 h1 h2, *)
       (* (forall v1 v2, bigstep p1 h1 e h2 (eshft v1 v2) -> False) *)
-      (* expr_shift_free e /\ *)
+      expr_shift_free e /\
 
       (* forall v, *)
       forall p1 s1 h1 h2 v,
@@ -252,8 +252,8 @@ Module SpecAssertions.
     { *)
       simpl. intros.
       splits; intros.
-      { shiftfree. }
-      (* { unfold expr_shift_free. intros. inverts H as H. } *)
+      (* { shiftfree. } *)
+      { unfold expr_shift_free. intros. inverts H as H. }
       inverts H as H.
       apply ens_pure_intro. reflexivity.
       (* }
@@ -288,7 +288,10 @@ Module SpecAssertions.
     inverts H as H.
     simpl in *. destr H0. destr H2.
     splits.
-    { shiftfree. }
+    {
+      admit.
+    }
+    (* { shiftfree. } *)
     (* {
       (* apply sf_plet. *)
       applys sf_plet H H0.
@@ -371,15 +374,11 @@ Module SpecAssertions.
            {
             (* there is more than one shift in f1 *)
             (* we are just prevented from using H0 *)
-            simpl in H0. destruct H0.
-            specializes H6 p1 s1 h1 h3.
+            simpl in H0. destruct H0 as [H0 _].
+            (* specializes H6 p1 s1 h1 h3. *)
             (* destruct H0. *)
             specializes H0 H5.
             false.
-
-            (* simpl in H2. *)
-            (* we need to spec assert to say that if the res is norm, false *)
-            (* admit. *)
           }
 
         }
@@ -390,18 +389,37 @@ Module SpecAssertions.
           destruct n1.
           {
             (* vacuous *)
-            simpl in H4.
-
+            unfold flow_res1 in H1.
             simpl in H0. destruct H0.
             (* since n1 is zero, we get to use the fact that f1 is
               shift free to get a contradiction *)
-
-            (* applys_eq s_seq_sh. *)
-            admit.
+            specializes H0 H5. false.
           }
           {
             (* this case is ok *)
-            simpl in H0. specializes H0. destruct H0 as [_ H0].
+
+            (* inverts H as H.
+            {
+              simpl in H2.
+            } *)
+
+            (* simpl in H2. *)
+            (* simpl in H. *)
+            (* Print Le. *)
+            (* Print le. *)
+            (* Check le. *)
+
+            (* rew_nat in H. *)
+            (* Print le. *)
+            (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+            (* inverts H as H. *)
+
+            (* rew_math H. *)
+
+            (* simpl in H0. destruct H0. *)
+
+            (* specializes H0. destruct H0 as [_ H0]. *)
+            (* specializes H0. *)
 
             (* specializes H0 . *)
 
