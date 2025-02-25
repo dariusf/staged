@@ -37,6 +37,13 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
     bigstep p1 h3 (subst x v e2) h2 Re ->
     bigstep p1 h1 (plet x e1 e2) h2 Re
 
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 x1 x2 xy xtmp eb ek,
+    bigstep p1 h1 e1 h2 (eshft (vfun x1 eb) (vfun x2 ek)) ->
+    bigstep p1 h1 (plet x e1 e2) h2
+      (eshft (vfun x1 eb)
+        (vfun xy (plet xtmp (papp (pval (vfun x2 ek)) (pvar xy))
+          (plet x (pvar xtmp) e2))))
+
   | eval_padd : forall h x y p,
     bigstep p h (padd (pval (vint x)) (pval (vint y))) h (enorm (vint (x + y)))
 
@@ -91,13 +98,6 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
     bigstep p h (pshift k eb) h
       (eshft (vfun k eb) (vfun "x" (preset (pvar "x"))))
 
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 x1 x2 xy xtmp eb ek,
-    bigstep p1 h1 e1 h2 (eshft (vfun x1 eb) (vfun x2 ek)) ->
-    bigstep p1 h1 (plet x e1 e2) h2
-      (eshft (vfun x1 eb)
-        (vfun xy (plet xtmp (papp (pval (vfun x2 ek)) (pvar xy))
-          (plet x (pvar xtmp) e2))))
-
   | eval_preset_val : forall h1 h2 p e v,
     bigstep p h1 e h2 (enorm v) ->
     bigstep p h1 (preset e) h2 (enorm v)
@@ -113,26 +113,99 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
 
 Module SpecAssertions.
 
+  Definition expr_shift_free e :=
+    forall p1 h1 h2 v1 v2, bigstep p1 h1 e h2 (eshft v1 v2) -> False.
+
+  Definition expr_res e v :=
+    forall p1 h1 h2 r, bigstep p1 h1 e h2 (enorm r) -> v = r.
+
+  Lemma sf_pval : forall v,
+    expr_shift_free (pval v).
+  Proof.
+    unfold expr_shift_free. intros.
+    inverts H as H.
+  Qed.
+
+  Lemma sf_plet : forall x e1 e2 r,
+    expr_shift_free e1 ->
+    expr_res e1 r ->
+    expr_shift_free (subst x r e2) ->
+    expr_shift_free (plet x e1 e2).
+  Proof.
+    unfold expr_shift_free. intros.
+    inverts H2 as H2.
+    { specializes H0 H2. subst.
+      specializes H1 H10.
+      false. }
+    { specializes H H2. false. }
+  Qed.
+
+
+  (* Lemma sf_subst : forall e x v,
+    expr_shift_free (subst x v e) ->
+    expr_shift_free e.
+  Proof.
+  intros e. induction e;
+  try solve [ unfold expr_shift_free; intros; inverts H0 as H0 ].
+  {
+    intros. simpl in H.
+    {
+    destruct (var_eq x x0); subst; simpl.
+    - eapply sf_plet.
+      eapply IHe1.
+      unfold expr_shift_free in H.
+    }
+      unfold expr_shift_free. intros.
+      eapply H.
+      (* eapply eval_plet.
+      admit.
+      apply H0. *)
+  }
+  Qed. *)
+
+  (* Lemma sf_plet0 : forall x e1 e2,
+    expr_shift_free e1 ->
+    expr_shift_free e2 ->
+    expr_shift_free (plet x e1 e2).
+  Proof.
+    unfold expr_shift_free. intros.
+    inverts H1 as H1.
+    { specializes H0 H9. subst.
+      specializes H1 H10.
+      false. }
+    { specializes H H2. false. }
+  Qed. *)
+
+
+  Definition expr_no_res e :=
+    forall p1 h1 h2 v, bigstep p1 h1 e h2 (enorm v) -> False.
+
   (* n is the number of shifts that can be done *)
   Fixpoint spec_assert (n:nat) (e: expr) (f: flow) : Prop :=
     match n with
     | O =>
     (* env compat *)
     shift_free f /\
+
+      (* forall p1 s1 h1 h2, *)
+      (* (forall v1 v2, bigstep p1 h1 e h2 (eshft v1 v2) -> False) *)
+      (* expr_shift_free e /\ *)
+
+      (* forall v, *)
       forall p1 s1 h1 h2 v,
         bigstep p1 h1 e h2 (enorm v) ->
         satisfies s1 s1 h1 h2 (norm v) f
     | S n1 =>
-      forall p1 s1,
+      (* forall p1 s1,
       (* env_compatible n1 p1 s1 -> *)
       forall h1 h2,
-
       (forall v,
-      bigstep p1 h1 e h2 (enorm v) -> False)
+      bigstep p1 h1 e h2 (enorm v) -> False) *)
+      expr_no_res e
       /\
 ( 
 
-      forall x1 eb x2 ek k fb v1 fk r,
+      forall p1 s1 h1 h2 x1 eb x2 ek k fb v1 fk r,
         (* k occurs in fb as a stage, not a value. we can't sub inside flow.
           sub it into eb instead, as a vfptr, not a var. *)
         spec_assert n1 (subst x1 (vfptr k) eb) fb ->
@@ -170,7 +243,9 @@ Module SpecAssertions.
     induction n; intros.
     { *)
       simpl. intros.
-      split; intros. { shiftfree. }
+      splits; intros.
+      { shiftfree. }
+      (* { unfold expr_shift_free. intros. inverts H as H. } *)
       inverts H as H.
       apply ens_pure_intro. reflexivity.
       (* }
@@ -203,10 +278,26 @@ Module SpecAssertions.
       (* index is zero, so there are no shifts anywhere *)
     intros.
     inverts H as H.
-    simpl in *.
-    intros.
-    destr H0. destr H2.
-    split. shiftfree.
+    simpl in *. destr H0. destr H2.
+    splits.
+    { shiftfree. }
+    (* {
+      (* apply sf_plet. *)
+      applys sf_plet H H0.
+
+      unfold expr_shift_free.
+
+      intros.
+      inverts H2 as H2.
+      (* specializes H0 H12. *)
+      eapply H0.
+      applys_eq H12.
+      (* reflexivity. *)
+      (* inverts H2 as H2. *)
+      (* specializes H3 H2. *)
+      (* specializes H H2. *)
+    } *)
+    (* shiftfree. *)
     clear H H0.
     intros.
 
@@ -223,6 +314,7 @@ Module SpecAssertions.
       {
         (* since there is at least one shift according to n,
         it cannot be that the let results in norm *)
+        unfold expr_no_res. intros.
         inverts H3 as H3.
         simpl in H2.
         destruct n1.
@@ -251,27 +343,29 @@ Module SpecAssertions.
           (* e1 is norm, e2 has a shift *)
           destruct n1.
           {
-          (* first case: use H0 H1 H2 *)
+          (* n1=0, e1 norm *)
           simpl in H0. destruct H0 as [_ H0].
           specializes H0 H5.
           specializes H1 H0. injects H1.
           simpl in H2.
           specializes H2. destruct H2 as [_ H2].
           specializes H2 H3 H4 H13.
+          (* clear H3 H4 H13. *)
 
           (* TODO in order to do this, we need the constructive shift free continuation in exprs as well *)
           (* TODO which might need similar cps hacks in expr. try to relax the ones in flow first *)
           (* applys_eq s_seq_sh. *)
           (* apply* s_seq_sh. *)
-          admit.
+          apply* s_seq.
           }
 
           (* second case, where there are shifts in f1, is vacuous *)
            {
             (* there is more than one shift in f1 *)
             (* we are just prevented from using H0 *)
-            simpl in H0.
-            specializes H0 p1 s1 h1 h3. destruct H0.
+            simpl in H0. destruct H0.
+            specializes H6 p1 s1 h1 h3.
+            (* destruct H0. *)
             specializes H0 H5.
             false.
 
@@ -282,20 +376,32 @@ Module SpecAssertions.
 
         }
         {
-          (* the result of let is shift, and the shift comes from e1 *)
+          (* the result of let is shift, the shift comes from e1,
+            and e2 goes into the continuation *)
           (* n1 must be nonzero *)
           destruct n1.
           {
             (* vacuous *)
+            simpl in H0. destruct H0.
+            (* since n1 is zero, we get to use the fact that f1 is
+              shift free to get a contradiction *)
+            
 
-            (* can't use H0 *)
-            simpl in H0. destruct H0 as [? H0].
+            simpl in H4.
+
+            (* applys_eq s_seq_sh. *)
             
 
             admit.
           }
           {
             (* this case is ok *)
+            simpl in H0. specializes H0. destruct H0 as [_ H0].
+
+            (* specializes H0 . *)
+
+
+            (* applys_eq s_seq_sh. *)
           admit.
           }
         }
