@@ -397,6 +397,9 @@ Module SpecAssertions.
           }
           {
             (* this case is ok *)
+            simpl in H2.
+            specializes IHn H2.
+            math.
 
             (* inverts H as H.
             {
