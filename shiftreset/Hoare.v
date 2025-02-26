@@ -1653,3 +1653,107 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     apply p_pshift.
     apply p_papp_unk.
   Qed.
+
+
+(* Inductive small_spec : senv -> senv -> heap -> heap -> val -> flow -> flow -> Prop :=
+
+  | s_req : forall s1 s2 H h1 h2 v f f1,
+    (forall (hp hr:heap),
+      H hp ->
+      h1 = Fmap.union hr hp ->
+      Fmap.disjoint hr hp ->
+      small_spec s1 s2 hr h2 v f f1) ->
+    small_spec s1 s2 h1 h2 v (req H f) f1
+
+  | s_ens : forall s1 Q h1 h2 v h3,
+    Q v h3 ->
+    h2 = Fmap.union h1 h3 ->
+    Fmap.disjoint h1 h3 ->
+    small_spec s1 s1 h1 h2 v (ens Q) fin
+
+  | s_seq_empty : forall v s1 h1 f2,
+    small_spec s1 s1 h1 h1 v (seq fin f2) f2
+
+  | s_seq_step : forall v s1 s2 h1 h2 f1 f2 f3,
+    small_spec s1 s2 h1 h2 v f1 f3 ->
+    small_spec s1 s2 h1 h2 v (seq f1 f2) (seq f3 f2)
+
+  | s_fex : forall s1 s2 h1 h2 v (A:Type) (c:A->flow) b,
+    small_spec s1 s2 h1 h2 v (@fex A c) (c b)
+
+  | s_fall : forall s1 s2 h1 h2 v (A:Type) (c:A->flow) f1,
+    (forall b, small_spec s1 s2 h1 h2 v (c b) f1) ->
+    small_spec s1 s2 h1 h2 v (@fall A c) f1
+
+  | s_intersect_step_l : forall s1 s2 h1 h2 v f1 f2 f3,
+    small_spec s1 s2 h1 h2 v f1 f3 ->
+    small_spec s1 s2 h1 h2 v (intersect f1 f2) (intersect f3 f2)
+
+  | s_intersect_step_r : forall s1 s2 h1 h2 v f1 f2 f3,
+    small_spec s1 s2 h1 h2 v f1 f3 ->
+    small_spec s1 s2 h1 h2 v (intersect f1 f2) (intersect f1 f3)
+
+  | s_intersect_elim_l : forall s1 h1 v f2,
+    small_spec s1 s1 h1 h1 v (intersect fin f2) f2
+
+  | s_intersect_elim_r : forall s1 h1 v f1,
+    small_spec s1 s1 h1 h1 v (intersect f1 fin) f1
+
+  | s_disj_l : forall s1 h1 v f1 f2,
+    small_spec s1 s1 h1 h1 v (disj f1 f2) f1
+
+  | s_disj_r : forall s1 h1 v f1 f2,
+    small_spec s1 s1 h1 h1 v (disj f1 f2) f2
+
+  | s_unk : forall s1 h1 h1 r xf uf a,
+    Fmap.read s1 xf = uf ->
+    small_spec s1 s1 h1 h1 r (unk xf a r) (uf a r)
+  . *)
+
+(* Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f1 '~>' f2" :=
+  (small_spec s1 s2 h1 h2 r f1 f2) (at level 30, only printing).
+
+
+Inductive steps :
+  senv -> senv -> heap -> heap -> val -> flow -> flow -> Prop :=
+
+  | steps_refl : forall s1 h1 v f,
+    steps s1 s1 h1 h1 v f f
+
+  | steps_step : forall s1 s2 s3 h1 h2 h3 v f1 f2 f3,
+    small_spec s1 s2 h1 h2 v f1 f2 ->
+    steps s2 s3 h2 h3 v f2 f3 ->
+    steps s1 s3 h1 h3 v f1 f3.
+
+Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f1 '~>*' f2" :=
+  (steps s1 s2 h1 h2 r f1 f2) (at level 30, only printing).
+
+Lemma steps_of_step : forall s1 s2 h1 h2 v f1 f2,
+  small_spec s1 s2 h1 h2 v f1 f2 ->
+  steps s1 s2 h1 h2 v f1 f2.
+Proof using.
+  introv M. applys steps_step M. applys steps_refl.
+Qed.
+
+Lemma steps_trans : forall s1 s2 s3 h1 h2 h3 v f1 f2 f3,
+  steps s1 s2 h1 h2 v f1 f2 ->
+  steps s2 s3 h2 h3 v f2 f3 ->
+  steps s1 s3 h1 h3 v f1 f3.
+Proof using.
+  introv M1. induction M1; introv M2. { auto. } { constructors*. }
+Qed.
+
+Definition terminal f : Prop :=
+  f = fin.
+
+Definition reducible s1 h1 f1 : Prop :=
+  exists s2 h2 v f2, small_spec s1 s2 h1 h2 v f1 f2.
+
+Lemma reducible_inv : forall s h v,
+  ~ reducible s h fin.
+Proof using.
+  intros. intros M. inverts M. destr H. inverts H0 as H0.
+Qed.
+
+Definition notstuck s h f : Prop :=
+  terminal f \/ reducible s h f. *)
