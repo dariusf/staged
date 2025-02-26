@@ -271,6 +271,178 @@ Module SpecAssertions.
     } *)
   Qed.
 
+  Lemma sem_pshift: forall n x eb r fb,
+    spec_assert n eb fb ->
+    spec_assert (S n) (pshift x eb) (sh x fb r).
+  Proof.
+    intros n. induction n.
+    {
+      intros.
+      simpl.
+      split.
+      { unfold expr_no_res. intros * Hb. inverts Hb as Hb. }
+
+
+      intros * [? ?] * [? ?] Hb.
+      pose proof Hb as Hb1.
+      inverts Hb as Hb.
+
+      simpl in H. destruct H.
+
+
+    (* applys_eq s_sh. *)
+
+      (* admit. *)
+      admit.
+    }
+
+    intros.
+    simpl.
+    splits.
+    { unfold expr_no_res. intros. inverts H as H. admit. }
+    intros. destr H. destr H0.
+
+
+  (* Qed. *)
+  Abort.
+
+  (* Lemma sem_plet_sf: forall n x e1 e2 f1 f2 v,
+    spec_assert 0 e1 f1 ->
+    flow_res f1 v ->
+    spec_assert n (subst x v e2) f2 ->
+    spec_assert n (plet x e1 e2) (f1;; f2).
+  Proof.
+    intros n.
+    induction n.
+    {
+      (* index is zero, so there are no shifts anywhere *)
+    intros.
+    (* inverts H as H. *)
+    simpl in *.
+    (* destr H0. destr H1. *)
+    (* splits. *)
+    (* intros. *)
+    (* {
+      admit.
+    } *)
+    (* { shiftfree. } *)
+    (* {
+      (* apply sf_plet. *)
+      applys sf_plet H H0.
+
+      unfold expr_shift_free.
+
+      intros.
+      inverts H2 as H2.
+      (* specializes H0 H12. *)
+      eapply H0.
+      applys_eq H12.
+      (* reflexivity. *)
+      (* inverts H2 as H2. *)
+      (* specializes H3 H2. *)
+      (* specializes H H2. *)
+    } *)
+    (* shiftfree. *)
+    (* clear H H0. *)
+    intros.
+
+    (* destr H. destr H1. *)
+    inverts H2 as. introv He1 He2.
+    specializes H He1. clear He1.
+    specializes H0 H. injects H0.
+    specializes H1 He2. clear He2.
+    applys* s_seq.
+    }
+    {
+      (* index is nonzero, so there are shifts *)
+      intros. simpl. intros.
+      split; intros.
+      {
+        (* since there is at least one shift according to n,
+        it cannot be that the let results in norm *)
+
+        (* reason about let *)
+        unfold expr_no_res. intros.
+        inverts H2 as H2.
+
+        simpl in H1. destruct H1 as [H1 _].
+        
+        cut (v = v1). intros. subst.
+        specializes H1 H10.
+        false.
+
+        specializes H H2.
+        specializes H0 H.
+        congruence.
+      }
+      {
+
+      (* the result of the let is a shift *)
+        inverts H4 as H4.
+        2: {
+          (* we can't use H. *)
+          simpl in H.
+
+        }
+        {
+          (* e1 is norm, e2 has a shift *)
+          destruct n1.
+          {
+          (* n1=0, e1 norm *)
+          simpl in H0. destruct H0 as [_ H0].
+          specializes H0 H5.
+          specializes H1 H0. subst.
+          simpl in H2.
+          specializes H2. destruct H2 as [_ H2].
+          specializes H2 H3 H4 H13.
+          (* clear H3 H4 H13. *)
+
+          (* TODO in order to do this, we need the constructive shift free continuation in exprs as well *)
+          (* TODO which might need similar cps hacks in expr. try to relax the ones in flow first *)
+          (* applys_eq s_seq_sh. *)
+          (* apply* s_seq_sh. *)
+          apply* s_seq.
+          }
+
+          (* second case, where there are shifts in f1, is vacuous *)
+           {
+            (* there is more than one shift in f1 *)
+            (* we are just prevented from using H0 *)
+            simpl in H0. destruct H0 as [H0 _].
+            (* specializes H6 p1 s1 h1 h3. *)
+            (* destruct H0. *)
+            specializes H0 H5.
+            false.
+          }
+
+        }
+        {
+          (* the result of let is shift, the shift comes from e1,
+            and e2 goes into the continuation *)
+          (* n1 must be nonzero *)
+          destruct n1.
+          {
+            (* vacuous *)
+            unfold flow_res1 in H1.
+            simpl in H0. destruct H0.
+            (* since n1 is zero, we get to use the fact that f1 is
+              shift free to get a contradiction *)
+            specializes H0 H5. false.
+          }
+          {
+            (* this case is ok *)
+            simpl in H2.
+            specializes IHn H2.
+            math.
+          admit.
+          }
+        }
+
+      }
+
+    }
+    Abort. *)
+
   Lemma sem_plet: forall n n1, n1 <= n ->
     forall x e1 e2 f1 f2 v,
     spec_assert n1 e1 f1 ->
