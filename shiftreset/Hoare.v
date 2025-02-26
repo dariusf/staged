@@ -344,6 +344,7 @@ Module SpecAssertions.
   Abort. *)
 
   Lemma sem_preset: forall n e f,
+  (* shift_free  *)
     spec_assert n e f ->
     spec_assert n (preset e) (∃ r, rs f r).
   Proof.
@@ -456,6 +457,14 @@ Module SpecAssertions.
     simpl in *.
     apply sem_preset_val.
   Qed.
+
+  (* Lemma sem_plet: forall n n1, n1 <= n ->
+    forall x e1 e2 f1 f2 v,
+    spec_assert n1 e1 f1 ->
+    flow_res1 f1 v ->
+    spec_assert (n-n1) (subst x v e2) f2 ->
+    spec_assert n (plet x e1 e2) (f1;; f2).
+  Proof. *)
 
   (* Abort. *)
 
@@ -1631,11 +1640,23 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     hoare_pair n eb fb ->
     hoare_pair (S n) (pshift x eb) (sh x fb r)
 
-  | p_plet : forall x e1 e2 f1 f2 v n n1, n1 <= n ->
+  (* | p_plet : forall x e1 e2 f1 f2 v n n1, n1 <= n ->
     hoare_pair n1 e1 f1 ->
     flow_res f1 v ->
     hoare_pair (n-n1) (subst x v e2) f2 ->
+    hoare_pair n (plet x e1 e2) (f1;; f2) *)
+
+  | p_plet_val : forall x e1 e2 f1 f2 v n,
+    hoare_pair 0 e1 f1 ->
+    flow_res f1 v ->
+    hoare_pair n (subst x v e2) f2 ->
     hoare_pair n (plet x e1 e2) (f1;; f2)
+
+  | p_plet_sh : forall x e1 e2 f1 f2 v n n1, n1 <= n ->
+    hoare_pair (S n) e1 f1 ->
+    flow_res f1 v ->
+    hoare_pair n1 (subst x v e2) f2 ->
+    hoare_pair (n + n1) (plet x e1 e2) (f1;; f2)
 
   | p_papp_unk : forall n x v r,
     hoare_pair n (papp (pvar x) (pval v)) (unk x v r)
@@ -1654,6 +1675,16 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     apply p_papp_unk.
   Qed.
 
+  (* let x = (shift k. k 2) in x + 1 *)
+  Example e_pshift1: exists f,
+    hoare_pair (S O)
+      (plet "x"
+        (pshift "k" (papp (pvar "k") (pval (vint 2))))
+        (padd (pvar "x") (pval (vint 1))))
+      f.
+  Proof.
+    exs.
+  Abort.
 
 (* Inductive small_spec : senv -> senv -> heap -> heap -> val -> flow -> flow -> Prop :=
 
