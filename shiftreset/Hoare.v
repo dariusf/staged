@@ -148,6 +148,13 @@ Module SpecAssertions.
     { specializes H H2. false. }
   Qed.
 
+  Lemma sf_preset: forall v,
+    expr_shift_free (preset (pval v)).
+  Proof.
+    unfold expr_shift_free. intros.
+    inverts H as H.
+    inverts H as H.
+  Qed.
 
   (* Lemma sf_subst : forall e x v,
     expr_shift_free (subst x v e) ->
@@ -209,24 +216,31 @@ Module SpecAssertions.
       forall h1 h2,
       (forall v,
       bigstep p1 h1 e h2 (enorm v) -> False) *)
-      expr_no_res e
-      ->
-( 
+      expr_no_res e ->
 
-      forall p1 s1 h1 h2 eb x2 ek k fb v1 fk r,
+      forall p1 s1 h1 h2 Re R,
+      bigstep p1 h1 e h2 Re ->
+      satisfies s1 s1 h1 h2 R f ->
+      (
+      forall eb x2 ek k fb v1 fk r,
+      Re = (eshft (vfun k eb) (vfun x2 ek)) ->
+      R = (shft k fb v1 fk) ->
         (* k occurs in fb as a stage, not a value. we can't sub inside flow.
           sub it into eb instead, as a vfptr, not a var. *)
         spec_assert n1 eb fb ->
         (* v1 occurs in fk as a value. we can sub this into ek. *)
         (* not sure about r, might need to be existential,
           as we can't get the result of ek *)
-        spec_assert n1 (subst x2 v1 ek) (fk r) ->
-
-      bigstep p1 h1 e h2 (eshft (vfun k eb) (vfun x2 ek)) ->
-      satisfies s1 s1 h1 h2 (shft k fb v1 fk) f
-      )
+        spec_assert n1 (subst x2 v1 ek) (fk r)
+    )
+      (* is_compatible_shft n1 Re R *)
+      
     end
+  (* with is_compatible_shft (n:nat) Re R := *)
+
     .
+
+(* cannot guess decreasing arg of fix *)
   (* with env_compatible (n:nat) (p1:penv) (s1:senv) :=
     match n with
     | O =>
@@ -276,7 +290,7 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     apply p_papp_unk.
   Qed.
 
-  Example e_pshift1: exists r1 r2,
+  (* Example e_pshift1: exists r1 r2,
     spec_assert (S O) (pshift "k" (papp (pvar "k") (pval (vint 2))))
       (sh "k" (unk "k" (vint 2) r2) r1).
   Proof.
@@ -291,7 +305,7 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     (* no constructive premise,
       need shift body to run for us to deduce anything *)
   Abort.
-  (* Qed. *)
+  Qed. *)
 
   Lemma sem_pval: forall v,
     spec_assert 0 (pval v) (ens (fun res => \[res = v])).
@@ -336,11 +350,23 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     induction H.
     { apply sem_pval. }
     {
-      simpl. intros _ * H1 H2 Hb.
+      simpl. intros _ * Hb Hf **.
+      (* H1 H2 Hb. *)
       inverts Hb.
-      simpl in *.
+      injects TEMP.
+
+      inverts Hf as Hf.
+      injects TEMP0.
+
+      simpl.
+
+
+      (* split. *)
+      (* applys_eq s_sh. *)
+
+      (* simpl in *. *)
       (* eapply s_sh. *)
-      applys_eq s_sh.
+      (* applys_eq s_sh. *)
 
       admit.
     }
@@ -351,20 +377,73 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
   (* Qed. *)
   Abort.
 
-  Lemma sem_pshift: forall n x eb r fb,
+  Lemma sem_preset: forall n e f r,
+    spec_assert n e f ->
+    spec_assert n (preset e) (rs f r).
+  Proof.
+    (* unfold spec_assert. *)
+    intros n.
+    induction n; intros.
+    {
+      simpl in *. destruct H.
+      split. admit.
+      intros.
+      inverts H1 as H1.
+      { admit. }
+      { admit. }
+      }
+    {
+      simpl in *.
+      intros.
+      inverts H1 as H1.
+      { inverts TEMP0. }
+      (* inverts H2 as H2. *)
+
+      admit.
+      }
+  (* Qed. *)
+  Abort.
+
+  Lemma sem_preset_val: forall n v,
+    spec_assert n (preset (pval v)) (rs (ens (fun r => \[r = v])) v).
+  Proof.
+    intros n. destruct n; intros.
+    { simpl.
+      split. apply sf_preset.
+      intros.
+      inverts H as H. 2: { inverts H as H. }
+      inverts H as H.
+      applys_eq s_rs_val.
+      applys_eq s_ens.
+      exs. splits*. hintro. reflexivity. fmap_eq. }
+    { (* n > 1, so reset over a val must have an outstanding shift,
+        which can't happen *)
+      simpl. intros.
+      inverts H0 as H0.
+      inverts TEMP0. 
+      inverts H0. }
+  Qed.
+
+  Lemma sem_pshift: forall n x eb fb,
     spec_assert n eb fb ->
-    spec_assert (S n) (pshift x eb) (sh x fb r).
+    (* forall?? *)
+    spec_assert (S n) (pshift x eb) (∀ r, sh x fb r).
   Proof.
     intros n.
     intros.
     simpl.
-    intros _ * H1 H2 Hb.
-    inverts Hb.
+    intros _ * Hb Hf **.
+    inverts Hb. injects TEMP.
+    inverts Hf as Hf.
+    specializes Hf r.
+    (* destruct Hf as [b Hf]. *)
+    inverts Hf as Hf. injects TEMP0.
+
     simpl in *.
-    applys_eq s_sh.
+    apply sem_preset_val.
+  Qed.
 
-
-  Abort.
+  (* Abort. *)
 
     (* induction n.
     {
@@ -533,7 +612,7 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     }
     Abort. *)
 
-  Lemma sem_plet: forall n n1, n1 <= n ->
+  (* Lemma sem_plet: forall n n1, n1 <= n ->
     forall x e1 e2 f1 f2 v,
     spec_assert n1 e1 f1 ->
     flow_res1 f1 v ->
@@ -697,7 +776,8 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
       }
 
     }
-    Abort.
+    Abort. *)
+
 End SpecAssertions.
 
 (*
