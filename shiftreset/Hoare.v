@@ -228,7 +228,7 @@ Module SpecAssertions.
   (* with env_compatible (n:nat) (p1:penv) (s1:senv) :=
     *)
 
-Inductive hoare_pair : nat -> expr -> flow -> Prop :=
+(* Inductive hoare_pair : nat -> expr -> flow -> Prop :=
 
   | p_pval : forall v,
     hoare_pair O (pval v) (ens (fun res => \[res = v]))
@@ -258,7 +258,7 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     exists (vint 3) (vint 4).
     apply p_pshift.
     apply p_papp_unk.
-  Qed.
+  Qed. *)
 
   (* Example e_pshift1: exists r1 r2,
     spec_assert (S O) (pshift "k" (papp (pvar "k") (pval (vint 2))))
@@ -311,7 +311,7 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     (* hoare_pair e f -> *)
     (* forall n, spec_assert n e f. *)
 
-  Lemma soundness : forall e f n,
+  (* Lemma soundness : forall e f n,
     hoare_pair n e f ->
     spec_assert n e f.
   Proof.
@@ -345,7 +345,7 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
       admit.
     }
   (* Qed. *)
-  Abort.
+  Abort. *)
 
   Lemma sem_preset: forall n e f r,
     spec_assert n e f ->
