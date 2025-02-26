@@ -156,6 +156,32 @@ Module SpecAssertions.
     inverts H as H.
   Qed.
 
+  Lemma sf_preset1: forall e,
+    expr_shift_free e ->
+    expr_shift_free (preset e).
+  Proof.
+    unfold expr_shift_free. intros.
+    inverts H0 as H0.
+    specializes H H0.
+    false.
+  Qed.
+
+  Lemma sf_preset2: forall e,
+    expr_shift_free (preset e).
+  Proof.
+    unfold expr_shift_free. intros.
+    inverts H as H.
+    (* dependent induction H. *)
+    
+    (* eapply IHbigstep1. *)
+    (* eapply IHbigstep2. *)
+
+    (* eauto. *)
+    (* inverts H as H. *)
+    (* inverts H as H. *)
+  Abort.
+  (* Qed. *)
+
   (* Lemma sf_subst : forall e x v,
     expr_shift_free (subst x v e) ->
     expr_shift_free e.
@@ -199,7 +225,7 @@ Module SpecAssertions.
   Fixpoint spec_assert (n:nat) (e: expr) (f: flow) : Prop :=
     match n with
     | O =>
-      (* expr_shift_free e /\ *)
+      expr_shift_free e /\
 
       forall p1 s1 h1 h2 v,
         bigstep p1 h1 e h2 (enorm v) ->
@@ -287,8 +313,10 @@ Module SpecAssertions.
       (* splits; intros. *)
       (* { shiftfree. } *)
       (* { unfold expr_shift_free. intros. inverts H as H. } *)
-      inverts H as H.
-      apply ens_pure_intro. reflexivity.
+      splits; intros.
+      { apply sf_pval. }
+      { inverts H as H.
+      apply ens_pure_intro. reflexivity. }
       (* }
     {
       simpl. intros.
@@ -347,19 +375,66 @@ Module SpecAssertions.
   (* Qed. *)
   Abort. *)
 
-  Lemma sem_preset: forall n e f r,
+  Lemma sem_preset: forall n e f,
     spec_assert n e f ->
-    spec_assert n (preset e) (rs f r).
+    spec_assert n (preset e) (∃ r, rs f r).
   Proof.
     (* unfold spec_assert. *)
     intros n.
     induction n; intros.
     {
+      (* n=0, so no shifts in e *)
+      simpl in *.
+      destr H.
+      split. apply* sf_preset1.
+      (* clear H0. *)
+      intros.
+
+      inverts H as H.
+      {
+        specializes H1 H.
+        apply s_fex. exists v.
+        apply s_rs_val.
+        eassumption. }
+      { specializes H0 H. false. }
+    }
+    {
       simpl in *.
       intros.
+
+      specializes IHn H4. clear H4.
       inverts H0 as H0.
-      { admit. }
-      { admit. }
+      { inverts TEMP0. }
+      {
+        inverts H1 as [b H1].
+        inverts H1 as H1.
+        2: { inverts TEMP0 as TEMP0. }
+
+        (* subst. *)
+        specializes H H0.
+        applys H.
+        admit.
+        f_equal.
+
+
+
+        (* admit. } *)
+      (* eapply H. *)
+
+
+
+
+    (* } *)
+  Abort.
+
+      (* inverts H0 as H0.
+      { specializes H H0.
+        apply s_fex. exists v.
+        apply s_rs_val.
+        eassumption. }
+      {
+        admit.
+        }
       }
     {
       simpl in *.
@@ -372,7 +447,7 @@ Module SpecAssertions.
       admit.
       }
   (* Qed. *)
-  Abort.
+  Abort. *)
 
   Lemma sem_preset_val: forall n v,
     spec_assert n (preset (pval v))
@@ -380,7 +455,7 @@ Module SpecAssertions.
   Proof.
     intros n. destruct n; intros.
     { simpl.
-      (* split. apply sf_preset. *)
+      split. apply sf_preset.
       intros.
       inverts H as H. 2: { inverts H as H. }
       inverts H as H.
