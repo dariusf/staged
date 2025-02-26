@@ -199,7 +199,7 @@ Module SpecAssertions.
   Fixpoint spec_assert (n:nat) (e: expr) (f: flow) : Prop :=
     match n with
     | O =>
-      expr_shift_free e /\
+      (* expr_shift_free e /\ *)
 
       forall p1 s1 h1 h2 v,
         bigstep p1 h1 e h2 (enorm v) ->
@@ -207,7 +207,7 @@ Module SpecAssertions.
 
     | S n1 =>
 
-      expr_no_res e ->
+      (* expr_no_res e -> *)
 
       forall p1 s1 h1 h2 Re R,
         bigstep p1 h1 e h2 Re ->
@@ -284,9 +284,9 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     induction n; intros.
     { *)
       simpl. intros.
-      splits; intros.
+      (* splits; intros. *)
       (* { shiftfree. } *)
-      { unfold expr_shift_free. intros. inverts H as H. }
+      (* { unfold expr_shift_free. intros. inverts H as H. } *)
       inverts H as H.
       apply ens_pure_intro. reflexivity.
       (* }
@@ -320,7 +320,7 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     induction H.
     { apply sem_pval. }
     {
-      simpl. intros _ * Hb Hf **.
+      simpl. intros * Hb Hf **.
       (* H1 H2 Hb. *)
       inverts Hb.
       injects TEMP.
@@ -355,10 +355,9 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     intros n.
     induction n; intros.
     {
-      simpl in *. destruct H.
-      split. admit.
+      simpl in *.
       intros.
-      inverts H1 as H1.
+      inverts H0 as H0.
       { admit. }
       { admit. }
       }
@@ -366,9 +365,10 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
       simpl in *.
       intros.
       inverts H1 as H1.
-      { inverts TEMP0. }
+      (* { inverts TEMP0. } *)
       (* inverts H2 as H2. *)
 
+      admit.
       admit.
       }
   (* Qed. *)
@@ -380,7 +380,7 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
   Proof.
     intros n. destruct n; intros.
     { simpl.
-      split. apply sf_preset.
+      (* split. apply sf_preset. *)
       intros.
       inverts H as H. 2: { inverts H as H. }
       inverts H as H.
@@ -390,9 +390,9 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     { (* n > 1, so reset over a val must have an outstanding shift,
         which can't happen *)
       simpl. intros.
-      inverts H0 as H0.
+      inverts H as H.
       inverts TEMP0. 
-      inverts H0. }
+      inverts H. }
   Qed.
 
   Lemma sem_pshift: forall n x eb fb,
@@ -403,7 +403,7 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
     intros n.
     intros.
     simpl.
-    intros _ * Hb Hf **.
+    intros * Hb Hf **.
     inverts Hb. injects TEMP.
     inverts Hf as Hf.
     specializes Hf r.
