@@ -199,64 +199,34 @@ Module SpecAssertions.
   Fixpoint spec_assert (n:nat) (e: expr) (f: flow) : Prop :=
     match n with
     | O =>
-    (* env compat *)
-    (* shift_free f /\ *)
-
-      (* forall p1 s1 h1 h2, *)
-      (* (forall v1 v2, bigstep p1 h1 e h2 (eshft v1 v2) -> False) *)
       expr_shift_free e /\
 
-      (* forall v, *)
       forall p1 s1 h1 h2 v,
         bigstep p1 h1 e h2 (enorm v) ->
         satisfies s1 s1 h1 h2 (norm v) f
+
     | S n1 =>
-      (* forall p1 s1,
-      (* env_compatible n1 p1 s1 -> *)
-      forall h1 h2,
-      (forall v,
-      bigstep p1 h1 e h2 (enorm v) -> False) *)
+
       expr_no_res e ->
 
       forall p1 s1 h1 h2 Re R,
-      bigstep p1 h1 e h2 Re ->
-      satisfies s1 s1 h1 h2 R f ->
-      (
-      forall eb x2 ek k fb v1 fk r,
-      Re = (eshft (vfun k eb) (vfun x2 ek)) ->
-      R = (shft k fb v1 fk) ->
-        (* k occurs in fb as a stage, not a value. we can't sub inside flow.
-          sub it into eb instead, as a vfptr, not a var. *)
-        spec_assert n1 eb fb ->
-        (* v1 occurs in fk as a value. we can sub this into ek. *)
-        (* not sure about r, might need to be existential,
-          as we can't get the result of ek *)
-        spec_assert n1 (subst x2 v1 ek) (fk r)
-    )
-      (* is_compatible_shft n1 Re R *)
-      
+        bigstep p1 h1 e h2 Re ->
+        satisfies s1 s1 h1 h2 R f ->
+        (
+          forall eb x2 ek k fb v1 fk r,
+            Re = (eshft (vfun k eb) (vfun x2 ek)) ->
+            R = (shft k fb v1 fk) ->
+              spec_assert n1 eb fb ->
+              spec_assert n1 (subst x2 v1 ek) (fk r)
+        )
+
     end
-  (* with is_compatible_shft (n:nat) Re R := *)
 
     .
 
 (* cannot guess decreasing arg of fix *)
   (* with env_compatible (n:nat) (p1:penv) (s1:senv) :=
-    match n with
-    | O =>
-      forall pfn xf x,
-        Fmap.read p1 xf = pfn ->
-        exists sfn, Fmap.read s1 xf = sfn /\
-      (* inlining defn from above *)
-        forall h1 h2 v, 
-          bigstep p1 h1 (pfn x) h2 (enorm v) ->
-          satisfies s1 s1 h1 h2 (norm v) (sfn x v)
-    | S n1 =>
-      forall pfn xf x,
-        Fmap.read p1 xf = pfn ->
-        exists sfn, Fmap.read s1 xf = sfn /\
-        forall v, spec_assert n1 (pfn x) (sfn x v)
-    end. *)
+    *)
 
 Inductive hoare_pair : nat -> expr -> flow -> Prop :=
 
@@ -405,7 +375,8 @@ Inductive hoare_pair : nat -> expr -> flow -> Prop :=
   Abort.
 
   Lemma sem_preset_val: forall n v,
-    spec_assert n (preset (pval v)) (rs (ens (fun r => \[r = v])) v).
+    spec_assert n (preset (pval v))
+      (rs (ens (fun r => \[r = v])) v).
   Proof.
     intros n. destruct n; intros.
     { simpl.
