@@ -254,38 +254,6 @@ Module SpecAssertions.
   (* with env_compatible (n:nat) (p1:penv) (s1:senv) :=
     *)
 
-(* Inductive hoare_pair : nat -> expr -> flow -> Prop :=
-
-  | p_pval : forall v,
-    hoare_pair O (pval v) (ens (fun res => \[res = v]))
-
-  | p_pshift : forall n eb fb x r,
-    hoare_pair n eb fb ->
-    hoare_pair (S n) (pshift x eb) (sh x fb r)
-
-  | p_plet : forall x e1 e2 f1 f2 v n n1, n1 <= n ->
-    hoare_pair n1 e1 f1 ->
-    flow_res f1 v ->
-    hoare_pair (n-n1) (subst x v e2) f2 ->
-    hoare_pair n (plet x e1 e2) (f1;; f2)
-
-  | p_papp_unk : forall n x v r,
-    hoare_pair n (papp (pvar x) (pval v)) (unk x v r)
-  .
-
-  (* shift k. k 2 *)
-  Example e_pshift: exists r1 r2,
-    hoare_pair (S O) (pshift "k" (papp (pvar "k") (pval (vint 2))))
-      (sh "k" (unk "k" (vint 2) r2) r1).
-  Proof.
-    (* r1 is what the continuation is resumed with,
-      r2 is what the continuation returns.
-      both can be anything. *)
-    exists (vint 3) (vint 4).
-    apply p_pshift.
-    apply p_papp_unk.
-  Qed. *)
-
   (* Example e_pshift1: exists r1 r2,
     spec_assert (S O) (pshift "k" (papp (pvar "k") (pval (vint 2))))
       (sh "k" (unk "k" (vint 2) r2) r1).
@@ -1652,3 +1620,36 @@ Module HistoryTriples.
 
 End HistoryTriples.
 *)
+
+
+Inductive hoare_pair : nat -> expr -> flow -> Prop :=
+
+  | p_pval : forall v,
+    hoare_pair O (pval v) (ens (fun res => \[res = v]))
+
+  | p_pshift : forall n eb fb x r,
+    hoare_pair n eb fb ->
+    hoare_pair (S n) (pshift x eb) (sh x fb r)
+
+  | p_plet : forall x e1 e2 f1 f2 v n n1, n1 <= n ->
+    hoare_pair n1 e1 f1 ->
+    flow_res f1 v ->
+    hoare_pair (n-n1) (subst x v e2) f2 ->
+    hoare_pair n (plet x e1 e2) (f1;; f2)
+
+  | p_papp_unk : forall n x v r,
+    hoare_pair n (papp (pvar x) (pval v)) (unk x v r)
+  .
+
+  (* shift k. k 2 *)
+  Example e_pshift: exists r1 r2,
+    hoare_pair (S O) (pshift "k" (papp (pvar "k") (pval (vint 2))))
+      (sh "k" (unk "k" (vint 2) r2) r1).
+  Proof.
+    (* r1 is what the continuation is resumed with,
+      r2 is what the continuation returns.
+      both can be anything. *)
+    exists (vint 3) (vint 4).
+    apply p_pshift.
+    apply p_papp_unk.
+  Qed.
