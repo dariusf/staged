@@ -210,19 +210,19 @@ Module SpecAssertions.
       (forall v,
       bigstep p1 h1 e h2 (enorm v) -> False) *)
       expr_no_res e
-      /\
+      ->
 ( 
 
-      forall p1 s1 h1 h2 x1 eb x2 ek k fb v1 fk r,
+      forall p1 s1 h1 h2 eb x2 ek k fb v1 fk r,
         (* k occurs in fb as a stage, not a value. we can't sub inside flow.
           sub it into eb instead, as a vfptr, not a var. *)
-        spec_assert n1 (subst x1 (vfptr k) eb) fb ->
+        spec_assert n1 eb fb ->
         (* v1 occurs in fk as a value. we can sub this into ek. *)
         (* not sure about r, might need to be existential,
           as we can't get the result of ek *)
         spec_assert n1 (subst x2 v1 ek) (fk r) ->
 
-      bigstep p1 h1 e h2 (eshft (vfun x1 eb) (vfun x2 ek)) ->
+      bigstep p1 h1 e h2 (eshft (vfun k eb) (vfun x2 ek)) ->
       satisfies s1 s1 h1 h2 (shft k fb v1 fk) f
       )
     end
@@ -243,6 +243,55 @@ Module SpecAssertions.
         exists sfn, Fmap.read s1 xf = sfn /\
         forall v, spec_assert n1 (pfn x) (sfn x v)
     end. *)
+
+Inductive hoare_pair : nat -> expr -> flow -> Prop :=
+
+  | p_pval : forall v,
+    hoare_pair O (pval v) (ens (fun res => \[res = v]))
+
+  | p_pshift : forall n eb fb x r,
+    hoare_pair n eb fb ->
+    hoare_pair (S n) (pshift x eb) (sh x fb r)
+
+  | p_plet : forall x e1 e2 f1 f2 v n n1, n1 <= n ->
+    hoare_pair n1 e1 f1 ->
+    flow_res f1 v ->
+    hoare_pair (n-n1) (subst x v e2) f2 ->
+    hoare_pair n (plet x e1 e2) (f1;; f2)
+
+  | p_papp_unk : forall n x v r,
+    hoare_pair n (papp (pvar x) (pval v)) (unk x v r)
+  .
+
+  (* shift k. k 2 *)
+  Example e_pshift: exists r1 r2,
+    hoare_pair (S O) (pshift "k" (papp (pvar "k") (pval (vint 2))))
+      (sh "k" (unk "k" (vint 2) r2) r1).
+  Proof.
+    (* r1 is what the continuation is resumed with,
+      r2 is what the continuation returns.
+      both can be anything. *)
+    exists (vint 3) (vint 4).
+    apply p_pshift.
+    apply p_papp_unk.
+  Qed.
+
+  Example e_pshift1: exists r1 r2,
+    spec_assert (S O) (pshift "k" (papp (pvar "k") (pval (vint 2))))
+      (sh "k" (unk "k" (vint 2) r2) r1).
+  Proof.
+    (* r1 is what the continuation is resumed with,
+      r2 is what the continuation returns.
+      both can be anything. *)
+    exists (vint 3) (vint 4).
+    unfold spec_assert.
+    intros _ * [? ?] [? ?] Hb.
+    inverts Hb.
+    applys_eq s_sh.
+    (* no constructive premise,
+      need shift body to run for us to deduce anything *)
+  Abort.
+  (* Qed. *)
 
   Lemma sem_pval: forall v,
     spec_assert 0 (pval v) (ens (fun res => \[res = v])).
@@ -271,11 +320,53 @@ Module SpecAssertions.
     } *)
   Qed.
 
+  (* Notation derivable e f := (hoare_pair e f).
+  Notation valid e f := (forall n, spec_assert n e f). *)
+    (* derivable e f -> valid e f. *)
+  (* Lemma soundness : forall e f, *)
+    (* hoare_pair e f -> *)
+    (* forall n, spec_assert n e f. *)
+
+  Lemma soundness : forall e f n,
+    hoare_pair n e f ->
+    spec_assert n e f.
+  Proof.
+    intros * H.
+    (* pose proof H. *)
+    induction H.
+    { apply sem_pval. }
+    {
+      simpl. intros _ * H1 H2 Hb.
+      inverts Hb.
+      simpl in *.
+      (* eapply s_sh. *)
+      applys_eq s_sh.
+
+      admit.
+    }
+    {
+      (* let *)
+      admit.
+    }
+  (* Qed. *)
+  Abort.
+
   Lemma sem_pshift: forall n x eb r fb,
     spec_assert n eb fb ->
     spec_assert (S n) (pshift x eb) (sh x fb r).
   Proof.
-    intros n. induction n.
+    intros n.
+    intros.
+    simpl.
+    intros _ * H1 H2 Hb.
+    inverts Hb.
+    simpl in *.
+    applys_eq s_sh.
+
+
+  Abort.
+
+    (* induction n.
     {
       intros.
       simpl.
@@ -300,11 +391,10 @@ Module SpecAssertions.
     simpl.
     splits.
     { unfold expr_no_res. intros. inverts H as H. admit. }
-    intros. destr H. destr H0.
+    intros. destr H. destr H0. *)
 
 
   (* Qed. *)
-  Abort.
 
   (* Lemma sem_plet_sf: forall n x e1 e2 f1 f2 v,
     spec_assert 0 e1 f1 ->
