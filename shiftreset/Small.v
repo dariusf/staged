@@ -105,6 +105,7 @@ Inductive flow : Type :=
   | unk : var -> val -> val -> flow
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
+  | sh : var -> flow -> val -> flow -> flow
   .
 
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
@@ -158,108 +159,108 @@ Implicit Types x y z k : var.
 Implicit Types a v r : val.
 Implicit Types e : expr.
 
-Inductive step_f : senv -> senv -> heap -> heap -> val -> flow -> flow -> Prop :=
+Inductive fstep : senv -> senv -> heap -> heap -> val -> flow -> flow -> Prop :=
 
   | s_req : forall s1 s2 H h1 h2 v f f1,
     (forall (hp hr:heap),
       H hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      step_f s1 s2 hr h2 v f f1) ->
-    step_f s1 s2 h1 h2 v (req H f) f1
+      fstep s1 s2 hr h2 v f f1) ->
+    fstep s1 s2 h1 h2 v (req H f) f1
 
   | s_ens : forall s1 Q h1 h2 v h3,
     Q v h3 ->
     h2 = Fmap.union h1 h3 ->
     Fmap.disjoint h1 h3 ->
-    step_f s1 s1 h1 h2 v (ens Q) fin
+    fstep s1 s1 h1 h2 v (ens Q) fin
 
   | s_seq_empty : forall v s1 h1 f2,
-    step_f s1 s1 h1 h1 v (seq fin f2) f2
+    fstep s1 s1 h1 h1 v (seq fin f2) f2
 
   | s_seq_step : forall v s1 s2 h1 h2 f1 f2 f3,
-    step_f s1 s2 h1 h2 v f1 f3 ->
-    step_f s1 s2 h1 h2 v (seq f1 f2) (seq f3 f2)
+    fstep s1 s2 h1 h2 v f1 f3 ->
+    fstep s1 s2 h1 h2 v (seq f1 f2) (seq f3 f2)
 
-  | s_fex : forall s1 s2 h1 h2 v (A:Type) (c:A->flow) b,
-    step_f s1 s2 h1 h2 v (@fex A c) (c b)
+  (* | s_fex : forall s1 s2 h1 h2 v (A:Type) (c:A->flow) b,
+    fstep s1 s2 h1 h2 v (@fex A c) (c b)
 
   | s_fall : forall s1 s2 h1 h2 v (A:Type) (c:A->flow) f1,
-    (forall b, step_f s1 s2 h1 h2 v (c b) f1) ->
-    step_f s1 s2 h1 h2 v (@fall A c) f1
+    (forall b, fstep s1 s2 h1 h2 v (c b) f1) ->
+    fstep s1 s2 h1 h2 v (@fall A c) f1 *)
 
   (* | s_intersect_step_l : forall s1 s2 h1 h2 v f1 f2 f3,
-    step_f s1 s2 h1 h2 v f1 f3 ->
-    step_f s1 s2 h1 h2 v (intersect f1 f2) (intersect f3 f2)
+    fstep s1 s2 h1 h2 v f1 f3 ->
+    fstep s1 s2 h1 h2 v (intersect f1 f2) (intersect f3 f2)
 
   | s_intersect_step_r : forall s1 s2 h1 h2 v f1 f2 f3,
-    step_f s1 s2 h1 h2 v f1 f3 ->
-    step_f s1 s2 h1 h2 v (intersect f1 f2) (intersect f1 f3)
+    fstep s1 s2 h1 h2 v f1 f3 ->
+    fstep s1 s2 h1 h2 v (intersect f1 f2) (intersect f1 f3)
 
   | s_intersect_elim_l : forall s1 h1 v f2,
-    step_f s1 s1 h1 h1 v (intersect fin f2) f2
+    fstep s1 s1 h1 h1 v (intersect fin f2) f2
 
   | s_intersect_elim_r : forall s1 h1 v f1,
-    step_f s1 s1 h1 h1 v (intersect f1 fin) f1 *)
+    fstep s1 s1 h1 h1 v (intersect f1 fin) f1 *)
 
-  | s_disj_l : forall s1 h1 v f1 f2,
-    step_f s1 s1 h1 h1 v (disj f1 f2) f1
+  (* | s_disj_l : forall s1 h1 v f1 f2,
+    fstep s1 s1 h1 h1 v (disj f1 f2) f1
 
   | s_disj_r : forall s1 h1 v f1 f2,
-    step_f s1 s1 h1 h1 v (disj f1 f2) f2
+    fstep s1 s1 h1 h1 v (disj f1 f2) f2 *)
 
   | s_unk : forall s1 h1 h1 r xf uf a,
     Fmap.read s1 xf = uf ->
-    step_f s1 s1 h1 h1 r (unk xf a r) (uf a r)
+    fstep s1 s1 h1 h1 r (unk xf a r) (uf a r)
   .
 
-Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f1 '~>' f2" :=
-  (step_f s1 s2 h1 h2 r f1 f2) (at level 30, only printing).
+(* Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f1 '~>' f2" :=
+  (fstep s1 s2 h1 h2 r f1 f2) (at level 30, only printing). *)
 
 
-Inductive steps_f :
+Inductive fsteps :
   senv -> senv -> heap -> heap -> val -> flow -> flow -> Prop :=
 
-  | steps_f_refl : forall s1 h1 v f,
-    steps_f s1 s1 h1 h1 v f f
+  | fsteps_refl : forall s1 h1 v f,
+    fsteps s1 s1 h1 h1 v f f
 
-  | steps_f_step : forall s1 s2 s3 h1 h2 h3 v f1 f2 f3,
-    step_f s1 s2 h1 h2 v f1 f2 ->
-    steps_f s2 s3 h2 h3 v f2 f3 ->
-    steps_f s1 s3 h1 h3 v f1 f3.
+  | fsteps_step : forall s1 s2 s3 h1 h2 h3 v f1 f2 f3,
+    fstep s1 s2 h1 h2 v f1 f2 ->
+    fsteps s2 s3 h2 h3 v f2 f3 ->
+    fsteps s1 s3 h1 h3 v f1 f3.
 
-Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f1 '~>*' f2" :=
-  (steps_f s1 s2 h1 h2 r f1 f2) (at level 30, only printing).
+(* Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f1 '~>*' f2" :=
+  (fsteps s1 s2 h1 h2 r f1 f2) (at level 30, only printing). *)
 
-Lemma steps_of_step_f : forall s1 s2 h1 h2 v f1 f2,
-  step_f s1 s2 h1 h2 v f1 f2 ->
-  steps_f s1 s2 h1 h2 v f1 f2.
+Lemma fsteps_of_fstep_ : forall s1 s2 h1 h2 v f1 f2,
+  fstep s1 s2 h1 h2 v f1 f2 ->
+  fsteps s1 s2 h1 h2 v f1 f2.
 Proof using.
-  introv M. applys steps_f_step M. applys steps_f_refl.
+  introv M. applys fsteps_step M. applys fsteps_refl.
 Qed.
 
-Lemma steps_f_trans : forall s1 s2 s3 h1 h2 h3 v f1 f2 f3,
-  steps_f s1 s2 h1 h2 v f1 f2 ->
-  steps_f s2 s3 h2 h3 v f2 f3 ->
-  steps_f s1 s3 h1 h3 v f1 f3.
+Lemma fsteps_trans : forall s1 s2 s3 h1 h2 h3 v f1 f2 f3,
+  fsteps s1 s2 h1 h2 v f1 f2 ->
+  fsteps s2 s3 h2 h3 v f2 f3 ->
+  fsteps s1 s3 h1 h3 v f1 f3.
 Proof using.
   introv M1. induction M1; introv M2. { auto. } { constructors*. }
 Qed.
 
-Definition terminal_f f : Prop :=
+Definition fterminal f : Prop :=
   f = fin.
 
-Definition reducible_f s1 h1 f1 : Prop :=
-  exists s2 h2 v f2, step_f s1 s2 h1 h2 v f1 f2.
+Definition freducible s1 h1 f1 : Prop :=
+  exists s2 h2 v f2, fstep s1 s2 h1 h2 v f1 f2.
 
-Lemma reducible_f_inv : forall s h v,
-  ~ reducible_f s h fin.
+Lemma freducible_inv : forall s h v,
+  ~ freducible s h fin.
 Proof using.
   intros. intros M. inverts M. destr H. inverts H0 as H0.
 Qed.
 
-Definition notstuck_f s h f : Prop :=
-  terminal_f f \/ reducible_f s h f.
+Definition fnotstuck s h f : Prop :=
+  fterminal f \/ freducible s h f.
 
 (* Inductive terminates : heap->trm->Prop :=
   | terminates_step : forall s t,
@@ -267,34 +268,34 @@ Definition notstuck_f s h f : Prop :=
       terminates s t.
 
 Definition safe (s:heap) (t:trm) : Prop :=
-  forall s' t', steps_f s t s' t' -> notstuck s' t'.
+  forall s' t', fsteps s t s' t' -> notstuck s' t'.
 
 Definition correct (s:heap) (t:trm) (Q:val->hprop) : Prop :=
-  forall s' v, steps_f s t s' v -> Q v s'. *)
+  forall s' v, fsteps s t s' v -> Q v s'. *)
 
 Example step_e1: forall (x y:loc) s1, exists s2 h2 v,
   x <> y ->
-  steps_f s1 s2 empty_heap h2 v (ens_ (x~~>vint 1);; ens_ (y~~>vint 2)) fin.
+  fsteps s1 s2 empty_heap h2 v (ens_ (x~~>vint 1);; ens_ (y~~>vint 2)) fin.
 Proof.
   intros. exs. intros.
 
-  applys steps_f_step.
+  applys fsteps_step.
   { applys s_seq_step.
     applys s_ens.
     - hintro. split. reflexivity. apply hsingle_intro.
     - fmap_eq. reflexivity.
     - fmap_disjoint. }
 
-  applys steps_f_step.
+  applys fsteps_step.
   { applys s_seq_empty. }
 
-  applys steps_f_step.
+  applys fsteps_step.
   { applys s_ens.
     - hintro. split. reflexivity. apply hsingle_intro.
     - reflexivity.
     - apply* Fmap.disjoint_single_single. }
 
-  applys steps_f_refl.
+  applys fsteps_refl.
 Qed.
 
 
@@ -400,18 +401,26 @@ Proof using.
   introv M1. induction M1; introv M2. { auto. } { constructors*. }
 Qed.
 
-(* Definition trm_is_val (t:trm) : Prop :=
-  match t with trm_val v => True | _ => False end.
+Definition terminal e : Prop :=
+  match e with
+  | pval _ => True
+  | pshift _ _ _ _ => True
+  | _ => False
+  end.
 
-Definition reducible (s:heap) (t:trm) : Prop :=
-  exists s' t', step s t s' t'.
+Definition reducible p h e : Prop :=
+  exists h' e', step p h e h' e'.
 
-Lemma reducible_val_inv : forall s v,
-  ~ reducible s v.
-Proof using. introv (s'&t'&M). inverts M. Qed.
+Lemma reducible_val_inv : forall p h v,
+  ~ reducible p h (pval v).
+Proof using. introv (s'&e'&M). inverts M. Qed.
 
-Definition notstuck (s:heap) (t:trm) : Prop :=
-  trm_is_val t \/ reducible s t. *)
+Lemma reducible_val_shift : forall p h v x1 eb x2 ek,
+  ~ reducible p h (pshift x1 eb x2 ek).
+Proof using. introv (s'&e'&M). inverts M. Qed.
+
+Definition notstuck p h e : Prop :=
+  terminal e \/ reducible p h e.
 
 
 
@@ -448,9 +457,99 @@ Proof.
 
   applys steps_refl.
 Qed.
+(* Print e1_step. *)
+
+
+Inductive terminates : heap->expr->Prop :=
+  | terminates_step : forall p h e,
+      (forall h' e', step p h e h' e' -> terminates h' e') ->
+      terminates h e.
+
+Definition safe p h e : Prop :=
+  forall h' e', steps p h e h' e' -> notstuck p h' e'.
+
+(* TODO relation between contents of s and p. needed? expressed outside? *)
+(* TODO relation between shift bodies. step index? *)
+Fixpoint correct n s p h e f : Prop :=
+  (* forall h' v, steps p h e h' (pval v) -> Q v h'. *)
+  forall h1 er,
+    terminal er ->
+    steps p h e h1 er ->
+  match n, er with
+  | O, pval v => fsteps s s h h1 v f fin
+  | S n1, pshift x1 eb x2 ek =>
+    (* exists v f1 f2 v1, *)
+    forall v f1 f2 v1,
+    correct n1 s p h1 eb f1 ->
+    correct n1 s p h1 ek f2 ->
+    fsteps s s h h1 v f (sh x1 f1 v1 f2)
+  | _, _ => False
+  end.
+
+(* TODO this could be inductive maybe, then no need for the index *)
 
 
 
+  (* -> Q v h1. *)
+
+(* Lemma seval_sound : forall h e Q,
+  seval h e Q ->
+  terminates h e /\ safe h e /\ correct h e Q.
+Proof using.
+  introv M. splits.
+  { applys* seval_terminates. }
+  { applys* seval_safe. }
+  { applys* seval_correct. }
+Qed. *)
+
+(* need an equiv of seval to define triple,
+  and which implies these soundness properties.
+  try to prove the soundness properties directly first. *)
+
+Example e2: correct O empty_env empty_penv empty_heap
+  (pval (vint 1)) (ens (fun r => \[r = vint 1])).
+Proof.
+  simpl. intros.
+  unfold terminal in H. destruct er; tryfalse. clear H.
+  {
+    inverts H0 as H.
+    { (* refl *)
+      eapply fsteps_step.
+      { applys s_ens.
+        hintro. reflexivity. fmap_eq. reflexivity. fmap_disjoint. }
+      eapply fsteps_refl. }
+    { (* values don't step *)
+      false_invert H. }
+  }
+  { inverts H0 as H0. false_invert H0. }
+Qed.
+
+Example e3: correct (S O) empty_env empty_penv empty_heap
+  (pshift "x1" (pval (vint 1)) "x2" (pvar "x2"))
+  (sh "x" (ens (fun r => \[True])) (vint 1) (ens (fun r => \[True]))).
+Proof.
+  unfold correct. intros.
+  unfold terminal in H. destruct er; tryfalse. clear H.
+  { inverts H0 as H0. false_invert H0. }
+  {
+    intros.
+    inverts H0 as H0.
+    { (* refl *)
+      eapply fsteps_step.
+      { applys s_sh.
+        hintro. reflexivity. fmap_eq. reflexivity. fmap_disjoint. }
+      eapply fsteps_refl. }
+    }
+    { (* values don't step *)
+      false_invert H0. }
+  }
+Qed.
+
+
+
+(* both are programs. so deeply embed staged as well.
+  and this is a compilation problem *)
+(* cps denotation? *)
 
 
 
@@ -469,8 +568,8 @@ Qed.
 (** * Entailment *)
 (* Definition entails (f1 f2:flow) : Prop :=
   forall s1 s2 h1 h2 v,
-    steps_f s1 s2 h1 h2 v f1 fin ->
-    steps_f s1 s2 h1 h2 v f2 fin.
+    fsteps s1 s2 h1 h2 v f1 fin ->
+    fsteps s1 s2 h1 h2 v f2 fin.
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
@@ -515,11 +614,11 @@ Section Propriety.
   Qed.
 
   (* Lemma steps_seq_inv: forall s1 s2 s3 h1 h2 h3 v f1 f2,
-    steps_f s1 s2 h1 h2 v (f1;; f2) fin ->
-    steps_f s1 s3 h1 h3 v f1 fin /\ steps_f s3 s2 h3 h2 v f2 fin. *)
+    fsteps s1 s2 h1 h2 v (f1;; f2) fin ->
+    fsteps s1 s3 h1 h3 v f1 fin /\ fsteps s3 s2 h3 h2 v f2 fin. *)
   Lemma steps_seq_inv: forall s1 s2 h1 h2 v f1 f2,
-    steps_f s1 s2 h1 h2 v (f1;; f2) fin ->
-    exists s3 h3, steps_f s1 s3 h1 h3 v f1 fin /\ steps_f s3 s2 h3 h2 v f2 fin.
+    fsteps s1 s2 h1 h2 v (f1;; f2) fin ->
+    exists s3 h3, fsteps s1 s3 h1 h3 v f1 fin /\ fsteps s3 s2 h3 h2 v f2 fin.
   Proof.
     (* intros s1 s2 h1 h2 v f1. *)
     (* dependent induction f1; intros. *)
@@ -606,9 +705,9 @@ Admitted.
   Admitted. *)
 
   Lemma steps_seq_intro: forall s1 s2 s3 h1 h2 h3 v f1 f2,
-    steps_f s1 s3 h1 h3 v f1 fin ->
-    steps_f s3 s2 h3 h2 v f2 fin ->
-    steps_f s1 s2 h1 h2 v (f1;; f2) fin.
+    fsteps s1 s3 h1 h3 v f1 fin ->
+    fsteps s3 s2 h3 h2 v f2 fin ->
+    fsteps s1 s2 h1 h2 v (f1;; f2) fin.
   Proof.
     intros.
     dependent induction H.
@@ -616,7 +715,7 @@ Admitted.
       applys steps_step.
       eapply s_seq_empty.
       assumption. }
-    { (* f1 steps_f to f3, which goes to fin *)
+    { (* f1 fsteps to f3, which goes to fin *)
       applys steps_step.
       { applys s_seq_step. eassumption. }
         applys IHsteps H1.
