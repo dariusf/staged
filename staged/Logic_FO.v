@@ -79,60 +79,119 @@ Module Val.
   Definition value := val.
 End Val.
 
+(*
 (** SLF's heap theory as a functor. *)
 Module Export Heap := HeapF.HeapSetup Val.
+*)
 
+(*
 Definition empty_heap : heap := Fmap.empty.
+*)
+
+Inductive sval : Type :=
+| sunit : sval
+| sint : Z -> sval
+| sloc : loc -> sval
+
+with term : Type :=
+| tconst : sval -> term
+| tadd : term -> term -> term
+
+with xprop : Type :=
+| xtrue : xprop
+| xfalse : xprop
+| xeq : term -> term -> xprop
+| xlt : term -> term -> xprop
+
+with hprop : Type :=
+| hpure : xprop -> hprop
+| hstar : hprop -> hprop -> hprop
+| hsingle : term -> term -> hprop.
+
+Inductive eval_term : term -> sval -> Prop :=
+| eval_tconst sv : eval_term (tconst sv) sv
+| eval_tadd t1 t2 n1 n2 :
+  eval_term t1 (sint n1) ->
+  eval_term t2 (sint n2) ->
+  eval_term (tadd t1 t2) (sint (n1 + n2)).
+(*
+| eval_tnot t b :
+  eval_term t (sbool b) ->
+  eval_term (tnot t) (sbool (negb b))
+| eval_tand t1 t2 b1 b2 :
+  eval_term t1 (sbool b1) ->
+  eval_term t2 (sbool b2) ->
+  eval_term (tand t1 t2) (sbool (andb b1 b2)).
+*)
+
+Definition heap := Fmap.fmap loc sval.
+
+Inductive eval_xprop : xprop -> Prop :=
+| eval_xtrue : eval_xprop xtrue
+| eval_xeq t1 sv1 t2 sv2 :
+  eval_term t1 sv1 ->
+  eval_term t2 sv2 ->
+  sv1 = sv2 ->
+  eval_xprop (xeq t1 t2)
+| eval_xlt t1 n1 t2 n2 :
+  eval_term t1 (sint n1) ->
+  eval_term t2 (sint n2) ->
+  n1 < n2 ->
+  eval_xprop (xlt t1 t2)
+
+with eval_hprop : heap -> hprop -> Prop :=
+| eval_hpure xp :
+  eval_xprop xp ->
+  eval_hprop Fmap.empty (hpure xp)
+| eval_hstar h1 h2 hp1 hp2 :
+  Fmap.disjoint h1 h2 ->
+  eval_hprop h1 hp1 ->
+  eval_hprop h2 hp2 ->
+  eval_hprop (Fmap.union h1 h2) (hstar hp1 hp2)
+| eval_hsingle t1 t2 l sv :
+  eval_term t1 (sloc l) ->
+  eval_term t2 sv ->
+  eval_hprop (Fmap.single l sv) (hsingle t1 t2).
+
+Definition hemp := hpure xtrue.
+
+Lemma hstar_assoc :
+  forall h hp1 hp2 hp3,
+    eval_hprop h (hstar (hstar hp1 hp2) hp3) <->
+    eval_hprop h (hstar hp1 (hstar hp2 hp3)).
+Proof.
+  intros h hp1 hp2 hp3.
+  split.
+  - intros H_eval.
+    inversion H_eval. subst.
+    inversion H3. subst.
+    assert (H_tmp : Fmap.disjoint h3 h2). { fmap_disjoint. }
+    Check (eval_hstar).
+    Check (eval_hstar _).
+    Check (eval_hstar _ H7).
+    Check (eval_hstar _ H7 H4).
+    assert (H_23 := eval_hstar H_tmp H7 H4).
+    Check (eval_hstar _ H6 H_23).
+    clear H_tmp.
+    assert (H_tmp : Fmap.disjoint h0 (h3 \+ h2)). { fmap_disjoint. }
+    assert (H_123 := eval_hstar H_tmp H6 H_23).
+    assert (h0 \+ h3 \+ h2 = (h0 \+ h3) \+ h2). { fmap_eq. }
+    rewrite <- H.
+    exact H_123.
+  - admit.
+Admitted.
 
 (** * Staged formulae *)
 (** Deeply embedded due to uninterpreted functions, which cannot immediately be given a semantics without an environment. *)
-
-Section Staged.
-
-Variable var : Type.
-
-Inductive sval :=
-| shole : sval
-| svar : var -> sval
-| sunit : sval
-| sint : Z -> sval
-| sbool : bool -> sval
-| sstr : string -> sval
-| sloc : loc -> sval
-| spair : sval -> sval -> sval
-| sfunptr : string -> sval.
-
 Inductive flow :=
 | req : hprop -> flow
 | ens : hprop -> flow
 | seq : flow -> flow -> flow
 | fex : forall A, (A -> flow) -> flow
 | fall : forall A, (A -> flow) -> flow
-| unk : sval -> sval -> sval -> flow
+| unk : var -> val -> val -> flow
 | intersect : flow -> flow -> flow
-| disj : flow -> flow -> flow
-| shift : (sval -> sval -> flow) -> sval -> flow
-| reset : (sval -> flow) -> sval -> flow.
-
-Infix ";;" := seq (at level 38, right associativity) : flow_scope.
-
-End Staged.
-
-Fixpoint ssubst (y : var) (w : sval) (f : flow) : flow :=
-  let aux := ssubst y w in
-  (* let if_y_eq x f1 f2 := if var_eq x y then f1 else f2 in *)
-  match f with
-  | req p => req p
-  | ens q => ens q
-  | seq f1 f2 => seq (aux f1) (aux f2)
-  | fex fa => fex (fun a => aux (fa a))
-  | fall fa => fall (fun a => aux (fa a))
-  | unk _ _ _ => f
-  | intersect f1 f2 => intersect (aux f1) (aux f2)
-  | disj f1 f2 => disj (aux f1) (aux f2)
-  | shift _ _ _ _ => f
-  | reset _ _ _ => f
-  end.
+| disj : flow -> flow -> flow.
 
 Definition spec : Type := val -> flow.
 
@@ -151,6 +210,8 @@ Definition empty_senv : senv := Fmap.empty.
 
 Declare Scope flow_scope.
 Open Scope flow_scope.
+
+Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 
 (*
 Notation "'∃' x1 .. xn , H" :=
@@ -204,7 +265,7 @@ Inductive satisfies : senv -> heap -> heap -> flow -> Prop :=
   satisfies env h1 h2 f1 ->
   satisfies env h1 h2 f2 ->
   satisfies env h1 h2 (intersect f1 f2)
-            
+
 | s_disj_l env f1 f2 h1 h2 :
   satisfies env h1 h2 f1 ->
   satisfies env h1 h2 (disj f1 f2)
@@ -803,7 +864,7 @@ Lemma req_void_pure_inv: forall env h1 h2 R P,
   satisfies env h1 h2 R (req_ \[P]) ->
   h1 = h2 /\ R = norm vunit.
 Proof.
-  intros env h1 h2 r P HP H. 
+  intros env h1 h2 r P HP H.
   apply empty_inv with (env := env).
   inverts H as H. specialize (H empty_heap h1). apply* H.
   apply hpure_intro. assumption.
@@ -1008,7 +1069,7 @@ Proof.
   inversion 2.
   eauto using s_req.
 Qed.
-  
+
 (** Covariance of ens *)
 Lemma entails_ens : forall q1 q2, q1 ==> q2 -> entails (ens q1) (ens q2).
 Proof.
@@ -2153,8 +2214,8 @@ Proof.
   assert (HP: hp' = empty_heap). (* and thus hr = hr' *)
   { inverts H1. inverts H0. reflexivity. }
 
-  inverts H as H. specialize (H hp' hr' H1 H2 H3). subst. 
-  
+  inverts H as H. specialize (H hp' hr' H1 H2 H3). subst.
+
   eapply s_seq.
   apply ens_void_pure_intro. destruct H1. assumption.
   assumption.
@@ -2168,25 +2229,25 @@ Proof.
   intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
   constructor.
   - apply req_generates_info.
-  - intros H. 
+  - intros H.
 
     (* Remove req p \* \[P] *)
     apply s_req. intros hp hr H1 H2 H3.
-    inverts H as H. specialize (H hp hr H1 H2 H3). 
+    inverts H as H. specialize (H hp hr H1 H2 H3).
 
     (* Just prove the ens_ f *)
     apply seq_ens_void_pure_inv in H. destruct H. assumption.
 Qed.
 
-Lemma ens_generates_info: forall P q f g, 
-  let original_flow := ens_ (q \* \[P]) ;; f ;; g in 
-  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in 
+Lemma ens_generates_info: forall P q f g,
+  let original_flow := ens_ (q \* \[P]) ;; f ;; g in
+  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in
   entails original_flow new_flow.
 Proof.
   intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
   intros env h1 h2 r H.
 
-  fdestr H. 
+  fdestr H.
   eapply s_seq. eassumption.
 
   fdestr H6.
@@ -2198,22 +2259,22 @@ Proof.
   assumption.
 Qed.
 
-Lemma ens_generates_info_bientails: forall P q f g, 
-  let original_flow := ens_ (q \* \[P]) ;; f ;; g in 
-  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in 
+Lemma ens_generates_info_bientails: forall P q f g,
+  let original_flow := ens_ (q \* \[P]) ;; f ;; g in
+  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in
   bientails original_flow new_flow.
 Proof.
   intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
   constructor.
   - apply ens_generates_info.
-  - intro H. 
-    
+  - intro H.
+
     (* Remove the ens_ q *)
     fdestr H.
     eapply s_seq. eassumption.
 
     (* Extract proof of P. *)
-    rewrite hstar_comm in H. 
+    rewrite hstar_comm in H.
     apply norm_ens_ens_void in H. fdestr H. fdestr H.
 
     (* Proving env, h3, h2, r |= (f;; g) *)
@@ -2228,15 +2289,15 @@ Proof.
     assumption.
 Qed.
 
-(** In ens_generates_info, the final flow g is not within the context of 
+(** In ens_generates_info, the final flow g is not within the context of
     req_ \[P] (i.e. req \[P] g). This is inconsequential as we can bring g in
     and out of the context of the req.
-    
+
     This is important for the normalized form of a specification. *)
 Lemma move_seq_into_req: forall P f,
   entails (req_ P ;; f) (req P f).
 Proof.
-  intros. 
+  intros.
   assert (bientails (req P f) (req P (empty ;; f))) as H.
   { rewrite  (norm_empty_l f). reflexivity. }
   rewrite H.
@@ -2760,7 +2821,7 @@ Inductive forward : expr -> spec -> Prop :=
 
 (* there is no need for fw_var/a store because substitution will take care of it before it is reached *)
 
-| fw_let x e1 e2 f1 f2 :
+| fw_let x e1 e2 (f1 : val -> flow) (f2 : val -> val -> flow) :
   forward e1 f1 ->
   (forall v, forward (subst x v e2) (f2 v)) ->
   forward (plet x e1 e2) (fun r => fex (fun v => f1 v;; f2 v r))
@@ -2823,7 +2884,7 @@ Module ForwardExamples.
   (* let x = f 1 in x + 1 *)
   Definition e2_let := plet "x" (papp (pvar "f") (pval (vint 1))) (pvar "x").
   Definition f2_let := fun r => fex (fun x => unk "f" (vint 1) x;; ens \[r = x]).
-  
+
   Example ex2 : forward e2_let f2_let.
   Proof.
     apply fw_let.
@@ -3105,11 +3166,11 @@ Module Soundness.
     - eapply sem_papp_unk.
   Qed.
    *)
-  
+
   (* what we want is to write "forward" as a FUNCTION instead,
      in which we can just "compute" the strongest postcondition with
      a single invocation of "simpl"
-     
+
      And then we prove the soundness of such function.
    *)
 
@@ -3121,7 +3182,7 @@ Module HistoryTriples.
 
   (** * History triples *)
   (** A #<i>history triple</i># (i.e. not just a "triple", which typically refers to a Hoare triple) also constrains the history of a program. *)
-  (* 
+  (*
       h0 ╶─[fh]──▶ h1 ╶─[e]──▶ h2
       ╷                        ▲
       └───────────[f]──────────┘

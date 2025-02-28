@@ -2724,7 +2724,7 @@ Inductive forward : expr -> spec -> Prop :=
 
 (* there is no need for fw_var/a store because substitution will take care of it before it is reached *)
 
-| fw_let x e1 e2 f1 f2 :
+| fw_let x e1 e2 (f1 : val -> flow) (f2 : val -> val -> flow) :
   forward e1 f1 ->
   (forall v, forward (subst x v e2) (f2 v)) ->
   forward (plet x e1 e2) (fun r => fex (fun v => f1 v;; f2 v r))
@@ -2796,6 +2796,18 @@ Module ForwardExamples.
       simpl.
       apply fw_val.
   Qed.
+
+  Definition e3_let := plet "x" (pval (vint 1)) (padd (pvar "x") (pval (vint 1))).
+  
+  Example ex3 : exists f3_let, forward e3_let f3_let.
+  Proof.
+    eexists.
+    unfold e3_let.
+    apply fw_let.
+    - apply fw_val.
+    - intro x. simpl.
+      admit.
+  Admitted.
 
 End ForwardExamples.
 
