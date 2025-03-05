@@ -208,7 +208,7 @@ Module ProgramNotations.
           e2 custom expr,
           left associativity) : expr_scope.
 
-  Notation "e1 - e2" := 
+  Notation "e1 - e2" :=
     (expr_prim2 prim2_sub e1 e2)
       (in custom expr at level 40,
           e1 custom expr,
@@ -437,7 +437,7 @@ expr_eqb (e1 e2 : expr) : bool :=
   | expr_prim2 op1 e11 e12, expr_prim2 op2 e21 e22 =>
       prim2_eqb op1 op2 && expr_eqb e11 e21 && expr_eqb e12 e22
   | expr_shift e1', expr_shift e2' =>
-      expr_eqb e1' e2'      
+      expr_eqb e1' e2'
   | expr_reset e1', expr_reset e2' =>
       expr_eqb e1' e2'
   | expr_cps e1' k1, expr_cps e2' k2 =>
@@ -478,6 +478,9 @@ Inductive eval_prim2_aux : heap -> prim2 -> val -> val -> heap -> val -> Prop :=
 | eval_prim2_aux_set h p v :
   Fmap.indom h p ->
   eval_prim2_aux h prim2_set (val_loc p) v (Fmap.update h p v) val_unit.
+
+Definition not_expr_val (e : expr) : Prop :=
+  match e with | expr_val _ => False | _ => True end.
 
 Inductive eval : heap -> expr -> heap -> val -> Prop :=
 | eval_val h v :
@@ -523,7 +526,7 @@ Inductive eval : heap -> expr -> heap -> val -> Prop :=
   eval h2 e2 h3 v2 ->
   eval_prim2_aux h3 op v1 v2 h4 r ->
   eval h1 (expr_prim2 op e1 e2) h4 r
-(* shift outside of any reset cannot be evaluated *)
+(* shift outside of reset cannot be evaluated *)
 (* reset *)
 | eval_reset h1 h2 e r :
   eval h1 (expr_cps e (expr_fun "x" (expr_var "x"))) h2 r ->
@@ -542,63 +545,98 @@ with eval_cps_aux : heap -> expr -> expr -> heap -> val -> Prop :=
 | eval_cps_aux_fix h1 h2 f x e k r :
   eval h1 (expr_app k (expr_val (val_fix f x e))) h2 r ->
   eval_cps_aux h1 (expr_fix f x e) k h2 r
-(* cps of application *) (* seems incorrect atm *)
-| eval_cps_aux_app h1 h2 e1 e2 k r :
-  eval
-    h1
+(* cps of application *)
+| eval_cps_aux_app_arg1 h1 h2 e1 e2 k r :
+  not_expr_val e1 ->
+  eval h1
     (expr_cps e1
-       (expr_fun "f" (expr_cps e2
-                        (expr_fun "x" (expr_app k
-                                         (expr_app
-                                            (expr_var "f")
-                                            (expr_var "x")))))))
+       (expr_fun "f" (expr_cps (expr_app (expr_var "f") e2) k)))
     h2 r ->
   eval_cps_aux h1 (expr_app e1 e2) k h2 r
+| eval_cps_aux_app_arg2 h1 h2 v e k r :
+  not_expr_val e ->
+  eval h1
+    (expr_cps e
+       (expr_fun "x" (expr_cps
+                        (expr_app (expr_val v) (expr_var "x")) k)))
+    h2 r ->
+  eval_cps_aux h1 (expr_app (expr_val v) e) k h2 r
+| eval_cps_aux_app_fun h1 h2 x e v k r :
+  eval h1 (expr_cps (expr_subst x v e) k) h2 r ->
+  eval_cps_aux h1
+    (expr_app (expr_val (val_fun x e)) (expr_val v))
+    k h2 r
+| eval_cps_aux_app_fix h1 h2 f x e v k r :
+  eval h1
+    (expr_cps (expr_subst x v (expr_subst f (val_fix f x e) e)) k)
+    h2 r ->
+  eval_cps_aux h1
+    (expr_app (expr_val (val_fix f x e)) (expr_val v))
+    k h2 r
 (* cps of let binding *)
 | eval_cps_aux_let h1 h2 x e1 e2 k r :
   eval h1 (expr_cps e1 (expr_fun x (expr_cps e2 k))) h2 r ->
   eval_cps_aux h1 (expr_let x e1 e2) k h2 r
-(*
-(* if then else *)
-| eval_if_true h1 h2 h3 e1 e2 e3 r :
-  eval h1 e1 h2 (val_bool true) ->
-  eval h2 e2 h3 r ->
-  eval h1 (expr_if e1 e2 e3) h3 r
-| eval_if_false h1 h2 h3 e1 e2 e3 r :
-  eval h1 e1 h2 (val_bool false) ->
-  eval h2 e3 h3 r ->
-  eval h1 (expr_if e1 e2 e3) h3 r
-*)
+(* cps of if then else *)
+| eval_cps_aux_if_arg h1 h2 e1 e2 e3 k r :
+  eval h1
+    (expr_cps e1
+       (expr_fun "b" (expr_cps (expr_if (expr_var "b") e2 e3) k)))
+    h2 r ->
+  eval_cps_aux h1 (expr_if e1 e2 e3) k h2 r
+| eval_cps_aux_if_true h1 h2 e1 e2 k r :
+  eval h1 (expr_cps e1 k) h2 r ->
+  eval_cps_aux h1 (expr_if (expr_val (val_bool true)) e1 e2) k h2 r
+| eval_cps_aux_if_false h1 h2 e1 e2 k r :
+  eval h1 (expr_cps e2 k) h2 r ->
+  eval_cps_aux h1 (expr_if (expr_val (val_bool false)) e1 e2) k h2 r
 (* cps of prim1 *)
-| eval_cps_aux_prim1 h1 h2 op e k r :
-  eval
-    h1
+| eval_cps_aux_prim1_arg h1 h2 op e k r :
+  not_expr_val e ->
+  eval h1
     (expr_cps e
-       (expr_fun "x" (expr_app k (expr_prim1 op (expr_var "x")))))
+       (expr_fun "x" (expr_cps (expr_prim1 op (expr_var "x")) k)))
     h2 r ->
   eval_cps_aux h1 (expr_prim1 op e) k h2 r
+| eval_cps_aux_prim1_val h1 h2 h3 op v v' k r :
+  eval_prim1_aux h1 op v h2 v' ->
+  eval h2 (expr_app k (expr_val v')) h3 r ->
+  eval_cps_aux h1 (expr_prim1 op (expr_val v)) k h3 r
 (* cps of prim2 *)
-| eval_cps_aux_prim2 h1 h2 op e1 e2 k r :
-  eval
-    h1
+| eval_cps_aux_prim2_arg1 h1 h2 op e1 e2 k r :
+  not_expr_val e1 ->
+  eval h1
     (expr_cps e1
-       (expr_fun "x1" (expr_cps e2
-                         (expr_fun "x2" (expr_app k
-                                           (expr_prim2
-                                              op
-                                              (expr_var "x1")
-                                              (expr_var "x2")))))))
+       (expr_fun "x" (expr_cps (expr_prim2 op (expr_var "x") e2) k)))
     h2 r ->
-  eval_cps_aux h1 (expr_prim2 op e1 e2) k h2 r.
-(*
+  eval_cps_aux h1 (expr_prim2 op e1 e2) k h2 r
+| eval_cps_aux_prim2_arg2 h1 h2 op v e k r :
+  not_expr_val e ->
+  eval h1
+    (expr_cps e
+       (expr_fun "y" (expr_cps
+                        (expr_prim2 op (expr_val v) (expr_var "y")) k)))
+    h2 r ->
+  eval_cps_aux h1 (expr_prim2 op (expr_val v) e) k h2 r
+| eval_cps_aux_prim2_val h1 h2 h3 op v1 v2 v k r :
+  eval_prim2_aux h1 op v1 v2 h2 v ->
+  eval h2 (expr_app k (expr_val v)) h3 r ->
+  eval_cps_aux h1 (expr_prim2 op (expr_val v1) (expr_val v2)) k h3 r
 (* shift inside cps context *)
-| eval_cps_aux_shift 
-    eval_cps_aux (shift e)
-(* reset *)
-| eval_reset h1 h2 e r :
-  eval h1 (expr_cps e (expr_fun "x" (expr_var "x"))) h2 r ->
-  eval h1 (expr_reset e) h2 r
-*)
+| eval_cps_aux_shift h1 h2 e k r :
+  eval h1
+    (expr_cps (expr_app e k) (expr_fun "x" (expr_var "x")))
+    h2 r ->
+  eval_cps_aux h1 (expr_shift e) k h2 r
+(* reset inside cps context *)
+| eval_cps_aux_reset h1 h2 h3 e v k r :
+  eval h1 (expr_cps e (expr_fun "x" (expr_var "x"))) h2 v ->
+  eval h2 (expr_app k (expr_val v)) h3 r ->
+  eval_cps_aux h1 (expr_reset e) k h3 r
+| eval_cps_aux_cps h1 h2 h3 e k v k' r :
+  eval h1 (expr_cps e k) h2 v ->
+  eval h2 (expr_app k' (expr_val v)) h3 r ->
+  eval_cps_aux h1 (expr_cps e k) k' h3 r.
 
 Module TestProgramSemantics.
 
@@ -780,22 +818,20 @@ Module TestProgramSemantics.
     unfold app_inside_reset.
     eapply eval_reset.
     eapply eval_cps.
-    eapply eval_cps_aux_app.
+    eapply eval_cps_aux_app_arg1. exact I.
     eapply eval_cps.
     eapply eval_cps_aux_fun.
     eapply eval_app_fun; try eapply eval_val.
     eapply eval_fun.
     simpl expr_subst.
     eapply eval_cps.
-    eapply eval_cps_aux_val.
-    eapply eval_app_fun; try eapply eval_val.
-    eapply eval_fun.
+    eapply eval_cps_aux_app_fun.
     simpl expr_subst.
+    eapply eval_cps.
+    eapply eval_cps_aux_prim2_val; eauto using eval_prim2_aux.
     eapply eval_app_fun.
     eapply eval_fun.
-    eapply eval_app_fun; try eapply eval_val.
-    simpl expr_subst.
-    eapply eval_prim2; eauto using eval_val, eval_prim2_aux.
+    eapply eval_val.
     simpl expr_subst.
     eapply eval_val.
   Qed.
@@ -832,15 +868,74 @@ Module TestProgramSemantics.
     unfold prim1_inside_reset.
     eapply eval_reset.
     eapply eval_cps.
-    eapply eval_cps_aux_prim1.
-    eapply eval_cps.
-    eapply eval_cps_aux_val.
+    eapply eval_cps_aux_prim1_val; eauto using eval_prim1_aux.
     eapply eval_app_fun; try eapply eval_val.
     eapply eval_fun.
     simpl expr_subst.
-    eapply eval_app_fun.
-    eapply eval_fun.
-    eapply eval_prim1; eauto using eval_val, eval_prim1_aux.
+    eapply eval_val.
+  Qed.
+
+  Definition if_inside_reset : expr :=
+    <{ <if 1 = 1 then 69 else 42> }>.
+  Print if_inside_reset.
+
+  Goal eval empty_heap if_inside_reset empty_heap 69.
+  Proof.
+    unfold if_inside_reset.
+    eapply eval_reset.
+    eapply eval_cps.
+    eapply eval_cps_aux_if_arg.
+    eapply eval_cps.
+    eapply eval_cps_aux_prim2_val; eauto using eval_prim2_aux.
+    eapply eval_app_fun; eauto using eval_fun, eval_val.
+    simpl expr_subst.
+    eapply eval_cps.
+    eapply eval_cps_aux_if_true.
+    eapply eval_cps.
+    eapply eval_cps_aux_val.
+    eapply eval_app_fun; eauto using eval_fun, eval_val.
+    simpl expr_subst.
+    eapply eval_val.
+  Qed.
+
+  Definition shift_reset1 : expr :=
+    <{ <1 + shift (fun "k" => {var_of "k"} 1)> }>.
+  Print shift_reset1.
+
+  Goal eval empty_heap shift_reset1 empty_heap 2.
+  Proof.
+    unfold shift_reset1.
+    eapply eval_reset.
+    eapply eval_cps.
+    eapply eval_cps_aux_prim2_arg2. exact I.
+    eapply eval_cps.
+    eapply eval_cps_aux_shift.
+    eapply eval_cps.
+    eapply eval_cps_aux_app_arg1. exact I.
+    eapply eval_cps.
+    eapply eval_cps_aux_fun.
+    eapply eval_app_fun; eauto using eval_fun, eval_val.
+    simpl expr_subst.
+    eapply eval_cps.
+    eapply eval_cps_aux_app_arg2. exact I.
+    eapply eval_cps.
+    eapply eval_cps_aux_fun.
+    eapply eval_app_fun; eauto using eval_fun, eval_val.
+    simpl expr_subst.
+    eapply eval_cps.
+    eapply eval_cps_aux_app_fun.
+    eapply eval_cps.
+    simpl expr_subst.
+    eapply eval_cps_aux_app_fun.
+    simpl expr_subst.
+    eapply eval_cps.
+    eapply eval_cps_aux_cps.
+    eapply eval_cps.
+    eapply eval_cps_aux_prim2_val; eauto using eval_prim2_aux.
+    eapply eval_app_fun; eauto using eval_fun, eval_val.
+    simpl expr_subst.
+    eapply eval_val.
+    eapply eval_app_fun; eauto using eval_fun, eval_val.
     simpl expr_subst.
     eapply eval_val.
   Qed.
