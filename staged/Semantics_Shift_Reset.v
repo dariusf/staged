@@ -13,8 +13,7 @@ Set Implicit Arguments.
 (** * Programs *)
 Definition var : Type := string.
 Definition var_of (x : string) : var := x.
-Definition var_eqb (x1 x2 : var) : bool :=
-  if String.string_dec x1 x2 then true else false.
+Definition var_eqb : var -> var -> bool := String.eqb.
 
 Definition loc := nat.
 Definition null := 0%nat.
@@ -32,7 +31,9 @@ Inductive prim2 : Type :=
 | prim2_mul : prim2
 | prim2_eq : prim2
 | prim2_lt : prim2
-| prim2_set : prim2.
+| prim2_set : prim2
+(* string extension *)
+| prim2_cat : prim2.
 
 Inductive val : Type :=
 | val_unit : val
@@ -41,6 +42,8 @@ Inductive val : Type :=
 | val_loc : loc -> val
 | val_fun : var -> expr -> val
 | val_fix : var -> var -> expr -> val
+(* string extension *)
+| val_str : string -> val
 
 with expr : Type :=
 | expr_val : val -> expr
@@ -69,6 +72,7 @@ Module CoerceVal.
   Coercion val_bool : bool >-> val.
   Coercion val_int : Z >-> val.
   Coercion val_loc : loc >-> val.
+  Coercion val_str : string >-> val.
 End CoerceVal.
 
 Module CoerceExpr.
@@ -254,6 +258,13 @@ Module ProgramNotations.
           e1 custom expr,
           e2 custom expr,
           right associativity) : expr_scope.
+
+  Notation "e1 ^ e2" :=
+    (expr_prim2 prim2_cat e1 e2)
+      (in custom expr at level 65,
+          e1 custom expr,
+          e2 custom expr,
+          right associativity) : expr_scope.
 End ProgramNotations.
 
 Module TestProgramNotations.
@@ -408,7 +419,8 @@ Definition prim2_eqb (op1 op2 : prim2) : bool :=
   | prim2_mul, prim2_mul
   | prim2_eq, prim2_eq
   | prim2_lt, prim2_lt
-  | prim2_set, prim2_set => true
+  | prim2_set, prim2_set
+  | prim2_cat, prim2_cat => true
   | _, _ => false
   end.
 
@@ -426,6 +438,8 @@ Fixpoint val_eqb (v1 v2 : val) : bool :=
       var_eqb x1 x2 && expr_eqb e1 e2
   | val_fix f1 x1 e1, val_fix f2 x2 e2 =>
       var_eqb f1 f2 && var_eqb x1 x2 && expr_eqb e1 e2
+  | val_str s1, val_str s2 =>
+      String.eqb s1 s2
   | _, _ =>
       false
   end with
@@ -492,7 +506,10 @@ Inductive eval_prim2_aux : heap -> prim2 -> val -> val -> heap -> val -> Prop :=
   eval_prim2_aux h prim2_lt (val_int n1) (val_int n2) h (val_bool (Z.ltb n1 n2))
 | eval_prim2_aux_set h p v :
   Fmap.indom h p ->
-  eval_prim2_aux h prim2_set (val_loc p) v (Fmap.update h p v) val_unit.
+  eval_prim2_aux h prim2_set (val_loc p) v (Fmap.update h p v) val_unit
+(* string concatenation *)
+| eval_prim2_aux_cat h s1 s2 :
+  eval_prim2_aux h prim2_cat (val_str s1) (val_str s2) h (val_str (s1 ++ s2)).
 
 Definition not_expr_val (e : expr) : Prop :=
   match e with | expr_val _ => False | _ => True end.
@@ -978,6 +995,33 @@ Module TestProgramSemantics.
     eapply eval_cps.
     eapply eval_cps_aux_fun. simpl expr_subst.
     eapply eval_val. simpl expr_subst.
+    eapply eval_val.
+  Qed.
+
+  Definition hello_printf : expr :=
+    <{ <(shift "k" => {var_of "k"}) ^ (shift "k" => {var_of "k"}) ^ "!"> "a" "b" }>.
+  Print hello_printf.
+
+  Goal eval empty_heap hello_printf empty_heap "ab!".
+  Proof.
+    unfold hello_printf.
+    eapply eval_app_fun; do_args.
+    eapply eval_app_fun; do_args.
+    eapply eval_reset.
+    eapply eval_cps_aux_prim2_arg1. exact I.
+    eapply eval_cps_aux_shift. simpl expr_subst.
+    eapply eval_cps_aux_val. simpl expr_subst.
+    eapply eval_val. simpl expr_subst.
+    eapply eval_cps.
+    eapply eval_cps_aux_prim2_arg2. exact I.
+    eapply eval_cps_aux_prim2_arg1. exact I.
+    eapply eval_cps_aux_shift. simpl expr_subst.
+    eapply eval_cps_aux_val. simpl expr_subst.
+    eapply eval_val. simpl expr_subst.
+    eapply eval_cps.
+    eapply eval_cps_aux_prim2_val; do_prim. simpl expr_subst.
+    eapply eval_cps.
+    eapply eval_cps_aux_prim2_val; do_prim. simpl expr_subst.
     eapply eval_val.
   Qed.
 
