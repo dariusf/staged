@@ -37,9 +37,9 @@ with expr : Type :=
   | pvar (x: var)
   | pval (v: val)
   | plet (x: var) (e1 e2: expr)
+  | padd (e1 e2: expr)
   (* | pfix (xf: var) (x: var) (e: expr)
   | pfun (x: var) (e: expr)
-  | padd (e1 e2: expr)
   | pfst (e: expr)
   | psnd (e: expr)
   | pminus (e1 e2: expr)
@@ -66,7 +66,8 @@ Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
-  (* | padd x z => padd x z
+  | padd x z => padd x z
+(*
   | pminus x z => pminus x z
   | pfst x => pfst x
   | psnd x => psnd x *)
@@ -379,6 +380,15 @@ Proof.
   eapply s_sh.
 Qed.
 
+(* TODO need a var rule basically *)
+
+Example ex_let:
+  spec_assert_valid
+    (plet "x" (pval (vint 1)) (padd (pval (vint 1)) (pvar "x"))) "r"
+    (ens "r1" (fun s => \[Fmap.read s "r1" = (vint 1)]);;
+      ens_ (fun s => \[Fmap.read s "x" = Fmap.read s "x"]);;
+      ens "r1" (fun s => \[Fmap.read s "r1" = (vint 2)])).
+Proof.
 
 Lemma plet_sound: forall x e1 e2 r r1 f1 f2,
   spec_assert_valid e1 r1 f1 ->
