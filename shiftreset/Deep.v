@@ -123,10 +123,10 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
 
   (* there is no var rule *)
 
-  | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r r1,
-    bigstep p1 s1 h1 e1 s3 h3 r (enorm v) ->
-    bigstep p1 s3 h3 (subst x v e2) s2 h2 r1 Re ->
-    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r1 Re
+  | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r,
+    (forall r1, bigstep p1 s1 h1 e1 s3 h3 r1 (enorm v)) ->
+    bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 r Re ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re
 
   | eval_plet_sh : forall x e1 e2 h1 h2 p1 x1 x2 xy xtmp eb ek r r1 s1 s2,
     bigstep p1 s1 h1 e1 s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
@@ -215,7 +215,7 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :
       Fmap.disjoint h1 h3 ->
     satisfies s1 s1 h1 h2 R (ens r H)
 
-  | s_ens_ : forall s1 H h1 h2 h3 r,
+  | s_ens_ : forall s1 H h1 h2 h3,
       H s1 h3 ->
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
@@ -384,7 +384,7 @@ Lemma plet_sound: forall x e1 e2 r r1 f1 f2,
   spec_assert_valid e1 r1 f1 ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
-    (f1;; ens_ (fun s => \[Fmap.read s r = Fmap.read s x]);; f2).
+    (f1;; ens_ (fun s => \[Fmap.read s r1 = Fmap.read s x]);; f2).
 Proof.
   intros.
   inverts H as H.
@@ -393,12 +393,43 @@ Proof.
     apply sav_base.
     intros.
     inverts H1 as H1.
+    specializes H1 r1.
+    specializes H H1. clear H1.
 
-    (* specializes H H1. *)
+    inverts H0 as H0.
+    (* 2: {
+
+    } *)
+    {
+
+    specializes H0 H12. clear H12.
+
+    applys s_seq H.
+    applys s_seq.
+    {
+    applys s_ens_.
+    hintro.
     admit.
+    admit.
+    admit.
+    }
+    {
+      admit.
+    }
+    }
+    {
+      (* the result of the whole let is shift *)
+      admit.
+    }
+
+    (* forwards: H0. *)
+    (* applys_eq H12. *)
+
+    (* forwards: H. *)
+    (* applys_eq H1. *)
   }
   {
-    (* shift *)
+    (* result of e1 is shift *)
     admit.
   }
 Abort.
