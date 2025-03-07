@@ -161,6 +161,7 @@ Inductive flow : Type :=
   | req : asn -> flow -> flow
   (* | ens : (val -> asn) -> flow *)
   | ens : var -> asn -> flow
+  | ens_ : asn -> flow
   | seq : flow -> flow -> flow
   | fexs : var -> flow -> flow (* exists in store *)
   | fex : forall (A:Type), (A -> flow) -> flow
@@ -211,6 +212,12 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
     satisfies s1 s1 h1 h2 R (ens r H)
+
+  | s_ens_ : forall s1 H h1 h2 h3 r,
+      H s1 h3 ->
+      h2 = Fmap.union h1 h3 ->
+      Fmap.disjoint h1 h3 ->
+    satisfies s1 s1 h1 h2 (norm vunit) (ens_ H)
 
   | s_seq s3 h3 v s1 s2 f1 f2 h1 h2 R :
     satisfies s1 s3 h1 h3 (norm v) f1 ->
@@ -329,16 +336,17 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
       exists fb fk,
       satisfies s1 s2 h1 h2 (shft x1 fb x2 fk) f) ->
     spec_assert_valid e r f.
-
+    (* TODO missing relation between fk and ek *)
 
 Lemma pval_sound: forall v r,
-  spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) ->
+  (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
   spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))).
 Proof.
   intros.
+  (* TODO remove these after confirming that they are useless *)
   (* useless, value case must be proved entirely using semantics *)
   (* inverts H. *)
-  clear H.
+  (* clear H. *)
   applys sav_base.
   intros.
   inverts H as H. (* eval_pval *)
@@ -351,13 +359,13 @@ Qed.
 
 
 Lemma pshift_sound: forall k e r fe,
-  spec_assert (pshift k e) r (fexs r (sh k fe r)) ->
+  (* spec_assert (pshift k e) r (fexs r (sh k fe r)) -> *)
   spec_assert_valid (pshift k e) r (fexs r (sh k fe r)).
 Proof.
   intros.
   (* also useless? *)
   (* inverts H as H. *)
-  clear H.
+  (* clear H. *)
   applys sav_shift.
 
   intros.
@@ -368,3 +376,12 @@ Proof.
   apply s_fexs. exists v.
   eapply s_sh.
 Qed.
+
+
+Lemma plet_sound: forall x e1 e2 r r1 f1 f2 r2,
+  spec_assert_valid e1 r1 f1 ->
+  spec_assert_valid e2 r f2 ->
+  spec_assert_valid (plet x e1 e2) r
+    (f1;; ens_ (fun s => \[Fmap.read s r = Fmap.read s x]);; f2).
+Proof.
+Abort.
