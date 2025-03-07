@@ -48,7 +48,8 @@ with expr : Type :=
   | pderef (v: expr)
   | passign (e1: expr) (e2: expr)
   | pif (v: expr) (e1: expr) (e2: expr)
-  | papp (e1: expr) (e2: expr) *)
+ *)
+  | papp (e1: expr) (e2: expr)
   | pshift (k: var) (e: expr)
   | preset (e: expr).
 
@@ -76,7 +77,8 @@ Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   | pref v => pref (aux v)
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
-  | papp e v => papp e v *)
+  *)
+  | papp e v => papp e v
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
   (* | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2) *)
   | pshift k e1 => pshift k (aux e1)
@@ -121,17 +123,17 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
 
   (* there is no var rule *)
 
-  (* | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1,
-    bigstep p1 s1 h1 e1 s3 h3 (enorm v) ->
-    bigstep p1 s3 h3 (subst x v e2) s2 h2 Re ->
-    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 Re *)
+  | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r r1,
+    bigstep p1 s1 h1 e1 s3 h3 r (enorm v) ->
+    bigstep p1 s3 h3 (subst x v e2) s2 h2 r1 Re ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r1 Re
 
-  (* | eval_plet_sh : forall x e1 e2 h1 h2 p1 x1 x2 xy xtmp eb ek,
-    bigstep p1 h1 e1 h2 (eshft (vfun x1 eb) (vfun x2 ek)) ->
-    bigstep p1 h1 (plet x e1 e2) h2
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 x1 x2 xy xtmp eb ek r r1 s1 s2,
+    bigstep p1 s1 h1 e1 s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r1
       (eshft (vfun x1 eb)
-        (vfun xy (plet xtmp (papp (pval (vfun x2 ek)) (pvar xy))
-          (plet x (pvar xtmp) e2)))) *)
+        xy (plet xtmp (papp (pval (vfun x2 ek)) (pvar xy))
+          (plet x (pvar xtmp) e2)))
 
   (*
 
@@ -378,10 +380,25 @@ Proof.
 Qed.
 
 
-Lemma plet_sound: forall x e1 e2 r r1 f1 f2 r2,
+Lemma plet_sound: forall x e1 e2 r r1 f1 f2,
   spec_assert_valid e1 r1 f1 ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
     (f1;; ens_ (fun s => \[Fmap.read s r = Fmap.read s x]);; f2).
 Proof.
+  intros.
+  inverts H as H.
+  {
+    (* norm *)
+    apply sav_base.
+    intros.
+    inverts H1 as H1.
+
+    (* specializes H H1. *)
+    admit.
+  }
+  {
+    (* shift *)
+    admit.
+  }
 Abort.
