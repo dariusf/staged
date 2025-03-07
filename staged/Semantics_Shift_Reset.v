@@ -645,6 +645,7 @@ with eval_cont_aux : heap -> expr -> cont -> heap -> val -> Prop :=
   eval_cont_aux h1 (expr_let x e1 e2) k h2 r
 (* cont of if then else *)
 | eval_cont_aux_if_arg h1 h2 e1 e2 e3 k r :
+  not_expr_val e1 ->
   eval_cont_aux h1 e1
     ("b", expr_cont (expr_if (expr_var "b") e2 e3) k)
     h2 r ->
@@ -901,7 +902,7 @@ Module TestProgramSemantics.
   Proof.
     unfold if_inside_reset.
     eapply eval_reset.
-    eapply eval_cont_aux_if_arg.
+    eapply eval_cont_aux_if_arg. exact I.
     eapply eval_cont_aux_prim2_val; auto_eval.
     eapply eval_cont.
     eapply eval_cont_aux_if_true.
@@ -1132,7 +1133,7 @@ Module TestProgramSemantics.
     eapply eval_app_fun; auto_eval.
     eapply eval_reset.
     eapply eval_cont_aux_app_fix. expr_subst.
-    eapply eval_cont_aux_if_arg.
+    eapply eval_cont_aux_if_arg. exact I.
     eapply eval_cont_aux_prim2_val; auto_eval.
     eapply eval_cont.
     eapply eval_cont_aux_if_false.
@@ -1144,7 +1145,7 @@ Module TestProgramSemantics.
     eapply eval_cont.
     eapply eval_cont_aux_prim2_arg2. exact I.
     eapply eval_cont_aux_app_fix. expr_subst.
-    eapply eval_cont_aux_if_arg.
+    eapply eval_cont_aux_if_arg. exact I.
     eapply eval_cont_aux_prim2_val; auto_eval.
     eapply eval_cont.
     eapply eval_cont_aux_if_false.
@@ -1156,7 +1157,7 @@ Module TestProgramSemantics.
     eapply eval_cont.
     eapply eval_cont_aux_prim2_arg2. exact I.
     eapply eval_cont_aux_app_fix. expr_subst.
-    eapply eval_cont_aux_if_arg.
+    eapply eval_cont_aux_if_arg. exact I.
     eapply eval_cont_aux_prim2_val; auto_eval.
     eapply eval_cont.
     eapply eval_cont_aux_if_true.
@@ -1171,3 +1172,335 @@ Module TestProgramSemantics.
   Qed.
 
 End TestProgramSemantics.
+
+Module ProgramDeterminism.
+
+  Axiom eval_prim1_aux_is_deterministic :
+    forall (h1 : heap)
+           (op : prim1)
+           (v : val)
+           (h2 : heap)
+           (r : val),
+      eval_prim1_aux h1 op v h2 r ->
+      forall (h2' : heap)
+             (r' : val),
+        eval_prim1_aux h1 op v h2' r' ->
+        h2 = h2' /\ r = r'.
+
+  Lemma eval_prim2_aux_is_deterministic :
+    forall (h1 : heap)
+           (op : prim2)
+           (v1 v2 : val)
+           (h2 : heap)
+           (r : val),
+      eval_prim2_aux h1 op v1 v2 h2 r ->
+      forall (h2' : heap)
+             (r' : val),
+        eval_prim2_aux h1 op v1 v2 h2' r' ->
+        h2 = h2' /\ r = r'.
+  Proof.
+    introv H_eval H_eval'.
+    now inverts H_eval; inverts H_eval'.
+  Qed.
+
+  Theorem eval_is_deterministic :
+    (forall (h1 : heap)
+            (e : expr)
+            (h2 : heap)
+            (r : val),
+        eval h1 e h2 r ->
+        forall (h2' : heap)
+               (r' : val),
+          eval h1 e h2' r' ->
+          h2 = h2' /\ r = r')
+    with eval_cont_aux_is_deterministic :
+      (forall (h1 : heap)
+              (e : expr)
+              (k : cont)
+              (h2 : heap)
+              (r : val),
+          eval_cont_aux h1 e k h2 r ->
+          forall (h2' : heap)
+                 (r' : val),
+            eval_cont_aux h1 e k h2' r' ->
+            h2 = h2' /\ r = r').
+  Proof.
+    {
+      introv H_eval.
+      induction H_eval; introv H_eval'.
+      - inverts H_eval' as. tauto.
+      - inverts H_eval' as. tauto.
+      - inverts H_eval' as. tauto.
+      - inverts H_eval' as.
+        + introv H_eval'1 H_eval'2 H_eval'3.
+          apply IHH_eval1 in H_eval'1 as [? H_eq]. subst. inverts H_eq as.
+          apply IHH_eval2 in H_eval'2 as []. subst.
+          apply IHH_eval3 in H_eval'3 as []. tauto.
+        + introv H_eval'1.
+          apply IHH_eval1 in H_eval'1 as []. discriminate.
+      - inverts H_eval' as.
+        + introv H_eval'1.
+          apply IHH_eval1 in H_eval'1 as []. discriminate.
+        + introv H_eval'1 H_eval'2 H_eval'3.
+          apply IHH_eval1 in H_eval'1 as [? H_eq]. subst. inverts H_eq as.
+          apply IHH_eval2 in H_eval'2 as []. subst.
+          apply IHH_eval3 in H_eval'3 as []. tauto.
+      - inverts H_eval' as.
+        introv H_eval'1 H_eval'2.
+        apply IHH_eval1 in H_eval'1 as []. subst.
+        apply IHH_eval2 in H_eval'2 as []. tauto.
+      - inverts H_eval' as.
+        introv H_eval'1 H_eval'2.
+        apply IHH_eval1 in H_eval'1 as []. subst.
+        apply IHH_eval2 in H_eval'2 as []. tauto.
+      - inverts H_eval' as.
+        + introv H_eval'1 H_eval'2.
+          apply IHH_eval1 in H_eval'1 as []. subst.
+          apply IHH_eval2 in H_eval'2 as []. tauto.
+        + introv H_eval'1.
+          apply IHH_eval1 in H_eval'1 as []. discriminate.
+      - inverts H_eval' as.
+        + introv H_eval'1.
+          apply IHH_eval1 in H_eval'1 as []. discriminate.
+        + introv H_eval'1 H_eval'2.
+          apply IHH_eval1 in H_eval'1 as []. subst.
+          apply IHH_eval2 in H_eval'2 as []. tauto.
+      - inverts H_eval' as.
+        introv H_eval' H_prim1'.
+        apply IHH_eval in H_eval' as []. subst.
+        eauto using eval_prim1_aux_is_deterministic.
+      - inverts H_eval' as.
+        introv H_eval'1 H_eval'2 H_prim2'.
+        apply IHH_eval1 in H_eval'1 as []. subst.
+        apply IHH_eval2 in H_eval'2 as []. subst.
+        eauto using eval_prim2_aux_is_deterministic.
+      - inverts H_eval'. eauto.
+      - inverts H_eval'. eauto.
+    }
+    {
+      introv H_eval_cont_aux.
+      induction H_eval_cont_aux; introv H_eval_cont_aux'.
+      - inverts H_eval_cont_aux' as. eauto.
+      - inverts H_eval_cont_aux' as. eauto.
+      - inverts H_eval_cont_aux' as. eauto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as.
+        + contradiction.
+        + introv H_prim1' H_eval_cont_aux'.
+          destruct (eval_prim1_aux_is_deterministic H H_prim1'). subst. eauto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as.
+        + contradiction.
+        + contradiction.
+        + introv H_prim2' H_eval_cont_aux'.
+          destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. eauto.
+      - inverts H_eval_cont_aux' as; contradiction || auto.
+      - inverts H_eval_cont_aux' as.
+        introv H_eval_cont_aux'.
+        apply IHH_eval_cont_aux in H_eval_cont_aux' as []. subst. eauto.
+      - inverts H_eval_cont_aux' as.
+        introv H_eval_cont_aux'.
+        apply IHH_eval_cont_aux in H_eval_cont_aux' as []. subst. eauto.
+    }
+  Qed.
+
+  Print Assumptions eval_is_deterministic.
+
+  Axiom expr_subst_on_expr_cont :
+    forall (x : var)
+           (v : val)
+           (e : expr)
+           (k : cont),
+      expr_subst x v (expr_cont e k) = expr_cont (expr_subst x v e) k.
+
+  Axiom expr_subst_on_closed_expr :
+    forall (x : var)
+           (v : val)
+           (e : expr),
+      expr_subst x v e = e.
+
+  Theorem eval_cont_aux_is_cont_of_eval :
+    forall (h1 : heap)
+           (e : expr)
+           (h2 : heap)
+           (v : val),
+      eval h1 e h2 v ->
+      forall (h3 : heap)
+             (x : var)
+             (k : expr)
+             (r : val),
+        eval_cont_aux h1 e (x, k) h3 r ->
+        eval h2 (expr_subst x v k) h3 r.
+  Proof.
+    introv H_eval.
+    induction H_eval; introv H_eval_cont_aux.
+    - inverts H_eval_cont_aux as. tauto.
+    - inverts H_eval_cont_aux as. tauto.
+    - inverts H_eval_cont_aux as. tauto.
+    - inverts H_eval_cont_aux as.
+      + introv _ H_eval_cont_aux.
+        apply IHH_eval1 in H_eval_cont_aux.
+        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+        simpl expr_subst in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
+        inverts H_eval_cont_aux as H_eval_cont_aux.
+        inverts H_eval_cont_aux as.
+        * contradiction.
+        * introv _ H_eval_cont_aux.
+          apply IHH_eval2 in H_eval_cont_aux.
+          rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+          simpl expr_subst in H_eval_cont_aux.
+          inverts H_eval_cont_aux as H_eval_cont_aux.
+          inverts H_eval_cont_aux as.
+          { contradiction. }
+          { contradiction. }
+          { auto. }
+        * inverts H_eval2 as. auto.
+      + inverts H_eval1 as.
+        introv _ H_eval_cont_aux.
+        apply IHH_eval2 in H_eval_cont_aux.
+        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+        simpl expr_subst in H_eval_cont_aux.
+        inverts H_eval_cont_aux as H_eval_cont_aux.
+        inverts H_eval_cont_aux as.
+        { contradiction. }
+        { contradiction. }
+        { auto. }
+      + inverts H_eval1 as.
+        inverts H_eval2 as. auto.
+      + inverts H_eval1 as.
+    - inverts H_eval_cont_aux as.
+      + introv _ H_eval_cont_aux.
+        apply IHH_eval1 in H_eval_cont_aux.
+        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+        simpl expr_subst in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
+        inverts H_eval_cont_aux as H_eval_cont_aux.
+        inverts H_eval_cont_aux as.
+        * contradiction.
+        * introv _ H_eval_cont_aux.
+          apply IHH_eval2 in H_eval_cont_aux.
+          rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+          simpl expr_subst in H_eval_cont_aux.
+          inverts H_eval_cont_aux as H_eval_cont_aux.
+          inverts H_eval_cont_aux as.
+          { contradiction. }
+          { contradiction. }
+          { auto. }
+        * inverts H_eval2 as. auto.
+      + inverts H_eval1 as.
+        introv _ H_eval_cont_aux.
+        apply IHH_eval2 in H_eval_cont_aux.
+        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+        simpl expr_subst in H_eval_cont_aux.
+        inverts H_eval_cont_aux as H_eval_cont_aux.
+        inverts H_eval_cont_aux as.
+        { contradiction. }
+        { contradiction. }
+        { auto. }
+      + inverts H_eval1 as.
+      + inverts H_eval1 as.
+        inverts H_eval2 as. auto.
+    - inverts H_eval_cont_aux as H_eval_cont_aux.
+      apply IHH_eval1 in H_eval_cont_aux.
+      rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
+      inverts H_eval_cont_aux as H_eval_cont_aux.
+      apply IHH_eval2 in H_eval_cont_aux. tauto.
+    - inverts H_eval_cont_aux as H_eval_cont_aux.
+      apply IHH_eval1 in H_eval_cont_aux.
+      rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+      inverts H_eval_cont_aux as H_eval_cont_aux.
+      apply IHH_eval2 in H_eval_cont_aux. tauto.
+    - inverts H_eval_cont_aux as.
+      + introv _ H_eval_cont_aux.
+        apply IHH_eval1 in H_eval_cont_aux.
+        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+        simpl expr_subst in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
+        inverts H_eval_cont_aux as H_eval_cont_aux.
+        inverts H_eval_cont_aux as.
+        * contradiction.
+        * auto.
+      + inverts H_eval1 as. auto.
+      + inverts H_eval1 as.
+    - inverts H_eval_cont_aux as.
+      + introv _ H_eval_cont_aux.
+        apply IHH_eval1 in H_eval_cont_aux.
+        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+        simpl expr_subst in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
+        inverts H_eval_cont_aux as H_eval_cont_aux.
+        inverts H_eval_cont_aux as.
+        * contradiction.
+        * auto.
+      + inverts H_eval1 as.
+      + inverts H_eval1 as. auto.
+    - inverts H_eval_cont_aux as.
+      + introv _ H_eval_cont_aux.
+        apply IHH_eval in H_eval_cont_aux.
+        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+        simpl expr_subst in H_eval_cont_aux.
+        inverts H_eval_cont_aux as H_eval_cont_aux.
+        inverts H_eval_cont_aux as.
+        * contradiction.
+        * introv H_prim1' H_eval'.
+          destruct (eval_prim1_aux_is_deterministic H H_prim1'). subst. auto.
+      + inverts H_eval as.
+        introv H_prim1' H_eval'.
+        destruct (eval_prim1_aux_is_deterministic H H_prim1'). subst. auto.
+    - inverts H_eval_cont_aux as.
+      + introv _ H_eval_cont_aux.
+        apply IHH_eval1 in H_eval_cont_aux.
+        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+        simpl expr_subst in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
+        inverts H_eval_cont_aux as H_eval_cont_aux.
+        inverts H_eval_cont_aux as.
+        * contradiction.
+        * introv _ H_eval_cont_aux.
+          apply IHH_eval2 in H_eval_cont_aux.
+          rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+          simpl expr_subst in H_eval_cont_aux.
+          inverts H_eval_cont_aux as H_eval_cont_aux.
+          inverts H_eval_cont_aux as.
+          { contradiction. }
+          { contradiction. }
+          { introv H_prim2' H_eval'.
+            destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. auto. }
+        * inverts H_eval2 as.
+          introv H_prim2' H_eval'.
+          destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. auto.
+      + inverts H_eval1 as.
+        introv _ H_eval_cont_aux.
+        apply IHH_eval2 in H_eval_cont_aux.
+        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
+        simpl expr_subst in H_eval_cont_aux.
+        inverts H_eval_cont_aux as H_eval_cont_aux.
+        inverts H_eval_cont_aux as.
+        { contradiction. }
+        { contradiction. }
+        { introv H_prim2' H_eval'.
+          destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. auto. }
+      + inverts H_eval1 as.
+        inverts H_eval2 as.
+        introv H_prim2' H_eval'.
+        destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. auto.
+    - inverts H_eval_cont_aux as H_eval_cont_aux' H_eval'.
+      destruct (eval_cont_aux_is_deterministic H H_eval_cont_aux'). subst. auto.
+    - inverts H_eval_cont_aux as H_eval_cont_aux' H_eval'.
+      destruct (eval_cont_aux_is_deterministic H H_eval_cont_aux'). subst. auto.
+  Qed.
+
+End ProgramDeterminism.
