@@ -96,7 +96,7 @@ Definition empty_heap : heap := Fmap.empty.
 
 Inductive eresult : Type :=
   | enorm : val -> eresult
-  | eshft : val -> val -> eresult.
+  | eshft : val -> var -> expr -> eresult.
 
 Definition penv := Fmap.fmap var val.
 Implicit Types p : penv.
@@ -112,6 +112,13 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     s2 = Fmap.update s1 r v ->
     bigstep p s1 h (pval v) s2 h r (enorm v)
 
+  | eval_pshift : forall s1 s2 h p k eb r v,
+    s2 = Fmap.update s1 r v ->
+    bigstep p s1 h (pshift k eb) s2 h r
+      (eshft (vfun k eb) r (pvar r))
+
+      (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
+
   (* there is no var rule *)
 
   (* | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1,
@@ -126,9 +133,7 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
         (vfun xy (plet xtmp (papp (pval (vfun x2 ek)) (pvar xy))
           (plet x (pvar xtmp) e2)))) *)
 
-  (* | eval_pshift : forall s h p k eb,
-    bigstep p s h (pshift k eb) s h
-      (eshft (vfun k eb) (vfun "x" (preset (pvar "x"))))
+  (*
 
   | eval_preset_val : forall s1 s2 h1 h2 p e v,
     bigstep p s1 h1 e s2 h2 (enorm v) ->
@@ -148,6 +153,7 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
 
 Definition asn := store -> heap -> Prop.
 Implicit Types H : asn.
+Implicit Types r : var.
 (* Implicit Types Q : val -> asn. *)
 
 (** * Staged formulae *)
@@ -158,14 +164,17 @@ Inductive flow : Type :=
   | seq : flow -> flow -> flow
   | fexs : var -> flow -> flow (* exists in store *)
   | fex : forall (A:Type), (A -> flow) -> flow
+
+  | sh : var -> flow -> var -> flow
+  | rs : flow -> val -> flow
+
   (* 
   | fall : forall (A:Type), (A -> flow) -> flow
   | unk : var -> val -> val -> flow
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
-  | sh : var -> flow -> val -> flow
   | shc : var -> flow -> val -> (val -> flow) -> flow
-  | rs : flow -> val -> flow *)
+  *)
   .
 
 (* Definition ens_ H := ens (fun r s => \[r = vunit] \* H s). *)
@@ -183,7 +192,7 @@ Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 
 Inductive result : Type :=
   | norm : val -> result
-  | shft : var -> flow -> val -> (val -> flow) -> result.
+  | shft : var -> flow -> var -> flow -> result.
 
 Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :=
 
@@ -203,8 +212,8 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :
       Fmap.disjoint h1 h3 ->
     satisfies s1 s1 h1 h2 R (ens r H)
 
-  | s_seq s3 h3 r1 s1 s2 f1 f2 h1 h2 R :
-    satisfies s1 s3 h1 h3 (norm r1) f1 ->
+  | s_seq s3 h3 v s1 s2 f1 f2 h1 h2 R :
+    satisfies s1 s3 h1 h3 (norm v) f1 ->
     satisfies s3 s2 h3 h2 R f2 ->
     satisfies s1 s2 h1 h2 R (seq f1 f2)
   (** seq is changed to require a value from the first flow *)
@@ -248,10 +257,13 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :
     (H: satisfies s1 s2 h1 h2 R f2) :
     satisfies s1 s2 h1 h2 R (disj f1 f2) *)
 
-  (* | s_sh s1 h1 x shb (v:val) :
+  | s_sh s1 h1 x shb r :
     satisfies s1 s1 h1 h1
-      (shft x shb v (fun r1 => rs (ens (fun r => \[r = v])) r1))
-      (sh x shb v)
+      (shft x shb r (ens r (fun _ => \[True])))
+(* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
+      (sh x shb r)
+
+  (*
     (** A [sh] on its own reduces to a [shft] containing an identity continuation. *)
 
   | s_seq_sh s1 s2 f1 f2 fk h1 h2 shb k (v:val) :
@@ -293,6 +305,10 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
   | sa_pval: forall r v,
     spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v])))
 
+  | sa_pshift: forall r1 r k e fe,
+    spec_assert e r1 fe ->
+    spec_assert (pshift k e) r (fexs r (sh k fe r))
+
   .
 
 
@@ -302,10 +318,18 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
     (forall s1 s2 h1 h2 v,
       bigstep empty_penv s1 h1 e s2 h2 r (enorm v) ->
       satisfies s1 s2 h1 h2 (norm v) f) ->
+    spec_assert_valid e r f
+
+  | sav_shift: forall e r f,
+    (* spec_assert_valid ek r fk -> *)
+    (* spec_assert_valid eb r fb -> *)
+    (forall s1 s2 h1 h2, forall x1 eb x2 ek,
+    (* fb fk, *)
+      bigstep empty_penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
+      exists fb fk,
+      satisfies s1 s2 h1 h2 (shft x1 fb x2 fk) f) ->
     spec_assert_valid e r f.
 
-
-(* TODO no ens with result *)
 
 Lemma pval_sound: forall v r,
   spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) ->
@@ -315,32 +339,32 @@ Proof.
   (* useless, value case must be proved entirely using semantics *)
   (* inverts H. *)
   clear H.
-
-  (* { ... } e {r . phi} *)
   applys sav_base.
   intros.
-
-  (* eval_pval *)
-  inverts H as H.
-
-  apply s_fexs.
-  exs.
-  (* exists v0. *)
-
-  (* destr H. *)
-  (* subst. *)
-
+  inverts H as H. (* eval_pval *)
+  apply s_fexs. exists v0.
   applys* s_ens.
-
-  (* unfold ens_.
-  *)
-  (* reflexivity. *)
   resolve_fn_in_env.
   hintro. resolve_fn_in_env.
   fmap_eq.
-  (* fmap_disjoint. *)
-
-  (* hintro. *)
-  (* big step semantics tells us nothing about the stores *)
 Qed.
 
+
+Lemma pshift_sound: forall k e r fe,
+  spec_assert (pshift k e) r (fexs r (sh k fe r)) ->
+  spec_assert_valid (pshift k e) r (fexs r (sh k fe r)).
+Proof.
+  intros.
+  (* also useless? *)
+  (* inverts H as H. *)
+  clear H.
+  applys sav_shift.
+
+  intros.
+  inverts H as H.
+  (* eval_pshift *)
+  exists fe.
+  exs.
+  apply s_fexs. exists v.
+  eapply s_sh.
+Qed.
