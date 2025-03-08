@@ -4,19 +4,23 @@ From Staged Require Import HeapF.
 Set Warnings "notation-incompatible-prefix".
 From Staged Require Import LibFmap.
 
+Import List.ListNotations.
+
+Local Open Scope list_scope.
 Local Open Scope string_scope.
 Local Open Scope Z_scope.
 
 Set Implicit Arguments.
 
-(** * Programs *)
+(* Programs *)
 Definition var : Type := string.
 Definition var_of (x : string) : var := x.
-Definition var_eqb : var -> var -> bool := String.eqb.
+Definition var_eqb := String.eqb.
+Definition var_dec := String.string_dec.
 
 Definition loc := nat.
 Definition null := 0%nat.
-Definition loc_eqb : loc -> loc -> bool := Nat.eqb.
+Definition loc_eqb := Nat.eqb.
 
 Inductive prim1 : Type :=
 | prim1_neg : prim1
@@ -1172,6 +1176,143 @@ Module TestProgramSemantics.
   Qed.
 
 End TestProgramSemantics.
+
+Module ClosedProgram.
+
+  Definition ctx : Type := list var.
+
+  Fixpoint closed_val_under (c : ctx) (v : val) : Prop :=
+    match v with
+    | val_fun x e => closed_expr_under (x :: c) e
+    | val_fix f x e => closed_expr_under (x :: f :: c) e
+    | _ => True
+    end with
+  closed_expr_under (c : ctx) (e : expr) : Prop :=
+    match e with
+    | expr_val v => closed_val_under c v
+    | expr_var x => List.In x c
+    | expr_fun x e' => closed_expr_under (x :: c) e'
+    | expr_fix f x e' => closed_expr_under (x :: f :: c) e'
+    | expr_app e1 e2 => closed_expr_under c e1 /\ closed_expr_under c e2
+    | expr_seq e1 e2 => closed_expr_under c e1 /\ closed_expr_under c e2
+    | expr_let x e1 e2 => closed_expr_under c e1 /\ closed_expr_under (x :: c) e2
+    | expr_if e1 e2 e3 => closed_expr_under c e1 /\ closed_expr_under c e2 /\ closed_expr_under c e3
+    | expr_prim1 _ e' => closed_expr_under c e'
+    | expr_prim2 _ e1 e2 => closed_expr_under c e1 /\ closed_expr_under c e2
+    | expr_shift k e' => closed_expr_under (k :: c) e'
+    | expr_reset e' => closed_expr_under c e'
+    | expr_cont e' k => closed_expr_under c e' /\ let (x, k') := k in closed_expr_under (x :: c) k'
+    end.
+
+  Definition closed_val := closed_val_under [].
+  Definition closed_expr := closed_expr_under [].
+  Definition closed_cont (k : cont) := let (x, k') := k in closed_expr_under [x] k'.
+
+  Lemma expr_subst_on_closed_expr_under :
+    forall (c : ctx)
+           (e : expr),
+      closed_expr_under c e ->
+      forall (x : var)
+             (v : val),
+        ~ List.In x c ->
+        expr_subst x v e = e.
+  Proof.
+    fix IH 2.
+    introv H_closed_aux H_not_in.
+    revert c H_closed_aux H_not_in.
+    induction e; simpl; introv H_closed_aux H_not_in.
+    - reflexivity.
+    - destruct var_eqb eqn:H_var_eq.
+      + rewrite -> String.eqb_eq in H_var_eq.
+        rewrite -> H_var_eq in H_closed_aux.
+        contradiction.
+      + reflexivity.
+    - destruct var_eqb eqn:H_var_eq.
+      + reflexivity.
+      + rewrite -> String.eqb_neq in H_var_eq.
+        rewrite -> (IHe _ H_closed_aux) by now rewrite -> List.not_in_cons.
+        reflexivity.
+    - destruct var_eqb eqn:H_var_eq1.
+      + reflexivity.
+      + rewrite -> String.eqb_neq in H_var_eq1.
+        destruct var_eqb eqn:H_var_eq2.
+        * reflexivity.
+        * rewrite -> String.eqb_neq in H_var_eq2.
+          rewrite -> (IHe _ H_closed_aux) by now rewrite ->2 List.not_in_cons.
+          reflexivity.
+    - destruct H_closed_aux as [H_closed_aux1 H_closed_aux2].
+      rewrite -> (IHe1 _ H_closed_aux1 H_not_in).
+      rewrite -> (IHe2 _ H_closed_aux2 H_not_in).
+      reflexivity.
+    - destruct H_closed_aux as [H_closed_aux1 H_closed_aux2].
+      rewrite -> (IHe1 _ H_closed_aux1 H_not_in).
+      rewrite -> (IHe2 _ H_closed_aux2 H_not_in).
+      reflexivity.
+    - destruct H_closed_aux as [H_closed_aux1 H_closed_aux2].
+      rewrite -> (IHe1 _ H_closed_aux1 H_not_in).
+      destruct var_eqb eqn:H_var_eq.
+      + reflexivity.
+      + rewrite -> String.eqb_neq in H_var_eq.
+        rewrite -> (IHe2 _ H_closed_aux2) by now rewrite -> List.not_in_cons.
+        reflexivity.
+    - destruct H_closed_aux as [H_closed_aux1 [H_closed_aux2 H_closed_aux3]].
+      rewrite -> (IHe1 _ H_closed_aux1 H_not_in).
+      rewrite -> (IHe2 _ H_closed_aux2 H_not_in).
+      rewrite -> (IHe3 _ H_closed_aux3 H_not_in).
+      reflexivity.
+    - rewrite -> (IHe _ H_closed_aux H_not_in).
+      reflexivity.
+    - destruct H_closed_aux as [H_closed_aux1 H_closed_aux2].
+      rewrite -> (IHe1 _ H_closed_aux1 H_not_in).
+      rewrite -> (IHe2 _ H_closed_aux2 H_not_in).
+      reflexivity.
+    - destruct var_eqb eqn:H_var_eq.
+      + reflexivity.
+      + rewrite -> String.eqb_neq in H_var_eq.
+        rewrite -> (IHe _ H_closed_aux) by now rewrite -> List.not_in_cons.
+        reflexivity.
+    - rewrite -> (IHe _ H_closed_aux H_not_in).
+      reflexivity.
+    - destruct p.
+      destruct H_closed_aux as [H_closed_aux1 H_closed_aux2].
+      rewrite -> (IHe _ H_closed_aux1 H_not_in).
+      destruct var_eqb eqn:H_var_eq.
+      + reflexivity.
+      + rewrite -> String.eqb_neq in H_var_eq.
+        rewrite -> (IH _ _ H_closed_aux2) by now rewrite -> List.not_in_cons.
+        reflexivity.
+  Qed.
+
+  Theorem expr_subst_on_closed_expr :
+    forall (e : expr),
+      closed_expr e ->
+      forall (x : var)
+             (v : val),
+        expr_subst x v e = e.
+  Proof.
+    unfold closed_expr.
+    intros e H_closed_aux x v.
+    eauto using expr_subst_on_closed_expr_under, List.in_nil.
+  Qed.
+
+  Lemma expr_subst_on_closed_cont :
+    forall (k : cont),
+      closed_cont k ->
+      forall (e : expr)
+             (x : var)
+             (v : val),
+        expr_subst x v (expr_cont e k) = expr_cont (expr_subst x v e) k.
+  Proof.
+    unfold closed_cont. simpl.
+    intros [x' k] H_closed_aux e x v.
+    destruct var_eqb eqn:H_var_eq.
+    + reflexivity.
+    + rewrite -> String.eqb_neq in H_var_eq.
+      rewrite -> (expr_subst_on_closed_expr_under _ _ H_closed_aux) by (simpl; tauto).
+      reflexivity.
+  Qed.
+
+End ClosedProgram.
 
 Module ProgramDeterminism.
 
