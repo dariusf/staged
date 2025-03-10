@@ -431,13 +431,11 @@ Proof.
   (* eval_pshift *)
   (* invert H. *)
   inverts H0 as H0.
-  exists fb.
-  (* exs. *)
+  (* exists fb. *)
+  exs.
   apply s_fexs. exists v.
-
-  applys_eq s_sh.
-
-  eapply s_sh.
+  (* applys_eq s_sh. *)
+  apply s_sh.
 Qed.
 
 (* TODO need a var rule basically *)
