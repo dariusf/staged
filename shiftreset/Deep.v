@@ -360,36 +360,15 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
       satisfies s1 s2 h1 h2 (norm v) r f) ->
     spec_assert_valid e r f
 
-  | sav_shift: forall e r f,
+  | sav_shift: forall e r r1 f eb fb,
     (* spec_assert_valid ek r fk -> *)
-    (* spec_assert_valid eb r fb -> *)
-    (forall s1 s2 h1 h2, forall x1 eb x2 ek,
-    (* fb fk, *)
+    spec_assert_valid eb r1 fb ->
+    (forall s1 s2 h1 h2, forall x1 x2 ek,
       bigstep empty_penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
-      exists fb fk,
+      exists fk,
       satisfies s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
     spec_assert_valid e r f.
     (* TODO missing relation between fk and ek *)
-
-(* Lemma satisfies_result: forall s1 s2 h1 h2 r v f,
-  satisfies s1 s2 h1 h2 (norm v) r f ->
-  Fmap.read s2 r = v.
-Proof.
-  intros.
-  (* dependent induction H. *)
-  inverts H as H.
-  {
-    (* cannot be proved without knowledge of H *)
-    admit.
-    }
-  {
-    injects H0.
-    rew_fmap *.
-  }
-  {
-    rew_fmap *.
-  }
-Abort. *)
 
 Lemma pval_sound: forall v r,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
@@ -411,22 +390,53 @@ Proof.
   fmap_eq.
 Qed.
 
-Lemma pshift_sound: forall k e r fe,
-  (* spec_assert (pshift k e) r (fexs r (sh k fe r)) -> *)
-  spec_assert_valid (pshift k e) r (fexs r (sh k fe r)).
+(* papp (pvar "k") (pval (vint 1)) *)
+
+(* Example ex_shift:
+  spec_assert_valid (pval (vint 1)) "r"
+    (ens "r" (fun s => \[Fmap.read s "r" = vint 1])) ->
+  spec_assert_valid
+    (pshift "k" (pval (vint 1)))
+    "r"
+    (fexs "k" (sh "k" (ens "r1" (fun s => \[Fmap.read s "r1" = vint 1])) "r")). *)
+
+Example ex_shift: forall eb fb,
+  spec_assert_valid eb "r" fb ->
+  spec_assert_valid
+    (pshift "k" eb)
+    "r"
+    (fexs "r" (sh "k" fb "r")).
+Proof.
+  intros.
+  applys sav_shift H.
+  intros.
+  inverts H0 as H0.
+  exs.
+  apply s_fexs.
+  exs.
+  applys_eq s_sh.
+Qed.
+
+Lemma pshift_sound: forall k eb r r1 fb,
+  (* spec_assert (pshift k eb) r (fexs r (sh k fb r)) -> *)
+  spec_assert_valid eb r1 fb ->
+  spec_assert_valid (pshift k eb) r (fexs r (sh k fb r)).
 Proof.
   intros.
   (* also useless? *)
   (* inverts H as H. *)
   (* clear H. *)
-  applys sav_shift.
-
+  applys sav_shift H.
   intros.
-  inverts H as H.
   (* eval_pshift *)
-  exists fe.
-  exs.
+  (* invert H. *)
+  inverts H0 as H0.
+  exists fb.
+  (* exs. *)
   apply s_fexs. exists v.
+
+  applys_eq s_sh.
+
   eapply s_sh.
 Qed.
 
