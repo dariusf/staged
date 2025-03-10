@@ -458,7 +458,7 @@ Lemma plet_sound: forall x e1 e2 r f1 f2,
   spec_assert_valid e1 x f1 ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
-    (f1;; fex_fresh x f2).
+    (f1;; fexs x f2).
     (* (f1;; fex_fresh x (ens_ (fun s => \[Fmap.read s r1 = Fmap.read s x]);; f2)). *)
 Proof.
   intros * He1 He2.
@@ -479,9 +479,10 @@ Proof.
 
 
     applys s_seq He1.
-    (* applys s_fexs. exists v0. *)
-    applys s_fex_fresh. intros.
-    exists v0.
+    applys s_fexs. exists v0.
+
+    (* applys s_fex_fresh. intros.
+    exists v0. *)
     assumption.
 
     (* applys s_seq.
@@ -513,6 +514,13 @@ Proof.
   }
   {
     (* result of e1 is shift *)
+    apply sav_shift.
+    intros.
+    inverts H as H.
+    {
+admit.
+    }
+
     admit.
   }
 Abort.
