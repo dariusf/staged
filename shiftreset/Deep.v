@@ -366,6 +366,7 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
     (forall s1 s2 h1 h2, forall x1 x2 ek,
       bigstep empty_penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
       exists fk,
+    spec_assert_valid ek r fk /\
       satisfies s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
     spec_assert_valid e r f.
     (* TODO missing relation between fk and ek *)
@@ -390,6 +391,17 @@ Proof.
   fmap_eq.
 Qed.
 
+Lemma pvar_sound: forall x,
+  spec_assert_valid (pvar x) x (ens x (fun s => \[True])).
+Proof.
+  intros.
+  applys sav_base. intros.
+  inverts H as H. (* eval_pvar *)
+  applys* s_ens.
+  hintro. constructor.
+  fmap_eq.
+Qed.
+
 (* papp (pvar "k") (pval (vint 1)) *)
 
 (* Example ex_shift:
@@ -400,7 +412,7 @@ Qed.
     "r"
     (fexs "k" (sh "k" (ens "r1" (fun s => \[Fmap.read s "r1" = vint 1])) "r")). *)
 
-Example ex_shift: forall eb fb,
+(* Example ex_shift: forall eb fb,
   spec_assert_valid eb "r" fb ->
   spec_assert_valid
     (pshift "k" eb)
@@ -415,7 +427,7 @@ Proof.
   apply s_fexs.
   exs.
   applys_eq s_sh.
-Qed.
+Qed. *)
 
 Lemma pshift_sound: forall k eb r r1 fb,
   (* spec_assert (pshift k eb) r (fexs r (sh k fb r)) -> *)
@@ -433,6 +445,8 @@ Proof.
   inverts H0 as H0.
   (* exists fb. *)
   exs.
+  split.
+  apply pvar_sound.
   apply s_fexs. exists v.
   (* applys_eq s_sh. *)
   apply s_sh.
