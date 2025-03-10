@@ -220,15 +220,15 @@ Inductive result : Type :=
   | norm : val -> result
   | shft : var -> flow -> var -> flow -> result.
 
-Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :=
+Inductive satisfies : store -> store -> heap -> heap -> result -> var -> flow -> Prop :=
 
-  | s_req : forall s1 s2 H (h1 h2:heap) R f,
+  | s_req : forall s1 s2 H (h1 h2:heap) R f r,
     (forall (hp hr:heap),
       H s1 hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies s1 s1 hr h2 R f) ->
-    satisfies s1 s1 h1 h2 R (req H f)
+      satisfies s1 s1 hr h2 R r f) ->
+    satisfies s1 s1 h1 h2 R r (req H f)
 
   | s_ens : forall s1 H h1 h2 R v h3 r,
       R = norm v ->
@@ -236,18 +236,18 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :
       H s1 h3 ->
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
-    satisfies s1 s1 h1 h2 R (ens r H)
+    satisfies s1 s1 h1 h2 R r (ens r H)
 
-  | s_ens_ : forall s1 H h1 h2 h3,
+  | s_ens_ : forall s1 H h1 h2 h3 r,
       H s1 h3 ->
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
-    satisfies s1 s1 h1 h2 (norm vunit) (ens_ H)
+    satisfies s1 s1 h1 h2 (norm vunit) r (ens_ H)
 
-  | s_seq s3 h3 v s1 s2 f1 f2 h1 h2 R :
-    satisfies s1 s3 h1 h3 (norm v) f1 ->
-    satisfies s3 s2 h3 h2 R f2 ->
-    satisfies s1 s2 h1 h2 R (seq f1 f2)
+  | s_seq s3 h3 v s1 s2 f1 f2 h1 h2 R r r1 :
+    satisfies s1 s3 h1 h3 (norm v) r1 f1 ->
+    satisfies s3 s2 h3 h2 R r f2 ->
+    satisfies s1 s2 h1 h2 R r (seq f1 f2)
   (** seq is changed to require a value from the first flow *)
 
   (* | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
@@ -255,21 +255,21 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :
       satisfies s1 s2 h1 h2 R (f b)) :
     satisfies s1 s2 h1 h2 R (@fex A f) *)
 
-  | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
-    (H: exists b,
-      satisfies s1 s2 h1 h2 R (f b)) :
-    satisfies s1 s2 h1 h2 R (@fex A f)
+  | s_fex : forall s1 s2 h1 h2 R (A:Type) (f:A->flow) r,
+    (exists b,
+      satisfies s1 s2 h1 h2 R r (f b)) ->
+    satisfies s1 s2 h1 h2 R r (@fex A f)
 
-  | s_fexs : forall s1 s2 h1 h2 R f x,
+  | s_fexs : forall s1 s2 h1 h2 R f x r,
     (exists v,
-      satisfies (Fmap.update s1 x v) s2 h1 h2 R (f)) ->
-    satisfies s1 s2 h1 h2 R (fexs x f)
+      satisfies (Fmap.update s1 x v) s2 h1 h2 R r f) ->
+    satisfies s1 s2 h1 h2 R r (fexs x f)
 
-  | s_fex_fresh : forall s1 s2 h1 h2 R f x,
+  | s_fex_fresh : forall s1 s2 h1 h2 R f x r,
     (~ Fmap.indom s1 x -> exists v,
       (* ~ Fmap.indom s1 x /\ *)
-      satisfies (Fmap.update s1 x v) s2 h1 h2 R (f)) ->
-    satisfies s1 s2 h1 h2 R (fex_fresh x f)
+      satisfies (Fmap.update s1 x v) s2 h1 h2 R r f) ->
+    satisfies s1 s2 h1 h2 R r (fex_fresh x f)
 
 
   (* | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow)
@@ -297,7 +297,7 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :
 
   | s_sh s1 h1 x shb r :
     satisfies s1 s1 h1 h1
-      (shft x shb r (ens r (fun _ => \[True])))
+      (shft x shb r (ens r (fun _ => \[True]))) r
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
       (sh x shb r)
 
@@ -335,8 +335,8 @@ Notation "'∃' x1 .. xn , H" :=
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : flow_scope. *)
 
 
-Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f" :=
-  (satisfies s1 s2 h1 h2 r f) (at level 30, only printing).
+Notation "s1 ',' s2 ','  h1 ','  h2 ','  R  ','  r  '|=' f" :=
+  (satisfies s1 s2 h1 h2 R r f) (at level 30, only printing).
 
 Inductive spec_assert : expr -> var -> flow -> Prop :=
 
@@ -355,7 +355,7 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
   | sav_base: forall e r f,
     (forall s1 s2 h1 h2 v,
       bigstep empty_penv s1 h1 e s2 h2 r (enorm v) ->
-      satisfies s1 s2 h1 h2 (norm v) f) ->
+      satisfies s1 s2 h1 h2 (norm v) r f) ->
     spec_assert_valid e r f
 
   | sav_shift: forall e r f,
@@ -365,9 +365,16 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
     (* fb fk, *)
       bigstep empty_penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
       exists fb fk,
-      satisfies s1 s2 h1 h2 (shft x1 fb x2 fk) f) ->
+      satisfies s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
     spec_assert_valid e r f.
     (* TODO missing relation between fk and ek *)
+
+Lemma satisfies_result: forall s1 s2 h1 h2 r v f,
+  satisfies s1 s2 h1 h2 (norm v) r f ->
+  Fmap.read s2 r = v.
+Proof.
+  intros.
+  induction H.
 
 Lemma pval_sound: forall v r,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
