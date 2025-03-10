@@ -110,10 +110,23 @@ Definition store : Type := Fmap.fmap var val.
 Definition empty_store : store := Fmap.empty.
 Implicit Types s : store.
 
+Definition get_val s e :=
+  match e with
+  | pval v => Some v
+  | pvar x => Some (Fmap.read s x)
+  | _ => None
+  end.
+
 Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> eresult -> Prop :=
   | eval_pval : forall s1 s2 h v p r,
     s2 = Fmap.update s1 r v ->
     bigstep p s1 h (pval v) s2 h r (enorm v)
+
+  | eval_padd : forall s1 s2 h v1 v2 p r e1 e2,
+    Some (vint v1) = get_val s1 e1 ->
+    Some (vint v2) = get_val s1 e2 ->
+    s2 = Fmap.update s1 r (vint (v1 + v2)) ->
+    bigstep p s1 h (padd e1 e2) s2 h r (enorm (vint (v1 + v2)))
 
   | eval_pshift : forall s1 s2 h p k eb r v,
     s2 = Fmap.update s1 r v ->
@@ -122,7 +135,15 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
 
       (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
 
-  (* there is no var rule *)
+  (* | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r r1,
+    bigstep p1 s1 h1 e1 s3 h3 r (enorm v) ->
+    bigstep p1 s3 h3 (subst x v e2) s2 h2 r1 Re ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r1 Re *)
+
+  | eval_pvar : forall s1 s2 h x v p r,
+    v = Fmap.read s1 x ->
+    s2 = Fmap.update s1 r v ->
+    bigstep p s1 h (pvar x) s1 h r (enorm v)
 
   | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r,
     (forall r1, bigstep p1 s1 h1 e1 s3 h3 r1 (enorm v)) ->
@@ -167,6 +188,7 @@ Inductive flow : Type :=
   | ens_ : asn -> flow
   | seq : flow -> flow -> flow
   | fexs : var -> flow -> flow (* exists in store *)
+  | fex_fresh : var -> flow -> flow
   | fex : forall (A:Type), (A -> flow) -> flow
 
   | sh : var -> flow -> var -> flow
@@ -242,6 +264,12 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> flow -> Prop :
     (exists v,
       satisfies (Fmap.update s1 x v) s2 h1 h2 R (f)) ->
     satisfies s1 s2 h1 h2 R (fexs x f)
+
+  | s_fex_fresh : forall s1 s2 h1 h2 R f x,
+    (~ Fmap.indom s1 x -> exists v,
+      (* ~ Fmap.indom s1 x /\ *)
+      satisfies (Fmap.update s1 x v) s2 h1 h2 R (f)) ->
+    satisfies s1 s2 h1 h2 R (fex_fresh x f)
 
 
   (* | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow)
@@ -382,43 +410,61 @@ Qed.
 
 (* TODO need a var rule basically *)
 
+(* let x = 1 in x + 2 *)
+(* ens x=1; ens[r] r=x+2 *)
 Example ex_let:
   spec_assert_valid
-    (plet "x" (pval (vint 1)) (padd (pval (vint 1)) (pvar "x"))) "r"
-    (ens "r1" (fun s => \[Fmap.read s "r1" = (vint 1)]);;
-      ens_ (fun s => \[Fmap.read s "x" = Fmap.read s "x"]);;
-      ens "r1" (fun s => \[Fmap.read s "r1" = (vint 2)])).
+    (plet "x" (pval (vint 1)) (padd (pval (vint 2)) (pvar "x"))) "r"
+    (ens_ (fun s => \[Fmap.read s "x" = (vint 1)]);;
+      ens "r" (fun s => \[exists v, vint v = Fmap.read s "x" /\ Fmap.read s "r" = (vint (v + 2))])).
 Proof.
+  apply sav_base.
+  intros.
+  inverts H as H.
+  specializes H "x".
+  inverts H as H.
+  inverts H10 as H10.
+  simpl in H10. injects H10.
+  simpl in H9. rew_fmap. injects H9.
+
+  eapply s_seq.
+  eapply s_ens_.
+  hintro.
+
 
 Lemma plet_sound: forall x e1 e2 r r1 f1 f2,
   spec_assert_valid e1 r1 f1 ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
-    (f1;; ens_ (fun s => \[Fmap.read s r1 = Fmap.read s x]);; f2).
+    (f1;; fex_fresh x (ens_ (fun s => \[Fmap.read s r1 = Fmap.read s x]);; f2)).
 Proof.
-  intros.
-  inverts H as H.
+  intros * He1 He2.
+  inverts He1 as He1.
   {
     (* norm *)
     apply sav_base.
     intros.
-    inverts H1 as H1.
-    specializes H1 r1.
-    specializes H H1. clear H1.
-
-    inverts H0 as H0.
-    (* 2: {
-
-    } *)
+    inverts H as H.
+    (* specializes H r1. *)
+    specializes He1 H. clear H.
+    
+    inverts He2 as He2.
     {
+      (* sav_base *)
 
-    specializes H0 H12. clear H12.
+    specializes He2 H10. clear H10.
 
-    applys s_seq H.
+
+    applys s_seq He1.
+    (* applys s_fexs. exists v0. *)
+    applys s_fex_fresh.
+    intros.
+    exists v0.
     applys s_seq.
     {
     applys s_ens_.
     hintro.
+    (* reflexivity. *)
     admit.
     admit.
     admit.
