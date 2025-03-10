@@ -476,6 +476,40 @@ Proof.
   hintro.
 Abort.
 
+Coercion pval : val >-> expr.
+Coercion pvar : var >-> expr.
+Coercion vint : Z >-> val.
+
+Definition store_read s x : val := Fmap.read s x.
+Coercion store_read : store >-> Funclass.
+Coercion papp : expr >-> Funclass.
+
+(* let x = 1 in x + 2 *)
+(* ens x=1; ens[r] r=x+2 *)
+
+(* let x = shift k. k 1 in x + 2 *)
+(* sh(k, k(1, r1), r) *)
+Example ex_let_shift:
+  spec_assert_valid
+    (plet "x" (pshift "k" ((pvar "k") 1)) (padd 2 (pvar "x")))
+    "r"
+    (ens_ (fun s => \[s "x" = 1]);;
+      ens "r" (fun s => \[exists v, vint v = s "x" /\ s "r" = (v + 2)])).
+Proof.
+  apply sav_base.
+  intros.
+  inverts H as H.
+  specializes H "x".
+  inverts H as H.
+  (* inverts H10 as H10.
+  simpl in H10. injects H10.
+  simpl in H9. rew_fmap. injects H9.
+
+  eapply s_seq.
+  eapply s_ens_.
+  hintro. *)
+Abort.
+
 Lemma plet_sound: forall x e1 e2 r f1 f2,
   spec_assert_valid e1 x f1 ->
   spec_assert_valid e2 r f2 ->
@@ -536,7 +570,7 @@ Proof.
   }
   {
     (* result of e1 is shift *)
-    apply sav_shift.
+    eapply sav_shift.
     intros.
     inverts H as H.
     {
