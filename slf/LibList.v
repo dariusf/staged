@@ -15,7 +15,6 @@ From SLF Require Import LibTactics LibLogic LibReflect LibOperation
 Generalizable Variables A B.
 Local Open Scope nat_scope.
 Local Open Scope comp_scope.
-Global Close Scope list_scope.
 
 (* **********************************************************************
 
