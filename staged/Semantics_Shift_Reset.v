@@ -1327,32 +1327,27 @@ Module ClosedProgram.
     introv H_eval_prim1_aux H_heap H_val.
     inverts H_eval_prim1_aux as; simpl in *.
     - intuition auto.
-    - intros H_not_indom. split; [| exact I].
+    - intros _. split; [| exact I].
       intros p' H_indom.
-      rewrite -> Fmap.update_eq_union_single.
-      rewrite -> Fmap.update_eq_union_single in H_indom.
-      rewrite -> Fmap.indom_union_eq in H_indom.
-      destruct H_indom as [H_indom | H_indom].
-      + rewrite -> Fmap.indom_single_eq in H_indom.
-        rewrite -> H_indom.
-        rewrite -> Fmap.read_union_l by apply Fmap.indom_single.
-        rewrite -> Fmap.read_single by apply Fmap.indom_single.
+      destruct (loc_eq_dec p p') as [H_eq | H_neq].
+      + rewrite -> H_eq.
+        rewrite -> fmap_read_update.
         exact H_val.
-      + rewrite -> Fmap.read_union_r.
-        exact (H_heap _ H_indom).
-        intros H_indom'.
-        rewrite -> Fmap.indom_single_eq in H_indom'.
-        rewrite -> H_indom' in H_not_indom.
-        contradiction.
+      + rewrite -> Fmap.indom_update_eq in H_indom.
+        rewrite -> fmap_neq_read_update by exact H_neq.
+        destruct H_indom as [H_eq | H_indom].
+        * congruence.
+        * exact (H_heap p' H_indom).
     - intuition auto.
-    - introv H_indom. split; [| exact I].
-      introv H_indom'.
-      rewrite -> Fmap.indom_remove_eq in H_indom'.
-      destruct H_indom' as [H_neq H_indom'].
-      admit.
+    - intros _. split; [| exact I].
+      intros p' H_indom.
+      rewrite -> Fmap.indom_remove_eq in H_indom.
+      destruct H_indom as [H_neq H_indom].
+      rewrite -> fmap_neq_read_remove by exact H_neq.
+      exact (H_heap p' H_indom).
     - intuition auto.
     - intuition auto.
-  Admitted.
+  Qed.
 
   Lemma eval_prim2_aux_preserves_closedness :
     forall (h1 : heap)
@@ -1374,20 +1369,17 @@ Module ClosedProgram.
     - intuition auto.
     - intuition auto.
     - intuition auto.
-    - intros H_indom. split; [| exact I].
-      intros p' H_indom'.
+    - intros _. split; [| exact I].
+      intros p' H_indom.
       destruct (loc_eq_dec p p') as [H_eq | H_neq].
-      * rewrite -> H_eq.
+      + rewrite -> H_eq.
         rewrite -> fmap_read_update.
         exact H_val2.
-      * rewrite -> Fmap.indom_update_eq in H_indom'.
-        destruct H_indom' as [H_eq' | H_indom']; [contradiction |].
-        rewrite -> Fmap.update_eq_union_single.
-        rewrite -> Fmap.read_union_r.
-        exact (H_heap _ H_indom').
-        intros H_indom''.
-        rewrite -> Fmap.indom_single_eq in H_indom''.
-        contradiction.
+      + rewrite -> Fmap.indom_update_eq in H_indom.
+        rewrite -> fmap_neq_read_update by exact H_neq.
+        destruct H_indom as [H_eq | H_indom].
+        * congruence.
+        * exact (H_heap p' H_indom).
     - intuition auto.
     - intuition auto.
   Qed.
@@ -1632,8 +1624,9 @@ Module ProgramDeterminism.
     forall (x : var)
            (v : val)
            (e : expr)
-           (k : cont),
-      expr_subst x v (expr_cont e k) = expr_cont (expr_subst x v e) k.
+           (x' : var)
+           (k : expr),
+      expr_subst x v (expr_cont e x' k) = expr_cont (expr_subst x v e) x' k.
 
   Axiom expr_subst_on_closed_expr :
     forall (x : var)
@@ -1651,7 +1644,7 @@ Module ProgramDeterminism.
              (x : var)
              (k : expr)
              (r : val),
-        eval_cont_aux h1 e (x, k) h3 r ->
+        eval_cont_aux h1 e x k h3 r ->
         eval h2 (expr_subst x v k) h3 r.
   Proof.
     introv H_eval.
