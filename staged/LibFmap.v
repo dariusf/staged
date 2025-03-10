@@ -173,3 +173,11 @@ Proof.
     rew_logic *. }
   { case_if. reflexivity. }
 Qed.
+
+Lemma update_update_idem: forall A (B:Type) (s:fmap A B) x v,
+  Fmap.update (Fmap.update s x v) x v = Fmap.update s x v.
+Proof.
+  unfold Fmap.update, single, Fmap.union, Fmap.map_union. intros.
+  applys fmap_extens. intros y. simpls.
+  case_if; reflexivity.
+Qed.

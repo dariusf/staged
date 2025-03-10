@@ -227,22 +227,24 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> var -> flow ->
       H s1 hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies s1 s1 hr h2 R r f) ->
-    satisfies s1 s1 h1 h2 R r (req H f)
+      satisfies s1 s2 hr h2 R r f) ->
+    satisfies s1 s2 h1 h2 R r (req H f)
 
-  | s_ens : forall s1 H h1 h2 R v h3 r,
+  | s_ens : forall s1 s2 H h1 h2 R v h3 r,
       R = norm v ->
       Fmap.read s1 r = v ->
+      (* s2 = Fmap.update s1 r v -> *)
       H s1 h3 ->
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
-    satisfies s1 s1 h1 h2 R r (ens r H)
+    satisfies s1 s2 h1 h2 R r (ens r H)
 
-  | s_ens_ : forall s1 H h1 h2 h3 r,
+  | s_ens_ : forall s1 s2 H h1 h2 h3 r,
       H s1 h3 ->
+      (* s2 = Fmap.update s1 r vunit -> *)
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
-    satisfies s1 s1 h1 h2 (norm vunit) r (ens_ H)
+    satisfies s1 s2 h1 h2 (norm vunit) r (ens_ H)
 
   | s_seq s3 h3 v s1 s2 f1 f2 h1 h2 R r r1 :
     satisfies s1 s3 h1 h3 (norm v) r1 f1 ->
@@ -255,10 +257,10 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> var -> flow ->
       satisfies s1 s2 h1 h2 R (f b)) :
     satisfies s1 s2 h1 h2 R (@fex A f) *)
 
-  | s_fex : forall s1 s2 h1 h2 R (A:Type) (f:A->flow) r,
+  (* | s_fex : forall s1 s2 h1 h2 R (A:Type) (f:A->flow) r,
     (exists b,
       satisfies s1 s2 h1 h2 R r (f b)) ->
-    satisfies s1 s2 h1 h2 R r (@fex A f)
+    satisfies s1 s2 h1 h2 R r (@fex A f) *)
 
   | s_fexs : forall s1 s2 h1 h2 R f x r,
     (exists v,
@@ -335,7 +337,7 @@ Notation "'∃' x1 .. xn , H" :=
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : flow_scope. *)
 
 
-Notation "s1 ',' s2 ','  h1 ','  h2 ','  R  ','  r  '|=' f" :=
+Notation "s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
   (satisfies s1 s2 h1 h2 R r f) (at level 30, only printing).
 
 Inductive spec_assert : expr -> var -> flow -> Prop :=
@@ -369,12 +371,25 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
     spec_assert_valid e r f.
     (* TODO missing relation between fk and ek *)
 
-Lemma satisfies_result: forall s1 s2 h1 h2 r v f,
+(* Lemma satisfies_result: forall s1 s2 h1 h2 r v f,
   satisfies s1 s2 h1 h2 (norm v) r f ->
   Fmap.read s2 r = v.
 Proof.
   intros.
-  induction H.
+  (* dependent induction H. *)
+  inverts H as H.
+  {
+    (* cannot be proved without knowledge of H *)
+    admit.
+    }
+  {
+    injects H0.
+    rew_fmap *.
+  }
+  {
+    rew_fmap *.
+  }
+Abort. *)
 
 Lemma pval_sound: forall v r,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
@@ -391,10 +406,10 @@ Proof.
   apply s_fexs. exists v0.
   applys* s_ens.
   resolve_fn_in_env.
+  (* rewrite* update_update_idem. *)
   hintro. resolve_fn_in_env.
   fmap_eq.
 Qed.
-
 
 Lemma pshift_sound: forall k e r fe,
   (* spec_assert (pshift k e) r (fexs r (sh k fe r)) -> *)
@@ -437,7 +452,7 @@ Proof.
   eapply s_seq.
   eapply s_ens_.
   hintro.
-
+Abort.
 
 Lemma plet_sound: forall x e1 e2 r r1 f1 f2,
   spec_assert_valid e1 r1 f1 ->
@@ -475,6 +490,7 @@ Proof.
     admit.
     admit.
     admit.
+    (* admit. *)
     }
     {
       admit.
