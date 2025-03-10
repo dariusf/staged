@@ -454,11 +454,12 @@ Proof.
   hintro.
 Abort.
 
-Lemma plet_sound: forall x e1 e2 r r1 f1 f2,
-  spec_assert_valid e1 r1 f1 ->
+Lemma plet_sound: forall x e1 e2 r f1 f2,
+  spec_assert_valid e1 x f1 ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
-    (f1;; fex_fresh x (ens_ (fun s => \[Fmap.read s r1 = Fmap.read s x]);; f2)).
+    (f1;; fex_fresh x f2).
+    (* (f1;; fex_fresh x (ens_ (fun s => \[Fmap.read s r1 = Fmap.read s x]);; f2)). *)
 Proof.
   intros * He1 He2.
   inverts He1 as He1.
@@ -479,13 +480,15 @@ Proof.
 
     applys s_seq He1.
     (* applys s_fexs. exists v0. *)
-    applys s_fex_fresh.
-    intros.
+    applys s_fex_fresh. intros.
     exists v0.
-    applys s_seq.
+    assumption.
+
+    (* applys s_seq.
     {
     applys s_ens_.
     hintro.
+    f_equal.
     (* reflexivity. *)
     admit.
     admit.
@@ -494,7 +497,8 @@ Proof.
     }
     {
       admit.
-    }
+    } *)
+
     }
     {
       (* the result of the whole let is shift *)
