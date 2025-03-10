@@ -1647,7 +1647,8 @@ Module ProgramDeterminism.
         eval_cont_aux h1 e x k h3 r ->
         eval h2 (expr_subst x v k) h3 r.
   Proof.
-    introv H_eval.
+    introv H_eval H_eval_cont_aux.
+    revert x k H_eval_cont_aux.
     induction H_eval; introv H_eval_cont_aux.
     - inverts H_eval_cont_aux as. tauto.
     - inverts H_eval_cont_aux as. tauto.
