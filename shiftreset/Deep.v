@@ -401,6 +401,7 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
 Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
   | sav_base: forall e r f,
     (forall env penv s1 s2 h1 h2 v,
+      (* env_compatible penv env -> *)
       bigstep penv s1 h1 e s2 h2 r (enorm v) ->
       satisfies env s1 s2 h1 h2 (norm v) r f) ->
     spec_assert_valid e r f
