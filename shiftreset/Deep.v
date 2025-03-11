@@ -433,7 +433,7 @@ Definition env_compatible penv env :=
 Lemma papp_unk_sound: forall f v r,
   (* spec_assert_valid e r f -> *)
   spec_assert_valid (papp (pvar f) (pval v)) r
-    (fexs r (unk f v r)).
+    (unk f v r).
 Proof.
   intros.
   (* eval_papp_unk *)
@@ -445,17 +445,17 @@ Proof.
   specializes H0 r H.
   destr H0.
 
-  applys s_fexs. exists v0.
+  (* applys s_fexs. exists v0. *)
   applys s_unk.
   eapply H0.
   reflexivity.
 
   inverts H2 as H2.
-  specializes H2 H10.
-  applys_eq H2.
-
-  admit.
-  admit.
+  {
+    specializes H2 H10.
+    applys_eq H2.
+  }
+  { admit. }
 
 
   
