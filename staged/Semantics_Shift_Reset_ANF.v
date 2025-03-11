@@ -109,7 +109,6 @@ Module CoerceExpr.
   Coercion expr_prim2 : prim2 >-> Funclass.
 End CoerceExpr.
 
-(*
 Module ProgramNotations.
   Declare Custom Entry expr.
   Declare Scope val_scope.
@@ -121,26 +120,18 @@ Module ProgramNotations.
   Notation "e" := e (in custom expr at level 0, e constr at level 0) : expr_scope.
   Notation "'begin' e 'end'" := e (in custom expr, e custom expr at level 99, only parsing) : expr_scope.
 
-  Notation "e1 e2" :=
-    (expr_app e1 e2)
+  Notation "a1 a2" :=
+    (expr_app a1 a2)
       (in custom expr at level 10,
-          e1 custom expr,
-          e2 custom expr,
-          left associativity) : expr_scope.
+          a1 custom expr,
+          a2 custom expr) : expr_scope.
 
-  Notation "'if' e1 'then' e2 'else' e3" :=
-    (expr_if e1 e2 e3)
+  Notation "'if' a 'then' e1 'else' e2" :=
+    (expr_if a e1 e2)
       (in custom expr at level 69,
+          a custom expr,
           e1 custom expr,
-          e2 custom expr,
-          e3 custom expr) : expr_scope.
-
-  Notation "e1 ; e2" :=
-    (expr_seq e1 e2)
-      (in custom expr at level 69,
-          e1 custom expr,
-          e2 custom expr,
-          right associativity) : expr_scope.
+          e2 custom expr) : expr_scope.
 
   Notation "'let' x '=' e1 'in' e2" :=
     (expr_let (var_of x) e1 e2)
@@ -228,109 +219,95 @@ Module ProgramNotations.
           f, x1, x2, xn at level 0,
           e custom expr at level 99) : val_scope.
 
-  Notation "()" := (expr_val val_unit) (in custom expr at level 0) : expr_scope.
+  Notation "()" := val_unit (in custom expr at level 0) : expr_scope.
 
-  Notation "'not' e" :=
-    (expr_prim1 prim1_neg e)
-      (in custom expr at level 23, e custom expr at level 0) : expr_scope.
+  Notation "'not' a" :=
+    (expr_prim1 prim1_neg a)
+      (in custom expr at level 23, a custom expr at level 0) : expr_scope.
 
-  Notation "'ref' e" :=
-    (expr_prim1 prim1_ref e)
-      (in custom expr at level 23, e custom expr at level 0) : expr_scope.
+  Notation "'ref' a" :=
+    (expr_prim1 prim1_ref a)
+      (in custom expr at level 23, a custom expr at level 0) : expr_scope.
 
-  Notation "! e" :=
-    (expr_prim1 prim1_get e)
-      (in custom expr at level 23, e custom expr at level 0) : expr_scope.
+  Notation "! a" :=
+    (expr_prim1 prim1_get a)
+      (in custom expr at level 23, a custom expr at level 0) : expr_scope.
 
-  Notation "'free' e" :=
-    (expr_prim1 prim1_free e)
-      (in custom expr at level 23, e custom expr at level 0) : expr_scope.
+  Notation "'free' a" :=
+    (expr_prim1 prim1_free a)
+      (in custom expr at level 23, a custom expr at level 0) : expr_scope.
 
-  Notation "'fst' e" :=
-    (expr_prim1 prim1_fst e)
-      (in custom expr at level 23, e custom expr at level 0) : expr_scope.
+  Notation "'fst' a" :=
+    (expr_prim1 prim1_fst a)
+      (in custom expr at level 23, a custom expr at level 0) : expr_scope.
 
-  Notation "'snd' e" :=
-    (expr_prim1 prim1_snd e)
-      (in custom expr at level 23, e custom expr at level 0) : expr_scope.
+  Notation "'snd' a" :=
+    (expr_prim1 prim1_snd a)
+      (in custom expr at level 23, a custom expr at level 0) : expr_scope.
 
-  Notation "e1 + e2" :=
-    (expr_prim2 prim2_add e1 e2)
+  Notation "a1 + a2" :=
+    (expr_prim2 prim2_add a1 a2)
       (in custom expr at level 40,
-          e1 custom expr,
-          e2 custom expr,
-          left associativity) : expr_scope.
+          a1 custom expr,
+          a2 custom expr) : expr_scope.
 
-  Notation "e1 - e2" :=
-    (expr_prim2 prim2_sub e1 e2)
+  Notation "a1 - a2" :=
+    (expr_prim2 prim2_sub a1 a2)
       (in custom expr at level 40,
-          e1 custom expr,
-          e2 custom expr,
-          left associativity) : expr_scope.
+          a1 custom expr,
+          a2 custom expr) : expr_scope.
 
-  Notation "e1 * e2" :=
-    (expr_prim2 prim2_mul e1 e2)
+  Notation "a1 * a2" :=
+    (expr_prim2 prim2_mul a1 a2)
       (in custom expr at level 39,
-          e1 custom expr,
-          e2 custom expr,
-          left associativity) : expr_scope.
+          a1 custom expr,
+          a2 custom expr) : expr_scope.
 
-  Notation "e1 = e2" :=
-    (expr_prim2 prim2_eq e1 e2)
+  Notation "a1 = a2" :=
+    (expr_prim2 prim2_eq a1 a2)
       (in custom expr at level 50,
-          e1 custom expr,
-          e2 custom expr,
-          left associativity) : expr_scope.
+          a1 custom expr,
+          a2 custom expr) : expr_scope.
 
-  Notation "e1 < e2" :=
-    (expr_prim2 prim2_lt e1 e2)
+  Notation "a1 < a2" :=
+    (expr_prim2 prim2_lt a1 a2)
       (in custom expr at level 50,
-          e1 custom expr,
-          e2 custom expr,
-          left associativity) : expr_scope.
+          a1 custom expr,
+          a2 custom expr) : expr_scope.
 
-  Notation "e1 := e2" :=
-    (expr_prim2 prim2_set e1 e2)
+  Notation "a1 := a2" :=
+    (expr_prim2 prim2_set a1 a2)
       (in custom expr at level 65,
-          e1 custom expr,
-          e2 custom expr,
-          right associativity) : expr_scope.
+          a1 custom expr,
+          a2 custom expr) : expr_scope.
 
-  Notation "e1 ^ e2" :=
-    (expr_prim2 prim2_cat e1 e2)
+  Notation "a1 ^ a2" :=
+    (expr_prim2 prim2_cat a1 a2)
       (in custom expr at level 65,
-          e1 custom expr,
-          e2 custom expr,
-          right associativity) : expr_scope.
+          a1 custom expr,
+          a2 custom expr) : expr_scope.
 
-  Notation "e1 , e2" :=
-    (expr_prim2 prim2_pair e1 e2)
+  Notation "a1 , a2" :=
+    (expr_prim2 prim2_pair a1 a2)
       (in custom expr at level 65,
-          e1 custom expr,
-          e2 custom expr,
-          right associativity) : expr_scope.
+          a1 custom expr,
+          a2 custom expr) : expr_scope.
 End ProgramNotations.
-*)
 
-(*
 Module TestProgramNotations.
   Import ProgramNotations.
   Import CoerceVal.
+  Import CoerceAtom.
   Import CoerceExpr.
 
   Local Open Scope val_scope.
   Local Open Scope expr_scope.
+
   Set Printing Coercions.
   Unset Printing Notations.
 
-  Definition test_app1 e1 e2 : expr := <{ e1 e2 }>.
-  Print test_app1.
-
-  Definition test_app2 e1 e2 e3 : expr := <{ e1 e2 e3 }>.
-  Print test_app2.
-
-  Definition test_app3 e1 e2 e3 : expr := <{ e1 (e2 e3) }>.
-  Print test_app3.
+  Definition test_app a1 a2 : expr := <{ a1 a2 }>.
+  Print test_app.
 
   Definition test_fun1 x e : expr := <{ fun x => e }>.
   Print test_fun1.
@@ -383,38 +360,17 @@ Module TestProgramNotations.
   Definition test_ref2 : expr := <{ ref 1 }>.
   Print test_ref2.
 
-  Definition test_ref3 : expr := <{ ref (1 + 2) }>.
-  Print test_ref3.
-
   Definition test_get1 : expr := <{ ! null }>.
   Print test_get1.
 
-  Definition test_add1 e : expr := <{ e + 1 }>.
+  Definition test_add1 : expr := <{ 6 + 9 }>.
   Print test_add1.
 
   Definition test_lt1 : expr := <{ 1 < 2 }>.
   Print test_lt1.
 
-  Definition test_arithmetic1 : expr := <{ 1 + 2 * 3 }>.
-  Print test_arithmetic1.
-
-  Definition test_arithmetic2 : expr := <{ 1 + 2 < 3 * 4 }>.
-  Print test_arithmetic2.
-
-  Definition test_arithmetic3 : expr := <{ 1 + 2 * 0 = 3 * 4 }>.
-  Print test_arithmetic3.
-
-  Definition test_arithmetic4 : expr := <{ 1 = 2 - 1 = false }>.
-  Print test_arithmetic4.
-
-  Definition test_set1 x e : expr := <{ x := e }>.
+  Definition test_set1 x a : expr := <{ x := a }>.
   Print test_set1.
-
-  Definition test_set_arithmetic1 : expr := <{ ref 0 := 42 + 6 * 9 }>.
-  Print test_set_arithmetic1.
-
-  Definition test_set_arithmetic2 e1 e2 : expr := <{ e1 e2 := true = false }>.
-  Print test_set_arithmetic2.
 
   Definition test_shift1 k e : expr := <{ shift k => e }>.
   Print test_shift1.
@@ -429,7 +385,6 @@ Module TestProgramNotations.
   Set Printing Notations.
   Unset Printing Coercions.
 End TestProgramNotations.
-*)
 
 Definition atom_subst (y : var) (w : val) (a : atom) : atom :=
   match a with
@@ -445,11 +400,11 @@ Fixpoint expr_subst (y : var) (w : val) (e : expr) : expr :=
   | expr_atom a => expr_atom (aaux a)
   | expr_fun x e' => expr_fun x (if_y_eq x e' (eaux e'))
   | expr_fix f x e' => expr_fix f x (if_y_eq f e' (if_y_eq x e' (eaux e')))
-  | expr_app v1 v2 => expr_app (aaux v1) (aaux v2)
+  | expr_app a1 a2 => expr_app (aaux a1) (aaux a2)
   | expr_let x e1 e2 => expr_let x (eaux e1) (if_y_eq x e2 (eaux e2))
-  | expr_if v e1 e2 => expr_if (aaux v) (eaux e1) (eaux e2)
-  | expr_prim1 op v => expr_prim1 op (aaux v)
-  | expr_prim2 op v1 v2 => expr_prim2 op (aaux v1) (aaux v2)
+  | expr_if a e1 e2 => expr_if (aaux a) (eaux e1) (eaux e2)
+  | expr_prim1 op a => expr_prim1 op (aaux a)
+  | expr_prim2 op a1 a2 => expr_prim2 op (aaux a1) (aaux a2)
   | expr_shift k e' => expr_shift k (if_y_eq k e' (eaux e'))
   | expr_reset e' => expr_reset (eaux e')
   | expr_cont e' x k => expr_cont (eaux e') x (if_y_eq x k (eaux k))
@@ -544,7 +499,7 @@ Inductive eval : heap -> expr -> heap -> val -> Prop :=
   eval_cont_aux h1 e x k h2 r ->
   eval h1 (expr_cont e x k) h2 r
 with eval_cont_aux : heap -> expr -> var -> expr -> heap -> val -> Prop :=
-| eval_cont_aux_val h1 h2 v x k r :
+| eval_cont_aux_atom h1 h2 v x k r :
   eval h1 (expr_subst x v k) h2 r ->
   eval_cont_aux h1 (expr_atom (atom_val v)) x k h2 r
 | eval_cont_aux_fun h1 h2 x e x' k r :
@@ -572,12 +527,12 @@ with eval_cont_aux : heap -> expr -> var -> expr -> heap -> val -> Prop :=
   eval_cont_aux h1 e2 x k h2 r ->
   eval_cont_aux h1 (expr_if (atom_val (val_bool false)) e1 e2) x k h2 r
 (* cont of prim1 *)
-| eval_cont_aux_prim1_val h1 h2 h3 op v v' x k r :
+| eval_cont_aux_prim1 h1 h2 h3 op v v' x k r :
   eval_prim1_aux h1 op v h2 v' ->
   eval h2 (expr_subst x v' k) h3 r ->
   eval_cont_aux h1 (expr_prim1 op (atom_val v)) x k h3 r
 (* cont of prim2 *)
-| eval_cont_aux_prim2_val h1 h2 h3 op v1 v2 v x k r :
+| eval_cont_aux_prim2 h1 h2 h3 op v1 v2 v x k r :
   eval_prim2_aux h1 op v1 v2 h2 v ->
   eval h2 (expr_subst x v k) h3 r ->
   eval_cont_aux h1 (expr_prim2 op (atom_val v1) (atom_val v2)) x k h3 r
@@ -595,10 +550,9 @@ with eval_cont_aux : heap -> expr -> var -> expr -> heap -> val -> Prop :=
   eval h2 (expr_subst x' v k') h3 r ->
   eval_cont_aux h1 (expr_cont e x k) x' k' h3 r.
 
-(*
 Module TestProgramSemantics.
-
   Import CoerceVal.
+  Import CoerceAtom.
   Import CoerceExpr.
   Import ProgramNotations.
 
@@ -607,7 +561,7 @@ Module TestProgramSemantics.
 
   Local Create HintDb auto_eval_hints discriminated.
 
-  Local Hint Resolve eval_val : auto_eval_hints.
+  Local Hint Resolve eval_atom : auto_eval_hints.
   Local Hint Resolve eval_fun : auto_eval_hints.
   Local Hint Resolve eval_fix : auto_eval_hints.
   Local Hint Constructors eval_prim1_aux : auto_eval_hints.
@@ -624,16 +578,19 @@ Module TestProgramSemantics.
   Proof.
     unfold one_plus_one.
     eapply eval_let; auto_eval.
-    eapply eval_app_fun; auto_eval.
+    eapply eval_app_fun. expr_subst.
     eapply eval_prim2; auto_eval.
   Qed.
 
   Definition factorial_3 : expr :=
     <{ let rec "f" "x" =
-             if {var_of "x"} = 0 then
+             let "b" = {var_of "x"} = 0 in
+             if {var_of "b"} then
                1
              else
-               {var_of "x"} * {var_of "f"} ({var_of "x"} - 1)
+               let "x'" = {var_of "x"} - 1 in
+               let "p" = {var_of "f"} {var_of "x'"} in
+               {var_of "x"} * {var_of "p"}
        in
        {var_of "f"} 3 }>.
   Print factorial_3.
@@ -642,41 +599,55 @@ Module TestProgramSemantics.
   Proof.
     unfold factorial_3.
     eapply eval_let; auto_eval.
-    eapply eval_app_fix; auto_eval.
+    eapply eval_app_fix. expr_subst.
+    eapply eval_let; auto_eval.
+    eapply eval_prim2; auto_eval.
     eapply eval_if_false.
-    eapply eval_prim2; auto_eval.
-    eapply eval_prim2; auto_eval.
-    eapply eval_app_fix; auto_eval.
+    eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
     ring_simplify (3 - 1).
+    eapply eval_let; auto_eval.
+    eapply eval_app_fix. expr_subst.
+    eapply eval_let; auto_eval.
+    eapply eval_prim2; auto_eval.
     eapply eval_if_false.
-    eapply eval_prim2; auto_eval.
-    eapply eval_prim2; auto_eval.
-    eapply eval_app_fix; auto_eval.
+    eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
     ring_simplify (2 - 1).
+    eapply eval_let; auto_eval.
+    eapply eval_app_fix. expr_subst.
+    eapply eval_let; auto_eval.
+    eapply eval_prim2; auto_eval.
     eapply eval_if_false.
-    eapply eval_prim2; auto_eval.
-    eapply eval_prim2; auto_eval.
-    eapply eval_app_fix; auto_eval.
+    eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
     ring_simplify (1 - 1).
-    eapply eval_if_true.
+    eapply eval_let; auto_eval.
+    eapply eval_app_fix. expr_subst.
+    eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
-    eapply eval_val.
-    eapply eval_prim2_aux_mul.
+    eapply eval_if_true.
+    eapply eval_atom.
+    eapply eval_prim2; auto_eval.
+    eapply eval_prim2; auto_eval.
+    eapply eval_prim2; auto_eval.
   Qed.
 
   Definition sum_2_ref : expr :=
     <{ let "s" = ref 0 in
        let rec "f" "x" =
-             if {var_of "x"} = 0 then
+             let "b" = {var_of "x"} = 0 in
+             if {var_of "b"} then
                ()
              else
-               let "_" = {var_of "s"} := !{var_of "s"} + {var_of "x"} in
-               {var_of "f"} ({var_of "x"} - 1)
+               let "v" = !{var_of "s"} in
+               let "v'" = {var_of "v"} + {var_of "x"} in
+               let "_" = {var_of "s"} := {var_of "v'"} in
+               let "x'" = {var_of "x"} - 1 in
+               {var_of "f"} {var_of "x'"}
        in
-       {var_of "f"} 2; !{var_of "s"} }>.
+       let "_" = {var_of "f"} 2 in
+       !{var_of "s"} }>.
   Print sum_2_ref.
 
   Goal eval empty_heap sum_2_ref (Fmap.single (loc_of 1) (val_int 3)) 3.
@@ -688,45 +659,54 @@ Module TestProgramSemantics.
     eapply fmap_not_indom_empty.
     rewrite -> Fmap.update_empty.
     eapply eval_let; auto_eval.
-    eapply eval_seq.
-    eapply eval_app_fix; auto_eval.
-    eapply eval_if_false.
-    eapply eval_prim2; auto_eval.
+    eapply eval_let; auto_eval.
+    eapply eval_app_fix. expr_subst.
     eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
-    eapply eval_prim2; auto_eval.
+    eapply eval_if_false.
+    eapply eval_let; auto_eval.
     eapply eval_prim1; auto_eval.
     eapply eval_prim1_aux_get.
     eapply Fmap.indom_single.
     eapply Fmap.read_single.
+    eapply eval_let; auto_eval.
+    eapply eval_prim2; auto_eval.
     ring_simplify (0 + 2).
+    eapply eval_let; auto_eval.
+    eapply eval_prim2; auto_eval.
     eapply eval_prim2_aux_set.
     eapply Fmap.indom_single.
     rewrite -> Fmap.update_eq_union_single.
     rewrite -> fmap_single_union_single_eq_single.
-    eapply eval_app_fix; auto_eval.
+    eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
     ring_simplify (2 - 1).
-    eapply eval_if_false.
-    eapply eval_prim2; auto_eval.
+    eapply eval_app_fix. expr_subst.
     eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
-    eapply eval_prim2; auto_eval.
+    eapply eval_if_false.
+    eapply eval_let; auto_eval.
     eapply eval_prim1; auto_eval.
     eapply eval_prim1_aux_get.
     eapply Fmap.indom_single.
     eapply Fmap.read_single.
+    eapply eval_let; auto_eval.
+    eapply eval_prim2; auto_eval.
     ring_simplify (2 + 1).
+    eapply eval_let; auto_eval.
+    eapply eval_prim2; auto_eval.
     eapply eval_prim2_aux_set.
     eapply Fmap.indom_single.
     rewrite -> Fmap.update_eq_union_single.
     rewrite -> fmap_single_union_single_eq_single.
-    eapply eval_app_fix; auto_eval.
+    eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
     ring_simplify (1 - 1).
-    eapply eval_if_true.
+    eapply eval_app_fix. expr_subst.
+    eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
-    eapply eval_val.
+    eapply eval_if_true.
+    eapply eval_atom.
     eapply eval_prim1; auto_eval.
     eapply eval_prim1_aux_get.
     eapply Fmap.indom_single.
@@ -741,24 +721,21 @@ Module TestProgramSemantics.
   Proof.
     unfold reset_trivial.
     eapply eval_reset.
-    eapply eval_cont_aux_val. expr_subst.
-    eapply eval_val.
+    eapply eval_cont_aux_atom. expr_subst.
+    eapply eval_atom.
   Qed.
 
   Definition app_inside_reset : expr :=
-    <{ <(fun "x" => {var_of "x"} + 1) 1> }>.
+    <{ <(\fun "x" => {var_of "x"} + 1) 1> }>.
   Print app_inside_reset.
 
   Goal eval empty_heap app_inside_reset empty_heap 2.
   Proof.
     unfold app_inside_reset.
     eapply eval_reset.
-    eapply eval_cont_aux_app_arg1. exact I.
-    eapply eval_cont_aux_fun. expr_subst.
-    eapply eval_cont.
     eapply eval_cont_aux_app_fun. expr_subst.
-    eapply eval_cont_aux_prim2_val; auto_eval.
-    eapply eval_val.
+    eapply eval_cont_aux_prim2; auto_eval.
+    eapply eval_atom.
   Qed.
 
   Definition let_inside_reset : expr :=
@@ -770,10 +747,10 @@ Module TestProgramSemantics.
     unfold let_inside_reset.
     eapply eval_reset.
     eapply eval_cont_aux_let. expr_subst.
-    eapply eval_cont_aux_val; expr_subst.
+    eapply eval_cont_aux_atom. expr_subst.
     eapply eval_cont.
-    eapply eval_cont_aux_val. expr_subst.
-    eapply eval_val.
+    eapply eval_cont_aux_atom. expr_subst.
+    eapply eval_atom.
   Qed.
 
   Definition prim1_inside_reset : expr :=
@@ -784,75 +761,81 @@ Module TestProgramSemantics.
   Proof.
     unfold prim1_inside_reset.
     eapply eval_reset.
-    eapply eval_cont_aux_prim1_val; auto_eval.
-    eapply eval_val.
+    eapply eval_cont_aux_prim1; auto_eval.
+    eapply eval_atom.
   Qed.
 
   Definition if_inside_reset : expr :=
-    <{ <if 1 = 1 then 69 else 42> }>.
+    <{ <if true then 69 else 42> }>.
   Print if_inside_reset.
 
   Goal eval empty_heap if_inside_reset empty_heap 69.
   Proof.
     unfold if_inside_reset.
     eapply eval_reset.
-    eapply eval_cont_aux_if_arg. exact I.
-    eapply eval_cont_aux_prim2_val; auto_eval.
-    eapply eval_cont.
     eapply eval_cont_aux_if_true.
-    eapply eval_cont_aux_val. expr_subst.
-    eapply eval_val.
+    eapply eval_cont_aux_atom. expr_subst.
+    eapply eval_atom.
   Qed.
 
   Definition shift_reset1 : expr :=
-    <{ <1 + shift "k" => {var_of "k"} 1> }>.
+    <{ < let "x" = shift "k" => {var_of "k"} 1 in 1 + {var_of "x"} > }>.
   Print shift_reset1.
 
   Goal eval empty_heap shift_reset1 empty_heap 2.
   Proof.
     unfold shift_reset1.
     eapply eval_reset.
-    eapply eval_cont_aux_prim2_arg2. exact I.
+    eapply eval_cont_aux_let.
     eapply eval_cont_aux_shift. expr_subst.
     eapply eval_cont_aux_app_fun. expr_subst.
     eapply eval_cont_aux_cont; auto_eval.
-    eapply eval_cont_aux_prim2_val; auto_eval.
-    eapply eval_val.
-    eapply eval_val.
+    eapply eval_cont_aux_prim2; auto_eval.
+    eapply eval_atom.
+    eapply eval_atom.
   Qed.
 
   Definition shift_reset2 : expr :=
-    <{ < 3 * shift "k" => {var_of "k"} > 23 }>.
+    <{ let "f" = < let "x" = shift "k" => {var_of "k"} in 3 * {var_of "x"} > in
+       {var_of "f"} 23 }>.
   Print shift_reset2.
 
   Goal eval empty_heap shift_reset2 empty_heap 69.
   Proof.
     unfold shift_reset2.
-    eapply eval_app_fun; auto_eval.
+    eapply eval_let; auto_eval.
     eapply eval_reset.
-    eapply eval_cont_aux_prim2_arg2. exact I.
+    eapply eval_cont_aux_let.
     eapply eval_cont_aux_shift. expr_subst.
-    eapply eval_cont_aux_val. expr_subst.
-    eapply eval_val. expr_subst.
+    eapply eval_cont_aux_atom. expr_subst.
+    eapply eval_atom.
+    eapply eval_app_fun. expr_subst.
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_val; auto_eval.
-    eapply eval_val.
+    eapply eval_cont_aux_prim2; auto_eval.
+    eapply eval_atom.
   Qed.
 
   Definition state_monad : expr :=
     <{ let "get" "_" =
              shift "k" =>
-             fun "s" => {var_of "k"} {var_of "s"} {var_of "s"}
+             fun "s" => let "f" = {var_of "k"} {var_of "s"} in
+                        {var_of "f"} {var_of "s"}
        in
        let "tick" "_" =
              shift "k" =>
-             fun "s" => {var_of "k"} () ({var_of "s"} + 1)
+             fun "s" => let "f" = {var_of "k"} () in
+                        let "s'" = {var_of "s"} + 1 in
+                        {var_of "f"} {var_of "s'"}
        in
        let "run_state" "t" =
-             < let "r" = {var_of "t"} () in
-               fun "_" => {var_of "r"} > 0
+             let "f" = < let "r" = {var_of "t"} () in
+                         fun "_" => {var_of "r"} > in
+             {var_of "f"} 0
        in
-       let "thunk" "_" = {var_of "tick"} (); {var_of "get"} () in
+       let "thunk" "_" =
+             let "_" = {var_of "tick"} () in
+             {var_of "get"} ()
+       in
        {var_of "run_state"} {var_of "thunk"} }>.
   Print state_monad.
 
@@ -863,67 +846,81 @@ Module TestProgramSemantics.
     eapply eval_let; auto_eval.
     eapply eval_let; auto_eval.
     eapply eval_let; auto_eval.
-    eapply eval_app_fun; auto_eval.
-    eapply eval_app_fun; auto_eval.
+    eapply eval_app_fun. expr_subst.
+    eapply eval_let; auto_eval.
     eapply eval_reset.
     eapply eval_cont_aux_let.
     eapply eval_cont_aux_app_fun. expr_subst.
-    eapply eval_cont_aux_seq.
+    eapply eval_cont_aux_let.
     eapply eval_cont_aux_app_fun. expr_subst.
     eapply eval_cont_aux_shift. expr_subst.
     eapply eval_cont_aux_fun. expr_subst.
-    eapply eval_val. expr_subst.
-    eapply eval_app_fun; auto_eval.
-    eapply eval_app_fun; auto_eval.
+    eapply eval_atom.
+    eapply eval_app_fun. expr_subst.
+    eapply eval_let; auto_eval.
+    eapply eval_app_fun. expr_subst.
     eapply eval_cont.
     eapply eval_cont_aux_app_fun. expr_subst.
     eapply eval_cont_aux_shift. expr_subst.
     eapply eval_cont_aux_fun. expr_subst.
-    eapply eval_val.
-    eapply eval_prim2; auto_eval. expr_subst.
-    eapply eval_app_fun; auto_eval.
-    eapply eval_app_fun; auto_eval.
+    eapply eval_atom.
+    eapply eval_let; auto_eval.
+    eapply eval_prim2; auto_eval.
+    eapply eval_app_fun. expr_subst.
+    eapply eval_let; auto_eval.
+    eapply eval_app_fun. expr_subst.
     eapply eval_cont.
     eapply eval_cont_aux_fun. expr_subst.
-    eapply eval_val. expr_subst.
-    eapply eval_val.
+    eapply eval_atom.
+    eapply eval_app_fun. expr_subst.
+    eapply eval_atom.
   Qed.
 
   Definition hello_printf : expr :=
-    <{ <(shift "k" => {var_of "k"}) ^ (shift "k" => {var_of "k"}) ^ "!"> "a" "b" }>.
+    <{ let "f" = <let "s1" = (shift "k" => {var_of "k"}) in
+                  let "s2" = (shift "k" => {var_of "k"}) in
+                  let "s3" = {var_of "s1"} ^ {var_of "s2"} in
+                  {var_of "s3"} ^ "!"> in
+       let "g" = {var_of "f"} "a" in
+       {var_of "g"} "b" }>.
   Print hello_printf.
 
   Goal eval empty_heap hello_printf empty_heap "ab!".
   Proof.
     unfold hello_printf.
-    eapply eval_app_fun; auto_eval.
-    eapply eval_app_fun; auto_eval.
+    eapply eval_let; auto_eval.
     eapply eval_reset.
-    eapply eval_cont_aux_prim2_arg1. exact I.
+    eapply eval_cont_aux_let.
     eapply eval_cont_aux_shift. expr_subst.
-    eapply eval_cont_aux_val. expr_subst.
-    eapply eval_val. expr_subst.
+    eapply eval_cont_aux_atom. expr_subst.
+    eapply eval_atom.
+    eapply eval_let; auto_eval.
+    eapply eval_app_fun. expr_subst.
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_arg2. exact I.
-    eapply eval_cont_aux_prim2_arg1. exact I.
+    eapply eval_cont_aux_let.
     eapply eval_cont_aux_shift. expr_subst.
-    eapply eval_cont_aux_val. expr_subst.
-    eapply eval_val. expr_subst.
+    eapply eval_cont_aux_atom. expr_subst.
+    eapply eval_atom.
+    eapply eval_app_fun. expr_subst.
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_val; auto_eval.
+    eapply eval_cont_aux_let.
+    eapply eval_cont_aux_prim2; auto_eval.
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_val; auto_eval.
-    eapply eval_val.
+    eapply eval_cont_aux_prim2; auto_eval.
+    eapply eval_atom.
   Qed.
 
   Definition either : expr :=
     <{ let "either" "a" "b" =
-             shift "k" =>
-             {var_of "k"} {var_of "a"}; {var_of "k"} {var_of "b"}
+             shift "k" => let "_" = {var_of "k"} {var_of "a"} in
+                          {var_of "k"} {var_of "b"}
        in
        let "r" = ref 0 in
-       let "_" = < let "x" = {var_of "either"} 60 9 in
-                   {var_of "r"} := !{var_of "r"} + {var_of "x"} >
+       let "_" = < let "f" = {var_of "either"} 60 in
+                   let "x" = {var_of "f"} 9 in
+                   let "v" = !{var_of "r"} in
+                   let "v'" = {var_of "v"} + {var_of "x"} in
+                   {var_of "r"} := {var_of "v'"} >
        in
        !{var_of "r"} }>.
   Print either.
@@ -940,52 +937,52 @@ Module TestProgramSemantics.
     eapply eval_let; auto_eval.
     eapply eval_reset.
     eapply eval_cont_aux_let.
-    eapply eval_cont_aux_app_arg1. exact I.
     eapply eval_cont_aux_app_fun. expr_subst.
     eapply eval_cont_aux_fun. expr_subst.
     eapply eval_cont.
+    eapply eval_cont_aux_let.
     eapply eval_cont_aux_app_fun. expr_subst.
     eapply eval_cont_aux_shift. expr_subst.
-    eapply eval_cont_aux_seq.
+    eapply eval_cont_aux_let.
     eapply eval_cont_aux_app_fun. expr_subst.
     eapply eval_cont_aux_cont; auto_eval.
-    eapply eval_cont_aux_prim2_arg2. exact I.
-    eapply eval_cont_aux_prim2_arg1. exact I.
-    eapply eval_cont_aux_prim1_val.
-    eapply eval_prim1_aux_get.
-    eapply Fmap.indom_single.
-    eapply Fmap.read_single. expr_subst.
-    eapply eval_cont.
-    eapply eval_cont_aux_prim2_val; auto_eval.
-    ring_simplify (0 + 60).
-    eapply eval_cont.
-    eapply eval_cont_aux_prim2_val; auto_eval.
-    eapply eval_prim2_aux_set.
-    eapply Fmap.indom_single.
-    rewrite -> Fmap.update_eq_union_single.
-    rewrite -> fmap_single_union_single_eq_single.
-    eapply eval_val.
-    eapply eval_cont.
-    eapply eval_cont_aux_app_fun. expr_subst.
-    eapply eval_cont_aux_cont; auto_eval.
-    eapply eval_cont_aux_prim2_arg2. exact I.
-    eapply eval_cont_aux_prim2_arg1. exact I.
-    eapply eval_cont_aux_prim1_val; auto_eval.
+    eapply eval_cont_aux_let.
+    eapply eval_cont_aux_prim1; auto_eval.
     eapply eval_prim1_aux_get.
     eapply Fmap.indom_single.
     eapply Fmap.read_single.
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_val; auto_eval.
-    ring_simplify (60 + 9).
+    eapply eval_cont_aux_let.
+    eapply eval_cont_aux_prim2; auto_eval.
+    ring_simplify (0 + 60).
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_val; auto_eval.
+    eapply eval_cont_aux_prim2; auto_eval.
     eapply eval_prim2_aux_set.
     eapply Fmap.indom_single.
     rewrite -> Fmap.update_eq_union_single.
     rewrite -> fmap_single_union_single_eq_single.
-    eapply eval_val.
-    eapply eval_val.
-    eapply eval_prim1; auto_eval.
+    eapply eval_atom.
+    eapply eval_cont.
+    eapply eval_cont_aux_app_fun. expr_subst.
+    eapply eval_cont_aux_cont; auto_eval.
+    eapply eval_cont_aux_let.
+    eapply eval_cont_aux_prim1; auto_eval.
+    eapply eval_prim1_aux_get.
+    eapply Fmap.indom_single.
+    eapply Fmap.read_single.
+    eapply eval_cont.
+    eapply eval_cont_aux_let.
+    eapply eval_cont_aux_prim2; auto_eval.
+    ring_simplify (60 + 9).
+    eapply eval_cont.
+    eapply eval_cont_aux_prim2; auto_eval.
+    eapply eval_prim2_aux_set.
+    eapply Fmap.indom_single.
+    rewrite -> Fmap.update_eq_union_single.
+    rewrite -> fmap_single_union_single_eq_single.
+    eapply eval_atom.
+    eapply eval_atom.
+    eapply eval_prim1.
     eapply eval_prim1_aux_get.
     eapply Fmap.indom_single.
     eapply Fmap.read_single.
@@ -993,79 +990,75 @@ Module TestProgramSemantics.
 
   Definition append_with_shift : expr :=
     <{ let rec "append_aux" "xs" =
-             if {var_of "xs"} = null then
+             let "b" = {var_of "xs"} = null in
+             if {var_of "b"} then
                shift "k" => {var_of "k"}
              else
                let "x" = fst {var_of "xs"} in
                let "xs'" = snd {var_of "xs"} in
-               {var_of "x"}, {var_of "append_aux"} {var_of "xs'"}
+               let "xs''" = {var_of "append_aux"} {var_of "xs'"} in
+               {var_of "x"}, {var_of "xs''"}
        in
        let "append" "xs" "ys" =
-             < {var_of "append_aux"} {var_of "xs"} > {var_of "ys"}
+             let "f" = < {var_of "append_aux"} {var_of "xs"} > in
+             {var_of "f"} {var_of "ys"}
        in
-       {var_of "append"} (1, (2, null)) (3, (4, null)) }>.
+       let "f" = {var_of "append"} {val_pair 1 (val_pair 2 null)}
+       in {var_of "f"} {val_pair 3 (val_pair 4 null)} }>.
   Print append_with_shift.
 
-  Goal eval empty_heap append_with_shift empty_heap
-    (val_pair (val_int 1)
-       (val_pair (val_int 2)
-          (val_pair (val_int 3)
-             (val_pair (val_int 4)
-                (val_loc null))))).
+  Goal eval empty_heap append_with_shift empty_heap (val_pair 1 (val_pair 2 (val_pair 3 (val_pair 4 null)))).
   Proof.
     unfold append_with_shift.
     eapply eval_let; auto_eval.
     eapply eval_let; auto_eval.
-    eapply eval_app_fun; auto_eval.
-    eapply eval_app_fun; auto_eval.
-    eapply eval_prim2; auto_eval.
-    eapply eval_prim2; auto_eval.
+    eapply eval_let; auto_eval.
+    eapply eval_app_fun. expr_subst.
     eapply eval_fun.
-    eapply eval_prim2; auto_eval.
-    eapply eval_prim2; auto_eval. expr_subst.
-    eapply eval_app_fun; auto_eval.
+    eapply eval_app_fun. expr_subst.
+    eapply eval_let; auto_eval.
     eapply eval_reset.
     eapply eval_cont_aux_app_fix. expr_subst.
-    eapply eval_cont_aux_if_arg. exact I.
-    eapply eval_cont_aux_prim2_val; auto_eval.
+    eapply eval_cont_aux_let.
+    eapply eval_cont_aux_prim2; auto_eval.
     eapply eval_cont.
     eapply eval_cont_aux_if_false.
     eapply eval_cont_aux_let.
-    eapply eval_cont_aux_prim1_val; auto_eval.
+    eapply eval_cont_aux_prim1; auto_eval.
     eapply eval_cont.
     eapply eval_cont_aux_let.
-    eapply eval_cont_aux_prim1_val; auto_eval.
+    eapply eval_cont_aux_prim1; auto_eval.
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_arg2. exact I.
+    eapply eval_cont_aux_let.
     eapply eval_cont_aux_app_fix. expr_subst.
-    eapply eval_cont_aux_if_arg. exact I.
-    eapply eval_cont_aux_prim2_val; auto_eval.
+    eapply eval_cont_aux_let.
+    eapply eval_cont_aux_prim2; auto_eval.
     eapply eval_cont.
     eapply eval_cont_aux_if_false.
     eapply eval_cont_aux_let.
-    eapply eval_cont_aux_prim1_val; auto_eval.
+    eapply eval_cont_aux_prim1; auto_eval.
     eapply eval_cont.
     eapply eval_cont_aux_let.
-    eapply eval_cont_aux_prim1_val; auto_eval.
+    eapply eval_cont_aux_prim1; auto_eval.
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_arg2. exact I.
+    eapply eval_cont_aux_let.
     eapply eval_cont_aux_app_fix. expr_subst.
-    eapply eval_cont_aux_if_arg. exact I.
-    eapply eval_cont_aux_prim2_val; auto_eval.
+    eapply eval_cont_aux_let.
+    eapply eval_cont_aux_prim2; auto_eval.
     eapply eval_cont.
     eapply eval_cont_aux_if_true.
     eapply eval_cont_aux_shift. expr_subst.
-    eapply eval_cont_aux_val. expr_subst.
-    eapply eval_val. expr_subst.
+    eapply eval_cont_aux_atom. expr_subst.
+    eapply eval_atom.
+    eapply eval_app_fun. expr_subst.
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_val; auto_eval.
+    eapply eval_cont_aux_prim2; auto_eval.
     eapply eval_cont.
-    eapply eval_cont_aux_prim2_val; auto_eval.
-    eapply eval_val.
+    eapply eval_cont_aux_prim2; auto_eval.
+    eapply eval_atom.
   Qed.
 
 End TestProgramSemantics.
-*)
 
 Module ClosedProgram.
 
@@ -1088,7 +1081,7 @@ Module ClosedProgram.
     end with
   closed_expr_under (c : ctx) (e : expr) : Prop :=
     match e with
-    | expr_atom v => closed_atom_under c v
+    | expr_atom a => closed_atom_under c a
     | expr_fun x e' => closed_expr_under (x :: c) e'
     | expr_fix f x e' => closed_expr_under (f :: x :: c) e'
     | expr_app a1 a2 => closed_atom_under c a1 /\ closed_atom_under c a2

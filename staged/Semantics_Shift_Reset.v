@@ -821,7 +821,7 @@ Module TestProgramSemantics.
     unfold let_inside_reset.
     eapply eval_reset.
     eapply eval_cont_aux_let. expr_subst.
-    eapply eval_cont_aux_val; expr_subst.
+    eapply eval_cont_aux_val. expr_subst.
     eapply eval_cont.
     eapply eval_cont_aux_val. expr_subst.
     eapply eval_val.
