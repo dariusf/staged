@@ -430,10 +430,9 @@ Definition env_compatible penv env :=
     spec_assert_valid pfn r sfn.
     (* pair_valid_under penv env (pfn x) (sfn x v). *)
 
-Lemma papp_unk_sound: forall f v r,
+Lemma papp_unk_sound: forall (f:var) (v:val) r,
   (* spec_assert_valid e r f -> *)
-  spec_assert_valid (papp (pvar f) (pval v)) r
-    (unk f v r).
+  spec_assert_valid (papp f v) r (unk f v r).
 Proof.
   intros.
   (* eval_papp_unk *)
@@ -455,7 +454,9 @@ Proof.
     specializes H2 H10.
     applys_eq H2.
   }
-  { admit. }
+  {
+
+    admit. }
 
 
   
