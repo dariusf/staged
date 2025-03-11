@@ -646,7 +646,7 @@ Proof.
 
     (* applys s_fex_fresh. intros.
     exists v0. *)
-    assumption.
+    eassumption.
 
     (* applys s_seq.
     {
