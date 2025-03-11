@@ -410,8 +410,8 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
     (forall env penv s1 s2 h1 h2, forall x1 x2 ek,
       bigstep penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
       exists fk,
-    spec_assert_valid ek r fk /\
-      satisfies env s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
+        spec_assert_valid ek r fk /\
+          satisfies env s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
     spec_assert_valid e r f.
 
 
@@ -435,6 +435,7 @@ Lemma papp_unk_sound: forall (f:var) (v:val) r,
   spec_assert_valid (papp f v) r (unk f v r).
 Proof.
   intros.
+
   (* eval_papp_unk *)
   applys sav_base. intros.
   inverts H as H.
@@ -458,10 +459,8 @@ Proof.
 
     admit. }
 
-
-  
-  (* TODO needs the env correspondence to be worked out,
-    and penv to not be empty? *)
+  (* TODO why does it not work for shift? *)
+  (* TODO need to put in the env compat assumption *)
 Abort.
 
 Lemma pval_sound: forall v r,
