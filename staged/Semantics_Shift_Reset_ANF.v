@@ -1581,7 +1581,6 @@ Module ProgramDeterminism.
     - destruct H_expr as [H_expr1 H_expr2].
       forwards [H_heap2 H_val1]: eval_preserves_closedness H_eval1 H_heap1 H_expr1.
       forwards H_expr2': expr_subst_preserves_closedness H_expr2 H_val1.
-      forwards [H_heap3 H_val2]: eval_preserves_closedness H_eval2 H_heap2 H_expr2'.
       inverts H_eval_cont_aux as H_eval_cont_aux.
       apply IHH_eval1 in H_eval_cont_aux; assumption || ensure_closed.
       rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed.
