@@ -524,7 +524,7 @@ Proof.
   { inverts H0 as H0. false_invert H0. }
 Qed.
 
-Example e3: correct (S O) empty_env empty_penv empty_heap
+(* Example e3: correct (S O) empty_env empty_penv empty_heap
   (pshift "x1" (pval (vint 1)) "x2" (pvar "x2"))
   (sh "x" (ens (fun r => \[True])) (vint 1) (ens (fun r => \[True]))).
 Proof.
@@ -543,7 +543,7 @@ Proof.
     { (* values don't step *)
       false_invert H0. }
   }
-Qed.
+Qed. *)
 
 
 

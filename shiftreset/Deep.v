@@ -101,7 +101,15 @@ Inductive eresult : Type :=
   | enorm : val -> eresult
   | eshft : val -> var -> expr -> eresult.
 
-Definition penv := Fmap.fmap var val.
+#[global]
+Instance Inhab_val_expr : Inhab (val -> expr).
+Proof.
+  constructor.
+  exists (fun v => pval v).
+  constructor.
+Qed.
+
+Definition penv := Fmap.fmap var (val -> expr).
 Implicit Types p : penv.
 
 Definition empty_penv : penv := Fmap.empty.
@@ -156,6 +164,25 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
       (eshft (vfun x1 eb)
         xy (plet xtmp (papp (pval (vfun x2 ek)) (pvar xy))
           (plet x (pvar xtmp) e2)))
+
+
+  | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3 r,
+    v1 = vfun x e ->
+    s3 = Fmap.update s1 x v2 ->
+    bigstep p s3 h e s2 h r Re ->
+    bigstep p s1 h (papp (pval v1) (pval v2)) s2 h r Re
+    (* TODO s2 keeps bindings produced by the app? *)
+
+  (* | eval_app_fix : forall v1 v2 h x e Re xf p,
+    v1 = vfix xf x e ->
+    bigstep p h (subst x v2 (subst xf v1 e)) h Re ->
+    bigstep p h (papp (pval v1) (pval v2)) h Re *)
+
+  | eval_papp_unk : forall va h Re efn xf p s1 r,
+    Fmap.read p xf = efn ->
+    bigstep p s1 h (efn va) s1 h r Re ->
+    bigstep p s1 h (papp (pvar xf) (pval va)) s1 h r Re
+
 
   (*
 
@@ -371,6 +398,16 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
     spec_assert_valid e r f.
     (* TODO missing relation between fk and ek *)
 
+
+Coercion pval : val >-> expr.
+Coercion pvar : var >-> expr.
+Coercion vint : Z >-> val.
+
+Definition store_read s x : val := Fmap.read s x.
+Coercion store_read : store >-> Funclass.
+Coercion papp : expr >-> Funclass.
+
+
 Lemma pval_sound: forall v r,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
   spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))).
@@ -401,6 +438,45 @@ Proof.
   hintro. constructor.
   fmap_eq.
 Qed.
+
+
+Lemma papp_sound: forall x e r (va:val) f,
+  spec_assert_valid e r f ->
+  spec_assert_valid (papp (vfun x e) va) r
+    (fex_fresh x (ens_ (fun s => \[s x = va]);; f)).
+Proof.
+  intros * He.
+  (* eval_papp_fun *)
+  inverts He as He.
+  { (* no shift in the body of the fn being applied *)
+    applys sav_base. intros.
+    inverts H as H. injects H.
+    specializes He H10. clear H10.
+    applys s_fex_fresh. intros. exists va.
+    applys s_seq He. clear He.
+    applys s_ens_.
+    hintro. unfold store_read. resolve_fn_in_env.
+    fmap_eq.
+    fmap_disjoint.
+    }
+  {
+    (* shift *)
+    applys sav_shift He. intros.
+    inverts H as H. injects H.
+    specializes H0 H11. destr H0.
+    exists fk. splits*.
+
+    applys s_fex_fresh. intros. exists va.
+    applys s_seq.
+    applys s_ens_.
+    hintro. unfold store_read. resolve_fn_in_env.
+    fmap_eq.
+    reflexivity.
+    fmap_disjoint.
+    eassumption.
+  }
+Abort.
+(* Qed. *)
 
 (* papp (pvar "k") (pval (vint 1)) *)
 
@@ -475,14 +551,6 @@ Proof.
   eapply s_ens_.
   hintro.
 Abort.
-
-Coercion pval : val >-> expr.
-Coercion pvar : var >-> expr.
-Coercion vint : Z >-> val.
-
-Definition store_read s x : val := Fmap.read s x.
-Coercion store_read : store >-> Funclass.
-Coercion papp : expr >-> Funclass.
 
 (* let x = 1 in x + 2 *)
 (* ens x=1; ens[r] r=x+2 *)
@@ -572,7 +640,7 @@ Proof.
     (* result of e1 is shift *)
     eapply sav_shift.
     intros.
-    inverts H as H.
+    (* inverts H as H. *)
     {
 admit.
     }

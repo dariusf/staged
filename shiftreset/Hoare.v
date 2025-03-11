@@ -64,7 +64,7 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
   | eval_pfix : forall h x e xf p,
     bigstep p h (pfix xf x e) h (enorm (vfix xf x e))
 
-  | eval_app_fun : forall v1 v2 h x e Re p p,
+  | eval_app_fun : forall v1 v2 h x e Re p,
     v1 = vfun x e ->
     bigstep p h (subst x v2 e) h Re ->
     bigstep p h (papp (pval v1) (pval v2)) h Re
