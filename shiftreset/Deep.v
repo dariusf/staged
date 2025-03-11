@@ -462,6 +462,7 @@ Proof.
 
   (* TODO why does it not work for shift? *)
   (* TODO need to put in the env compat assumption *)
+  (* the known-function case has the answer: need constraint on the body to split against *)
 Abort.
 
 Lemma pval_sound: forall v r,
