@@ -590,19 +590,24 @@ Abort.
 (* ens x=1; ens[r] r=x+2 *)
 
 (* let x = shift k. k 1 in x + 2 *)
-(* sh(k, k(1, r1), r) *)
+(* sh(k, k(1, r1), x); ens[r] r=x+2 *)
 Example ex_let_shift:
+  (* TODO need a premise about the unknown k *)
   spec_assert_valid
     (plet "x" (pshift "k" ((pvar "k") 1)) (padd 2 (pvar "x")))
     "r"
-    (ens_ (fun s => \[s "x" = 1]);;
-      ens "r" (fun s => \[exists v, vint v = s "x" /\ s "r" = (v + 2)])).
+    (fexs "y" (ens_ (fun s => \[s "y" = 1]);; sh "k" (unk "k" "y" "x") "x";;
+      ens "r" (fun s => \[exists v, vint v = s "x" /\ s "r" = (v + 2)]))).
+    (* (ens_ (fun s => \[s "x" = 1]);;
+      ens "r" (fun s => \[exists v, vint v = s "x" /\ s "r" = (v + 2)])). *)
 Proof.
-  apply sav_base.
+  eapply sav_shift.
   intros.
-  inverts H as H.
+
+  (* inverts H as H.
   specializes H "x".
-  inverts H as H.
+  inverts H as H. *)
+
   (* inverts H10 as H10.
   simpl in H10. injects H10.
   simpl in H9. rew_fmap. injects H9.
