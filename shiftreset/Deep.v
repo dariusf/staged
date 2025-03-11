@@ -272,6 +272,7 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> var -> flow ->
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
     satisfies s1 s2 h1 h2 (norm vunit) r (ens_ H)
+    (* TODO r is a problem, as ens does nothing to it, so *)
 
   | s_seq s3 h3 v s1 s2 f1 f2 h1 h2 R r r1 :
     satisfies s1 s3 h1 h3 (norm v) r1 f1 ->
@@ -456,6 +457,8 @@ Proof.
     hintro. unfold store_read. resolve_fn_in_env.
     fmap_eq.
     fmap_disjoint.
+    Unshelve. exact "anything".
+    (* this is due to the ens_ variable being unconstrained *)
   }
   {
     (* shift *)
@@ -473,9 +476,10 @@ Proof.
     reflexivity.
     fmap_disjoint.
     eassumption.
+    Unshelve. exact "anything".
+    (* this is due to the ens_ variable being unconstrained *)
   }
-Abort.
-(* Qed. *)
+Qed.
 
 (* papp (pvar "k") (pval (vint 1)) *)
 
