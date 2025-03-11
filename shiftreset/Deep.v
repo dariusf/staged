@@ -380,7 +380,6 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
 
 
 Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
-  (* | sav_base: forall r s1 s2 f e h1 h2 v, *)
   | sav_base: forall e r f,
     (forall s1 s2 h1 h2 v,
       bigstep empty_penv s1 h1 e s2 h2 r (enorm v) ->
@@ -388,7 +387,6 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
     spec_assert_valid e r f
 
   | sav_shift: forall e r r1 f eb fb,
-    (* spec_assert_valid ek r fk -> *)
     spec_assert_valid eb r1 fb ->
     (forall s1 s2 h1 h2, forall x1 x2 ek,
       bigstep empty_penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
@@ -396,7 +394,6 @@ Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
     spec_assert_valid ek r fk /\
       satisfies s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
     spec_assert_valid e r f.
-    (* TODO missing relation between fk and ek *)
 
 
 Coercion pval : val >-> expr.
@@ -443,7 +440,7 @@ Qed.
 Lemma papp_sound: forall x e r (va:val) f,
   spec_assert_valid e r f ->
   spec_assert_valid (papp (vfun x e) va) r
-    (fex_fresh x (ens_ (fun s => \[s x = va]);; f)).
+    (fexs x (ens_ (fun s => \[s x = va]);; f)).
 Proof.
   intros * He.
   (* eval_papp_fun *)
@@ -452,13 +449,14 @@ Proof.
     applys sav_base. intros.
     inverts H as H. injects H.
     specializes He H10. clear H10.
-    applys s_fex_fresh. intros. exists va.
+    (* applys s_fex_fresh. intros. exists va. *)
+    applys s_fexs. exists va.
     applys s_seq He. clear He.
     applys s_ens_.
     hintro. unfold store_read. resolve_fn_in_env.
     fmap_eq.
     fmap_disjoint.
-    }
+  }
   {
     (* shift *)
     applys sav_shift He. intros.
@@ -466,7 +464,8 @@ Proof.
     specializes H0 H11. destr H0.
     exists fk. splits*.
 
-    applys s_fex_fresh. intros. exists va.
+    (* applys s_fex_fresh. intros. exists va. *)
+    applys s_fexs. exists va.
     applys s_seq.
     applys s_ens_.
     hintro. unfold store_read. resolve_fn_in_env.
