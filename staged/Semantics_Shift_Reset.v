@@ -1266,13 +1266,14 @@ Module ClosedProgram.
 
   Ltac ctx_incl := unfold List.incl; simpl; tauto.
   Ltac revert_weakening := eapply weakening_preserves_closedness; [eassumption | ctx_incl].
-  Ltac is_closed :=  unfold closed_expr, closed_cont; simpl; repeat match goal with
-                                                                 | [ _ : _ |- _ /\ _ ] => split
-                                                                 | [ _ : _ |- closed_val _ ] => assumption
-                                                                 | [ _ : _ |- closed_expr_under _ _ ] => revert_weakening
-                                                                 | [ _ : _ |- _ = _ \/ False ] => left; reflexivity
-                                                                 | _ => fail
-                                                                 end.
+  Ltac ensure_closed := unfold closed_expr, closed_cont;
+                        simpl closed_expr_under;
+                        repeat match goal with
+                          | [ _ : _ |- _ /\ _ ] => split
+                          | [ _ : _ |- closed_val _ ] => assumption
+                          | [ _ : _ |- closed_expr_under _ _ ] => assumption || revert_weakening
+                          | [ _ : _ |- _ = _ \/ False ] => left; reflexivity
+                          end.
 
   Lemma expr_subst_preserves_closedness :
     forall (x : var)
@@ -1287,34 +1288,24 @@ Module ClosedProgram.
     revert c H_expr.
     induction e; simpl; intros c H_expr.
     - assumption.
-    - destruct var_eq_dec.
-      + simpl. assumption.
-      + simpl. intuition congruence.
-    - destruct var_eq_dec.
-      + subst. revert_weakening.
-      + apply IHe. revert_weakening.
-    - destruct var_eq_dec.
-      + subst. revert_weakening.
-      + destruct var_eq_dec.
-        * subst. revert_weakening.
-        * apply IHe. revert_weakening.
+    - destruct var_eq_dec; simpl.
+      + assumption.
+      + intuition congruence.
+    - destruct var_eq_dec; [subst | apply IHe]; revert_weakening.
+    - destruct var_eq_dec; [subst |].
+      + revert_weakening.
+      + destruct var_eq_dec; [subst | apply IHe]; revert_weakening.
     - intuition auto.
     - intuition auto.
     - intuition auto.
-      destruct var_eq_dec.
-      + subst. revert_weakening.
-      + apply IHe2. revert_weakening.
+      destruct var_eq_dec; [subst | apply IHe2]; revert_weakening.
     - intuition auto.
     - intuition auto.
     - intuition auto.
-    - destruct var_eq_dec.
-      + subst. revert_weakening.
-      + apply IHe. revert_weakening.
+    - destruct var_eq_dec; [subst | apply IHe]; revert_weakening.
     - intuition auto.
     - intuition auto.
-      destruct var_eq_dec.
-      + subst. revert_weakening.
-      + apply IHe2. revert_weakening.
+      destruct var_eq_dec; [subst | apply IHe2]; revert_weakening.
   Qed.
 
   Ltac revert_expr_subst := apply expr_subst_preserves_closedness; try assumption.
@@ -1440,7 +1431,7 @@ Module ClosedProgram.
         specialize (IHH_eval1 H_heap1 H_expr1) as [H_heap2 H_val1].
         specialize (IHH_eval2 H_heap2 H_expr2) as [H_heap3 H_val2].
         eapply eval_prim2_aux_preserves_closedness; eassumption.
-      - eapply eval_cont_aux_preserves_closedness; eassumption || is_closed.
+      - eapply eval_cont_aux_preserves_closedness; eassumption || ensure_closed.
       - destruct H_expr as [H_expr1 H_expr2].
         eapply eval_cont_aux_preserves_closedness; eassumption.
     }
@@ -1451,25 +1442,25 @@ Module ClosedProgram.
       - eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
       - eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
       - eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
-      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || is_closed.
-      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || is_closed.
+      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || ensure_closed.
+      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || ensure_closed.
       - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; try assumption. revert_expr_subst.
       - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; try assumption. revert_expr_subst. revert_expr_subst.
-      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || is_closed.
-      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || is_closed.
-      - destruct H_expr as [H_expr1 [H_expr2 H_expr3]]. apply IHH_eval_cont_aux; assumption || is_closed.
+      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || ensure_closed.
+      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || ensure_closed.
+      - destruct H_expr as [H_expr1 [H_expr2 H_expr3]]. apply IHH_eval_cont_aux; assumption || ensure_closed.
       - destruct H_expr as [_ [H_expr1 H_expr2]]. apply IHH_eval_cont_aux; assumption.
       - destruct H_expr as [_ [H_expr1 H_expr2]]. apply IHH_eval_cont_aux; assumption.
-      - eapply IHH_eval_cont_aux; assumption || is_closed.
+      - eapply IHH_eval_cont_aux; assumption || ensure_closed.
       - destruct (eval_prim1_aux_preserves_closedness H H_heap1 H_expr) as [H_heap2 H_val].
         eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
-      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || is_closed.
-      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || is_closed.
+      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || ensure_closed.
+      - destruct H_expr as [H_expr1 H_expr2]. apply IHH_eval_cont_aux; assumption || ensure_closed.
       - destruct H_expr as [H_expr1 H_expr2].
         destruct (eval_prim2_aux_preserves_closedness H H_heap1 H_expr1 H_expr2) as [H_heap2 H_val].
         eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
-      - apply IHH_eval_cont_aux; [assumption | revert_expr_subst | is_closed].
-      - specialize (IHH_eval_cont_aux H_heap1 H_expr ltac:(is_closed)) as [H_heap2 H_val].
+      - apply IHH_eval_cont_aux; [assumption | revert_expr_subst | ensure_closed].
+      - specialize (IHH_eval_cont_aux H_heap1 H_expr ltac:(ensure_closed)) as [H_heap2 H_val].
         eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
       - destruct H_expr as [H_expr1 H_expr2].
         specialize (IHH_eval_cont_aux H_heap1 H_expr1 H_expr2) as [H_heap2 H_val].
@@ -1621,197 +1612,6 @@ Module ProgramDeterminism.
     }
   Qed.
 
-  Print Assumptions eval_is_deterministic.
-
-  Axiom expr_subst_on_expr_cont :
-    forall (x : var)
-           (v : val)
-           (e : expr)
-           (x' : var)
-           (k : expr),
-      expr_subst x v (expr_cont e x' k) = expr_cont (expr_subst x v e) x' k.
-
-  Axiom expr_subst_on_closed_expr :
-    forall (x : var)
-           (v : val)
-           (e : expr),
-      expr_subst x v e = e.
-
-  Theorem eval_cont_aux_is_cont_of_eval_with_axioms :
-    forall (h1 : heap)
-           (e : expr)
-           (h2 : heap)
-           (v : val),
-      eval h1 e h2 v ->
-      forall (h3 : heap)
-             (x : var)
-             (k : expr)
-             (r : val),
-        eval_cont_aux h1 e x k h3 r ->
-        eval h2 (expr_subst x v k) h3 r.
-  Proof.
-    introv H_eval H_eval_cont_aux.
-    revert x k H_eval_cont_aux.
-    induction H_eval; introv H_eval_cont_aux.
-    - inverts H_eval_cont_aux as. tauto.
-    - inverts H_eval_cont_aux as. tauto.
-    - inverts H_eval_cont_aux as. tauto.
-    - inverts H_eval_cont_aux as.
-      + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-        simpl expr_subst in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
-        inverts H_eval_cont_aux as H_eval_cont_aux.
-        inverts H_eval_cont_aux as.
-        * contradiction.
-        * introv _ H_eval_cont_aux.
-          apply IHH_eval2 in H_eval_cont_aux.
-          rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-          simpl expr_subst in H_eval_cont_aux.
-          inverts H_eval_cont_aux as H_eval_cont_aux.
-          inverts H_eval_cont_aux as.
-          { contradiction. }
-          { contradiction. }
-          { auto. }
-        * inverts H_eval2 as. auto.
-      + inverts H_eval1 as.
-        introv _ H_eval_cont_aux.
-        apply IHH_eval2 in H_eval_cont_aux.
-        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-        simpl expr_subst in H_eval_cont_aux.
-        inverts H_eval_cont_aux as H_eval_cont_aux.
-        inverts H_eval_cont_aux as.
-        { contradiction. }
-        { contradiction. }
-        { auto. }
-      + inverts H_eval1 as.
-        inverts H_eval2 as. auto.
-      + inverts H_eval1 as.
-    - inverts H_eval_cont_aux as.
-      + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-        simpl expr_subst in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
-        inverts H_eval_cont_aux as H_eval_cont_aux.
-        inverts H_eval_cont_aux as.
-        * contradiction.
-        * introv _ H_eval_cont_aux.
-          apply IHH_eval2 in H_eval_cont_aux.
-          rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-          simpl expr_subst in H_eval_cont_aux.
-          inverts H_eval_cont_aux as H_eval_cont_aux.
-          inverts H_eval_cont_aux as.
-          { contradiction. }
-          { contradiction. }
-          { auto. }
-        * inverts H_eval2 as. auto.
-      + inverts H_eval1 as.
-        introv _ H_eval_cont_aux.
-        apply IHH_eval2 in H_eval_cont_aux.
-        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-        simpl expr_subst in H_eval_cont_aux.
-        inverts H_eval_cont_aux as H_eval_cont_aux.
-        inverts H_eval_cont_aux as.
-        { contradiction. }
-        { contradiction. }
-        { auto. }
-      + inverts H_eval1 as.
-      + inverts H_eval1 as.
-        inverts H_eval2 as. auto.
-    - inverts H_eval_cont_aux as H_eval_cont_aux.
-      apply IHH_eval1 in H_eval_cont_aux.
-      rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
-      inverts H_eval_cont_aux as H_eval_cont_aux.
-      apply IHH_eval2 in H_eval_cont_aux. tauto.
-    - inverts H_eval_cont_aux as H_eval_cont_aux.
-      apply IHH_eval1 in H_eval_cont_aux.
-      rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-      inverts H_eval_cont_aux as H_eval_cont_aux.
-      apply IHH_eval2 in H_eval_cont_aux. tauto.
-    - inverts H_eval_cont_aux as.
-      + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-        simpl expr_subst in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
-        inverts H_eval_cont_aux as H_eval_cont_aux.
-        inverts H_eval_cont_aux as.
-        * contradiction.
-        * auto.
-      + inverts H_eval1 as. auto.
-      + inverts H_eval1 as.
-    - inverts H_eval_cont_aux as.
-      + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-        simpl expr_subst in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
-        inverts H_eval_cont_aux as H_eval_cont_aux.
-        inverts H_eval_cont_aux as.
-        * contradiction.
-        * auto.
-      + inverts H_eval1 as.
-      + inverts H_eval1 as. auto.
-    - inverts H_eval_cont_aux as.
-      + introv _ H_eval_cont_aux.
-        apply IHH_eval in H_eval_cont_aux.
-        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-        simpl expr_subst in H_eval_cont_aux.
-        inverts H_eval_cont_aux as H_eval_cont_aux.
-        inverts H_eval_cont_aux as.
-        * contradiction.
-        * introv H_prim1' H_eval'.
-          destruct (eval_prim1_aux_is_deterministic H H_prim1'). subst. auto.
-      + inverts H_eval as.
-        introv H_prim1' H_eval'.
-        destruct (eval_prim1_aux_is_deterministic H H_prim1'). subst. auto.
-    - inverts H_eval_cont_aux as.
-      + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-        simpl expr_subst in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux.
-        inverts H_eval_cont_aux as H_eval_cont_aux.
-        inverts H_eval_cont_aux as.
-        * contradiction.
-        * introv _ H_eval_cont_aux.
-          apply IHH_eval2 in H_eval_cont_aux.
-          rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-          simpl expr_subst in H_eval_cont_aux.
-          inverts H_eval_cont_aux as H_eval_cont_aux.
-          inverts H_eval_cont_aux as.
-          { contradiction. }
-          { contradiction. }
-          { introv H_prim2' H_eval'.
-            destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. auto. }
-        * inverts H_eval2 as.
-          introv H_prim2' H_eval'.
-          destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. auto.
-      + inverts H_eval1 as.
-        introv _ H_eval_cont_aux.
-        apply IHH_eval2 in H_eval_cont_aux.
-        rewrite -> expr_subst_on_expr_cont in H_eval_cont_aux.
-        simpl expr_subst in H_eval_cont_aux.
-        inverts H_eval_cont_aux as H_eval_cont_aux.
-        inverts H_eval_cont_aux as.
-        { contradiction. }
-        { contradiction. }
-        { introv H_prim2' H_eval'.
-          destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. auto. }
-      + inverts H_eval1 as.
-        inverts H_eval2 as.
-        introv H_prim2' H_eval'.
-        destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. auto.
-    - inverts H_eval_cont_aux as H_eval_cont_aux' H_eval'.
-      destruct (eval_cont_aux_is_deterministic H H_eval_cont_aux'). subst. auto.
-    - inverts H_eval_cont_aux as H_eval_cont_aux' H_eval'.
-      destruct (eval_cont_aux_is_deterministic H H_eval_cont_aux'). subst. auto.
-  Qed.
-
   Import ClosedProgram.
 
   Theorem eval_cont_aux_is_cont_of_eval :
@@ -1837,25 +1637,23 @@ Module ProgramDeterminism.
     - inverts H_eval_cont_aux as. tauto.
     - inverts H_eval_cont_aux as. tauto.
     - destruct H_expr as [H_expr1 H_expr2].
-      destruct (eval_preserves_closedness H_eval1 H_heap1 H_expr1) as [H_heap2 H_val1].
-      destruct (eval_preserves_closedness H_eval2 H_heap2 H_expr2) as [H_heap3 H_val2].
-      assert (H_expr3 := expr_subst_preserves_closedness _ _ _ _ H_val1 H_val2).
+      forwards [H_heap2 H_val1]: eval_preserves_closedness H_eval1 H_heap1 H_expr1.
+      forwards [H_heap3 H_val2]: eval_preserves_closedness H_eval2 H_heap2 H_expr2.
+      forwards H_expr3: expr_subst_preserves_closedness H_val1 H_val2.
       specialize (IHH_eval1 H_heap1 H_expr1).
       specialize (IHH_eval2 H_heap2 H_expr2).
       specialize (IHH_eval3 H_heap3 H_expr3).
       inverts H_eval_cont_aux as.
       + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        2: { is_closed. }
-        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by is_closed.
+        apply IHH_eval1 in H_eval_cont_aux; [| ensure_closed].
+        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by ensure_closed.
         inverts H_eval_cont_aux as H_eval_cont_aux.
         inverts H_eval_cont_aux as.
         * contradiction.
         * introv _ H_eval_cont_aux.
-          apply IHH_eval2 in H_eval_cont_aux.
-          2: { is_closed. }
-          rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
+          apply IHH_eval2 in H_eval_cont_aux; [| ensure_closed].
+          rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
           inverts H_eval_cont_aux as H_eval_cont_aux.
           inverts H_eval_cont_aux as.
           { contradiction. }
@@ -1864,9 +1662,8 @@ Module ProgramDeterminism.
         * inverts H_eval2 as. auto.
       + inverts H_eval1 as.
         introv _ H_eval_cont_aux.
-        apply IHH_eval2 in H_eval_cont_aux.
-        2: { is_closed. }
-        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
+        apply IHH_eval2 in H_eval_cont_aux; [| ensure_closed].
+        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
         inverts H_eval_cont_aux as H_eval_cont_aux.
         inverts H_eval_cont_aux as.
         { contradiction. }
@@ -1876,25 +1673,23 @@ Module ProgramDeterminism.
         inverts H_eval2 as. auto.
       + inverts H_eval1 as.
     - destruct H_expr as [H_expr1 H_expr2].
-      destruct (eval_preserves_closedness H_eval1 H_heap1 H_expr1) as [H_heap2 H_val1].
-      destruct (eval_preserves_closedness H_eval2 H_heap2 H_expr2) as [H_heap3 H_val2].
-      assert (H_expr3 := expr_subst_preserves_closedness _ _ _ _ (expr_subst_preserves_closedness _ _ _ _ H_val1 H_val1) H_val2).
+      forwards [H_heap2 H_val1]: eval_preserves_closedness H_eval1 H_heap1 H_expr1.
+      forwards [H_heap3 H_val2]: eval_preserves_closedness H_eval2 H_heap2 H_expr2.
+      forwards H_expr3: expr_subst_preserves_closedness ltac:(applys expr_subst_preserves_closedness H_val1 H_val1) H_val2.
       specialize (IHH_eval1 H_heap1 H_expr1).
       specialize (IHH_eval2 H_heap2 H_expr2).
       specialize (IHH_eval3 H_heap3 H_expr3).
       inverts H_eval_cont_aux as.
       + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        2: { is_closed. }
-        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by is_closed.
+        apply IHH_eval1 in H_eval_cont_aux; [| ensure_closed].
+        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by ensure_closed.
         inverts H_eval_cont_aux as H_eval_cont_aux.
         inverts H_eval_cont_aux as.
         * contradiction.
         * introv _ H_eval_cont_aux.
-          apply IHH_eval2 in H_eval_cont_aux.
-          2: { is_closed. }
-          rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
+          apply IHH_eval2 in H_eval_cont_aux; [| ensure_closed].
+          rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
           inverts H_eval_cont_aux as H_eval_cont_aux.
           inverts H_eval_cont_aux as.
           { contradiction. }
@@ -1903,9 +1698,8 @@ Module ProgramDeterminism.
         * inverts H_eval2 as. auto.
       + inverts H_eval1 as.
         introv _ H_eval_cont_aux.
-        apply IHH_eval2 in H_eval_cont_aux.
-        2: { is_closed. }
-        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
+        apply IHH_eval2 in H_eval_cont_aux; [| ensure_closed].
+        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
         inverts H_eval_cont_aux as H_eval_cont_aux.
         inverts H_eval_cont_aux as.
         { contradiction. }
@@ -1915,44 +1709,39 @@ Module ProgramDeterminism.
       + inverts H_eval1 as.
         inverts H_eval2 as. auto.
     - destruct H_expr as [H_expr1 H_expr2].
-      destruct (eval_preserves_closedness H_eval1 H_heap1 H_expr1) as [H_heap2 H_val1].
-      destruct (eval_preserves_closedness H_eval2 H_heap2 H_expr2) as [H_heap3 H_val2].
+      forwards [H_heap2 H_val1]: eval_preserves_closedness H_eval1 H_heap1 H_expr1.
+      forwards [H_heap3 H_val2]: eval_preserves_closedness H_eval2 H_heap2 H_expr2.
       specialize (IHH_eval1 H_heap1 H_expr1).
       specialize (IHH_eval2 H_heap2 H_expr2).
       inverts H_eval_cont_aux as H_eval_cont_aux.
-      apply IHH_eval1 in H_eval_cont_aux.
-      2: { is_closed. }
-      rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by is_closed.
+      apply IHH_eval1 in H_eval_cont_aux; [| ensure_closed].
+      rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by ensure_closed.
       inverts H_eval_cont_aux as H_eval_cont_aux.
-      apply IHH_eval2 in H_eval_cont_aux.
-      2: { is_closed. }
-      tauto.
+      apply IHH_eval2 in H_eval_cont_aux; [| ensure_closed].
+      assumption.
     - destruct H_expr as [H_expr1 H_expr2].
-      destruct (eval_preserves_closedness H_eval1 H_heap1 H_expr1) as [H_heap2 H_val1].
-      assert (H_expr2' := expr_subst_preserves_closedness _ _ _ _ H_expr2 H_val1).
-      destruct (eval_preserves_closedness H_eval2 H_heap2 H_expr2') as [H_heap3 H_val2].
+      forwards [H_heap2 H_val1]: eval_preserves_closedness H_eval1 H_heap1 H_expr1.
+      forwards H_expr2': expr_subst_preserves_closedness H_expr2 H_val1.
+      forwards [H_heap3 H_val2]: eval_preserves_closedness H_eval2 H_heap2 H_expr2'.
       specialize (IHH_eval1 H_heap1 H_expr1).
       specialize (IHH_eval2 H_heap2 H_expr2').
       inverts H_eval_cont_aux as H_eval_cont_aux.
-      apply IHH_eval1 in H_eval_cont_aux.
-      2: { is_closed. }
-      rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed.
+      apply IHH_eval1 in H_eval_cont_aux; [| ensure_closed].
+      rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed.
       inverts H_eval_cont_aux as H_eval_cont_aux.
-      apply IHH_eval2 in H_eval_cont_aux.
-      2: { is_closed. }
-      tauto.
+      apply IHH_eval2 in H_eval_cont_aux; [| ensure_closed].
+      assumption.
     - destruct H_expr as [H_expr1 [H_expr2 H_expr3]].
-      destruct (eval_preserves_closedness H_eval1 H_heap1 H_expr1) as [H_heap2 H_val1].
-      destruct (eval_preserves_closedness H_eval2 H_heap2 H_expr2) as [H_heap3 H_val2].
+      forwards [H_heap2 H_val1]: eval_preserves_closedness H_eval1 H_heap1 H_expr1.
+      forwards [H_heap3 H_val2]: eval_preserves_closedness H_eval2 H_heap2 H_expr2.
       specialize (IHH_eval1 H_heap1 H_expr1).
       specialize (IHH_eval2 H_heap2 H_expr2).
       inverts H_eval_cont_aux as.
       + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        2: { is_closed. }
-        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by is_closed.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by is_closed.
+        apply IHH_eval1 in H_eval_cont_aux; [| ensure_closed].
+        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by ensure_closed.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by ensure_closed.
         inverts H_eval_cont_aux as H_eval_cont_aux.
         inverts H_eval_cont_aux as.
         * contradiction.
@@ -1960,30 +1749,28 @@ Module ProgramDeterminism.
       + inverts H_eval1 as. auto.
       + inverts H_eval1 as.
     - destruct H_expr as [H_expr1 [H_expr2 H_expr3]].
-      destruct (eval_preserves_closedness H_eval1 H_heap1 H_expr1) as [H_heap2 H_val1].
-      destruct (eval_preserves_closedness H_eval2 H_heap2 H_expr3) as [H_heap3 H_val2].
+      forwards [H_heap2 H_val1]: eval_preserves_closedness H_eval1 H_heap1 H_expr1.
+      forwards [H_heap3 H_val2]: eval_preserves_closedness H_eval2 H_heap2 H_expr3.
       specialize (IHH_eval1 H_heap1 H_expr1).
       specialize (IHH_eval2 H_heap2 H_expr3).
       inverts H_eval_cont_aux as.
       + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        2: { is_closed. }
-        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by is_closed.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by is_closed.
+        apply IHH_eval1 in H_eval_cont_aux; [| ensure_closed].
+        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by ensure_closed.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by ensure_closed.
         inverts H_eval_cont_aux as H_eval_cont_aux.
         inverts H_eval_cont_aux as.
         * contradiction.
         * auto.
       + inverts H_eval1 as.
       + inverts H_eval1 as. auto.
-    - destruct (eval_preserves_closedness H_eval H_heap1 H_expr) as [H_heap2 H_val].
+    - forwards [H_heap2 H_val]: eval_preserves_closedness H_eval H_heap1 H_expr.
       specialize (IHH_eval H_heap1 H_expr).
       inverts H_eval_cont_aux as.
       + introv _ H_eval_cont_aux.
-        apply IHH_eval in H_eval_cont_aux.
-        2: { is_closed. }
-        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
+        apply IHH_eval in H_eval_cont_aux; [| ensure_closed].
+        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
         inverts H_eval_cont_aux as H_eval_cont_aux.
         inverts H_eval_cont_aux as.
         * contradiction.
@@ -1993,23 +1780,21 @@ Module ProgramDeterminism.
         introv H_prim1' H_eval'.
         destruct (eval_prim1_aux_is_deterministic H H_prim1'). subst. auto.
     - destruct H_expr as [H_expr1 H_expr2].
-      destruct (eval_preserves_closedness H_eval1 H_heap1 H_expr1) as [H_heap2 H_val1].
-      destruct (eval_preserves_closedness H_eval2 H_heap2 H_expr2) as [H_heap3 H_val2].
+      forwards [H_heap2 H_val1]: eval_preserves_closedness H_eval1 H_heap1 H_expr1.
+      forwards [H_heap3 H_val2]: eval_preserves_closedness H_eval2 H_heap2 H_expr2.
       specialize (IHH_eval1 H_heap1 H_expr1).
       specialize (IHH_eval2 H_heap2 H_expr2).
       inverts H_eval_cont_aux as.
       + introv _ H_eval_cont_aux.
-        apply IHH_eval1 in H_eval_cont_aux.
-        2: { is_closed. }
-        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
-        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by is_closed.
+        apply IHH_eval1 in H_eval_cont_aux; [| ensure_closed].
+        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
+        rewrite -> expr_subst_on_closed_expr in H_eval_cont_aux by ensure_closed.
         inverts H_eval_cont_aux as H_eval_cont_aux.
         inverts H_eval_cont_aux as.
         * contradiction.
         * introv _ H_eval_cont_aux.
-          apply IHH_eval2 in H_eval_cont_aux.
-          2: { is_closed. }
-          rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
+          apply IHH_eval2 in H_eval_cont_aux; [| ensure_closed].
+          rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
           inverts H_eval_cont_aux as H_eval_cont_aux.
           inverts H_eval_cont_aux as.
           { contradiction. }
@@ -2021,9 +1806,8 @@ Module ProgramDeterminism.
           destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. auto.
       + inverts H_eval1 as.
         introv _ H_eval_cont_aux.
-        apply IHH_eval2 in H_eval_cont_aux.
-        2: { is_closed. }
-        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by is_closed. simpl in H_eval_cont_aux.
+        apply IHH_eval2 in H_eval_cont_aux; [| ensure_closed].
+        rewrite -> expr_subst_with_closed_cont in H_eval_cont_aux by ensure_closed. simpl in H_eval_cont_aux.
         inverts H_eval_cont_aux as H_eval_cont_aux.
         inverts H_eval_cont_aux as.
         { contradiction. }
@@ -2039,7 +1823,7 @@ Module ProgramDeterminism.
     - inverts H_eval_cont_aux as H_eval_cont_aux' H_eval'.
       destruct (eval_cont_aux_is_deterministic H H_eval_cont_aux'). subst. auto.
   Qed.
-  
+
   Print Assumptions eval_cont_aux_is_cont_of_eval.
 
 End ProgramDeterminism.
