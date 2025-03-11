@@ -434,6 +434,7 @@ Definition env_compatible penv env :=
 Lemma papp_unk_sound: forall (f:var) (v:val) r,
   (* spec_assert_valid e r f -> *)
   (forall p env, env_compatible p env) ->
+  (* TODO expose the env in assertion below? then can talk about the concrete bindings *)
   spec_assert_valid (papp f v) r (unk f v r).
 Proof.
   intros * Henv.
