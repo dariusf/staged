@@ -425,30 +425,31 @@ Coercion store_read : store >-> Funclass.
 Coercion papp : expr >-> Funclass.
 
 Definition env_compatible penv env :=
-  forall pfn xf x r,
-    Fmap.read penv xf = (x, pfn) ->
-    exists sfn, Fmap.read env xf = (x, r, sfn) /\
+  forall pfn (f:var) x r,
+    Fmap.read penv f = (x, pfn) ->
+    exists sfn, Fmap.read env f = (x, r, sfn) /\
     spec_assert_valid pfn r sfn.
     (* pair_valid_under penv env (pfn x) (sfn x v). *)
 
 Lemma papp_unk_sound: forall (f:var) (v:val) r,
   (* spec_assert_valid e r f -> *)
+  (forall p env, env_compatible p env) ->
   spec_assert_valid (papp f v) r (unk f v r).
 Proof.
-  intros.
+  intros * Henv.
 
   (* eval_papp_unk *)
   applys sav_base. intros.
   inverts H as H.
 
-  assert (env_compatible penv0 env) as ?. admit.
-  unfold env_compatible in H0.
-  specializes H0 r H.
-  destr H0.
+  (* assert (env_compatible penv0 env) as ?. admit. *)
+  unfold env_compatible in Henv.
+  specializes Henv r H.
+  destr Henv.
 
   (* applys s_fexs. exists v0. *)
   applys s_unk.
-  eapply H0.
+  eassumption.
   reflexivity.
 
   inverts H2 as H2.
