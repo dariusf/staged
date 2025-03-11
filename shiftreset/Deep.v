@@ -221,9 +221,11 @@ Inductive flow : Type :=
   | sh : var -> flow -> var -> flow
   | rs : flow -> val -> flow
 
+  (* all variables because may depend on or return the result of a shift *)
+  | unk : var -> var -> var -> flow
+
   (* 
   | fall : forall (A:Type), (A -> flow) -> flow
-  | unk : var -> val -> val -> flow
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
   | shc : var -> flow -> val -> (val -> flow) -> flow
@@ -232,11 +234,21 @@ Inductive flow : Type :=
 
 (* Definition ens_ H := ens (fun r s => \[r = vunit] \* H s). *)
 
-Definition ufun := val -> val -> flow.
+(* Definition ufun := val -> val -> flow. *)
+Definition ufun : Type := var * var * flow.
+(* Definition senv := Fmap.fmap var ufun. *)
 Definition senv := Fmap.fmap var ufun.
 Implicit Types u : ufun.
-Implicit Types S : senv.
+Implicit Types env : senv.
 Definition empty_env : senv := Fmap.empty.
+
+#[global]
+Instance Inhab_ufun : Inhab ufun.
+Proof.
+  constructor.
+  exists ("a", "b", ens_ (fun s => \[True])).
+  constructor.
+Qed.
 
 Declare Scope flow_scope.
 Open Scope flow_scope.
@@ -247,37 +259,37 @@ Inductive result : Type :=
   | norm : val -> result
   | shft : var -> flow -> var -> flow -> result.
 
-Inductive satisfies : store -> store -> heap -> heap -> result -> var -> flow -> Prop :=
+Inductive satisfies : senv -> store -> store -> heap -> heap -> result -> var -> flow -> Prop :=
 
-  | s_req : forall s1 s2 H (h1 h2:heap) R f r,
+  | s_req : forall env s1 s2 H (h1 h2:heap) R f r,
     (forall (hp hr:heap),
       H s1 hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies s1 s2 hr h2 R r f) ->
-    satisfies s1 s2 h1 h2 R r (req H f)
+      satisfies env s1 s2 hr h2 R r f) ->
+    satisfies env s1 s2 h1 h2 R r (req H f)
 
-  | s_ens : forall s1 s2 H h1 h2 R v h3 r,
+  | s_ens : forall env s1 s2 H h1 h2 R v h3 r,
       R = norm v ->
       Fmap.read s1 r = v ->
       (* s2 = Fmap.update s1 r v -> *)
       H s1 h3 ->
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
-    satisfies s1 s2 h1 h2 R r (ens r H)
+    satisfies env s1 s2 h1 h2 R r (ens r H)
 
-  | s_ens_ : forall s1 s2 H h1 h2 h3 r,
+  | s_ens_ : forall env s1 s2 H h1 h2 h3 r,
       H s1 h3 ->
       (* s2 = Fmap.update s1 r vunit -> *)
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
-    satisfies s1 s2 h1 h2 (norm vunit) r (ens_ H)
+    satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H)
     (* TODO r is a problem, as ens does nothing to it, so *)
 
-  | s_seq s3 h3 v s1 s2 f1 f2 h1 h2 R r r1 :
-    satisfies s1 s3 h1 h3 (norm v) r1 f1 ->
-    satisfies s3 s2 h3 h2 R r f2 ->
-    satisfies s1 s2 h1 h2 R r (seq f1 f2)
+  | s_seq : forall env s3 h3 v s1 s2 f1 f2 h1 h2 R r r1,
+    satisfies env s1 s3 h1 h3 (norm v) r1 f1 ->
+    satisfies env s3 s2 h3 h2 R r f2 ->
+    satisfies env s1 s2 h1 h2 R r (seq f1 f2)
   (** seq is changed to require a value from the first flow *)
 
   (* | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
@@ -290,27 +302,28 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> var -> flow ->
       satisfies s1 s2 h1 h2 R r (f b)) ->
     satisfies s1 s2 h1 h2 R r (@fex A f) *)
 
-  | s_fexs : forall s1 s2 h1 h2 R f x r,
+  | s_fexs : forall env s1 s2 h1 h2 R f x r,
     (exists v,
-      satisfies (Fmap.update s1 x v) s2 h1 h2 R r f) ->
-    satisfies s1 s2 h1 h2 R r (fexs x f)
+      satisfies env (Fmap.update s1 x v) s2 h1 h2 R r f) ->
+    satisfies env s1 s2 h1 h2 R r (fexs x f)
 
-  | s_fex_fresh : forall s1 s2 h1 h2 R f x r,
+  | s_fex_fresh : forall env s1 s2 h1 h2 R f x r,
     (~ Fmap.indom s1 x -> exists v,
       (* ~ Fmap.indom s1 x /\ *)
-      satisfies (Fmap.update s1 x v) s2 h1 h2 R r f) ->
-    satisfies s1 s2 h1 h2 R r (fex_fresh x f)
+      satisfies env (Fmap.update s1 x v) s2 h1 h2 R r f) ->
+    satisfies env s1 s2 h1 h2 R r (fex_fresh x f)
 
+  | s_unk : forall env s1 s2 s3 h1 h2 R xf fb xa r y r1,
+    Fmap.read env xf = (y, r1, fb) ->
+    s3 = Fmap.update s1 y (Fmap.read s1 xa) ->
+    satisfies env s3 s2 h1 h2 R r1 fb ->
+    satisfies env s1 s2 h1 h2 R r1 (unk xf xa r)
 
   (* | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow)
     (H: forall b,
       satisfies s1 s2 h1 h2 R (f b)) :
     satisfies s1 s2 h1 h2 R (@fall A f)
 
-  | s_unk s1 s2 h1 h2 r xf uf a
-    (He: Fmap.read s1 xf = uf)
-    (Hr: satisfies s1 s2 h1 h2 (norm r) (uf a r)) :
-    satisfies s1 s2 h1 h2 (norm r) (unk xf a r)
 
   | s_intersect s1 s2 h1 h2 R f1 f2
     (H1: satisfies s1 s2 h1 h2 R f1)
@@ -325,8 +338,8 @@ Inductive satisfies : store -> store -> heap -> heap -> result -> var -> flow ->
     (H: satisfies s1 s2 h1 h2 R f2) :
     satisfies s1 s2 h1 h2 R (disj f1 f2) *)
 
-  | s_sh s1 h1 x shb r :
-    satisfies s1 s1 h1 h1
+  | s_sh : forall env s1 h1 x shb r,
+    satisfies env s1 s1 h1 h1
       (shft x shb r (ens r (fun _ => \[True]))) r
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
       (sh x shb r)
@@ -365,8 +378,8 @@ Notation "'∃' x1 .. xn , H" :=
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : flow_scope. *)
 
 
-Notation "s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
-  (satisfies s1 s2 h1 h2 R r f) (at level 30, only printing).
+Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
+  (satisfies env s1 s2 h1 h2 R r f) (at level 30, only printing).
 
 Inductive spec_assert : expr -> var -> flow -> Prop :=
 
@@ -382,18 +395,18 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
 
 Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
   | sav_base: forall e r f,
-    (forall s1 s2 h1 h2 v,
+    (forall env s1 s2 h1 h2 v,
       bigstep empty_penv s1 h1 e s2 h2 r (enorm v) ->
-      satisfies s1 s2 h1 h2 (norm v) r f) ->
+      satisfies env s1 s2 h1 h2 (norm v) r f) ->
     spec_assert_valid e r f
 
   | sav_shift: forall e r r1 f eb fb,
     spec_assert_valid eb r1 fb ->
-    (forall s1 s2 h1 h2, forall x1 x2 ek,
+    (forall env s1 s2 h1 h2, forall x1 x2 ek,
       bigstep empty_penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
       exists fk,
     spec_assert_valid ek r fk /\
-      satisfies s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
+      satisfies env s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
     spec_assert_valid e r f.
 
 
@@ -480,6 +493,24 @@ Proof.
     (* this is due to the ens_ variable being unconstrained *)
   }
 Qed.
+
+Lemma papp_unk_sound: forall f v r x,
+  (* spec_assert_valid e r f -> *)
+  spec_assert_valid (papp (pvar f) (pval v)) r
+    (fexs x (fexs r (unk f x r))).
+Proof.
+  intros.
+  (* eval_papp_unk *)
+  applys sav_base. intros.
+  inverts H as H.
+
+  applys s_fexs. exists v.
+  applys s_fexs. exists v0.
+  applys s_unk.
+  (* TODO needs the env correspondence to be worked out,
+    and penv to not be empty? *)
+Abort.
+
 
 (* papp (pvar "k") (pval (vint 1)) *)
 
