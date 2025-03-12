@@ -104,7 +104,7 @@ Inductive eresult : Type :=
 (* Definition penv := Fmap.fmap var (val -> expr). *)
 Definition pfun : Type := var * expr.
 Definition penv := Fmap.fmap var pfun.
-Implicit Types p : penv.
+Implicit Types p penv : penv.
 
 #[global]
 Instance Inhab_pfun : Inhab (var * expr).
@@ -398,23 +398,35 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
   .
 
 
-Inductive spec_assert_valid : expr -> var -> flow -> Prop :=
+Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
   | sav_base: forall e r f,
-    (forall env penv s1 s2 h1 h2 v,
+    (forall s1 s2 h1 h2 v,
       (* env_compatible penv env -> *)
       bigstep penv s1 h1 e s2 h2 r (enorm v) ->
       satisfies env s1 s2 h1 h2 (norm v) r f) ->
-    spec_assert_valid e r f
+    spec_assert_valid_under penv env e r f
 
   | sav_shift: forall e r r1 f eb fb,
-    spec_assert_valid eb r1 fb ->
-    (forall env penv s1 s2 h1 h2, forall x1 x2 ek,
+    spec_assert_valid_under penv env eb r1 fb ->
+    (forall s1 s2 h1 h2 v, not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
+    (forall s1 s2 h1 h2, forall x1 x2 ek,
       bigstep penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
       exists fk,
-        spec_assert_valid ek r fk /\
+        spec_assert_valid_under penv env ek r fk /\
           satisfies env s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
-    spec_assert_valid e r f.
+    spec_assert_valid_under penv env e r f.
 
+Definition env_compatible penv env :=
+  forall e (f:var) x r,
+    Fmap.read penv f = (x, e) ->
+    exists f1, Fmap.read env f = (x, r, f1) /\
+    spec_assert_valid_under penv env e r f1.
+    (* pair_valid_under penv env (e x) (f1 x v). *)
+
+Definition spec_assert_valid e r f : Prop :=
+  forall penv env,
+    env_compatible penv env ->
+    spec_assert_valid_under penv env e r f.
 
 Coercion pval : val >-> expr.
 Coercion pvar : var >-> expr.
@@ -424,20 +436,15 @@ Definition store_read s x : val := Fmap.read s x.
 Coercion store_read : store >-> Funclass.
 Coercion papp : expr >-> Funclass.
 
-Definition env_compatible penv env :=
-  forall pfn (f:var) x r,
-    Fmap.read penv f = (x, pfn) ->
-    exists sfn, Fmap.read env f = (x, r, sfn) /\
-    spec_assert_valid pfn r sfn.
-    (* pair_valid_under penv env (pfn x) (sfn x v). *)
-
 Lemma papp_unk_sound: forall (f:var) (v:val) r,
   (* spec_assert_valid e r f -> *)
-  (forall p env, env_compatible p env) ->
+  (* (forall p env, env_compatible p env) -> *)
   (* TODO expose the env in assertion below? then can talk about the concrete bindings *)
   spec_assert_valid (papp f v) r (unk f v r).
 Proof.
-  intros * Henv.
+  unfold spec_assert_valid. intros * Henv.
+
+  (* unfold env_compatible in Henv. *)
 
   (* eval_papp_unk *)
   applys sav_base. intros.
@@ -458,14 +465,13 @@ Proof.
     specializes H2 H10.
     applys_eq H2.
   }
-  {
-
-    admit. }
+  { false H0 H10. }
 
   (* TODO why does it not work for shift? *)
   (* TODO need to put in the env compat assumption *)
   (* the known-function case has the answer: need constraint on the body to split against *)
-Abort.
+Qed.
+(* Abort. *)
 
 Lemma pval_sound: forall v r,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
