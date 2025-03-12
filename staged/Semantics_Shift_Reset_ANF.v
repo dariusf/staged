@@ -65,8 +65,6 @@ with atom : Set :=
 | atom_var : var -> atom
 with expr : Set :=
 | expr_atom : atom -> expr
-| expr_fun : var -> expr -> expr
-| expr_fix : var -> var -> expr -> expr
 | expr_app : atom -> atom -> expr
 | expr_let : var -> expr -> expr -> expr
 | expr_if : atom -> expr -> expr -> expr
@@ -142,7 +140,7 @@ Module ProgramNotations.
           right associativity) : expr_scope.
 
   Notation "'let' f x1 .. xn '=' e1 'in' e2" :=
-    (expr_let (var_of f) (expr_fun (var_of x1) .. (expr_fun (var_of xn) e1) ..) e2)
+    (expr_let (var_of f) (expr_atom (atom_val (val_fun (var_of x1) .. (expr_atom (atom_val (val_fun (var_of xn) e1))) ..))) e2)
       (in custom expr at level 69,
           f, x1, xn at level 0,
           e1 custom expr,
@@ -150,7 +148,7 @@ Module ProgramNotations.
           right associativity) : expr_scope.
 
   Notation "'let' 'rec' f x '=' e1 'in' e2" :=
-    (expr_let (var_of f) (expr_fix (var_of f) (var_of x) e1) e2)
+    (expr_let (var_of f) (expr_atom (atom_val (val_fix (var_of f) (var_of x) e1))) e2)
       (in custom expr at level 69,
           f, x at level 0,
           e1 custom expr,
@@ -158,30 +156,16 @@ Module ProgramNotations.
           right associativity) : expr_scope.
 
   Notation "'let' 'rec' f x1 x2 .. xn '=' e1 'in' e2" :=
-    (expr_let (var_of f) (expr_fix (var_of f) (var_of x1) (expr_fun (var_of x2) .. (expr_fun (var_of xn) e1) ..)) e2)
+    (expr_let (var_of f)
+       (expr_atom
+          (atom_val
+             (val_fix (var_of f) (var_of x1)
+                (expr_atom (atom_val (val_fun (var_of x2) .. (expr_atom (atom_val (val_fun (var_of xn) e1))) ..)))))) e2)
       (in custom expr at level 69,
           f, x1, x2, xn at level 0,
           e1 custom expr,
           e2 custom expr,
           right associativity) : expr_scope.
-
-  Notation "'fun' x1 .. xn '=>' e" :=
-    (expr_fun (var_of x1) .. (expr_fun (var_of xn) e) ..)
-      (in custom expr at level 69,
-          x1, xn at level 0,
-          e custom expr at level 99) : expr_scope.
-
-  Notation "'fix' f x '=>' e" :=
-    (expr_fix (var_of f) (var_of x) e)
-      (in custom expr at level 69,
-          f, x at level 0,
-          e custom expr at level 99) : expr_scope.
-
-  Notation "'fix' f x1 x2 .. xn '=>' e" :=
-    (expr_fix f (var_of x1) (expr_fun (var_of x2) .. (expr_fun (var_of xn) e) ..))
-      (in custom expr at level 69,
-          f, x1, x2, xn at level 0,
-          e custom expr at level 99) : expr_scope.
 
   (* shift *)
   Notation "'shift' k '=>' e" :=
@@ -195,31 +179,31 @@ Module ProgramNotations.
     (expr_reset e) (in custom expr at level 69, e custom expr) : expr_scope.
 
   (* function value *)
-  Notation "'\fun' x '=>' e" :=
+  Notation "'fun' x '=>' e" :=
     (val_fun (var_of x) e)
       (in custom expr at level 69,
           x at level 0,
           e custom expr at level 99) : val_scope.
 
-  Notation "'\fun' x1 x2 .. xn '=>' e" :=
-    (val_fun (var_of x1) (expr_fun (var_of x2) .. (expr_fun (var_of xn) e) ..))
+  Notation "'fun' x1 x2 .. xn '=>' e" :=
+    (val_fun (var_of x1) (expr_atom (atom_val (val_fun (var_of x2) .. (expr_atom (atom_val (val_fun (var_of xn) e))) ..))))
       (in custom expr at level 69,
           x1, x2, xn at level 0,
           e custom expr at level 99) : val_scope.
 
-  Notation "'\fix' f x '=>' e" :=
+  Notation "'fix' f x '=>' e" :=
     (val_fix (var_of f) (var_of x) e)
       (in custom expr at level 69,
           f, x at level 0,
           e custom expr at level 99) : val_scope.
 
-  Notation "'\fix' f x1 x2 .. xn '=>' e" :=
-    (val_fix (var_of f) (var_of x1) (expr_fun (var_of x2) .. (expr_fun (var_of xn) e) ..))
+  Notation "'fix' f x1 x2 .. xn '=>' e" :=
+    (val_fix (var_of f) (var_of x1) (expr_atom (atom_val (val_fun (var_of x2) .. (expr_atom (atom_val (val_fun (var_of xn) e))) ..))))
       (in custom expr at level 69,
           f, x1, x2, xn at level 0,
           e custom expr at level 99) : val_scope.
 
-  Notation "()" := val_unit (in custom expr at level 0) : expr_scope.
+  Notation "()" := val_unit (in custom expr at level 0) : val_scope.
 
   Notation "'not' a" :=
     (expr_prim1 prim1_neg a)
@@ -386,20 +370,27 @@ Module TestProgramNotations.
   Unset Printing Coercions.
 End TestProgramNotations.
 
-Definition atom_subst (y : var) (w : val) (a : atom) : atom :=
+Fixpoint val_subst (y : var) (w : val) (v : val) : val :=
+  let vaux := val_subst y w in
+  let eaux := expr_subst y w in
+  let if_y_eq x e1 e2 := if var_eq_dec x y then e1 else e2 in
+  match v with
+  | val_fun x e => val_fun x (if_y_eq x e (eaux e))
+  | val_fix f x e => val_fix f x (if_y_eq f e (if_y_eq x e (eaux e)))
+  | val_pair v1 v2 => val_pair (vaux v1) (vaux v2)
+  | _ => v
+  end with
+atom_subst (y : var) (w : val) (a : atom) : atom :=
   match a with
-  | atom_val _ => a
+  | atom_val v => atom_val (val_subst y w v)
   | atom_var x => if var_eq_dec x y then atom_val w else a
-  end.
-
-Fixpoint expr_subst (y : var) (w : val) (e : expr) : expr :=
+  end with
+expr_subst (y : var) (w : val) (e : expr) : expr :=
   let aaux := atom_subst y w in
   let eaux := expr_subst y w in
   let if_y_eq x e1 e2 := if var_eq_dec x y then e1 else e2 in
   match e with
   | expr_atom a => expr_atom (aaux a)
-  | expr_fun x e' => expr_fun x (if_y_eq x e' (eaux e'))
-  | expr_fix f x e' => expr_fix f x (if_y_eq f e' (if_y_eq x e' (eaux e')))
   | expr_app a1 a2 => expr_app (aaux a1) (aaux a2)
   | expr_let x e1 e2 => expr_let x (eaux e1) (if_y_eq x e2 (eaux e2))
   | expr_if a e1 e2 => expr_if (aaux a) (eaux e1) (eaux e2)
@@ -457,10 +448,6 @@ Inductive eval_prim2_aux : heap -> prim2 -> val -> val -> heap -> val -> Prop :=
 Inductive eval : heap -> expr -> heap -> val -> Prop :=
 | eval_atom h v :
   eval h (expr_atom (atom_val v)) h v
-| eval_fun h x e :
-  eval h (expr_fun x e) h (val_fun x e)
-| eval_fix h f x e :
-  eval h (expr_fix f x e) h (val_fix f x e)
 (* fun application *)
 | eval_app_fun h1 h2 x e v r :
   eval h1 (expr_subst x v e) h2 r ->
@@ -502,12 +489,6 @@ with eval_cont_aux : heap -> expr -> var -> expr -> heap -> val -> Prop :=
 | eval_cont_aux_atom h1 h2 v x k r :
   eval h1 (expr_subst x v k) h2 r ->
   eval_cont_aux h1 (expr_atom (atom_val v)) x k h2 r
-| eval_cont_aux_fun h1 h2 x e x' k r :
-  eval h1 (expr_subst x' (val_fun x e) k) h2 r ->
-  eval_cont_aux h1 (expr_fun x e) x' k h2 r
-| eval_cont_aux_fix h1 h2 f x e x' k r :
-  eval h1 (expr_subst x' (val_fix f x e) k) h2 r ->
-  eval_cont_aux h1 (expr_fix f x e) x' k h2 r
 (* cont of application *)
 | eval_cont_aux_app_fun h1 h2 x e v x' k r :
   eval_cont_aux h1 (expr_subst x v e) x' k h2 r ->
@@ -562,8 +543,6 @@ Module TestProgramSemantics.
   Local Create HintDb auto_eval_hints discriminated.
 
   Local Hint Resolve eval_atom : auto_eval_hints.
-  Local Hint Resolve eval_fun : auto_eval_hints.
-  Local Hint Resolve eval_fix : auto_eval_hints.
   Local Hint Constructors eval_prim1_aux : auto_eval_hints.
   Local Hint Constructors eval_prim2_aux : auto_eval_hints.
 
@@ -726,7 +705,7 @@ Module TestProgramSemantics.
   Qed.
 
   Definition app_inside_reset : expr :=
-    <{ <(\fun "x" => {var_of "x"} + 1) 1> }>.
+    <{ <(fun "x" => {var_of "x"} + 1) 1> }>.
   Print app_inside_reset.
 
   Goal eval empty_heap app_inside_reset empty_heap 2.
@@ -854,7 +833,7 @@ Module TestProgramSemantics.
     eapply eval_cont_aux_let.
     eapply eval_cont_aux_app_fun. expr_subst.
     eapply eval_cont_aux_shift. expr_subst.
-    eapply eval_cont_aux_fun. expr_subst.
+    eapply eval_cont_aux_atom. expr_subst.
     eapply eval_atom.
     eapply eval_app_fun. expr_subst.
     eapply eval_let; auto_eval.
@@ -862,7 +841,7 @@ Module TestProgramSemantics.
     eapply eval_cont.
     eapply eval_cont_aux_app_fun. expr_subst.
     eapply eval_cont_aux_shift. expr_subst.
-    eapply eval_cont_aux_fun. expr_subst.
+    eapply eval_cont_aux_atom. expr_subst.
     eapply eval_atom.
     eapply eval_let; auto_eval.
     eapply eval_prim2; auto_eval.
@@ -870,7 +849,7 @@ Module TestProgramSemantics.
     eapply eval_let; auto_eval.
     eapply eval_app_fun. expr_subst.
     eapply eval_cont.
-    eapply eval_cont_aux_fun. expr_subst.
+    eapply eval_cont_aux_atom. expr_subst.
     eapply eval_atom.
     eapply eval_app_fun. expr_subst.
     eapply eval_atom.
@@ -938,7 +917,7 @@ Module TestProgramSemantics.
     eapply eval_reset.
     eapply eval_cont_aux_let.
     eapply eval_cont_aux_app_fun. expr_subst.
-    eapply eval_cont_aux_fun. expr_subst.
+    eapply eval_cont_aux_atom. expr_subst.
     eapply eval_cont.
     eapply eval_cont_aux_let.
     eapply eval_cont_aux_app_fun. expr_subst.
@@ -1014,7 +993,7 @@ Module TestProgramSemantics.
     eapply eval_let; auto_eval.
     eapply eval_let; auto_eval.
     eapply eval_app_fun. expr_subst.
-    eapply eval_fun.
+    eapply eval_atom.
     eapply eval_app_fun. expr_subst.
     eapply eval_let; auto_eval.
     eapply eval_reset.
@@ -1067,23 +1046,21 @@ Module ClosedProgram.
 
   Definition ctx := list var.
 
-  Fixpoint closed_val (v : val) : Prop :=
+  Fixpoint closed_val_under (c : ctx) (v : val) : Prop :=
     match v with
-    | val_fun x e => closed_expr_under [x] e
-    | val_fix f x e => closed_expr_under [f; x] e
-    | val_pair v1 v2 => closed_val v1 /\ closed_val v2
+    | val_fun x e => closed_expr_under (x :: c) e
+    | val_fix f x e => closed_expr_under (f :: x :: c) e
+    | val_pair v1 v2 => closed_val_under c v1 /\ closed_val_under c v2
     | _ => True
     end with
   closed_atom_under (c : ctx) (a : atom) : Prop :=
     match a with
-    | atom_val v => closed_val v
+    | atom_val v => closed_val_under c v
     | atom_var x => List.In x c
     end with
   closed_expr_under (c : ctx) (e : expr) : Prop :=
     match e with
     | expr_atom a => closed_atom_under c a
-    | expr_fun x e' => closed_expr_under (x :: c) e'
-    | expr_fix f x e' => closed_expr_under (f :: x :: c) e'
     | expr_app a1 a2 => closed_atom_under c a1 /\ closed_atom_under c a2
     | expr_let x e1 e2 => closed_expr_under c e1 /\ closed_expr_under (x :: c) e2
     | expr_if a e1 e2 => closed_atom_under c a /\ closed_expr_under c e1 /\ closed_expr_under c e2
@@ -1094,35 +1071,36 @@ Module ClosedProgram.
     | expr_cont e' x k => closed_expr_under c e' /\ closed_expr_under (x :: c) k
     end.
 
+  Definition closed_val := closed_val_under [].
   Definition closed_atom := closed_atom_under [].
   Definition closed_expr := closed_expr_under [].
   Definition closed_cont (x : var) := closed_expr_under [x].
   Definition closed_heap (h : heap) := forall (p : loc), Fmap.indom h p -> closed_val (Fmap.read h p).
 
-  Lemma fold_unfold_closed_val_fix :
-    forall (f x : var)
+  Lemma fold_unfold_closed_val_under_fix :
+    forall (c : ctx)
+           (f x : var)
            (e : expr),
-      closed_val (val_fix f x e) = closed_expr_under [f; x] e.
+      closed_val_under c (val_fix f x e) = closed_expr_under (f :: x :: c) e.
   Proof. auto. Qed.
 
-  Lemma atom_subst_with_nonfree_var :
+  Lemma val_subst_with_nonfree_var :
+    forall (c : ctx)
+           (v : val)
+           (x : var)
+           (v' : val),
+      closed_val_under c v ->
+      ~ List.In x c ->
+      val_subst x v' v = v
+  with atom_subst_with_nonfree_var :
     forall (c : ctx)
            (a : atom)
            (x : var)
            (v : val),
       closed_atom_under c a ->
       ~ List.In x c ->
-      atom_subst x v a = a.
-  Proof.
-    introv H_atom H_not_in.
-    destruct a as [v' | x']; simpl in *.
-    - reflexivity.
-    - destruct var_eq_dec.
-      + congruence.
-      + reflexivity.
-  Qed.
-
-  Lemma expr_subst_with_nonfree_var :
+      atom_subst x v a = a
+  with expr_subst_with_nonfree_var :
     forall (c : ctx)
            (e : expr)
            (x : var)
@@ -1131,52 +1109,65 @@ Module ClosedProgram.
       ~ List.In x c ->
       expr_subst x v e = e.
   Proof.
-    intros c e x v.
-    revert c.
-    induction e; intros c H_expr H_not_in; simpl in *.
-    - fequal; eauto using atom_subst_with_nonfree_var.
-    - fequal.
-      destruct var_eq_dec.
-      + reflexivity.
-      + eapply IHe.
-        { eassumption. }
-        { now rewrite -> List.not_in_cons. }
-    - fequal.
-      destruct var_eq_dec.
-      + reflexivity.
-      + destruct var_eq_dec.
-        * reflexivity.
-        * eapply IHe.
+    {
+      intros c [] x v' H_val H_not_in; simpl in *.
+      - reflexivity.
+      - reflexivity.
+      - reflexivity.
+      - reflexivity.
+      - fequal.
+        destruct var_eq_dec.
+        + reflexivity.
+        + eapply expr_subst_with_nonfree_var.
           { eassumption. }
-          { now rewrite ->2 List.not_in_cons. }
-    - destruct H_expr as [H_atom1 H_atom2].
-      fequal; eauto using atom_subst_with_nonfree_var.
-    - destruct H_expr as [H_expr1 H_expr2].
-      fequal; eauto.
-      destruct var_eq_dec.
-      + reflexivity.
-      + eapply IHe2.
-        { eassumption. }
-        { now rewrite -> List.not_in_cons. }
-    - destruct H_expr as [H_atom [H_expr1 H_expr2]].
-      fequal; eauto using atom_subst_with_nonfree_var.
-    - fequal; eauto using atom_subst_with_nonfree_var.
-    - destruct H_expr as [H_atom1 H_atom2].
-      fequal; eauto using atom_subst_with_nonfree_var.
-    - fequal.
-      destruct var_eq_dec.
-      + reflexivity.
-      + eapply IHe.
-        { eassumption. }
-        { now rewrite -> List.not_in_cons. }
-    - fequal; eauto.
-    - destruct H_expr as [H_expr1 H_expr2].
-      fequal; eauto.
-      destruct var_eq_dec.
-      + reflexivity.
-      + eapply IHe2.
-        { eassumption. }
-        { now rewrite -> List.not_in_cons. }
+          { now rewrite -> List.not_in_cons. }
+      - fequal.
+        destruct var_eq_dec.
+        + reflexivity.
+        + destruct var_eq_dec.
+          * reflexivity.
+          * eapply expr_subst_with_nonfree_var.
+            { eassumption. }
+            { now rewrite ->2 List.not_in_cons. }
+      - reflexivity.
+      - intuition fequal; eauto.
+    }
+    {
+      intros c [] x v' H_atom H_not_in; simpl in *.
+      - intuition fequal; eauto.
+      - destruct var_eq_dec.
+        + congruence.
+        + reflexivity.
+    }
+    {
+      intros c [] x v' H_expr H_not_in; simpl in *.
+      - intuition fequal; eauto.
+      - intuition fequal; eauto.
+      - destruct H_expr as [H_expr1 H_expr2].
+        fequal; eauto.
+        destruct var_eq_dec.
+        + reflexivity.
+        + eapply expr_subst_with_nonfree_var.
+          { eassumption. }
+          { now rewrite -> List.not_in_cons. }
+      - intuition fequal; eauto.
+      - intuition fequal; eauto.
+      - intuition fequal; eauto.
+      - fequal.
+        destruct var_eq_dec.
+        + reflexivity.
+        + eapply expr_subst_with_nonfree_var.
+          { eassumption. }
+          { now rewrite -> List.not_in_cons. }
+      - intuition fequal; eauto.
+      - destruct H_expr as [H_expr1 H_expr2].
+        fequal; eauto.
+        destruct var_eq_dec.
+        + reflexivity.
+        + eapply expr_subst_with_nonfree_var.
+          { eassumption. }
+          { now rewrite -> List.not_in_cons. }
+    }
   Qed.
 
   Corollary expr_subst_on_closed_expr :
@@ -1214,18 +1205,21 @@ Module ClosedProgram.
     unfold List.incl. simpl. intuition auto.
   Qed.
 
-  Lemma weakening_preserves_atom_closedness :
+  Lemma weakening_preserves_val_closedness :
+    forall (c : ctx)
+           (v : val)
+           (c' : ctx),
+      closed_val_under c v ->
+      List.incl c c' ->
+      closed_val_under c' v
+  with weakening_preserves_atom_closedness :
     forall (c : ctx)
            (a : atom)
            (c' : ctx),
       closed_atom_under c a ->
       List.incl c c' ->
-      closed_atom_under c' a.
-  Proof.
-    intros c []; simpl; auto.
-  Qed.
-
-  Lemma weakening_preserves_expr_closedness :
+      closed_atom_under c' a
+  with weakening_preserves_expr_closedness :
     forall (c : ctx)
            (e : expr)
            (c' : ctx),
@@ -1233,40 +1227,41 @@ Module ClosedProgram.
       List.incl c c' ->
       closed_expr_under c' e.
   Proof.
-    intros c e.
-    revert c.
-    induction e; simpl; intuition eauto using ctx_incl_cons_cons, weakening_preserves_atom_closedness.
+    { intros c [] **; simpl in *; intuition eauto using ctx_incl_cons_cons. }
+    { intros c [] **; simpl in *; eauto. }
+    { intros c [] **; simpl in *; intuition eauto using ctx_incl_cons_cons. }
   Qed.
 
   Ltac ctx_incl := unfold List.incl; simpl; tauto.
+  Ltac revert_weakening_val := eapply weakening_preserves_val_closedness; [eassumption | ctx_incl].
   Ltac revert_weakening_atom := eapply weakening_preserves_atom_closedness; [eassumption | ctx_incl].
   Ltac revert_weakening_expr := eapply weakening_preserves_expr_closedness; [eassumption | ctx_incl].
-  Ltac ensure_closed := unfold closed_atom, closed_expr, closed_cont; simpl;
+  Ltac ensure_closed := unfold closed_val, closed_atom, closed_expr, closed_cont; simpl;
                         repeat match goal with
                           | [ _ : _ |- _ /\ _ ] => split
-                          | [ _ : _ |- closed_val _ ] => assumption
+                          | [ _ : _ |- closed_val_under _ _ ] => assumption || revert_weakening_val
                           | [ _ : _ |- closed_atom_under _ _ ] => assumption || revert_weakening_atom
                           | [ _ : _ |- closed_expr_under _ _ ] => assumption || revert_weakening_expr
                           | [ _ : _ |- _ = _ \/ False ] => left; reflexivity
                           end.
 
-  Lemma atom_subst_preserves_closedness :
+  Lemma val_subst_preserves_closedness :
+    forall (x : var)
+           (c : ctx)
+           (v : val)
+           (v' : val),
+      closed_val_under (x :: c) v ->
+      closed_val v' ->
+      closed_val_under c (val_subst x v' v)
+  with atom_subst_preserves_closedness :
     forall (x : var)
            (c : ctx)
            (a : atom)
            (v : val),
       closed_atom_under (x :: c) a ->
       closed_val v ->
-      closed_atom_under c (atom_subst x v a).
-  Proof.
-    intros x c [v' | x'] v H_atom H_val; simpl in *.
-    - assumption.
-    - destruct var_eq_dec; simpl.
-      + assumption.
-      + intuition congruence.
-  Qed.
-
-  Lemma expr_subst_preserves_closedness :
+      closed_atom_under c (atom_subst x v a)
+  with expr_subst_preserves_closedness :
     forall (x : var)
            (c : ctx)
            (e : expr)
@@ -1275,26 +1270,69 @@ Module ClosedProgram.
       closed_val v ->
       closed_expr_under c (expr_subst x v e).
   Proof.
-    introv H_expr H_val.
-    revert c H_expr.
-    induction e; intros c H_expr; simpl in *.
-    - intuition auto using atom_subst_preserves_closedness.
-    - destruct var_eq_dec; [subst | apply IHe]; revert_weakening_expr.
-    - destruct var_eq_dec; [subst |].
-      + revert_weakening_expr.
-      + destruct var_eq_dec; [subst | apply IHe]; revert_weakening_expr.
-    - intuition auto using atom_subst_preserves_closedness.
-    - intuition auto.
-      destruct var_eq_dec; [subst | apply IHe2]; revert_weakening_expr.
-    - intuition auto using atom_subst_preserves_closedness.
-    - intuition auto using atom_subst_preserves_closedness.
-    - intuition auto using atom_subst_preserves_closedness.
-    - destruct var_eq_dec; [subst | apply IHe]; revert_weakening_expr.
-    - intuition auto.
-    - intuition auto.
-      destruct var_eq_dec; [subst | apply IHe2]; revert_weakening_expr.
+    {
+      intros x c [] v' H_val H_val'; simpl in *.
+      - exact I.
+      - exact I.
+      - exact I.
+      - exact I.
+      - destruct var_eq_dec.
+        + subst.
+          revert_weakening_expr.
+        + apply expr_subst_preserves_closedness.
+          { revert_weakening_expr. }
+          { assumption. }
+      - destruct var_eq_dec.
+        + subst.
+          revert_weakening_expr.
+        + destruct var_eq_dec.
+          * subst.
+            revert_weakening_expr.
+          * apply expr_subst_preserves_closedness.
+            { revert_weakening_expr. }
+            { assumption. }
+      - exact I.
+      - intuition auto.
+    }
+    {
+      intros x c [] v' H_atom H_val; simpl in *.
+      - intuition auto.
+      - destruct var_eq_dec; simpl.
+        + revert_weakening_val.
+        + intuition congruence.
+    }
+    {
+      intros x c [] v' H_expr H_val; simpl in *.
+      - intuition auto.
+      - intuition auto.
+      - intuition auto.
+        destruct var_eq_dec.
+        + subst.
+          revert_weakening_expr.
+        + apply expr_subst_preserves_closedness.
+          { revert_weakening_expr. }
+          { assumption. }
+      - intuition auto.
+      - intuition auto.
+      - intuition auto.
+      - destruct var_eq_dec.
+        + subst.
+          revert_weakening_expr.
+        + apply expr_subst_preserves_closedness.
+          { revert_weakening_expr. }
+          { assumption. }
+      - intuition auto.
+      - intuition auto.
+        destruct var_eq_dec.
+        + subst.
+          revert_weakening_expr.
+        + apply expr_subst_preserves_closedness.
+          { revert_weakening_expr. }
+          { assumption. }
+    }
   Qed.
 
+  Ltac revert_val_subst := apply val_subst_preserves_closedness; try assumption.
   Ltac revert_atom_subst := apply atom_subst_preserves_closedness; try assumption.
   Ltac revert_expr_subst := apply expr_subst_preserves_closedness; try assumption.
 
@@ -1309,7 +1347,7 @@ Module ClosedProgram.
       closed_val v ->
       closed_heap h2 /\ closed_val r.
   Proof.
-    unfold closed_heap.
+    unfold closed_heap, closed_val.
     introv H_eval_prim1_aux H_heap H_val.
     inverts H_eval_prim1_aux as; simpl in *.
     - intuition auto.
@@ -1347,7 +1385,7 @@ Module ClosedProgram.
       closed_val v2 ->
       closed_heap h2 /\ closed_val r.
   Proof.
-    unfold closed_heap.
+    unfold closed_heap, closed_val.
     introv H_eval_prim2_aux H_heap H_val1 H_val2.
     inverts H_eval_prim2_aux as; simpl in *.
     - intuition auto.
@@ -1370,35 +1408,34 @@ Module ClosedProgram.
     - intuition auto.
   Qed.
 
-  Theorem eval_preserves_closedness :
-    (forall (h1 : heap)
-            (e : expr)
-            (h2 : heap)
-            (r : val),
-        eval h1 e h2 r ->
-        closed_heap h1 ->
-        closed_expr e ->
-        closed_heap h2 /\ closed_val r)
-    with eval_cont_aux_preserves_closedness :
-      (forall (h1 : heap)
-              (e : expr)
-              (x : var)
-              (k : expr)
-              (h2 : heap)
-              (r : val),
-          eval_cont_aux h1 e x k h2 r ->
-          closed_heap h1 ->
-          closed_expr e ->
-          closed_cont x k ->
-          closed_heap h2 /\ closed_val r).
+  Lemma eval_preserves_closedness :
+    forall (h1 : heap)
+           (e : expr)
+           (h2 : heap)
+           (r : val),
+      eval h1 e h2 r ->
+      closed_heap h1 ->
+      closed_expr e ->
+      closed_heap h2 /\ closed_val r
+  with eval_cont_aux_preserves_closedness :
+    forall (h1 : heap)
+           (e : expr)
+           (x : var)
+           (k : expr)
+           (h2 : heap)
+           (r : val),
+      eval_cont_aux h1 e x k h2 r ->
+      closed_heap h1 ->
+      closed_expr e ->
+      closed_cont x k ->
+      closed_heap h2 /\ closed_val r.
   Proof.
     {
+      clear eval_preserves_closedness.
       unfold closed_expr, closed_cont in *.
       introv H_eval H_heap1 H_expr.
       induction H_eval; simpl in *.
-      - tauto.
-      - tauto.
-      - tauto.
+      - auto.
       - destruct H_expr as [H_val1 H_val2].
         apply IHH_eval; try assumption. revert_expr_subst.
       - destruct H_expr as [H_val1 H_val2].
@@ -1406,21 +1443,19 @@ Module ClosedProgram.
       - destruct H_expr as [H_expr1 H_expr2].
         specialize (IHH_eval1 H_heap1 H_expr1) as [H_heap2 H_val1].
         apply IHH_eval2; try assumption. revert_expr_subst.
-      - intuition auto.
-      - intuition auto.
-      - eapply eval_prim1_aux_preserves_closedness; eassumption.
+      - destruct H_expr as [_ [H_expr1 H_expr2]]. auto.
+      - destruct H_expr as [_ [H_expr1 H_expr2]]. auto.
+      - eauto using eval_prim1_aux_preserves_closedness.
       - destruct H_expr as [H_val1 H_val2].
-        eapply eval_prim2_aux_preserves_closedness; eassumption.
+        eauto using eval_prim2_aux_preserves_closedness.
       - eapply eval_cont_aux_preserves_closedness; eassumption || ensure_closed.
-      - destruct H_expr as [H_expr1 H_expr2].
-        eapply eval_cont_aux_preserves_closedness; eassumption.
+      - destruct H_expr as [H_expr1 H_expr2]. eauto.
     }
     {
+      clear eval_cont_aux_preserves_closedness.
       unfold closed_expr, closed_cont in *.
       introv H_eval_cont_aux H_heap1 H_expr H_cont.
       induction H_eval_cont_aux; simpl in *.
-      - eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
-      - eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
       - eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
       - destruct H_expr as [H_val1 H_val2].
         apply IHH_eval_cont_aux; try assumption. revert_expr_subst.
@@ -1428,10 +1463,8 @@ Module ClosedProgram.
         apply IHH_eval_cont_aux; try assumption. revert_expr_subst. revert_expr_subst.
       - destruct H_expr as [H_expr1 H_expr2].
         apply IHH_eval_cont_aux; assumption || ensure_closed.
-      - destruct H_expr as [_ [H_expr1 H_expr2]].
-        apply IHH_eval_cont_aux; assumption.
-      - destruct H_expr as [_ [H_expr1 H_expr2]].
-        apply IHH_eval_cont_aux; assumption.
+      - destruct H_expr as [_ [H_expr1 H_expr2]]. auto.
+      - destruct H_expr as [_ [H_expr1 H_expr2]]. auto.
       - destruct (eval_prim1_aux_preserves_closedness H H_heap1 H_expr) as [H_heap2 H_val].
         eapply eval_preserves_closedness; try eassumption. revert_expr_subst.
       - destruct H_expr as [H_val1 H_val2].
@@ -1478,41 +1511,39 @@ Module ProgramDeterminism.
     now inverts H_eval; inverts H_eval'.
   Qed.
 
-  Theorem eval_is_deterministic :
-    (forall (h1 : heap)
-            (e : expr)
-            (h2 : heap)
-            (r : val),
-        eval h1 e h2 r ->
-        forall (h2' : heap)
-               (r' : val),
-          eval h1 e h2' r' ->
-          h2 = h2' /\ r = r')
-    with eval_cont_aux_is_deterministic :
-      (forall (h1 : heap)
-              (e : expr)
-              (x : var)
-              (k : expr)
-              (h2 : heap)
-              (r : val),
-          eval_cont_aux h1 e x k h2 r ->
-          forall (h2' : heap)
-                 (r' : val),
-            eval_cont_aux h1 e x k h2' r' ->
-            h2 = h2' /\ r = r').
+  Lemma eval_is_deterministic :
+    forall (h1 : heap)
+           (e : expr)
+           (h2 : heap)
+           (r : val),
+      eval h1 e h2 r ->
+      forall (h2' : heap)
+             (r' : val),
+        eval h1 e h2' r' ->
+        h2 = h2' /\ r = r'
+  with eval_cont_aux_is_deterministic :
+    forall (h1 : heap)
+           (e : expr)
+           (x : var)
+           (k : expr)
+           (h2 : heap)
+           (r : val),
+      eval_cont_aux h1 e x k h2 r ->
+      forall (h2' : heap)
+             (r' : val),
+        eval_cont_aux h1 e x k h2' r' ->
+        h2 = h2' /\ r = r'.
   Proof.
     {
+      clear eval_is_deterministic.
       introv H_eval.
       induction H_eval; introv H_eval'.
-      - inverts H_eval' as. tauto.
-      - inverts H_eval' as. tauto.
-      - inverts H_eval' as. tauto.
       - inverts H_eval' as. auto.
       - inverts H_eval' as. auto.
-      - inverts H_eval' as.
-        introv H_eval'1 H_eval'2.
+      - inverts H_eval' as. auto.
+      - inverts H_eval' as H_eval'1 H_eval'2.
         apply IHH_eval1 in H_eval'1 as []. subst.
-        apply IHH_eval2 in H_eval'2 as []. tauto.
+        apply IHH_eval2 in H_eval'2 as []. auto.
       - inverts H_eval' as. auto.
       - inverts H_eval' as. auto.
       - inverts H_eval' as. eauto using eval_prim1_aux_is_deterministic.
@@ -1521,28 +1552,23 @@ Module ProgramDeterminism.
       - inverts H_eval' as. eauto.
     }
     {
+      clear eval_cont_aux_is_deterministic.
       introv H_eval_cont_aux.
       induction H_eval_cont_aux; introv H_eval_cont_aux'.
       - inverts H_eval_cont_aux' as. eauto.
-      - inverts H_eval_cont_aux' as. eauto.
-      - inverts H_eval_cont_aux' as. eauto.
-      - inverts H_eval_cont_aux' as; contradiction || auto.
-      - inverts H_eval_cont_aux' as; contradiction || auto.
-      - inverts H_eval_cont_aux' as; contradiction || auto.
-      - inverts H_eval_cont_aux' as; contradiction || auto.
-      - inverts H_eval_cont_aux' as; contradiction || auto.
-      - inverts H_eval_cont_aux' as.
-        introv H_prim1' H_eval_cont_aux'.
+      - inverts H_eval_cont_aux' as. auto.
+      - inverts H_eval_cont_aux' as. auto.
+      - inverts H_eval_cont_aux' as. auto.
+      - inverts H_eval_cont_aux' as. auto.
+      - inverts H_eval_cont_aux' as. auto.
+      - inverts H_eval_cont_aux' as H_prim1' H_eval_cont_aux'.
         destruct (eval_prim1_aux_is_deterministic H H_prim1'). subst. eauto.
-      - inverts H_eval_cont_aux' as.
-        introv H_prim2' H_eval_cont_aux'.
+      - inverts H_eval_cont_aux' as H_prim2' H_eval_cont_aux'.
         destruct (eval_prim2_aux_is_deterministic H H_prim2'). subst. eauto.
-      - inverts H_eval_cont_aux' as; contradiction || auto.
-      - inverts H_eval_cont_aux' as.
-        introv H_eval_cont_aux'.
+      - inverts H_eval_cont_aux' as. auto.
+      - inverts H_eval_cont_aux' as H_eval_cont_aux'.
         apply IHH_eval_cont_aux in H_eval_cont_aux' as []. subst. eauto.
-      - inverts H_eval_cont_aux' as.
-        introv H_eval_cont_aux'.
+      - inverts H_eval_cont_aux' as H_eval_cont_aux'.
         apply IHH_eval_cont_aux in H_eval_cont_aux' as []. subst. eauto.
     }
   Qed.
@@ -1568,14 +1594,12 @@ Module ProgramDeterminism.
     introv H_heap1 H_expr H_eval H_cont.
     revert x k H_cont.
     induction H_eval; introv H_cont H_eval_cont_aux; cbn in *.
-    - inverts H_eval_cont_aux as. tauto.
-    - inverts H_eval_cont_aux as. tauto.
-    - inverts H_eval_cont_aux as. tauto.
+    - inverts H_eval_cont_aux as. auto.
     - destruct H_expr as [H_val1 H_val2].
       forwards H_expr: expr_subst_preserves_closedness H_val1 H_val2.
       inverts H_eval_cont_aux as. auto.
     - destruct H_expr as [H_val1 H_val2].
-      rewrite <- fold_unfold_closed_val_fix in H_val1.
+      rewrite <- fold_unfold_closed_val_under_fix in H_val1.
       forwards H_expr: expr_subst_preserves_closedness ltac:(applys expr_subst_preserves_closedness H_val1 H_val1) H_val2.
       inverts H_eval_cont_aux as. auto.
     - destruct H_expr as [H_expr1 H_expr2].
