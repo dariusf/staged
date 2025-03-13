@@ -138,9 +138,10 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     s2 = Fmap.update s1 r (vint (v1 + v2)) ->
     bigstep p s1 h (padd e1 e2) s2 h r (enorm (vint (v1 + v2)))
 
-  | eval_pshift : forall s1 s2 h p k eb r v,
-    s2 = Fmap.update s1 r v ->
-    bigstep p s1 h (pshift k eb) s2 h r
+  (* _3 *)
+  | eval_pshift : forall s1 h p k eb r r1,
+    (* s2 = Fmap.update s1 r v -> *)
+    bigstep p s1 h (pshift k eb) s1 h r1
       (eshft (vfun k eb) r (pvar r))
 
       (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
@@ -343,6 +344,7 @@ Inductive satisfies : senv -> store -> store -> heap -> heap -> result -> var ->
     (H: satisfies s1 s2 h1 h2 R f2) :
     satisfies s1 s2 h1 h2 R (disj f1 f2) *)
 
+  (* _1 *)
   | s_sh : forall env s1 h1 x shb r r1,
     satisfies env s1 s1 h1 h1
       (shft x shb r (ens r (fun _ => \[True])))
@@ -404,7 +406,9 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
 
   .
 
+(* The cases in the triple definition have to be disjoint, meaning one must know exactly what the next outcome is to prove
 
+If there is a program which could be either shift or not, you have to case, then pick the appropriate triple case *)
 Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
   | sav_base: forall e r f,
     (forall s1 s2 h1 h2 v r x e1,
@@ -414,16 +418,17 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
       satisfies env s1 s2 h1 h2 (norm v) r f) ->
     spec_assert_valid_under penv env e r f
 
-  | sav_shift: forall e r r1 f eb fb,
-    spec_assert_valid_under penv env eb r1 fb ->
-    (forall s1 s2 h1 h2 v r,
-      not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
-    (forall s1 s2 h1 h2, forall r1 x1 x2 ek,
-      bigstep penv s1 h1 e s2 h2 r1 (eshft (vfun x1 eb) x2 ek) ->
-      exists r2 fk,
-        spec_assert_valid_under penv env ek r fk /\
-          satisfies env s1 s2 h1 h2 (shft x1 fb r2 fk) r1 f) ->
-    spec_assert_valid_under penv env e r f.
+  (* _2 *)
+  | sav_shift: forall e r1 rb f eb fb,
+    spec_assert_valid_under penv env eb rb fb ->
+    (forall s1 s2 h1 h2 v rr,
+      not (bigstep penv s1 h1 e s2 h2 rr (enorm v))) ->
+    (forall s1 s2 h1 h2, forall k r ek,
+      bigstep penv s1 h1 e s2 h2 r1 (eshft (vfun k eb) r ek) ->
+      exists rk fk,
+        spec_assert_valid_under penv env ek rk fk /\
+          satisfies env s1 s2 h1 h2 (shft k fb r fk) r1 f) ->
+    spec_assert_valid_under penv env e r1 f.
 
 Definition env_compatible penv env :=
   forall e (f:var) x r,
@@ -488,31 +493,42 @@ Proof.
   fmap_eq.
 Qed.
 
-Lemma pshift_sound: forall k eb r r1 r2 fb,
-  (* spec_assert (pshift k eb) r (fexs r (sh k fb r)) -> *)
-  spec_assert_valid eb r1 fb ->
-  spec_assert_valid (pshift k eb) r2 (fexs r (sh k fb r)).
+Lemma pshift_sound: forall r rb r1 k eb fb,
+  spec_assert_valid eb rb fb ->
+  spec_assert_valid (pshift k eb) r1 (sh k fb r).
 Proof.
-  unfold spec_assert_valid.
-  intros.
-  (* also useless? *)
-  (* inverts H as H. *)
-  (* clear H. *)
+  unfold spec_assert_valid. intros r rb r1 **.
+  specializes H penv0 env.
+
+  (* in big step, r is a fresh name.
+    r1 is never used, not by let.
+    so (bigstep ... r1 shift) does not bind r1 to anything *)
+  (* satisfies is the same except the input has r. r1 is not used *)
+  (* triple has rb and rk extra. r and r1 have the same meaning *)
+
+  (* _3 bigstep *)
+  (* _1 satisfies *)
+  (* _2 triple *)
+
   applys sav_shift H. { intros * ?. false_invert H0. }
   intros.
-  (* eval_pshift *)
-  (* invert H. *)
   inverts H0 as H0.
-  (* exists fb. *)
+  rename k0 into k.
+  exists r0.
   exs.
   split.
-  applys_eq pvar_sound.
-
   apply pvar_sound.
-  apply s_fexs. exists v.
-  (* applys_eq s_sh. *)
-  apply s_sh.
-Qed.
+
+  (* apply pvar_sound. *)
+  (* apply s_fexs. exists v. *)
+  Fail applys s_sh.
+  applys_eq s_sh.
+  f_equal.
+  (* TODO prove r = r0 *)
+  admit.
+  (* apply s_sh. *)
+(* Qed. *)
+Abort.
 
 
 
