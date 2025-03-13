@@ -409,44 +409,44 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
 (* The cases in the triple definition have to be disjoint, meaning one must know exactly what the next outcome is to prove
 
 If there is a program which could be either shift or not, you have to case, then pick the appropriate triple case *)
-Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
-  | sav_base: forall e r f,
+Inductive spec_assert_valid_under penv env : expr -> var -> var -> flow -> Prop :=
+  | sav_base: forall e r rc f,
     (forall s1 s2 h1 h2 v r x e1,
       not (bigstep penv s1 h1 e s2 h2 r (eshft v x e1))) ->
     (forall s1 s2 h1 h2 v,
       bigstep penv s1 h1 e s2 h2 r (enorm v) ->
       satisfies env s1 s2 h1 h2 (norm v) r f) ->
-    spec_assert_valid_under penv env e r f
+    spec_assert_valid_under penv env e r rc f
 
   (* _2 *)
-  | sav_shift: forall e r1 rb f eb fb r,
-    spec_assert_valid_under penv env eb rb fb ->
+  | sav_shift: forall e rb f eb fb r rc rcb,
+    spec_assert_valid_under penv env eb rb rcb fb ->
     (forall s1 s2 h1 h2 v rr,
       not (bigstep penv s1 h1 e s2 h2 rr (enorm v))) ->
     (forall s1 s2 h1 h2, forall k ek,
-      bigstep penv s1 h1 e s2 h2 r1 (eshft (vfun k eb) r ek) ->
-      exists rk fk,
-        spec_assert_valid_under penv env ek rk fk /\
-          satisfies env s1 s2 h1 h2 (shft k fb r fk) r1 f) ->
-    spec_assert_valid_under penv env e r f.
+      bigstep penv s1 h1 e s2 h2 r (eshft (vfun k eb) rc ek) ->
+      exists rk fk rck,
+        spec_assert_valid_under penv env ek rk rck fk /\
+          satisfies env s1 s2 h1 h2 (shft k fb rc fk) r f) ->
+    spec_assert_valid_under penv env e r rc f.
     (* some strangeness here: r is the cont arg for the shift case,
       but the value for the base case *)
 
 Definition env_compatible penv env :=
-  forall e (f:var) x r,
+  forall e (f:var) x r rc,
     Fmap.read penv f = (x, e) ->
     exists f1, Fmap.read env f = (x, r, f1) /\
-    spec_assert_valid_under penv env e r f1.
+    spec_assert_valid_under penv env e r rc f1.
 
 (* this has the env_compatible premise. kept for posterity, for now. *)
-Definition spec_assert_valid_env e r f : Prop :=
+Definition spec_assert_valid_env e r rc f : Prop :=
   forall penv env,
     env_compatible penv env ->
-    spec_assert_valid_under penv env e r f.
+    spec_assert_valid_under penv env e r rc f.
 
-Definition spec_assert_valid e r f : Prop :=
+Definition spec_assert_valid e r rc f : Prop :=
   forall penv env,
-    spec_assert_valid_under penv env e r f.
+    spec_assert_valid_under penv env e r rc f.
 
 Coercion pval : val >-> expr.
 Coercion pvar : var >-> expr.
@@ -479,8 +479,8 @@ Proof.
     admit. }
 Abort. *)
 
-Lemma pvar_sound: forall x,
-  spec_assert_valid (pvar x) x (ens x (fun s => \[True])).
+Lemma pvar_sound: forall x _x,
+  spec_assert_valid (pvar x) x _x (ens x (fun s => \[True])).
 Proof.
   unfold spec_assert_valid. intros.
   applys sav_base.
@@ -495,11 +495,11 @@ Proof.
   fmap_eq.
 Qed.
 
-Lemma pshift_sound: forall r rb r1 k eb fb,
-  spec_assert_valid eb rb fb ->
-  spec_assert_valid (pshift k eb) r (sh k fb r).
+Lemma pshift_sound: forall r rcb rc rb k eb fb,
+  spec_assert_valid eb rb rcb fb ->
+  spec_assert_valid (pshift k eb) r rc (sh k fb rc).
 Proof.
-  unfold spec_assert_valid. intros r rb r1 **.
+  unfold spec_assert_valid. intros r rcb rc rb **.
   specializes H penv0 env.
 
   (* in big step, r is a fresh name.
@@ -539,13 +539,13 @@ Qed.
 
 
 
-Lemma papp_unk_sound: forall penv env (f:var) (v:val) r,
+Lemma papp_unk_sound: forall penv env (f:var) (v:val) r rc,
   forall x e f1,
   Fmap.read penv f = (x, e) ->
   Fmap.read env f = (x, r, f1) ->
-  spec_assert_valid_under penv env e r f1 ->
+  spec_assert_valid_under penv env e r rc f1 ->
 
-  spec_assert_valid_under penv env (papp f v) r (unk f v r).
+  spec_assert_valid_under penv env (papp f v) r rc (unk f v r).
 Proof.
   unfold spec_assert_valid. intros * ? ? He.
   inverts He as.
@@ -582,8 +582,9 @@ Proof.
     intros * Hb.
     inverts Hb as. intros.
     rewrite H in H3. injects H3.
-    specializes He H12. destruct He as (r2&fk&?&?).
-    exists r2 fk.
+    specializes He H12. destruct He as (r2&fk&?&?&?).
+    exs.
+    (* exists r2 fk. *)
     split*.
     applys s_unk.
     eassumption.
@@ -591,9 +592,9 @@ Proof.
     assumption. }
 Qed.
 
-Lemma pval_sound: forall v r,
+Lemma pval_sound: forall v r rc,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
-  spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))).
+  spec_assert_valid (pval v) r rc (fexs r (ens r (fun s => \[Fmap.read s r = v]))).
 Proof.
   unfold spec_assert_valid. intros.
   (* TODO remove these after confirming that they are useless *)
@@ -616,9 +617,9 @@ Proof.
 Qed.
 
 
-Lemma papp_sound: forall x e r (va:val) f,
-  spec_assert_valid e r f ->
-  spec_assert_valid (papp (vfun x e) va) r
+Lemma papp_sound: forall x e r rc (va:val) f,
+  spec_assert_valid e r rc f ->
+  spec_assert_valid (papp (vfun x e) va) r rc
     (fexs x (ens_ (fun s => \[s x = va]);; f)).
 Proof.
   unfold spec_assert_valid.
@@ -659,7 +660,8 @@ Proof.
     intros.
     inverts H as H. injects H.
     specializes He H10. destr He.
-    exists fk. splits*.
+    exs.
+    splits*.
 
     (* applys s_fex_fresh. intros. exists va. *)
     applys s_fexs. exists va.
@@ -708,7 +710,7 @@ Qed. *)
 
 (* let x = 1 in x + 2 *)
 (* ens x=1; ens[r] r=x+2 *)
-Example ex_let:
+(* Example ex_let:
   spec_assert_valid
     (plet "x" (pval (vint 1)) (padd (pval (vint 2)) (pvar "x"))) "r"
     (ens_ (fun s => \[Fmap.read s "x" = (vint 1)]);;
@@ -726,14 +728,14 @@ Proof.
   eapply s_seq.
   eapply s_ens_.
   hintro. *)
-Abort.
+Abort. *)
 
 (* let x = 1 in x + 2 *)
 (* ens x=1; ens[r] r=x+2 *)
 
 (* let x = shift k. k 1 in x + 2 *)
 (* sh(k, k(1, r1), x); ens[r] r=x+2 *)
-Example ex_let_shift:
+(* Example ex_let_shift:
   (* TODO need a premise about the unknown k *)
   spec_assert_valid
     (plet "x" (pshift "k" ((pvar "k") 1)) (padd 2 (pvar "x")))
@@ -757,12 +759,12 @@ Proof.
   eapply s_seq.
   eapply s_ens_.
   hintro. *)
-Abort.
+Abort. *)
 
-Lemma plet_sound: forall x e1 e2 r f1 f2,
-  spec_assert_valid e1 x f1 ->
-  spec_assert_valid e2 r f2 ->
-  spec_assert_valid (plet x e1 e2) r
+Lemma plet_sound: forall x rc1 rc e1 e2 r f1 f2,
+  spec_assert_valid e1 x rc1 f1 ->
+  spec_assert_valid e2 r rc f2 ->
+  spec_assert_valid (plet x e1 e2) r rc
     (f1;; fexs x f2).
     (* (f1;; fex_fresh x (ens_ (fun s => \[Fmap.read s r1 = Fmap.read s x]);; f2)). *)
 Proof.
@@ -808,7 +810,13 @@ Proof.
       { intros * Hb1 Hb2.
         (* the shift is from e2 *)
         specializes He2 Hb2.
-        destruct He2 as (fk&?&?). exists fk. split. assumption.
+        destr He2.
+        (* destruct He2 as (fk&?&?). *)
+        exs.
+
+        (* exists fk. *)
+        split.
+        eassumption.
         specializes He1 Hb1.
         applys s_seq He1.
         applys s_fexs. eexists.
@@ -860,10 +868,17 @@ Proof.
     {
       (* finally, the let-shift case *)
       intros * Hb.
-      specializes He1 Hb.
+      (* exs. *)
+      (* split *)
+      (* TODO prove rc1 = x2 *)
+      forwards: He1.
+      applys_eq Hb.
+      f_equal.
+      (* specializes He1 Hb.
       destruct He1 as (fk&?&?).
-      exists fk.
-      split.
+      exs. split.
+      (* exists fk. *)
+      (* split. *)
       {
         (* the continuation *)
 
@@ -879,7 +894,7 @@ Proof.
         }
 
         admit.
-        }
+        } *)
 
 
     }
