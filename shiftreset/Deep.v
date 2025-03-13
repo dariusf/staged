@@ -689,48 +689,38 @@ Proof.
   intros * He1 He2 penv env.
   specializes He1 penv env.
   specializes He2 penv env.
-  inverts He1 as He1.
-  {
-    (* norm *)
-    apply sav_base.
-    intros.
-    inverts H as H.
-    (* specializes H r1. *)
-    specializes He1 H. clear H.
-    
-    inverts He2 as He2.
+  inverts He1 as.
+  { intros * He1.
+    inverts He2 as.
+    { intros * He2.
+      apply sav_base. intros.
+      inverts H as H.
+      specializes He1 H. clear H.
+      specializes He2 H10. clear H10.
+      applys s_seq He1.
+      applys s_fexs. exists v0.
+      eassumption. }
     {
-      (* sav_base *)
-
-    specializes He2 H10. clear H10.
-
-
-    applys s_seq He1.
-    applys s_fexs. exists v0.
-
-    (* applys s_fex_fresh. intros.
-    exists v0. *)
-    eassumption.
-
-    (* applys s_seq.
-    {
-    applys s_ens_.
-    hintro.
-    f_equal.
-    (* reflexivity. *)
-    admit.
-    admit.
-    admit.
-    (* admit. *)
-    }
-    {
-      admit.
-    } *)
-
-    }
-    {
-      (* the result of the whole let is shift *)
-      admit.
+      intros * Heb He2.
+      (* there is a shift in e2, so the result of the whole let is shift *)
+      applys sav_shift Heb.
+      intros * Hb.
+      inverts Hb as.
+      {
+        (* the shift is from e2 *)
+        intros * Hb1 Hb2.
+        specializes He2 Hb2.
+        destruct He2 as (fk&?&?). exists fk. split. assumption.
+        specializes He1 Hb1.
+        applys s_seq He1.
+        applys s_fexs.
+        exs.
+        eassumption.
+      }
+      {
+        (* the shift is from e1 *)
+        admit.
+      }
     }
 
     (* forwards: H0. *)
@@ -740,14 +730,41 @@ Proof.
     (* applys_eq H1. *)
   }
   {
-    (* result of e1 is shift *)
-    eapply sav_shift.
-    intros.
-    (* inverts H as H. *)
+    intros * Heb He1.
+
+    applys sav_shift Heb. intros.
+    inverts H as.
     {
-admit.
+      (* this case is impossible *)
+      intros.
+      admit.
+    }
+    {
+      intros * Hb.
+      (* forwards: He1. *)
+      (* applys_eq Hb. *)
+
+      (* specializes He1 Hb. *)
+      admit.
+
     }
 
-    admit.
+    (* result of e1 is shift *)
+    (* inverts He2 as He2.
+    { admit. }
+    { admit. } *)
+
+    (* 
+    inverts H as H.
+    {
+      (* e1 is norm, so the shift comes from e2 *)
+      (* unfold spec_assert_valid_under in He2. *)
+      inverts He2 as He2.
+      admit.
+    }
+    {
+      (* e1 is shift *)
+      admit.
+      } *)
   }
 Abort.
