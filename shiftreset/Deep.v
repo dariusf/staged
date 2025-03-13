@@ -833,24 +833,24 @@ Proof.
     (* shift in e1 *)
 
     (* inverts He2 as.
-    {
-      intros He2.
-      applys sav_shift Heb.
-      intros * Hb.
-      inverts Hb as Hb.
       {
-        (* impossible but stuck *)
-        admit. }
-      {
-        (* r0 <> x? *)
-        (* specializes He1 Hb. *)
-        admit.
+        intros He2.
+        applys sav_shift Heb.
+        intros * Hb.
+        inverts Hb as Hb.
+        {
+          (* impossible but stuck *)
+          admit. }
+        {
+          (* r0 <> x? *)
+          (* specializes He1 Hb. *)
+          admit.
+        }
       }
-    }
-    {
-      intros * Hb1 He2.
-      admit.
-    } *)
+      {
+        intros * Hb1 He2.
+        admit.
+      } *)
 
     applys sav_shift Heb.
     {
