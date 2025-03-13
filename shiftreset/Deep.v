@@ -419,16 +419,18 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
     spec_assert_valid_under penv env e r f
 
   (* _2 *)
-  | sav_shift: forall e r1 rb f eb fb,
+  | sav_shift: forall e r1 rb f eb fb r,
     spec_assert_valid_under penv env eb rb fb ->
     (forall s1 s2 h1 h2 v rr,
       not (bigstep penv s1 h1 e s2 h2 rr (enorm v))) ->
-    (forall s1 s2 h1 h2, forall k r ek,
+    (forall s1 s2 h1 h2, forall k ek,
       bigstep penv s1 h1 e s2 h2 r1 (eshft (vfun k eb) r ek) ->
       exists rk fk,
         spec_assert_valid_under penv env ek rk fk /\
           satisfies env s1 s2 h1 h2 (shft k fb r fk) r1 f) ->
-    spec_assert_valid_under penv env e r1 f.
+    spec_assert_valid_under penv env e r f.
+    (* some strangeness here: r is the cont arg for the shift case,
+      but the value for the base case *)
 
 Definition env_compatible penv env :=
   forall e (f:var) x r,
@@ -495,7 +497,7 @@ Qed.
 
 Lemma pshift_sound: forall r rb r1 k eb fb,
   spec_assert_valid eb rb fb ->
-  spec_assert_valid (pshift k eb) r1 (sh k fb r).
+  spec_assert_valid (pshift k eb) r (sh k fb r).
 Proof.
   unfold spec_assert_valid. intros r rb r1 **.
   specializes H penv0 env.
@@ -512,23 +514,28 @@ Proof.
 
   applys sav_shift H. { intros * ?. false_invert H0. }
   intros.
+  (* exs. *)
+  (* intros. *)
   inverts H0 as H0.
-  rename k0 into k.
-  exists r0.
+  (* rename k0 into k. *)
+  (* exists r0. *)
+  (* exists r r0. *)
   exs.
   split.
   apply pvar_sound.
 
   (* apply pvar_sound. *)
   (* apply s_fexs. exists v. *)
-  Fail applys s_sh.
-  applys_eq s_sh.
-  f_equal.
+  (* Fail applys s_sh. *)
+  applys s_sh.
+  Unshelve.
+  exact "anything".
+  (* f_equal. *)
   (* TODO prove r = r0 *)
-  admit.
+  (* admit. *)
   (* apply s_sh. *)
-(* Qed. *)
-Abort.
+Qed.
+(* Abort. *)
 
 
 
