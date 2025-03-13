@@ -434,27 +434,6 @@ Definition spec_assert_valid e r f : Prop :=
   forall penv env,
     spec_assert_valid_under penv env e r f.
 
-(* Inductive spec_assert_valid_old : expr -> var -> flow -> Prop :=
-  | sav_base_old: forall penv env e r f,
-    (forall s1 s2 h1 h2 v x e1,
-      not (bigstep penv s1 h1 e s2 h2 r (eshft v x e1))) ->
-    (forall s1 s2 h1 h2 v,
-      bigstep penv s1 h1 e s2 h2 r (enorm v) ->
-      satisfies env s1 s2 h1 h2 (norm v) r f) ->
-    spec_assert_valid_old e r f
-
-  | sav_shift_old: forall penv env e r r1 f eb fb,
-    spec_assert_valid_old eb r1 fb ->
-    (forall s1 s2 h1 h2 v,
-      not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
-    (forall s1 s2 h1 h2, forall x1 x2 ek,
-      bigstep penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
-      exists fk,
-        spec_assert_valid_old ek r fk /\
-          satisfies env s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
-    spec_assert_valid_old e r f. *)
-
-
 Coercion pval : val >-> expr.
 Coercion pvar : var >-> expr.
 Coercion vint : Z >-> val.
@@ -749,20 +728,17 @@ Proof.
   hintro. *)
 Abort.
 
-Lemma plet_sound: forall x e1 e2 r f1 f2 penv env,
-  (forall y, spec_assert_valid_under penv env e1 y f1) ->
-  spec_assert_valid_under penv env e2 r f2 ->
-  spec_assert_valid_under penv env (plet x e1 e2) r
+Lemma plet_sound: forall x e1 e2 r f1 f2,
+  spec_assert_valid e1 x f1 ->
+  spec_assert_valid e2 r f2 ->
+  spec_assert_valid (plet x e1 e2) r
     (f1;; fexs x f2).
     (* (f1;; fex_fresh x (ens_ (fun s => \[Fmap.read s r1 = Fmap.read s x]);; f2)). *)
 Proof.
-  (* unfold spec_assert_valid_old.
+  unfold spec_assert_valid.
   intros * He1 He2 penv env.
   specializes He1 penv env.
-  specializes He2 penv env. *)
-  intros * He1 He2.
-  pose proof He1 as He3.
-  specializes He1 x.
+  specializes He2 penv env.
   inverts He1 as.
   { intros * Hne1 He1.
     (* no shift in e1 *)
@@ -771,7 +747,7 @@ Proof.
       (* no shift in e2 *)
       (* Abort. *)
 
-      applys sav_base.
+      apply sav_base.
       {
         unfold not. intros.
         inverts H as H.
@@ -782,7 +758,6 @@ Proof.
           (* specializes Hne1 H. *)
           forwards: Hne1.
           applys_eq H.
-          (* reflexivity. *)
           Abort.
 (* 
           (* specializes Hne1 H. Hne1 H. *)
