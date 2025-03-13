@@ -695,9 +695,10 @@ Proof.
   specializes He2 penv env.
   inverts He1 as.
   { intros * He1.
+    (* no shift in e1 *)
     inverts He2 as.
     { intros * He2.
-      (* no shifts anywhere *)
+      (* no shift in e2 *)
       apply sav_base. intros.
       inverts H as H.
       specializes He1 H. clear H.
@@ -726,49 +727,42 @@ Proof.
         admit.
       }
     }
-
-    (* forwards: H0. *)
-    (* applys_eq H12. *)
-
-    (* forwards: H. *)
-    (* applys_eq H1. *)
   }
-  {
-    intros * Heb He1.
+  { intros * Heb He1.
+    (* shift in e1 *)
+
+    (* inverts He2 as.
+    {
+      intros He2.
+      applys sav_shift Heb.
+      intros * Hb.
+      inverts Hb as Hb.
+      {
+        (* impossible but stuck *)
+        admit. }
+      {
+        (* r0 <> x? *)
+        (* specializes He1 Hb. *)
+        admit.
+      }
+    }
+    {
+      intros * Hb1 He2.
+      admit.
+    } *)
 
     applys sav_shift Heb. intros.
     inverts H as.
     {
       (* this case is impossible *)
-      intros.
+      intros * Hb1 Hb2.
+      (* we're stuck because we can't use Hb1 *)
       admit.
     }
     {
       intros * Hb.
-      (* forwards: He1. *)
-      (* applys_eq Hb. *)
-
       (* specializes He1 Hb. *)
-      admit.
-
-    }
-
-    (* result of e1 is shift *)
-    (* inverts He2 as He2.
-    { admit. }
-    { admit. } *)
-
-    (* 
-    inverts H as H.
-    {
-      (* e1 is norm, so the shift comes from e2 *)
-      (* unfold spec_assert_valid_under in He2. *)
-      inverts He2 as He2.
+      (* r0 <> x *)
       admit.
     }
-    {
-      (* e1 is shift *)
-      admit.
-      } *)
-  }
 Abort.
