@@ -693,6 +693,7 @@ Proof.
   { intros * He1.
     inverts He2 as.
     { intros * He2.
+      (* no shifts anywhere *)
       apply sav_base. intros.
       inverts H as H.
       specializes He1 H. clear H.
@@ -700,25 +701,24 @@ Proof.
       applys s_seq He1.
       applys s_fexs. exists v0.
       eassumption. }
-    {
-      intros * Heb He2.
-      (* there is a shift in e2, so the result of the whole let is shift *)
-      applys sav_shift Heb.
-      intros * Hb.
+    { intros * Heb He2.
+      (* no shift in e1, shift in e2,
+        so the result of the whole let is shift *)
+      applys sav_shift Heb. intros * Hb.
       inverts Hb as.
-      {
+      { intros * Hb1 Hb2.
         (* the shift is from e2 *)
-        intros * Hb1 Hb2.
         specializes He2 Hb2.
         destruct He2 as (fk&?&?). exists fk. split. assumption.
         specializes He1 Hb1.
         applys s_seq He1.
-        applys s_fexs.
-        exs.
+        applys s_fexs. eexists.
         eassumption.
       }
       {
-        (* the shift is from e1 *)
+        intros * Hb1.
+        (* the shift is from e1, which is impossible *)
+        (* stuck, because we can't use He1 *)
         admit.
       }
     }
