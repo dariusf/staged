@@ -343,16 +343,17 @@ Inductive satisfies : senv -> store -> store -> heap -> heap -> result -> var ->
     (H: satisfies s1 s2 h1 h2 R f2) :
     satisfies s1 s2 h1 h2 R (disj f1 f2) *)
 
-  | s_sh : forall env s1 h1 x shb r,
+  | s_sh : forall env s1 h1 x shb r r1,
     satisfies env s1 s1 h1 h1
-      (shft x shb r (ens r (fun _ => \[True]))) r
+      (shft x shb r (ens r (fun _ => \[True])))
+      r1
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
       (sh x shb r)
 
-  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r r1 fk1,
+  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r r1 r2 fk1,
     fk1 = fk;; f2 ->
-    satisfies env s1 s2 h1 h2 (shft k shb r1 fk) r f1 ->
-    satisfies env s1 s2 h1 h2 (shft k shb r1 fk1) r (f1;; f2)
+    satisfies env s1 s2 h1 h2 (shft k shb r2 fk) r1 f1 ->
+    satisfies env s1 s2 h1 h2 (shft k shb r2 fk1) r (f1;; f2)
 
     (* TODO no constructive shift free yet *)
     (* satisfies env s1 s2 h1 h2 (shft k shb r1 (rs fk r1)) r f1 -> *)
@@ -417,11 +418,11 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
     spec_assert_valid_under penv env eb r1 fb ->
     (forall s1 s2 h1 h2 v r,
       not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
-    (forall s1 s2 h1 h2, forall x1 x2 ek,
-      bigstep penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
-      exists x3 fk,
+    (forall s1 s2 h1 h2, forall r1 x1 x2 ek,
+      bigstep penv s1 h1 e s2 h2 r1 (eshft (vfun x1 eb) x2 ek) ->
+      exists r2 fk,
         spec_assert_valid_under penv env ek r fk /\
-          satisfies env s1 s2 h1 h2 (shft x1 fb x3 fk) r f) ->
+          satisfies env s1 s2 h1 h2 (shft x1 fb r2 fk) r1 f) ->
     spec_assert_valid_under penv env e r f.
 
 Definition env_compatible penv env :=
@@ -471,6 +472,49 @@ Proof.
     admit. }
 Abort. *)
 
+Lemma pvar_sound: forall x,
+  spec_assert_valid (pvar x) x (ens x (fun s => \[True])).
+Proof.
+  unfold spec_assert_valid. intros.
+  applys sav_base.
+  {
+    unfold not. intros.
+    false_invert H.
+  }
+  intros.
+  inverts H as H. (* eval_pvar *)
+  applys* s_ens.
+  hintro. constructor.
+  fmap_eq.
+Qed.
+
+Lemma pshift_sound: forall k eb r r1 r2 fb,
+  (* spec_assert (pshift k eb) r (fexs r (sh k fb r)) -> *)
+  spec_assert_valid eb r1 fb ->
+  spec_assert_valid (pshift k eb) r2 (fexs r (sh k fb r)).
+Proof.
+  unfold spec_assert_valid.
+  intros.
+  (* also useless? *)
+  (* inverts H as H. *)
+  (* clear H. *)
+  applys sav_shift H. { intros * ?. false_invert H0. }
+  intros.
+  (* eval_pshift *)
+  (* invert H. *)
+  inverts H0 as H0.
+  (* exists fb. *)
+  exs.
+  split.
+  applys_eq pvar_sound.
+
+  apply pvar_sound.
+  apply s_fexs. exists v.
+  (* applys_eq s_sh. *)
+  apply s_sh.
+Qed.
+
+
 
 Lemma papp_unk_sound: forall penv env (f:var) (v:val) r,
   forall x e f1,
@@ -515,8 +559,8 @@ Proof.
     intros * Hb.
     inverts Hb as. intros.
     rewrite H in H3. injects H3.
-    specializes He H12. destr He.
-    exists x3 fk.
+    specializes He H12. destruct He as (r2&fk&?&?).
+    exists r2 fk.
     split*.
     applys s_unk.
     eassumption.
@@ -545,22 +589,6 @@ Proof.
   resolve_fn_in_env.
   (* rewrite* update_update_idem. *)
   hintro. resolve_fn_in_env.
-  fmap_eq.
-Qed.
-
-Lemma pvar_sound: forall x,
-  spec_assert_valid (pvar x) x (ens x (fun s => \[True])).
-Proof.
-  unfold spec_assert_valid. intros.
-  applys sav_base.
-  {
-    unfold not. intros.
-    false_invert H.
-  }
-  intros.
-  inverts H as H. (* eval_pvar *)
-  applys* s_ens.
-  hintro. constructor.
   fmap_eq.
 Qed.
 
@@ -608,7 +636,7 @@ Proof.
     intros.
     inverts H as H. injects H.
     specializes He H10. destr He.
-    exists x3 fk. splits*.
+    exists fk. splits*.
 
     (* applys s_fex_fresh. intros. exists va. *)
     applys s_fexs. exists va.
@@ -652,32 +680,6 @@ Proof.
   exs.
   applys_eq s_sh.
 Qed. *)
-
-Lemma pshift_sound: forall k eb r r1 fb,
-  (* spec_assert (pshift k eb) r (fexs r (sh k fb r)) -> *)
-  spec_assert_valid eb r1 fb ->
-  spec_assert_valid (pshift k eb) r (fexs r (sh k fb r)).
-Proof.
-  unfold spec_assert_valid.
-  intros.
-  (* also useless? *)
-  (* inverts H as H. *)
-  (* clear H. *)
-  applys sav_shift H.
-  { unfold not. intros.
-    false_invert H0. }
-  intros.
-  (* eval_pshift *)
-  (* invert H. *)
-  inverts H0 as H0.
-  (* exists fb. *)
-  exs.
-  split.
-  apply pvar_sound.
-  apply s_fexs. exists v.
-  (* applys_eq s_sh. *)
-  apply s_sh.
-Qed.
 
 (* TODO need a var rule basically *)
 
@@ -783,7 +785,7 @@ Proof.
       { intros * Hb1 Hb2.
         (* the shift is from e2 *)
         specializes He2 Hb2.
-        destruct He2 as (x3&fk&?&?). exists x3 fk. split. assumption.
+        destruct He2 as (fk&?&?). exists fk. split. assumption.
         specializes He1 Hb1.
         applys s_seq He1.
         applys s_fexs. eexists.
@@ -836,8 +838,8 @@ Proof.
       (* finally, the let-shift case *)
       intros * Hb.
       specializes He1 Hb.
-      destruct He1 as (x3&fk&?&?).
-      exists x3 fk.
+      destruct He1 as (fk&?&?).
+      exists fk.
       split.
       {
         (* the continuation *)
@@ -845,9 +847,11 @@ Proof.
         admit.
         }
       {
-        applys s_seq_sh.
+        applys s_seq_sh fk.
         2: {
+          (* applys H0. *)
           applys_eq H0.
+          (* reflexivity. *)
 
         }
 
