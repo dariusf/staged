@@ -401,14 +401,12 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
 Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
   | sav_base: forall e r f,
     (forall s1 s2 h1 h2 v,
-      (* env_compatible penv env -> *)
       bigstep penv s1 h1 e s2 h2 r (enorm v) ->
       satisfies env s1 s2 h1 h2 (norm v) r f) ->
     spec_assert_valid_under penv env e r f
 
   | sav_shift: forall e r r1 f eb fb,
     spec_assert_valid_under penv env eb r1 fb ->
-    (forall s1 s2 h1 h2 v, not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
     (forall s1 s2 h1 h2, forall x1 x2 ek,
       bigstep penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
       exists fk,
@@ -436,36 +434,76 @@ Definition store_read s x : val := Fmap.read s x.
 Coercion store_read : store >-> Funclass.
 Coercion papp : expr >-> Funclass.
 
-Lemma papp_unk_sound: forall (f:var) (v:val) r,
+Lemma papp_unk_sound: forall penv env (f:var) (v:val) r,
   (* spec_assert_valid e r f -> *)
   (* (forall p env, env_compatible p env) -> *)
   (* TODO expose the env in assertion below? then can talk about the concrete bindings *)
-  spec_assert_valid (papp f v) r (unk f v r).
-Proof.
-  unfold spec_assert_valid. intros * Henv.
+  forall x e f1,
+  Fmap.read penv f = (x, e) ->
+  Fmap.read env f = (x, r, f1) ->
+  spec_assert_valid_under penv env e r f1 ->
 
+  spec_assert_valid_under penv env (papp f v) r (unk f v r).
+Proof.
+  unfold spec_assert_valid. intros * ? ? He.
+
+  inverts He as.
+  {
+    intros He.
+
+  (* unfold spec_assert_valid. intros. *)
   (* unfold env_compatible in Henv. *)
 
   (* eval_papp_unk *)
-  applys sav_base. intros.
-  inverts H as H.
+  applys sav_base. intros * Hb.
+  inverts Hb as. intros * ? Hb.
+
+  rewrite H in H3. injects H3.
+  specializes He Hb.
 
   (* assert (env_compatible penv0 env) as ?. admit. *)
-  unfold env_compatible in Henv.
+  (* unfold env_compatible in Henv.
   specializes Henv r H.
-  destr Henv.
+  destr Henv. *)
+
+  (* specializes He H12. *)
 
   (* applys s_fexs. exists v0. *)
   applys s_unk.
   eassumption.
   reflexivity.
+  (* apply He. *)
+  assumption.
+  }
 
-  inverts H2 as H2.
+  {
+    intros * Heb He.
+
+    applys sav_shift Heb. intros * Hb.
+    inverts Hb as. intros.
+    rewrite H in H3. injects H3.
+
+    (* forwards: He.
+    applys_eq H12. *)
+
+    specializes He H12.
+
+    (* inverts Hb as. intros * ? Hb. *)
+    destr He.
+    exists fk.
+    split. assumption.
+    applys s_unk.
+    eassumption.
+    reflexivity.
+    assumption.
+  }
+
+  (* inverts H2 as H2.
   {
     specializes H2 H10.
     applys_eq H2.
   }
-  { false H0 H10. }
+  { false H0 H10. } *)
 
   (* TODO why does it not work for shift? *)
   (* TODO need to put in the env compat assumption *)
