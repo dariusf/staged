@@ -815,7 +815,7 @@ Proof.
 
     applys sav_shift Heb.
     {
-      unfold not. intros.
+      intros * H.
       inverts H as H.
       false Hne1 H.
     }
@@ -834,8 +834,12 @@ Proof.
       exists fk.
       split.
 
+      {
+
+        admit.
+        }
       { admit. }
-      { admit. }
+
 
     }
 Abort.
