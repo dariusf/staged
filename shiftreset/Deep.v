@@ -349,12 +349,18 @@ Inductive satisfies : senv -> store -> store -> heap -> heap -> result -> var ->
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
       (sh x shb r)
 
+  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r r1 fk1,
+    fk1 = fk;; f2 ->
+    satisfies env s1 s2 h1 h2 (shft k shb r1 fk) r f1 ->
+    satisfies env s1 s2 h1 h2 (shft k shb r1 fk1) r (f1;; f2)
+
+    (* TODO no constructive shift free yet *)
+    (* satisfies env s1 s2 h1 h2 (shft k shb r1 (rs fk r1)) r f1 -> *)
+    (* satisfies env s1 s2 h1 h2 (shft k shb r1 (rs (fk;; f2) r1)) r (f1;; f2) *)
+
   (*
     (** A [sh] on its own reduces to a [shft] containing an identity continuation. *)
 
-  | s_seq_sh s1 s2 f1 f2 fk h1 h2 shb k (v:val) :
-    satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs fk r1)) f1 ->
-    satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs (fk;; f2) r1)) (f1;; f2)
     (** This rule extends the continuation in a [shft] on the left side of a [seq]. Notably, it moves whatever comes next #<i>under the reset</i>#, preserving shift-freedom by constructon. *)
 
   | s_rs_sh s1 s2 f h1 h2 r rf s3 h3 fb fk k v1 :
@@ -413,9 +419,9 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
       not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
     (forall s1 s2 h1 h2, forall x1 x2 ek,
       bigstep penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
-      exists fk,
+      exists x3 fk,
         spec_assert_valid_under penv env ek r fk /\
-          satisfies env s1 s2 h1 h2 (shft x1 fb x2 fk) r f) ->
+          satisfies env s1 s2 h1 h2 (shft x1 fb x3 fk) r f) ->
     spec_assert_valid_under penv env e r f.
 
 Definition env_compatible penv env :=
@@ -510,7 +516,7 @@ Proof.
     inverts Hb as. intros.
     rewrite H in H3. injects H3.
     specializes He H12. destr He.
-    exists fk.
+    exists x3 fk.
     split*.
     applys s_unk.
     eassumption.
@@ -602,7 +608,7 @@ Proof.
     intros.
     inverts H as H. injects H.
     specializes He H10. destr He.
-    exists fk. splits*.
+    exists x3 fk. splits*.
 
     (* applys s_fex_fresh. intros. exists va. *)
     applys s_fexs. exists va.
@@ -777,7 +783,7 @@ Proof.
       { intros * Hb1 Hb2.
         (* the shift is from e2 *)
         specializes He2 Hb2.
-        destruct He2 as (fk&?&?). exists fk. split. assumption.
+        destruct He2 as (x3&fk&?&?). exists x3 fk. split. assumption.
         specializes He1 Hb1.
         applys s_seq He1.
         applys s_fexs. eexists.
@@ -830,15 +836,23 @@ Proof.
       (* finally, the let-shift case *)
       intros * Hb.
       specializes He1 Hb.
-      destruct He1 as (fk&?&?).
-      exists fk.
+      destruct He1 as (x3&fk&?&?).
+      exists x3 fk.
       split.
-
       {
+        (* the continuation *)
 
         admit.
         }
-      { admit. }
+      {
+        applys s_seq_sh.
+        2: {
+          applys_eq H0.
+
+        }
+
+        admit.
+        }
 
 
     }
