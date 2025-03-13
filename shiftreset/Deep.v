@@ -740,14 +740,32 @@ Proof.
   specializes He1 penv env.
   specializes He2 penv env.
   inverts He1 as.
-  { intros * He1.
+  { intros * Hne1 He1.
     (* no shift in e1 *)
     inverts He2 as.
-    { intros * He2.
+    { intros * Hne2 He2.
       (* no shift in e2 *)
-      Abort.
+      (* Abort. *)
 
-      (* apply sav_base. intros.
+      apply sav_base.
+      {
+        unfold not. intros.
+        inverts H as H.
+        { false Hne2 H10. }
+        {
+          unfold not in Hne1.
+          (* x <> r0 problem *)
+          (* specializes Hne1 H. *)
+          forwards: Hne1.
+          applys_eq H.
+          Abort.
+(* 
+          (* specializes Hne1 H. Hne1 H. *)
+          admit.
+          }
+
+      }
+      intros.
       inverts H as H.
       specializes He1 H. clear H.
       specializes He2 H10. clear H10.
