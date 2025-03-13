@@ -400,8 +400,8 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
 
 Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
   | sav_base: forall e r f,
-    (* (forall s1 s2 h1 h2 v x e1,
-      not (bigstep penv s1 h1 e s2 h2 r (eshft v x e1))) -> *)
+    (forall s1 s2 h1 h2 v x e1,
+      not (bigstep penv s1 h1 e s2 h2 r (eshft v x e1))) ->
     (forall s1 s2 h1 h2 v,
       bigstep penv s1 h1 e s2 h2 r (enorm v) ->
       satisfies env s1 s2 h1 h2 (norm v) r f) ->
@@ -446,7 +446,8 @@ Coercion papp : expr >-> Funclass.
   the problem with this is we have to split on something before we know
   whether to use [sav_base] or [sav_shift]. here we only get that
   something after using [sav_base]. *)
-Lemma papp_unk_sound_fail: forall (f:var) (v:val) r,
+
+(* Lemma papp_unk_sound_fail: forall (f:var) (v:val) r,
   spec_assert_valid_env (papp f v) r (unk f v r).
 Proof.
   unfold spec_assert_valid_env. intros * Henv.
@@ -462,7 +463,7 @@ Proof.
   { (* cannot be proved.
       we have to have used sav_shift earlier. *)
     admit. }
-Abort.
+Abort. *)
 
 
 Lemma papp_unk_sound: forall penv env (f:var) (v:val) r,
@@ -475,9 +476,23 @@ Lemma papp_unk_sound: forall penv env (f:var) (v:val) r,
 Proof.
   unfold spec_assert_valid. intros * ? ? He.
   inverts He as.
-  { intros He.
+  { intros Hne He.
     (* eval_papp_unk *)
-    applys sav_base. intros * Hb.
+    applys sav_base.
+    {
+      intros.
+      unfold not. intros.
+      inverts H1 as H1.
+      rewrite H in H1. injects H1.
+      unfold not in Hne.
+      specializes Hne H12.
+      false.
+      (* forwards: Hne. *)
+      (* applys_eq H12. *)
+
+    }
+
+    intros * Hb.
     inverts Hb as. intros * ? Hb.
     rewrite H in H3. injects H3.
     specializes He Hb.
@@ -507,7 +522,12 @@ Proof.
   (* useless, value case must be proved entirely using semantics *)
   (* inverts H. *)
   (* clear H. *)
-  applys sav_base. intros.
+  applys sav_base.
+  {
+    unfold not. intros.
+    false_invert H.
+  }
+  intros.
   inverts H as H. (* eval_pval *)
   apply s_fexs. exists v0.
   applys* s_ens.
@@ -521,7 +541,12 @@ Lemma pvar_sound: forall x,
   spec_assert_valid (pvar x) x (ens x (fun s => \[True])).
 Proof.
   unfold spec_assert_valid. intros.
-  applys sav_base. intros.
+  applys sav_base.
+  {
+    unfold not. intros.
+    false_invert H.
+  }
+  intros.
   inverts H as H. (* eval_pvar *)
   applys* s_ens.
   hintro. constructor.
@@ -538,9 +563,16 @@ Proof.
   intros * He penv env.
   specializes He penv env.
   (* eval_papp_fun *)
-  inverts He as He.
-  { (* no shift in the body of the fn being applied *)
-    applys sav_base. intros.
+  inverts He as.
+  { intros Hne He.
+    (* no shift in the body of the fn being applied *)
+    applys sav_base.
+    {
+      unfold not. intros.
+      inverts H as H. injects H.
+      false Hne H10.
+    }
+    intros.
     inverts H as H. injects H.
     specializes He H10. clear H10.
     (* applys s_fex_fresh. intros. exists va. *)
@@ -554,10 +586,11 @@ Proof.
     (* this is due to the ens_ variable being unconstrained *)
   }
   {
+    intros * Heb He.
     (* shift *)
-    applys sav_shift He. intros.
+    applys sav_shift Heb. intros.
     inverts H as H. injects H.
-    specializes H0 H11. destr H0.
+    specializes He H10. destr He.
     exists fk. splits*.
 
     (* applys s_fex_fresh. intros. exists va. *)
