@@ -752,18 +752,9 @@ Proof.
         unfold not. intros.
         inverts H as H.
         { false Hne2 H10. }
-        {
-          unfold not in Hne1.
-          (* x <> r0 problem *)
-          (* specializes Hne1 H. *)
-          forwards: Hne1.
-          applys_eq H.
-          Abort.
-(* 
+        { false Hne1 H. }
+          (* Abort. *)
           (* specializes Hne1 H. Hne1 H. *)
-          admit.
-          }
-
       }
       intros.
       inverts H as H.
@@ -772,10 +763,16 @@ Proof.
       applys s_seq He1.
       applys s_fexs. exists v0.
       eassumption. }
-    { intros * Heb He2.
+    { intros * Heb Hne2 He2.
       (* no shift in e1, shift in e2,
         so the result of the whole let is shift *)
-      applys sav_shift Heb. intros * Hb.
+      applys sav_shift Heb.
+      {
+        unfold not. intros.
+        inverts H as H.
+        { false Hne2 H10. }
+      }
+      intros * Hb.
       inverts Hb as.
       { intros * Hb1 Hb2.
         (* the shift is from e2 *)
@@ -789,12 +786,11 @@ Proof.
       {
         intros * Hb1.
         (* the shift is from e1, which is impossible *)
-        (* stuck, because we can't use He1 *)
-        admit.
+        false Hne1 Hb1.
       }
     }
   }
-  { intros * Heb He1.
+  { intros * Heb Hne1 He1.
     (* shift in e1 *)
 
     (* inverts He2 as.
@@ -817,7 +813,13 @@ Proof.
       admit.
     } *)
 
-    applys sav_shift Heb. intros.
+    applys sav_shift Heb.
+    {
+      unfold not. intros.
+      inverts H as H.
+      false Hne1 H.
+    }
+    intros.
     inverts H as.
     {
       (* this case is impossible *)
@@ -831,4 +833,4 @@ Proof.
       (* r0 <> x *)
       admit.
     }
-Abort. *)
+Abort.
