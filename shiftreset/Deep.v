@@ -419,11 +419,15 @@ Definition env_compatible penv env :=
     Fmap.read penv f = (x, e) ->
     exists f1, Fmap.read env f = (x, r, f1) /\
     spec_assert_valid_under penv env e r f1.
-    (* pair_valid_under penv env (e x) (f1 x v). *)
+
+(* this has the env_compatible premise. kept for posterity, for now. *)
+Definition spec_assert_valid_env e r f : Prop :=
+  forall penv env,
+    env_compatible penv env ->
+    spec_assert_valid_under penv env e r f.
 
 Definition spec_assert_valid e r f : Prop :=
   forall penv env,
-    env_compatible penv env ->
     spec_assert_valid_under penv env e r f.
 
 Coercion pval : val >-> expr.
@@ -434,10 +438,30 @@ Definition store_read s x : val := Fmap.read s x.
 Coercion store_read : store >-> Funclass.
 Coercion papp : expr >-> Funclass.
 
+(* trying to use env_compatible, like in the HO work.
+  the problem with this is we have to split on something before we know
+  whether to use [sav_base] or [sav_shift]. here we only get that
+  something after using [sav_base]. *)
+Lemma papp_unk_sound_fail: forall (f:var) (v:val) r,
+  spec_assert_valid_env (papp f v) r (unk f v r).
+Proof.
+  unfold spec_assert_valid_env. intros * Henv.
+  applys sav_base. intros * Hb.
+  inverts Hb as Hb.
+  specializes Henv Hb. destr Henv.
+  applys s_unk.
+  eassumption.
+  reflexivity.
+  inverts H1 as H1.
+  { specializes H1 H10.
+    assumption. }
+  { (* cannot be proved.
+      we have to have used sav_shift earlier. *)
+    admit. }
+Abort.
+
+
 Lemma papp_unk_sound: forall penv env (f:var) (v:val) r,
-  (* spec_assert_valid e r f -> *)
-  (* (forall p env, env_compatible p env) -> *)
-  (* TODO expose the env in assertion below? then can talk about the concrete bindings *)
   forall x e f1,
   Fmap.read penv f = (x, e) ->
   Fmap.read env f = (x, r, f1) ->
@@ -446,82 +470,40 @@ Lemma papp_unk_sound: forall penv env (f:var) (v:val) r,
   spec_assert_valid_under penv env (papp f v) r (unk f v r).
 Proof.
   unfold spec_assert_valid. intros * ? ? He.
-
   inverts He as.
-  {
-    intros He.
-
-  (* unfold spec_assert_valid. intros. *)
-  (* unfold env_compatible in Henv. *)
-
-  (* eval_papp_unk *)
-  applys sav_base. intros * Hb.
-  inverts Hb as. intros * ? Hb.
-
-  rewrite H in H3. injects H3.
-  specializes He Hb.
-
-  (* assert (env_compatible penv0 env) as ?. admit. *)
-  (* unfold env_compatible in Henv.
-  specializes Henv r H.
-  destr Henv. *)
-
-  (* specializes He H12. *)
-
-  (* applys s_fexs. exists v0. *)
-  applys s_unk.
-  eassumption.
-  reflexivity.
-  (* apply He. *)
-  assumption.
-  }
-
-  {
-    intros * Heb He.
-
-    applys sav_shift Heb. intros * Hb.
-    inverts Hb as. intros.
+  { intros He.
+    (* eval_papp_unk *)
+    applys sav_base. intros * Hb.
+    inverts Hb as. intros * ? Hb.
     rewrite H in H3. injects H3.
-
-    (* forwards: He.
-    applys_eq H12. *)
-
-    specializes He H12.
-
-    (* inverts Hb as. intros * ? Hb. *)
-    destr He.
-    exists fk.
-    split. assumption.
+    specializes He Hb.
     applys s_unk.
     eassumption.
     reflexivity.
-    assumption.
-  }
-
-  (* inverts H2 as H2.
-  {
-    specializes H2 H10.
-    applys_eq H2.
-  }
-  { false H0 H10. } *)
-
-  (* TODO why does it not work for shift? *)
-  (* TODO need to put in the env compat assumption *)
-  (* the known-function case has the answer: need constraint on the body to split against *)
+    assumption. }
+  { intros * Heb He.
+    applys sav_shift Heb. intros * Hb.
+    inverts Hb as. intros.
+    rewrite H in H3. injects H3.
+    specializes He H12. destr He.
+    exists fk.
+    split*.
+    applys s_unk.
+    eassumption.
+    reflexivity.
+    assumption. }
 Qed.
-(* Abort. *)
 
 Lemma pval_sound: forall v r,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
   spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))).
 Proof.
-  intros.
+  unfold spec_assert_valid. intros.
   (* TODO remove these after confirming that they are useless *)
   (* useless, value case must be proved entirely using semantics *)
   (* inverts H. *)
   (* clear H. *)
-  applys sav_base.
-  intros.
+  applys sav_base. intros.
   inverts H as H. (* eval_pval *)
   apply s_fexs. exists v0.
   applys* s_ens.
@@ -534,7 +516,7 @@ Qed.
 Lemma pvar_sound: forall x,
   spec_assert_valid (pvar x) x (ens x (fun s => \[True])).
 Proof.
-  intros.
+  unfold spec_assert_valid. intros.
   applys sav_base. intros.
   inverts H as H. (* eval_pvar *)
   applys* s_ens.
@@ -548,7 +530,9 @@ Lemma papp_sound: forall x e r (va:val) f,
   spec_assert_valid (papp (vfun x e) va) r
     (fexs x (ens_ (fun s => \[s x = va]);; f)).
 Proof.
-  intros * He.
+  unfold spec_assert_valid.
+  intros * He penv env.
+  specializes He penv env.
   (* eval_papp_fun *)
   inverts He as He.
   { (* no shift in the body of the fn being applied *)
@@ -620,6 +604,7 @@ Lemma pshift_sound: forall k eb r r1 fb,
   spec_assert_valid eb r1 fb ->
   spec_assert_valid (pshift k eb) r (fexs r (sh k fb r)).
 Proof.
+  unfold spec_assert_valid.
   intros.
   (* also useless? *)
   (* inverts H as H. *)
@@ -648,7 +633,7 @@ Example ex_let:
     (ens_ (fun s => \[Fmap.read s "x" = (vint 1)]);;
       ens "r" (fun s => \[exists v, vint v = Fmap.read s "x" /\ Fmap.read s "r" = (vint (v + 2))])).
 Proof.
-  apply sav_base.
+  (* apply sav_base.
   intros.
   inverts H as H.
   specializes H "x".
@@ -659,7 +644,7 @@ Proof.
 
   eapply s_seq.
   eapply s_ens_.
-  hintro.
+  hintro. *)
 Abort.
 
 (* let x = 1 in x + 2 *)
@@ -677,8 +662,8 @@ Example ex_let_shift:
     (* (ens_ (fun s => \[s "x" = 1]);;
       ens "r" (fun s => \[exists v, vint v = s "x" /\ s "r" = (v + 2)])). *)
 Proof.
-  eapply sav_shift.
-  intros.
+  (* eapply sav_shift. *)
+  (* intros. *)
 
   (* inverts H as H.
   specializes H "x".
@@ -700,7 +685,10 @@ Lemma plet_sound: forall x e1 e2 r f1 f2,
     (f1;; fexs x f2).
     (* (f1;; fex_fresh x (ens_ (fun s => \[Fmap.read s r1 = Fmap.read s x]);; f2)). *)
 Proof.
-  intros * He1 He2.
+  unfold spec_assert_valid.
+  intros * He1 He2 penv env.
+  specializes He1 penv env.
+  specializes He2 penv env.
   inverts He1 as He1.
   {
     (* norm *)
