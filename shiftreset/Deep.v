@@ -409,8 +409,8 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
 
   | sav_shift: forall e r r1 f eb fb,
     spec_assert_valid_under penv env eb r1 fb ->
-    (* (forall s1 s2 h1 h2 v,
-      not (bigstep penv s1 h1 e s2 h2 r (enorm v))) -> *)
+    (forall s1 s2 h1 h2 v,
+      not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
     (forall s1 s2 h1 h2, forall x1 x2 ek,
       bigstep penv s1 h1 e s2 h2 r (eshft (vfun x1 eb) x2 ek) ->
       exists fk,
@@ -500,8 +500,13 @@ Proof.
     eassumption.
     reflexivity.
     assumption. }
-  { intros * Heb He.
-    applys sav_shift Heb. intros * Hb.
+  { intros * Heb Hne He.
+    applys sav_shift Heb.
+    { unfold not. intros.
+      inverts H1 as H1.
+      rewrite H in H1. injects H1.
+      false Hne H12. }
+    intros * Hb.
     inverts Hb as. intros.
     rewrite H in H3. injects H3.
     specializes He H12. destr He.
@@ -586,9 +591,15 @@ Proof.
     (* this is due to the ens_ variable being unconstrained *)
   }
   {
-    intros * Heb He.
+    intros * Heb Hne He.
     (* shift *)
-    applys sav_shift Heb. intros.
+    applys sav_shift Heb.
+    {
+      unfold not. intros.
+      inverts H as H. injects H.
+      false Hne H10.
+    }
+    intros.
     inverts H as H. injects H.
     specializes He H10. destr He.
     exists fk. splits*.
@@ -647,6 +658,8 @@ Proof.
   (* inverts H as H. *)
   (* clear H. *)
   applys sav_shift H.
+  { unfold not. intros.
+    false_invert H0. }
   intros.
   (* eval_pshift *)
   (* invert H. *)
@@ -732,7 +745,9 @@ Proof.
     inverts He2 as.
     { intros * He2.
       (* no shift in e2 *)
-      apply sav_base. intros.
+      Abort.
+
+      (* apply sav_base. intros.
       inverts H as H.
       specializes He1 H. clear H.
       specializes He2 H10. clear H10.
@@ -798,4 +813,4 @@ Proof.
       (* r0 <> x *)
       admit.
     }
-Abort.
+Abort. *)
