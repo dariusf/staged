@@ -2,6 +2,91 @@
 From ShiftReset Require Import Logic Automation.
 Local Open Scope string_scope.
 
+Module Multi.
+
+Definition f : ufun := fun _ r3 =>
+    ∃ r,
+  rs (
+    sh "k" (
+      ∃ r1, unk "k" (vbool true) (vint r1);;
+      ∃ r2, unk "k" (vbool false) (vint r2);;
+      ens (fun r => \[r = vint (r1 + r2)])) r;;
+      ens_ \[r3 = r]) r3.
+
+Lemma norm_seq_ex_widen : forall f1 A (fctx:A -> flow),
+  shift_free f1 ->
+  entails (f1;; (∃ b, fctx b))
+    (∃ b, f1;; (fctx b)).
+Proof.
+  unfold entails. intros * Hsf * H.
+  inverts H as H1 H2.
+  { inverts H2 as (b&H2).
+    apply s_fex. exists b.
+    applys s_seq H1 H2. }
+  { false Hsf H1. }
+Qed.
+
+Lemma norm_rs_seq_ex_l : forall f1 A (fctx:A -> flow) r,
+  shift_free f1 ->
+  entails (rs (f1;; (∃ b, fctx b)) r)
+    (∃ b, rs (f1;; (fctx b)) r).
+Proof.
+  intros.
+  rewrite norm_seq_ex_widen.
+  2: { assumption. }
+  lets H1: norm_rs_ex.
+  specializes H1 A (fun b => f1;; fctx b).
+Qed.
+
+Lemma f_reduction: forall v1 v2, exists f1,
+  entails_under empty_env (f v1 v2) (f1;; ens_ \[True]).
+Proof.
+  intros.
+  exists (∃ r,
+    defun "k"
+    (fun a r0 => rs (ens_ \[r = a];; (ens (fun r1 => \[r1 = r]));; ens_ \[v2 = r]) r0)).
+  unfold f.
+  fintro r.
+  rewrite red_init.
+  rewrite red_acc.
+
+  rewrite red_shift_elim.
+  apply ent_seq_ex_r. { intros. shiftfree. }
+  exists r.
+  apply ent_seq_defun.
+
+  rewrite norm_rs_ex. fintro r1.
+
+  match goal with
+  | |- entails_under ?env _ _ =>
+    rewrite (@ent_unk env "k")
+  end.
+  2: { resolve_fn_in_env. }
+  simpl.
+
+  (* TODO this loses conditions on r1 *)
+  rewrites (>> red_normal (vint r1)). { shiftfree. }
+
+  rewrite norm_rs_seq_ex_l.
+  2: { shiftfree. }
+  fintro r2.
+
+  match goal with
+  | |- entails_under ?env _ _ =>
+    rewrite (@ent_unk env "k")
+  end.
+  2: { resolve_fn_in_env. }
+  simpl.
+
+  rewrites (>> red_normal (vint r2)). { shiftfree. }
+  rewrites (>> red_normal v2). { shiftfree. }
+  (* TODO both true and false *)
+
+  Abort.
+(* Qed. *)
+
+End Multi.
+
 Module Toss.
 
 (* let s() =
