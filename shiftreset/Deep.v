@@ -353,7 +353,7 @@ Inductive satisfies : senv -> store -> store ->
   (* _1 *)
   | s_sh : forall env s1 h1 x shb rc r,
     satisfies env s1 s1 h1 h1
-      (shft x shb rc (ens rc (fun _ => \[True])))
+      (shft x shb rc (ens rc (fun _ => \[])))
       r
       rc
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
@@ -487,7 +487,7 @@ Proof.
 Abort. *)
 
 Lemma pvar_sound: forall x _x,
-  spec_assert_valid (pvar x) x _x (ens x (fun s => \[True])).
+  spec_assert_valid (pvar x) x _x (ens x (fun s => \[])).
 Proof.
   unfold spec_assert_valid. intros.
   applys sav_base.
@@ -498,7 +498,7 @@ Proof.
   intros.
   inverts H as H. (* eval_pvar *)
   applys* s_ens.
-  hintro. constructor.
+  hintro.
   fmap_eq.
 Qed.
 
