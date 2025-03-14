@@ -358,7 +358,7 @@ Inductive satisfies : senv -> store -> store ->
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
       (sh x shb r)
 
-  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r r1 fk1,
+  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r fk1,
     fk1 = fk;; f2 ->
     satisfies env s1 s2 h1 h2 (shft k shb r fk) r f1 ->
     satisfies env s1 s2 h1 h2 (shft k shb r fk1) r (f1;; f2)
@@ -864,38 +864,12 @@ Proof.
     {
       (* finally, the let-shift case *)
       intros * Hb.
-      (* exs. *)
-      (* split *)
-      (* TODO prove rc1 = x2 *)
       specializes He1 Hb.
       destruct He1 as (rk&fk&Hek&He1).
-      
-
-      (* forwards: He1. *)
-      (* applys_eq Hb. *)
-      (* f_equal. *)
-      (* specializes He1 Hb.
-      destruct He1 as (fk&?&?).
-      exs. split.
-      (* exists fk. *)
-      (* split. *)
-      {
-        (* the continuation *)
-
-        admit.
-        }
-      {
-        applys s_seq_sh fk.
-        2: {
-          (* applys H0. *)
-          applys_eq H0.
-          (* reflexivity. *)
-
-        }
-
-        admit.
-        } *)
-
-
+      exists rk fk.
+      split.
+      admit.
+      (* applys s_seq_sh. *)
+      admit.
     }
 Abort.
