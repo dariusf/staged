@@ -165,12 +165,11 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 r Re ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re
 
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k xy xtmp eb ek r s1 s2,
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k xy eb ek r s1 s2,
     (forall r1, bigstep p1 s1 h1 e1 s2 h2 r1 (eshft (vfun k eb) r ek)) ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r
       (eshft (vfun k eb)
-        xy (plet xtmp (papp (pval (vfun r ek)) (pvar xy))
-          (plet x (pvar xtmp) e2)))
+        xy (plet x (papp (pval (vfun r ek)) (pvar xy)) e2))
 
 
   | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3 r,
@@ -871,7 +870,7 @@ Proof.
     {
       (* finally, the let-shift case *)
       intros * Hb.
-      specializes He1 Hb.
+      specializes He1 Hb. clear Hb.
       destruct He1 as (rk&fk&Hek&He1).
       exists rk.
       eexists.
