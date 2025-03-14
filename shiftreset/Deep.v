@@ -17,6 +17,8 @@ Set Implicit Arguments.
 
 (** * Programs *)
 Definition var : Type := string.
+Implicit Types x k r : var.
+
 Definition var_eq := String.string_dec.
 
 Definition loc := nat.
@@ -52,6 +54,8 @@ with expr : Type :=
   | papp (e1: expr) (e2: expr)
   | pshift (k: var) (e: expr)
   | preset (e: expr).
+
+Implicit Types e : expr.
 
 #[global]
 Instance Inhab_val : Inhab val.
@@ -127,22 +131,22 @@ Definition get_val s e :=
   | _ => None
   end.
 
-Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> eresult -> Prop :=
-  | eval_pval : forall s1 s2 h v p r,
+Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> var -> eresult -> Prop :=
+  | eval_pval : forall s1 s2 h v p r rc,
     s2 = Fmap.update s1 r v ->
-    bigstep p s1 h (pval v) s2 h r (enorm v)
+    bigstep p s1 h (pval v) s2 h r rc (enorm v)
 
-  | eval_padd : forall s1 s2 h v1 v2 p r e1 e2,
+  | eval_padd : forall s1 s2 h v1 v2 p r e1 e2 rc,
     Some (vint v1) = get_val s1 e1 ->
     Some (vint v2) = get_val s1 e2 ->
     s2 = Fmap.update s1 r (vint (v1 + v2)) ->
-    bigstep p s1 h (padd e1 e2) s2 h r (enorm (vint (v1 + v2)))
+    bigstep p s1 h (padd e1 e2) s2 h r rc (enorm (vint (v1 + v2)))
 
   (* _3 *)
-  | eval_pshift : forall s1 h p k eb r r1,
+  | eval_pshift : forall s1 h p k eb r rc,
     (* s2 = Fmap.update s1 r v -> *)
-    bigstep p s1 h (pshift k eb) s1 h r1
-      (eshft (vfun k eb) r (pvar r))
+    bigstep p s1 h (pshift k eb) s1 h r rc
+      (eshft (vfun k eb) rc (pvar rc))
 
       (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
 
@@ -151,29 +155,29 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     bigstep p1 s3 h3 (subst x v e2) s2 h2 r1 Re ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r1 Re *)
 
-  | eval_pvar : forall s1 s2 h x v p r,
+  | eval_pvar : forall s1 s2 h x v p r rc,
     v = Fmap.read s1 x ->
     s2 = Fmap.update s1 r v ->
-    bigstep p s1 h (pvar x) s1 h r (enorm v)
+    bigstep p s1 h (pvar x) s1 h r rc (enorm v)
 
-  | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r,
-    (forall r1, bigstep p1 s1 h1 e1 s3 h3 r1 (enorm v)) ->
-    bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 r Re ->
-    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re
+  | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r rc,
+    (forall r1 rc1, bigstep p1 s1 h1 e1 s3 h3 r1 rc1 (enorm v)) ->
+    bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 r rc Re ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r rc Re
 
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 x1 x2 xy xtmp eb ek r s1 s2,
-    (forall r, bigstep p1 s1 h1 e1 s2 h2 r (eshft (vfun x1 eb) x2 ek)) ->
-    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r
-      (eshft (vfun x1 eb)
-        xy (plet xtmp (papp (pval (vfun x2 ek)) (pvar xy))
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k xy xtmp eb ek r s1 s2 rc,
+    (forall r1, bigstep p1 s1 h1 e1 s2 h2 r1 rc (eshft (vfun k eb) rc ek)) ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r rc
+      (eshft (vfun k eb)
+        xy (plet xtmp (papp (pval (vfun rc ek)) (pvar xy))
           (plet x (pvar xtmp) e2)))
 
 
-  | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3 r,
+  | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3 r rc,
     v1 = vfun x e ->
     s3 = Fmap.update s1 x v2 ->
-    bigstep p s3 h e s2 h r Re ->
-    bigstep p s1 h (papp (pval v1) (pval v2)) s2 h r Re
+    bigstep p s3 h e s2 h r rc Re ->
+    bigstep p s1 h (papp (pval v1) (pval v2)) s2 h r rc Re
     (* TODO s2 keeps bindings produced by the app? *)
 
   (* | eval_app_fix : forall v1 v2 h x e Re xf p,
@@ -181,12 +185,12 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     bigstep p h (subst x v2 (subst xf v1 e)) h Re ->
     bigstep p h (papp (pval v1) (pval v2)) h Re *)
 
-  | eval_papp_unk : forall v h1 h2 Re fe (f:var) p s1 s2 s3 r x,
+  | eval_papp_unk : forall v h1 h2 Re fe (f:var) p s1 s2 s3 r x rc,
     Fmap.read p f = (x, fe) ->
     s3 = Fmap.update s1 x v ->
     (* s4 = Fmap.update s2 r r -> *)
-    bigstep p s3 h1 fe s2 h2 r Re ->
-    bigstep p s1 h1 (papp (pvar f) (pval v)) s2 h2 r Re
+    bigstep p s3 h1 fe s2 h2 r rc Re ->
+    bigstep p s1 h1 (papp (pvar f) (pval v)) s2 h2 r rc Re
 
 
   (*
@@ -209,7 +213,6 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
 
 Definition asn := store -> heap -> Prop.
 Implicit Types H : asn.
-Implicit Types r : var.
 (* Implicit Types Q : val -> asn. *)
 
 (** * Staged formulae *)
@@ -237,6 +240,8 @@ Inductive flow : Type :=
   | shc : var -> flow -> val -> (val -> flow) -> flow
   *)
   .
+
+Implicit Types f : flow.
 
 (* Definition ens_ H := ens (fun r s => \[r = vunit] \* H s). *)
 
