@@ -178,6 +178,13 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     s3 = Fmap.update s1 x v2 ->
     bigstep p s3 h e s2 h r Re ->
     bigstep p s1 h (papp (pval v1) (pval v2)) s2 h r Re
+
+  | eval_papp_fun_var : forall v1 v2 h x x1 e Re p s1 s2 s3 r,
+    v1 = vfun x e ->
+    v2 = Fmap.read s1 x1 ->
+    s3 = Fmap.update s1 x v2 ->
+    bigstep p s3 h e s2 h r Re ->
+    bigstep p s1 h (papp (pval v1) (pvar x1)) s2 h r Re
     (* TODO s2 keeps bindings produced by the app? *)
 
   (* | eval_app_fix : forall v1 v2 h x e Re xf p,
@@ -460,7 +467,7 @@ Coercion vint : Z >-> val.
 
 Definition store_read s x : val := Fmap.read s x.
 Coercion store_read : store >-> Funclass.
-Coercion papp : expr >-> Funclass.
+(* Coercion papp : expr >-> Funclass. *)
 
 (* trying to use env_compatible, like in the HO work.
   the problem with this is we have to split on something before we know
@@ -866,10 +873,40 @@ Proof.
       intros * Hb.
       specializes He1 Hb.
       destruct He1 as (rk&fk&Hek&He1).
-      exists rk fk.
+      exists rk.
+      eexists.
+      (* exs. *)
       split.
-      admit.
-      (* applys s_seq_sh. *)
-      admit.
+      2: {
+        applys s_seq_sh.
+        reflexivity.
+        apply He1.
+      }
+
+      (* reason about the faithfulness of the continuation translation *)
+      inverts Hek as.
+      { introv Heksf Hefk.
+        (* the continuation does not perform any shifts *)
+        applys sav_base.
+        {
+          introv H1.
+          inverts H1 as H12 H13.
+          admit.
+          admit.
+          (* 2: { specializes H12. false_invert H12. }
+          (* invert H12. *)
+          specializes H12.
+          inverts H12. injects H1. *)
+
+        }
+        admit.
+      }
+      {
+        (* the continuation performs more shifts *)
+        introv Heb0 Heksh Hefk.
+        applys sav_shift Heb0.
+        { admit. }
+        admit.
+      }
     }
 Abort.
