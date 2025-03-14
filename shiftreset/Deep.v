@@ -758,7 +758,7 @@ Proof.
 Abort. *)
 
 Lemma plet_sound: forall x e1 e2 r f1 f2,
-  spec_assert_valid e1 x f1 ->
+  (forall y, spec_assert_valid e1 y f1) ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
     (f1;; fexs x f2).
@@ -867,9 +867,13 @@ Proof.
       (* exs. *)
       (* split *)
       (* TODO prove rc1 = x2 *)
-      forwards: He1.
-      applys_eq Hb.
-      f_equal.
+      specializes He1 Hb.
+      destruct He1 as (rk&fk&Hek&He1).
+      
+
+      (* forwards: He1. *)
+      (* applys_eq Hb. *)
+      (* f_equal. *)
       (* specializes He1 Hb.
       destruct He1 as (fk&?&?).
       exs. split.
