@@ -402,7 +402,7 @@ Notation "'∃' a1 .. an , H" :=
 Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r ','  rc  '|=' f" :=
   (satisfies env s1 s2 h1 h2 R r rc f) (at level 30, only printing).
 
-Inductive spec_assert : expr -> var -> flow -> Prop :=
+(* Inductive spec_assert : expr -> var -> flow -> Prop :=
 
   | sa_pval: forall r v,
     spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v])))
@@ -411,7 +411,7 @@ Inductive spec_assert : expr -> var -> flow -> Prop :=
     spec_assert e r1 fe ->
     spec_assert (pshift k e) r (fexs r (sh k fe r))
 
-  .
+  . *)
 
 (* The cases in the triple definition have to be disjoint, meaning one must know exactly what the next outcome is to prove
 
@@ -558,14 +558,10 @@ Proof.
     {
       intros.
       unfold not. intros.
-      inverts H1 as H1.
+      inverts H1 as H1 H2.
       rewrite H in H1. injects H1.
       unfold not in Hne.
-      specializes Hne H12.
-      false.
-      (* forwards: Hne. *)
-      (* applys_eq H12. *)
-
+      false Hne H2.
     }
 
     intros * Hb.
@@ -581,11 +577,11 @@ Proof.
     { unfold not. intros.
       inverts H1 as H1.
       rewrite H in H1. injects H1.
-      false Hne H12. }
+      false Hne H13. }
     intros * Hb.
     inverts Hb as. intros.
     rewrite H in H3. injects H3.
-    specializes He H12. destruct He as (r2&fk&?&?&?).
+    specializes He H13. destruct He as (r2&fk&?&?&?).
     exs.
     (* exists r2 fk. *)
     split*.
@@ -633,14 +629,10 @@ Proof.
   { intros Hne He.
     (* no shift in the body of the fn being applied *)
     applys sav_base.
-    {
-      unfold not. intros.
-      inverts H as H. injects H.
-      false Hne H10.
-    }
+    { intros * H. inverts H as H H1. injects H. false Hne H1. }
     intros.
     inverts H as H. injects H.
-    specializes He H10. clear H10.
+    specializes He H11. clear H11.
     (* applys s_fex_fresh. intros. exists va. *)
     applys s_fexs. exists va.
     applys s_seq He. clear He.
@@ -648,7 +640,9 @@ Proof.
     hintro. unfold store_read. resolve_fn_in_env.
     fmap_eq.
     fmap_disjoint.
-    Unshelve. exact "anything".
+    Unshelve.
+    exact "anything".
+    exact "anything".
     (* this is due to the ens_ variable being unconstrained *)
   }
   {
@@ -657,12 +651,12 @@ Proof.
     applys sav_shift Heb.
     {
       unfold not. intros.
-      inverts H as H. injects H.
-      false Hne H10.
+      inverts H as H H1. injects H.
+      false Hne H1.
     }
     intros.
-    inverts H as H. injects H.
-    specializes He H10. destr He.
+    inverts H as H H1. injects H.
+    specializes He H1. destr He.
     exs.
     splits*.
 
@@ -675,7 +669,9 @@ Proof.
     reflexivity.
     fmap_disjoint.
     eassumption.
-    Unshelve. exact "anything".
+    Unshelve.
+    exact "anything".
+    exact "anything".
     (* this is due to the ens_ variable being unconstrained *)
   }
 Qed.
@@ -786,16 +782,16 @@ Proof.
       apply sav_base.
       {
         unfold not. intros.
-        inverts H as H.
-        { false Hne2 H10. }
+        inverts H as H H1.
+        { false Hne2 H1. }
         { false Hne1 H. }
           (* Abort. *)
           (* specializes Hne1 H. Hne1 H. *)
       }
       intros.
-      inverts H as H.
+      inverts H as H H1.
       specializes He1 H. clear H.
-      specializes He2 H10. clear H10.
+      specializes He2 H1. clear H1.
       applys s_seq He1.
       applys s_fexs. exists v0.
       eassumption. }
@@ -805,8 +801,8 @@ Proof.
       applys sav_shift Heb.
       {
         unfold not. intros.
-        inverts H as H.
-        { false Hne2 H10. }
+        inverts H as H H1.
+        { false Hne2 H1. }
       }
       intros * Hb.
       inverts Hb as.
