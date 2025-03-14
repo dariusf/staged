@@ -399,8 +399,8 @@ Notation "'∃' a1 .. an , H" :=
    format "'[' '∀' '/ '  a1  ..  an , '/ '  H ']'") : flow_scope. *)
 
 
-Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
-  (satisfies env s1 s2 h1 h2 R r f) (at level 30, only printing).
+Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r ','  rc  '|=' f" :=
+  (satisfies env s1 s2 h1 h2 R r rc f) (at level 30, only printing).
 
 Inductive spec_assert : expr -> var -> flow -> Prop :=
 
@@ -490,13 +490,9 @@ Lemma pvar_sound: forall x _x,
   spec_assert_valid (pvar x) x _x (ens x (fun s => \[])).
 Proof.
   unfold spec_assert_valid. intros.
-  applys sav_base.
-  {
-    unfold not. intros.
-    false_invert H.
-  }
+  applys sav_base. { intros * H. false_invert H. }
   intros.
-  inverts H as H. (* eval_pvar *)
+  inverts H. (* eval_pvar *)
   applys* s_ens.
   hintro.
   fmap_eq.
