@@ -443,12 +443,28 @@ Notation "'∃' a1 .. an , H" :=
 Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
   (satisfies env s1 s2 h1 h2 R r f) (at level 30, only printing).
 
+Notation "'sh(λ' k '.' fb ',' r ')'" :=
+  (sh k fb r) (at level 30, only printing,
+  format "'sh(λ' k '.'  fb ','  r ')'" ).
+
+Notation "'ens[' r ']' H" :=
+  (ens r H) (at level 30, only printing,
+  format "ens[ r ] H").
+
+Notation "f '$(' v ',' r ')'" :=
+  (unk f v r) (at level 30, only printing,
+  format "f '$(' v ','  r ')'").
+
+(* Notation "'ens' H" :=
+  (ens_ H) (at level 30, only printing,
+  format "'ens' H"). *)
+
 
 (* plet "x" (pshift "k" (papp (pvar "k") 1))
       (padd (pvar "x") 2) *)
 Example ex2 : exists R,
   satisfies empty_env empty_store empty_store empty_heap empty_heap R "r"
-    (sh "k" (unk "k" 1 "r") "r";;
+    (sh "k" (unk "k" 1 "r2") "r";;
       ens "r" (fun s => \[exists i, s "r1" = vint i /\ s "r" = i + 2])).
 Proof.
   exs.
@@ -868,6 +884,9 @@ Definition plet_test x e1 e2 r f1 f2 :=
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
     (f1;; fexs x f2).
+
+(* ex1 *)
+(* ex2 *)
 
 Lemma plet_test1:
   plet_test "x"
