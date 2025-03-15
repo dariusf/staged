@@ -165,11 +165,12 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 r Re ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re
 
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k xy eb ek r s1 s2,
+  (* _4 *)
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek r s1 s2,
     (forall r1, bigstep p1 s1 h1 e1 s2 h2 r1 (eshft (vfun k eb) r ek)) ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r
       (eshft (vfun k eb)
-        xy (plet x (papp (pval (vfun r ek)) (pvar xy)) e2))
+        y (plet x (papp (pval (vfun r ek)) (pvar y)) e2))
 
 
   | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3 r,
@@ -763,14 +764,59 @@ Proof.
   hintro. *)
 Abort. *)
 
-Lemma plet_inside: forall penv env e2 r f2 rk fk ek x,
-  spec_assert_valid_under penv env e2 r f2 ->
-  spec_assert_valid_under penv env ek rk fk ->
-  spec_assert_valid_under penv env (plet x (papp (vfun r ek) r) e2) rk
+Lemma plet_inside: forall p env e2 r f2 rk fk ek x,
+  spec_assert_valid_under p env e2 r f2 ->
+  spec_assert_valid_under p env ek rk fk ->
+  spec_assert_valid_under p env (plet x (papp (vfun r ek) r) e2) rk
     (fk;; fexs x f2).
 Proof.
-  intros.
+  introv He2 Hek.
+  (* _4 *)
+  inverts Hek as.
+  { (* continuation has no shifts *)
+    introv Hnek Hek.
+    inverts He2 as.
+    { (* e2 has no shifts *)
+      (* introv H H1 H2. *)
+      introv Hne2 He2.
+      applys sav_base.
+      { introv Hb.
+        inverts Hb.
+        false Hne2 H10.
+        specializes H8.
+        inverts H8. injects H1.
+        false Hnek H12. }
+      (* clear Hnek Hne2. *)
+      introv Hb.
+      inverts Hb.
+      {
+        specializes H9.
+        inverts H9. injects H1.
+        specializes Hek H13.
+        (* Search (update _ _ (read _ _)). *)
+        erewrite update_idem in Hek.
+        3: { reflexivity. }
+        2: {
+         admit.
+        }
+        applys s_seq Hek.
+        applys s_fexs. exs.
 
+        forwards: He2.
+        applys_eq H10.
+
+        (* specializes He2 H10. *)
+
+        admit.
+        applys_eq H.
+        admit.
+        }
+    }
+    { admit. }
+
+
+    }
+  { admit. }
 
 Abort.
 
