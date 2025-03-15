@@ -16,7 +16,8 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Set Implicit Arguments.
 
 (** * Programs *)
-Definition var : Type := string.
+(* Definition var : Type := string. *)
+Notation var := string.
 Implicit Types x k r : var.
 
 Definition var_eq := String.string_dec.
@@ -161,13 +162,13 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     bigstep p s1 h (pvar x) s1 h r (enorm v)
 
   | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r,
-    (forall r1, bigstep p1 s1 h1 e1 s3 h3 r1 (enorm v)) ->
+    (forall _r, bigstep p1 s1 h1 e1 s3 h3 _r (enorm v)) ->
     bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 r Re ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re
 
   (* _4 *)
   | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek r s1 s2,
-    (forall r1, bigstep p1 s1 h1 e1 s2 h2 r1 (eshft (vfun k eb) r ek)) ->
+    bigstep p1 s1 h1 e1 s2 h2 r (eshft (vfun k eb) r ek) ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r
       (eshft (vfun k eb)
         y (plet x (papp (pval (vfun r ek)) (pvar y)) e2))
@@ -214,7 +215,42 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
   .
 
 
+Notation " '[' penv ','  s1 ',' h1  '|'  e ']'  '~~>'  '[' s1 ','  s2 ','  h2  '|'  r ','  Re ']'" :=
+  (bigstep penv s1 h1 e s2 h2 r Re) (at level 30, only printing).
 
+Coercion pval : val >-> expr.
+Coercion pvar : var >-> expr.
+Coercion vint : Z >-> val.
+
+Definition store_read s x : val := Fmap.read s x.
+Coercion store_read : store >-> Funclass.
+(* Coercion papp : expr >-> Funclass. *)
+
+
+Example ex0 : exists Re,
+  bigstep empty_penv empty_store empty_heap
+  (pshift "k" (papp (pvar "k") 1))
+    empty_store empty_heap "r"
+    Re.
+Proof.
+  exs.
+  applys eval_pshift.
+  Show Proof.
+Qed.
+
+Example ex1 : exists Re,
+  bigstep empty_penv empty_store empty_heap
+  (plet "x" (pshift "k" (papp (pvar "k") 1))
+    (padd (pvar "x") 2))
+    empty_store empty_heap "r" Re.
+Proof.
+  exs.
+  applys eval_plet_sh.
+  applys eval_pshift.
+  Unshelve.
+  exact "a".
+  Show Proof.
+Qed.
 
 
 
@@ -305,11 +341,23 @@ Inductive satisfies : senv -> store -> store ->
     satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H)
     (* TODO r is a problem, as ens does nothing to it, so *)
 
+  (* _1 *)
+  | s_sh : forall env s1 h1 k fb r,
+    satisfies env s1 s1 h1 h1
+      (shft k fb r (ens r (fun _ => \[]))) r
+      (sh k fb r)
+(* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
+
   | s_seq : forall env s3 h3 v s1 s2 f1 f2 h1 h2 R r r1 ,
     satisfies env s1 s3 h1 h3 (norm v) r1 f1 ->
     satisfies env s3 s2 h3 h2 R r f2 ->
     satisfies env s1 s2 h1 h2 R r (seq f1 f2)
-  (** seq is changed to require a value from the first flow *)
+  (* if it's a value, we ignore the variable of f1, same as before *)
+
+  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r,
+    satisfies env s1 s2 h1 h2 (shft k shb r fk) r f1 ->
+    satisfies env s1 s2 h1 h2 (shft k shb r (fk;; f2)) r (f1;; f2)
+  (* f2 is depending on r *)
 
   (* | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
     (H: exists b,
@@ -357,19 +405,6 @@ Inductive satisfies : senv -> store -> store ->
     (H: satisfies s1 s2 h1 h2 R f2) :
     satisfies s1 s2 h1 h2 R (disj f1 f2) *)
 
-  (* _1 *)
-  | s_sh : forall env s1 h1 x shb r,
-    satisfies env s1 s1 h1 h1
-      (shft x shb r (ens r (fun _ => \[])))
-      r
-(* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
-      (sh x shb r)
-
-  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r fk1,
-    fk1 = fk;; f2 ->
-    satisfies env s1 s2 h1 h2 (shft k shb r fk) r f1 ->
-    satisfies env s1 s2 h1 h2 (shft k shb r fk1) r (f1;; f2)
-
     (* TODO no constructive shift free yet *)
     (* satisfies env s1 s2 h1 h2 (shft k shb r1 (rs fk r1)) r f1 -> *)
     (* satisfies env s1 s2 h1 h2 (shft k shb r1 (rs (fk;; f2) r1)) r (f1;; f2) *)
@@ -407,6 +442,22 @@ Notation "'∃' a1 .. an , H" :=
 
 Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
   (satisfies env s1 s2 h1 h2 R r f) (at level 30, only printing).
+
+
+(* plet "x" (pshift "k" (papp (pvar "k") 1))
+      (padd (pvar "x") 2) *)
+Example ex2 : exists R,
+  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
+    (sh "k" (unk "k" 1 "r") "r1";;
+      ens "r2" (fun s => \[exists i, s "r1" = vint i /\ s "r2" = i + 2])).
+Proof.
+  exs.
+  applys s_seq_sh.
+  (* applys_eq s_sh. *)
+  applys s_sh.
+  Show Proof.
+Qed.
+
 
 (* Inductive spec_assert : expr -> var -> flow -> Prop :=
 
@@ -460,14 +511,6 @@ Definition spec_assert_valid_env e r f : Prop :=
 Definition spec_assert_valid e r f : Prop :=
   forall penv env,
     spec_assert_valid_under penv env e r f.
-
-Coercion pval : val >-> expr.
-Coercion pvar : var >-> expr.
-Coercion vint : Z >-> val.
-
-Definition store_read s x : val := Fmap.read s x.
-Coercion store_read : store >-> Funclass.
-(* Coercion papp : expr >-> Funclass. *)
 
 (* trying to use env_compatible, like in the HO work.
   the problem with this is we have to split on something before we know
@@ -927,7 +970,6 @@ Proof.
     (* figure out the shape of the continuation fk first *)
     2: {
       applys s_seq_sh.
-      reflexivity.
       apply He1.
     }
     (* now we know everything after the seq is part of the continuation *)
