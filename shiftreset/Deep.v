@@ -763,6 +763,17 @@ Proof.
   hintro. *)
 Abort. *)
 
+Lemma plet_inside: forall penv env e2 r f2 rk fk ek x,
+  spec_assert_valid_under penv env e2 r f2 ->
+  spec_assert_valid_under penv env ek rk fk ->
+  spec_assert_valid_under penv env (plet x (papp (vfun r ek) r) e2) rk
+    (fk;; fexs x f2).
+Proof.
+  intros.
+
+
+Abort.
+
 Lemma plet_sound: forall x e1 e2 r f1 f2,
   (forall y, spec_assert_valid e1 y f1) ->
   spec_assert_valid e2 r f2 ->
@@ -854,58 +865,73 @@ Proof.
         admit.
       } *)
 
-    applys sav_shift Heb.
-    {
-      intros * H.
-      inverts H as H.
-      false Hne1 H.
+    (* the result is a shift *)
+    applys sav_shift Heb. { intros * H. inverts H as H. false Hne1 H. }
+    clear Heb. intros.
+    (* consider the ways in which the let produces a shift *)
+    inverts H as. { intros * Hb1 Hb2. false Hne1 Hb1. }
+    rename ek0 into ek.
+  
+    (* finally, the let-shift case *)
+    intros * Hb.
+    specializes He1 Hb. clear Hb.
+    destruct He1 as (rk&fk&Hek&He1). exists rk. eexists.
+    (* now we have to prove that the continuation is built correctly *)
+    split.
+    (* figure out the shape of the continuation fk first *)
+    2: {
+      applys s_seq_sh.
+      reflexivity.
+      apply He1.
     }
-    intros.
-    inverts H as.
-    {
-      (* this case is impossible *)
-      intros * Hb1 Hb2.
-      false Hne1 Hb1.
-    }
-    {
-      (* finally, the let-shift case *)
-      intros * Hb.
-      specializes He1 Hb. clear Hb.
-      destruct He1 as (rk&fk&Hek&He1).
-      exists rk.
-      eexists.
-      (* exs. *)
-      split.
-      2: {
-        applys s_seq_sh.
-        reflexivity.
-        apply He1.
-      }
+    (* now we know everything after the seq is part of the continuation *)
+    (* case on whether the continuation itself performs any shifts *)
 
-      (* reason about the faithfulness of the continuation translation *)
-      inverts Hek as.
-      { introv Heksf Hefk.
-        (* the continuation does not perform any shifts *)
-        applys sav_base.
-        {
-          introv H1.
-          inverts H1 as H12 H13.
-          admit.
-          admit.
-          (* 2: { specializes H12. false_invert H12. }
-          (* invert H12. *)
-          specializes H12.
-          inverts H12. injects H1. *)
-
-        }
-        admit.
-      }
+    inverts Hek as.
+    { introv Heksf Hefk.
+      (* the continuation does not perform any shifts *)
+      applys sav_base.
       {
-        (* the continuation performs more shifts *)
-        introv Heb0 Heksh Hefk.
-        applys sav_shift Heb0.
-        { admit. }
-        admit.
+        (* we have to show that applying the continuation does not result in shifts *)
+        introv Hb.
+        (* the body of a continuation is a let. the e1 can have shifts or not *)
+        inverts Hb as H12 H13.
+        
+        {
+          (* the e1 has no shift *)
+          clear Heksf.
+
+          specializes H12.
+          inverts H12 as H12.
+          injects H12.
+          specializes Hefk H11.
+
+          (* false Heksf. *)
+          (* applys_eq H11. *)
+          
+
+          admit. }
+
+        {
+          (* the e1 has shifts *)
+          specializes H12.
+        inverts H12. injects H1.
+        false Heksf H11. }
+
+        (* 2: { specializes H12. false_invert H12. }
+        (* invert H12. *)
+        specializes H12.
+        inverts H12. injects H1. *)
+
       }
+      admit.
     }
+    { (* the continuation performs more shifts *)
+      introv Heb0 Heksh Hefk.
+      applys sav_shift Heb0.
+      { admit. }
+      admit.
+    }
+    
+  }
 Abort.
