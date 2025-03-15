@@ -99,7 +99,7 @@ Proof.
   { subst.
     destruct (Fmap.fmap_data s y).
     reflexivity.
-    exfalso. apply H. reflexivity. }
+    false. }
   { reflexivity. }
 Qed.
 

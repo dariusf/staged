@@ -447,9 +447,9 @@ Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
 (* plet "x" (pshift "k" (papp (pvar "k") 1))
       (padd (pvar "x") 2) *)
 Example ex2 : exists R,
-  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
-    (sh "k" (unk "k" 1 "r") "r1";;
-      ens "r2" (fun s => \[exists i, s "r1" = vint i /\ s "r2" = i + 2])).
+  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r"
+    (sh "k" (unk "k" 1 "r") "r";;
+      ens "r" (fun s => \[exists i, s "r1" = vint i /\ s "r" = i + 2])).
 Proof.
   exs.
   applys s_seq_sh.
@@ -862,6 +862,93 @@ Proof.
   { admit. }
 
 Abort.
+
+Definition plet_test x e1 e2 r f1 f2 :=
+  (forall y, spec_assert_valid e1 y f1) ->
+  spec_assert_valid e2 r f2 ->
+  spec_assert_valid (plet x e1 e2) r
+    (f1;; fexs x f2).
+
+Lemma plet_test1:
+  plet_test "x"
+    (pshift "k" (papp (pvar "k") 1)) (padd (pvar "x") 2)
+    "r"
+    (sh "k" (unk "k" 1 "r") "r")
+      (ens "r" (fun s => \[exists i, s "r" = vint i /\ s "r" = i + 2])).
+Proof.
+  unfold plet_test.
+  unfold spec_assert_valid.
+  introv He1 He2. intros.
+  specializes He1 penv0 env.
+  specializes He2 penv0 env.
+  (* preamble done *)
+  inverts He1 as. { introv H. exfalso. eapply H. applys eval_pshift. }
+  introv Heb Hne1 He1.
+  (* e1/f1 is a shift, so we have a triple about the body,
+    that it's not norm, and a validity premise for if it's a shift *)
+
+  (* start reasoning backwards using the body premise *)
+  applys sav_shift Heb. { intros * Hb. inverts Hb. specializes H9. false_invert H9. }
+  introv Hb.
+  (* we know that the let evaluates to a shift. explicate that *)
+  inverts Hb. { specializes H9. false_invert H9. }
+  (* the e1 evaluates to a shift *)
+  (* use the validity fact we have *)
+  specializes He1 H8.
+  destruct He1 as (rk&fk&Htek&Hek).
+  inverts Hek.
+  (* now we have info about the continuation,
+    and have to prove something about the continuation's extension *)
+
+  exists "r".
+  eexists.
+  split. 2: { applys s_seq_sh. applys s_sh. }
+  (* now we know what the extension looks like *)
+
+  (* use what we have about the cont. here it's just the identity *)
+  inverts Htek.
+  2: { inverts H8. exfalso. applys H0. applys eval_pvar. reflexivity. reflexivity. }
+  (* the cont does not evaluate to a shift, and if value, we have a triple *)
+
+  (* now, prove that the extension has a corresponding execution in the spec *)
+  applys sav_base.
+  {
+    (* have to prove the cont has no shift *)
+    intros * H1.
+    inverts H1.
+    { specializes H13. inverts H13. injects H3. inverts H14. }
+    { inverts H12. injects H3. false H H15. }
+  }
+  intros.
+  (* recall: we know ek0 has no shift *)
+
+  (* reason about let inside the cont *)
+  inverts H1.
+  specializes H13.
+  inverts H13.
+  injects H3.
+
+  applys s_seq.
+  applys s_ens.
+  reflexivity.
+  reflexivity.
+  hintro.
+  fmap_eq. reflexivity.
+  fmap_disjoint.
+
+  applys s_fexs. exs.
+  applys s_ens.
+
+  reflexivity.
+  admit.
+  hintro.
+  admit.
+  admit.
+  fmap_disjoint.
+
+Admitted.
+
+
 
 Lemma plet_sound: forall x e1 e2 r f1 f2,
   (forall y, spec_assert_valid e1 y f1) ->
