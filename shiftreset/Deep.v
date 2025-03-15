@@ -517,9 +517,9 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
       but the value for the base case *)
 
 
-Notation "penv ',' env '|-' e ':::' r '.' f" :=
+(* Notation "penv ',' env '|-' e ':::' r '.' f" :=
   (spec_assert_valid_under penv env e r f) (at level 30, only printing,
-  format "penv ','  env  '|-'  e  ':::'  r '.'  f").
+  format " '[v  ' penv ','  env  '|-'  e  ':::'  r '.'  f ']' "). *)
 
 Definition env_compatible penv env :=
   forall e (f:var) x r,
@@ -537,9 +537,9 @@ Definition spec_assert_valid e r f : Prop :=
   forall penv env,
     spec_assert_valid_under penv env e r f.
 
-Notation "e ':::' r '.' f" :=
+(* Notation "e ':::' r '.' f" :=
   (spec_assert_valid e r f) (at level 30, only printing,
-  format "e  ':::'  r '.'  f").
+  format "'[' e ':::'  r '.' f ']'"). *)
 
 (* trying to use env_compatible, like in the HO work.
   the problem with this is we have to split on something before we know
