@@ -218,6 +218,10 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
 Notation " '[' penv ','  s1 ',' h1  '|'  e ']'  '~~>'  '[' s1 ','  s2 ','  h2  '|'  r ','  Re ']'" :=
   (bigstep penv s1 h1 e s2 h2 r Re) (at level 30, only printing).
 
+Notation "'pshift' k '.' e" :=
+  (pshift k e) (at level 30, only printing,
+  format "'pshift'  k '.'  e" ).
+
 Coercion pval : val >-> expr.
 Coercion pvar : var >-> expr.
 Coercion vint : Z >-> val.
@@ -512,6 +516,11 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
     (* some strangeness here: r is the cont arg for the shift case,
       but the value for the base case *)
 
+
+Notation "penv ',' env '|-' e ':::' r '.' f" :=
+  (spec_assert_valid_under penv env e r f) (at level 30, only printing,
+  format "penv ','  env  '|-'  e  ':::'  r '.'  f").
+
 Definition env_compatible penv env :=
   forall e (f:var) x r,
     Fmap.read penv f = (x, e) ->
@@ -527,6 +536,10 @@ Definition spec_assert_valid_env e r f : Prop :=
 Definition spec_assert_valid e r f : Prop :=
   forall penv env,
     spec_assert_valid_under penv env e r f.
+
+Notation "e ':::' r '.' f" :=
+  (spec_assert_valid e r f) (at level 30, only printing,
+  format "e  ':::'  r '.'  f").
 
 (* trying to use env_compatible, like in the HO work.
   the problem with this is we have to split on something before we know
