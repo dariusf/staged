@@ -493,13 +493,13 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
     spec_assert_valid_under penv env e r f
 
   (* _2 *)
-  | sav_shift: forall e rb f eb fb r r1,
+  | sav_shift: forall e rb f eb fb r,
     spec_assert_valid_under penv env eb rb fb ->
     (forall s1 s2 h1 h2 v r,
       not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
-    (forall s1 s2 h1 h2, forall k ek,
+    (forall s1 s2 h1 h2, forall k r1 ek,
       bigstep penv s1 h1 e s2 h2 r (eshft (vfun k eb) r1 ek) ->
-      exists fk,
+      exists r1 fk,
         spec_assert_valid_under penv env ek r fk /\
           satisfies env s1 s2 h1 h2 (shft k rb fb r1 r fk) r f) ->
     spec_assert_valid_under penv env e r f.
@@ -608,9 +608,9 @@ Proof.
   fmap_eq.
 Qed.
 
-Lemma pshift_sound: forall r rb k eb fb,
+Lemma pshift_sound: forall rb k eb fb,
   spec_assert_valid eb rb fb ->
-  spec_assert_valid (pshift k eb) rb (sh k rb fb r).
+  spec_assert_valid (pshift k eb) rb (sh k rb fb rb).
 Proof.
   unfold spec_assert_valid. intros r rb **.
   specializes H penv0 env.
@@ -697,7 +697,8 @@ Proof.
     applys s_unk.
     eassumption.
     reflexivity.
-    assumption. }
+    destr H1.
+    eassumption. }
 Qed.
 
 Lemma pval_sound: forall v r,
@@ -955,15 +956,22 @@ Proof.
   inverts Hb. { specializes H9. false_invert H9. }
   (* the e1 evaluates to a shift *)
   (* use the validity fact we have *)
+  forwards: He1. applys_eq H8. f_equal.
+
   specializes He1 H8.
-  destruct He1 as (rk&fk&Htek&Hek).
+  destruct He1 as (fk&Htek&Hek).
   inverts Hek.
   (* now we have info about the continuation,
     and have to prove something about the continuation's extension *)
 
   exists "r".
   eexists.
-  split. 2: { applys s_seq_sh. applys_eq s_sh. f_equal. applys s_sh. simpl. reflexivity. }
+  split. 2: {
+    applys s_seq_sh.
+    applys_eq s_sh. f_equal.
+    (* applys s_sh. *)
+    simpl. reflexivity.
+    }
   (* now we know what the extension looks like *)
 
   (* use what we have about the cont. here it's just the identity *)
