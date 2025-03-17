@@ -146,6 +146,7 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
   (* _3 *)
   | eval_pshift : forall s1 h p k eb r,
     (* s2 = Fmap.update s1 r v -> *)
+    (* TODO is r in s1? *)
     bigstep p s1 h (pshift k eb) s1 h r
       (eshft (vfun k eb) r (pvar r))
 
@@ -168,7 +169,7 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
 
   (* _4 *)
   | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek r s1 s2,
-    bigstep p1 s1 h1 e1 s2 h2 r (eshft (vfun k eb) r ek) ->
+    bigstep p1 s1 h1 e1 s2 h2 x (eshft (vfun k eb) x ek) ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r
       (eshft (vfun k eb)
         y (plet x (papp (pval (vfun r ek)) (pvar y)) e2))
@@ -273,7 +274,7 @@ Inductive flow : Type :=
   | fex_fresh : var -> flow -> flow
   | fex : forall (A:Type), (A -> flow) -> flow
 
-  | sh : var -> flow -> var -> flow
+  | sh : var -> var -> flow -> var -> flow
   | rs : flow -> val -> flow
 
   (* may return the result of a shift.
@@ -315,7 +316,21 @@ Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 
 Inductive result : Type :=
   | norm : val -> result
-  | shft : var -> flow -> var -> flow -> result.
+  | shft : var -> var -> flow -> var -> var -> flow -> result.
+
+Fixpoint flow_res f : option var :=
+  match f with
+  | ens r _ => Some r
+  | ens_ _ => None
+  | req _ f => flow_res f
+  | seq _ f => flow_res f
+  | sh _ _ _ r => Some r
+  | fexs _ f => flow_res f
+  | fex_fresh _ f => flow_res f
+  | unk _ _ r => Some r
+  | fex f => None (* TODO remove *)
+  | rs _ r => None (* TODO remove *)
+  end.
 
 Inductive satisfies : senv -> store -> store ->
   heap -> heap -> result -> var -> flow -> Prop :=
@@ -346,10 +361,10 @@ Inductive satisfies : senv -> store -> store ->
     (* TODO r is a problem, as ens does nothing to it, so *)
 
   (* _1 *)
-  | s_sh : forall env s1 h1 k fb r,
+  | s_sh : forall env s1 h1 k fb r r1,
     satisfies env s1 s1 h1 h1
-      (shft k fb r (ens r (fun _ => \[]))) r
-      (sh k fb r)
+      (shft k r1 fb r r (ens r (fun _ => \[]))) r
+      (sh k r1 fb r)
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
 
   | s_seq : forall env s3 h3 v s1 s2 f1 f2 h1 h2 R r r1 ,
@@ -358,9 +373,12 @@ Inductive satisfies : senv -> store -> store ->
     satisfies env s1 s2 h1 h2 R r (seq f1 f2)
   (* if it's a value, we ignore the variable of f1, same as before *)
 
-  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r,
-    satisfies env s1 s2 h1 h2 (shft k shb r fk) r f1 ->
-    satisfies env s1 s2 h1 h2 (shft k shb r (fk;; f2)) r (f1;; f2)
+  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r r1 r2 r3,
+    satisfies env s1 s2 h1 h2 (shft k r1 shb r r2 fk) r f1 ->
+    Some r3 = flow_res f2 ->
+    satisfies env s1 s2 h1 h2 (shft k r1 shb r r3
+    (* TODO r2 should change to result of f2? *)
+    (fk;; f2)) r (f1;; f2)
   (* f2 is depending on r *)
 
   (* | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
@@ -447,9 +465,9 @@ Notation "'∃' a1 .. an , H" :=
 Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
   (satisfies env s1 s2 h1 h2 R r f) (at level 30, only printing).
 
-Notation "'sh(λ' k '.' fb ',' r ')'" :=
-  (sh k fb r) (at level 30, only printing,
-  format "'sh(λ' k '.'  fb ','  r ')'" ).
+Notation "'sh(λ' k r '.' fb ',' r1 ')'" :=
+  (sh k r fb r1) (at level 30, only printing,
+  format "'sh(λ' k  r '.'  fb ','  r1 ')'" ).
 
 Notation "'ens[' r ']' H" :=
   (ens r H) (at level 30, only printing,
@@ -463,18 +481,18 @@ Notation "f '$(' v ',' r ')'" :=
   (ens_ H) (at level 30, only printing,
   format "'ens' H"). *)
 
-
 (* plet "x" (pshift "k" (papp (pvar "k") 1))
       (padd (pvar "x") 2) *)
 Example ex2 : exists R,
   satisfies empty_env empty_store empty_store empty_heap empty_heap R "r"
-    (sh "k" (unk "k" 1 "r2") "r";;
-      ens "r" (fun s => \[exists i, s "r1" = vint i /\ s "r" = i + 2])).
+    (sh "k" "r2" (unk "k" 1 "r2") "r";;
+      ens "r1" (fun s => \[exists i, s "r" = vint i /\ s "r1" = i + 2])).
 Proof.
   exs.
   applys s_seq_sh.
   (* applys_eq s_sh. *)
   applys s_sh.
+  simpl. reflexivity.
   Show Proof.
 Qed.
 
@@ -511,7 +529,7 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
       bigstep penv s1 h1 e s2 h2 r (eshft (vfun k eb) r ek) ->
       exists rk fk,
         spec_assert_valid_under penv env ek rk fk /\
-          satisfies env s1 s2 h1 h2 (shft k fb r fk) r f) ->
+          satisfies env s1 s2 h1 h2 (shft k rb fb r rk fk) r f) ->
     spec_assert_valid_under penv env e r f.
     (* some strangeness here: r is the cont arg for the shift case,
       but the value for the base case *)
@@ -578,7 +596,7 @@ Qed.
 
 Lemma pshift_sound: forall r rb k eb fb,
   spec_assert_valid eb rb fb ->
-  spec_assert_valid (pshift k eb) r (sh k fb r).
+  spec_assert_valid (pshift k eb) r (sh k rb fb r).
 Proof.
   unfold spec_assert_valid. intros r rb **.
   specializes H penv0 env.
@@ -896,22 +914,20 @@ Definition plet_test x e1 e2 r f1 f2 :=
   (forall y, spec_assert_valid e1 y f1) ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
-    (f1;; fexs x f2).
-
-(* ex1 *)
-(* ex2 *)
+    (f1;; f2). (* fexs x  *)
 
 Lemma plet_test1:
   plet_test "x"
-    (pshift "k" (papp (pvar "k") 1)) (padd (pvar "x") 2)
+    (pshift "k" (papp (pvar "k") 1))
+      (padd (pvar "x") 2)
     "r"
-    (sh "k" (unk "k" 1 "r") "r")
-      (ens "r" (fun s => \[exists i, s "r" = vint i /\ s "r" = i + 2])).
+    (sh "k" "r1" (unk "k" 1 "r1") "x")
+      (ens "r" (fun s => \[exists i, s "x" = vint i /\ s "r" = i + 2])).
 Proof.
   unfold plet_test.
   unfold spec_assert_valid.
   introv He1 He2. intros.
-  specializes He1 penv0 env.
+  specializes He1 "x" penv0 env.
   specializes He2 penv0 env.
   (* preamble done *)
   inverts He1 as. { introv H. exfalso. eapply H. applys eval_pshift. }
@@ -934,7 +950,7 @@ Proof.
 
   exists "r".
   eexists.
-  split. 2: { applys s_seq_sh. applys s_sh. }
+  split. 2: { applys s_seq_sh. applys s_sh. simpl. reflexivity. }
   (* now we know what the extension looks like *)
 
   (* use what we have about the cont. here it's just the identity *)
@@ -972,7 +988,8 @@ Proof.
   applys s_ens.
 
   reflexivity.
-  admit.
+  resolve_fn_in_env.
+
   hintro.
   admit.
   admit.
