@@ -1012,6 +1012,7 @@ Proof.
   (* inverts H17. *)
 
   applys s_fexs. exists v1.
+  (* TODO how does ens update the store? *)
   applys s_ens.
 
   reflexivity.
