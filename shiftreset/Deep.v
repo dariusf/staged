@@ -493,15 +493,15 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
     spec_assert_valid_under penv env e r f
 
   (* _2 *)
-  | sav_shift: forall e rb f eb fb r,
+  | sav_shift: forall e rb f eb fb r r1,
     spec_assert_valid_under penv env eb rb fb ->
     (forall s1 s2 h1 h2 v r,
       not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
     (forall s1 s2 h1 h2, forall k ek,
-      bigstep penv s1 h1 e s2 h2 r (eshft (vfun k eb) r ek) ->
-      exists rk fk,
-        spec_assert_valid_under penv env ek rk fk /\
-          satisfies env s1 s2 h1 h2 (shft k rb fb r rk fk) r f) ->
+      bigstep penv s1 h1 e s2 h2 r (eshft (vfun k eb) r1 ek) ->
+      exists fk,
+        spec_assert_valid_under penv env ek r fk /\
+          satisfies env s1 s2 h1 h2 (shft k rb fb r1 r fk) r f) ->
     spec_assert_valid_under penv env e r f.
     
 
@@ -610,7 +610,7 @@ Qed.
 
 Lemma pshift_sound: forall r rb k eb fb,
   spec_assert_valid eb rb fb ->
-  spec_assert_valid (pshift k eb) r (sh k rb fb r).
+  spec_assert_valid (pshift k eb) rb (sh k rb fb r).
 Proof.
   unfold spec_assert_valid. intros r rb **.
   specializes H penv0 env.
@@ -691,9 +691,8 @@ Proof.
     intros * Hb.
     inverts Hb as H3 H4. intros.
     rewrite H in H3. injects H3.
-    specializes He H4. destruct He as (r2&fk&?&?).
+    specializes He H4. destruct He as (fk&?&?).
     exs.
-    (* exists r2 fk. *)
     split*.
     applys s_unk.
     eassumption.
