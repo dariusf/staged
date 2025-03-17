@@ -928,7 +928,7 @@ Definition plet_test x e1 e2 r f1 f2 :=
   (forall y, spec_assert_valid e1 y f1) ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
-    (f1;; f2). (* fexs x  *)
+    (f1;; fexs x f2).
 
 Lemma plet_test1:
   plet_test "x"
@@ -996,7 +996,7 @@ Proof.
   inverts H14.
   injects H4.
 
-  applys s_seq.
+  applys s_seq s1 s0.
   applys s_ens.
   reflexivity.
   reflexivity.
@@ -1004,7 +1004,14 @@ Proof.
   fmap_eq. reflexivity.
   fmap_disjoint.
 
-  (* applys s_fexs. exs. *)
+  inverts H15.
+  simpl in H9. injects H9.
+  simpl in H13. injects H13.
+  rewrite fmap_read_update in TEMP. subst.
+
+  (* inverts H17. *)
+
+  applys s_fexs. exists v1.
   applys s_ens.
 
   reflexivity.
@@ -1012,8 +1019,13 @@ Proof.
   admit.
 
   hintro.
+  exists v1.
+  split.
+  unfold store_read. rewrite fmap_read_update.
+  reflexivity.
+  
   admit.
-  admit.
+  fmap_eq.
   fmap_disjoint.
 
 Admitted.
