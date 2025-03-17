@@ -232,31 +232,6 @@ Coercion store_read : store >-> Funclass.
 (* Coercion papp : expr >-> Funclass. *)
 
 
-Example ex0 : exists Re,
-  bigstep empty_penv empty_store empty_heap
-  (pshift "k" (papp (pvar "k") 1))
-    empty_store empty_heap "r"
-    Re.
-Proof.
-  exs.
-  applys eval_pshift.
-  Show Proof.
-Qed.
-
-Example ex1 : exists Re,
-  bigstep empty_penv empty_store empty_heap
-  (plet "x" (pshift "k" (papp (pvar "k") 1))
-    (padd (pvar "x") 2))
-    empty_store empty_heap "r" Re.
-Proof.
-  exs.
-  applys eval_plet_sh.
-  applys eval_pshift.
-  Unshelve.
-  exact "a".
-  Show Proof.
-Qed.
-
 
 
 Definition asn := store -> heap -> Prop.
@@ -373,12 +348,10 @@ Inductive satisfies : senv -> store -> store ->
     satisfies env s1 s2 h1 h2 R r (seq f1 f2)
   (* if it's a value, we ignore the variable of f1, same as before *)
 
-  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r r1 r2 r3,
-    satisfies env s1 s2 h1 h2 (shft k r1 shb r r2 fk) r f1 ->
+  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r r1 r2 r3 r4,
+    satisfies env s1 s2 h1 h2 (shft k r1 shb r r2 fk) r4 f1 ->
     Some r3 = flow_res f2 ->
-    satisfies env s1 s2 h1 h2 (shft k r1 shb r r3
-    (* TODO r2 should change to result of f2? *)
-    (fk;; f2)) r (f1;; f2)
+    satisfies env s1 s2 h1 h2 (shft k r1 shb r r3 (fk;; f2)) r3 (f1;; f2)
   (* f2 is depending on r *)
 
   (* | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
@@ -469,6 +442,17 @@ Notation "'sh(λ' k r '.' fb ',' r1 ')'" :=
   (sh k r fb r1) (at level 30, only printing,
   format "'sh(λ' k  r '.'  fb ','  r1 ')'" ).
 
+Notation "'shft(λ' k  r '.'  fb ',' 'λ' x  r1 '.'  fk ')'" :=
+(* Notation "'shft(λ' k r '.' fb ',' 'λ' x r1 '.' fk ')'" := *)
+  (shft k r fb x r1 fk) (at level 30, only printing
+  (* , *)
+  (* format "'shft(λ' k  r '.'  fb ','  'λ' x  r1 '.'  fk ')'"  *)
+  ).
+
+Notation "'eshft(' eb ',' 'λ' r '.' ek ')'" :=
+  (eshft eb r ek) (at level 30, only printing,
+  format "'eshft(' eb ','  'λ' r '.'  ek ')'" ).
+
 Notation "'ens[' r ']' H" :=
   (ens r H) (at level 30, only printing,
   format "ens[ r ] H").
@@ -483,18 +467,6 @@ Notation "f '$(' v ',' r ')'" :=
 
 (* plet "x" (pshift "k" (papp (pvar "k") 1))
       (padd (pvar "x") 2) *)
-Example ex2 : exists R,
-  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r"
-    (sh "k" "r2" (unk "k" 1 "r2") "r";;
-      ens "r1" (fun s => \[exists i, s "r" = vint i /\ s "r1" = i + 2])).
-Proof.
-  exs.
-  applys s_seq_sh.
-  (* applys_eq s_sh. *)
-  applys s_sh.
-  simpl. reflexivity.
-  Show Proof.
-Qed.
 
 
 (* Inductive spec_assert : expr -> var -> flow -> Prop :=
@@ -531,8 +503,7 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
         spec_assert_valid_under penv env ek rk fk /\
           satisfies env s1 s2 h1 h2 (shft k rb fb r rk fk) r f) ->
     spec_assert_valid_under penv env e r f.
-    (* some strangeness here: r is the cont arg for the shift case,
-      but the value for the base case *)
+    
 
 
 (* Notation "penv ',' env '|-' e ':::' r '.' f" :=
@@ -581,6 +552,49 @@ Proof.
       we have to have used sav_shift earlier. *)
     admit. }
 Abort. *)
+
+Module Examples.
+
+
+Example ex0 : exists Re,
+  bigstep empty_penv empty_store empty_heap
+  (pshift "k" (papp (pvar "k") 1))
+    empty_store empty_heap "r"
+    Re.
+Proof.
+  exs.
+  applys eval_pshift.
+  Show Proof.
+Qed.
+
+Example ex1 : exists Re,
+  bigstep empty_penv empty_store empty_heap
+  (plet "x" (pshift "k" (papp (pvar "k") 1))
+    (padd (pvar "x") 2))
+    empty_store empty_heap "r" Re.
+Proof.
+  exs.
+  applys eval_plet_sh.
+  applys eval_pshift.
+  Unshelve.
+  exact "a".
+  Show Proof.
+Qed.
+
+Example ex2 : exists R,
+  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
+    (sh "k" "r2" (unk "k" 1 "r2") "r";;
+      ens "r1" (fun s => \[exists i, s "r" = vint i /\ s "r1" = i + 2])).
+Proof.
+  exs.
+  applys s_seq_sh.
+  (* applys_eq s_sh. *)
+  applys s_sh.
+  simpl. reflexivity.
+  Show Proof.
+Qed.
+
+End Examples.
 
 Lemma pvar_sound: forall x,
   spec_assert_valid (pvar x) x (ens x (fun s => \[])).
@@ -950,7 +964,7 @@ Proof.
 
   exists "r".
   eexists.
-  split. 2: { applys s_seq_sh. applys s_sh. simpl. reflexivity. }
+  split. 2: { applys s_seq_sh. applys_eq s_sh. f_equal. applys s_sh. simpl. reflexivity. }
   (* now we know what the extension looks like *)
 
   (* use what we have about the cont. here it's just the identity *)
