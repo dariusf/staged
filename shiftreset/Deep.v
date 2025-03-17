@@ -959,43 +959,42 @@ Proof.
   forwards: He1. applys_eq H8. f_equal.
 
   specializes He1 H8.
-  destruct He1 as (fk&Htek&Hek).
+  destruct He1 as (?&fk&Htek&Hek).
   inverts Hek.
   (* now we have info about the continuation,
     and have to prove something about the continuation's extension *)
 
-  exists "r".
+  exists "x".
   eexists.
   split. 2: {
     applys s_seq_sh.
-    applys_eq s_sh. f_equal.
-    (* applys s_sh. *)
+    applys s_sh.
     simpl. reflexivity.
     }
   (* now we know what the extension looks like *)
 
   (* use what we have about the cont. here it's just the identity *)
   inverts Htek.
-  2: { inverts H8. exfalso. applys H0. applys eval_pvar. reflexivity. reflexivity. }
+  2: { inverts H8. exfalso. applys H1. applys eval_pvar. reflexivity. reflexivity. }
   (* the cont does not evaluate to a shift, and if value, we have a triple *)
 
   (* now, prove that the extension has a corresponding execution in the spec *)
   applys sav_base.
   {
     (* have to prove the cont has no shift *)
-    intros * H1.
-    inverts H1.
-    { specializes H13. inverts H13. injects H3. inverts H14. }
-    { inverts H12. injects H3. false H H15. }
+    intros * H2.
+    inverts H2.
+    { specializes H14. inverts H14. injects H4. inverts H15. }
+    { inverts H13. injects H4. false H0 H16. }
   }
   intros.
   (* recall: we know ek0 has no shift *)
 
   (* reason about let inside the cont *)
-  inverts H1.
-  specializes H13.
-  inverts H13.
-  injects H3.
+  inverts H2.
+  specializes H14.
+  inverts H14.
+  injects H4.
 
   applys s_seq.
   applys s_ens.
@@ -1005,11 +1004,12 @@ Proof.
   fmap_eq. reflexivity.
   fmap_disjoint.
 
-  applys s_fexs. exs.
+  (* applys s_fexs. exs. *)
   applys s_ens.
 
   reflexivity.
-  resolve_fn_in_env.
+  (* resolve_fn_in_env. *)
+  admit.
 
   hintro.
   admit.
