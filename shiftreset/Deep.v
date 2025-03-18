@@ -141,12 +141,9 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> eresult ->
     Some (vint v2) = get_val s1 e2 ->
     bigstep p s1 h (padd e1 e2) s1 h (enorm (vint (v1 + v2)))
 
-  (* _3 *)
   | eval_pshift : forall s1 h p k eb r,
-    (* s2 = Fmap.update s1 r v -> *)
     (* TODO is r in s1? *)
-    bigstep p s1 h (pshift k eb) s1 h
-      (eshft (vfun k eb) r (pvar r))
+    bigstep p s1 h (pshift k eb) s1 h (eshft (vfun k eb) r (pvar r))
 
       (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
 
@@ -334,7 +331,6 @@ Inductive satisfies : senv -> store -> store ->
     satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H)
     (* TODO r is a problem, as ens does nothing to it, so *)
 
-  (* _1 *)
   | s_sh : forall env s1 h1 k fb r r1,
     satisfies env s1 s1 h1 h1
       (shft k r1 fb r r (ens r (fun _ => \[]))) r
@@ -491,14 +487,14 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
       satisfies env s1 (Fmap.update s2 r v) h1 h2 (norm v) r f) ->
     spec_assert_valid_under penv env e r f
 
-  (* _2 *)
-  | sav_shift: forall e rb f eb fb r,
+  | sav_shift: forall e r f, forall eb rb fb,
     spec_assert_valid_under penv env eb rb fb ->
     (forall s1 s2 h1 h2 v,
       not (bigstep penv s1 h1 e s2 h2 (enorm v))) ->
-    (forall s1 s2 h1 h2, forall k ek,
-      (forall r1, bigstep penv s1 h1 e s2 h2 (eshft (vfun k eb) r1 ek)) ->
-      exists r1 fk,
+    (forall s1 s2 h1 h2, forall k r1 ek,
+    (* r1 is the input to the continuation *)
+      bigstep penv s1 h1 e s2 h2 (eshft (vfun k eb) r1 ek) ->
+      exists fk,
         spec_assert_valid_under penv env ek r fk /\
           satisfies env s1 s2 h1 h2 (shft k rb fb r1 r fk) r f) ->
     spec_assert_valid_under penv env e r f.
@@ -610,6 +606,19 @@ Proof.
   fmap_eq.
 Qed.
 
+(* Lemma pvar_sound1: forall x r,
+  spec_assert_valid (pvar x) r (fexs "r" (ens r (fun s => \[s "x" = s "r"]))).
+Proof.
+  unfold spec_assert_valid. intros.
+  applys sav_base. { intros * H. false_invert H. }
+  intros.
+  inverts H. (* eval_pvar *)
+  applys* s_fexs. exists (s2 "x").
+  applys* s_ens.
+  (* hintro. *)
+  fmap_eq.
+Qed. *)
+
 Lemma pshift_sound: forall r r1 k eb fb,
   spec_assert_valid eb r1 fb ->
   spec_assert_valid (pshift k eb) r (sh k r1 fb r).
@@ -617,47 +626,25 @@ Proof.
   unfold spec_assert_valid. intros r **.
   specializes H penv0 env.
 
-  (* in big step, r is a fresh name.
-    r1 is never used, not by let.
-    so (bigstep ... r1 shift) does not bind r1 to anything *)
-  (* satisfies is the same except the input has r. r1 is not used *)
-  (* triple has rb and rk extra. r and r1 have the same meaning *)
-
-  (* _3 bigstep *)
-  (* _1 satisfies *)
-  (* _2 triple *)
-
-  applys sav_shift H. { intros * ?. false_invert H0. }
+  applys sav_shift H. { intros * H0. false_invert H0. }
   introv Hb.
-  (* exs. *)
-  (* intros. *)
-  specializes Hb r.
+  (* r0 is the input to ek *)
+
+(* invert Hb. *)
+pose proof Hb.
   inverts Hb.
-  (* rename k0 into k. *)
-  (* exists r0. *)
-  (* exists r r0. *)
   exs.
   split.
-
-  (* applys_eq pvar_sound. *)
-  2: {
-    (* applys_eq s_sh. *)
-    (* f_equal. *)
-
-    applys s_sh.
-    }
+  (* TODO how to know that r is the return val of the cont in the big step? *)
 
   apply pvar_sound.
+  (* apply pval_sound. *)
 
-  (* apply pvar_sound. *)
-  (* apply s_fexs. exists v. *)
-  (* Fail applys s_sh. *)
-  (* Unshelve. *)
-  (* exact "anything". *)
-  (* f_equal. *)
-  (* TODO prove r = r0 *)
-  (* admit. *)
-  (* apply s_sh. *)
+  applys_eq s_sh.
+  f_equal.
+
+  applys s_sh.
+
 Qed.
 (* Abort. *)
 
@@ -700,6 +687,7 @@ Proof.
       rewrite H in H1. injects H1.
       false Hne H2. }
     intros * Hb.
+    specializes Hb.
     inverts Hb as H3 H4. intros.
     rewrite H in H3. injects H3.
     specializes He H4. destruct He as (fk&?&?).
