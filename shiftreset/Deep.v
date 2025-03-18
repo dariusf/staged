@@ -168,11 +168,11 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re
 
   (* _4 *)
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek r s1 s2,
-    bigstep p1 s1 h1 e1 s2 h2 x (eshft (vfun k eb) x ek) ->
-    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek r s1 s2 r1 r2 r3,
+    bigstep p1 s1 h1 e1 s2 h2 r2 (eshft (vfun k eb) r1 ek) ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r3
       (eshft (vfun k eb)
-        y (plet x (papp (pval (vfun r ek)) (pvar y)) e2))
+        y (plet x (papp (pval (vfun r1 ek)) (pvar y)) e2))
 
 
   | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3 r,
@@ -575,9 +575,11 @@ Example ex1 : exists Re,
 Proof.
   exs.
   applys eval_plet_sh.
+  exact "z".
   applys eval_pshift.
   Unshelve.
-  exact "a".
+  exact "y".
+  exact "r".
   Show Proof.
 Qed.
 
@@ -889,6 +891,9 @@ Proof.
         false Hne2 H10.
         specializes H8.
         inverts H8. injects H1.
+        (* unfold not in Hnek.
+        forwards: Hnek. applys_eq H12. f_equal. *)
+        (* specializes Hnek H12. *)
         false Hnek H12. }
       (* clear Hnek Hne2. *)
       introv Hb.
@@ -952,19 +957,21 @@ Proof.
   (* start reasoning backwards using the body premise *)
   applys sav_shift Heb. { intros * Hb. inverts Hb. specializes H9. false_invert H9. }
   introv Hb.
-  (* we know that the let evaluates to a shift. explicate that *)
+  (* if whole let evaluates to a shift (Hb), then we have to prove a triple about the cont, and that there is a corresponding exec in the spec. *)
+
+  (* see how the let evaluates *)
   inverts Hb. { specializes H9. false_invert H9. }
   (* the e1 evaluates to a shift *)
   (* use the validity fact we have *)
-  (* forwards: He1. applys_eq H8. f_equal. *)
-
   specializes He1 H8.
-  destruct He1 as (?&fk&Htek&Hek).
+  destruct He1 as (r0&fk&Htek&Hek).
+  (* now we have a triple about the continuation,
+    and we know how the sh evaluates to produce it.
+    we have to prove a triple about the continuation's extension. *)
   inverts Hek.
-  (* clear H2 H5. *)
-  (* now we have info about the continuation,
-    and have to prove something about the continuation's extension *)
+  inverts H8.
 
+  (* first find out what the extension is by swapping to the other goal *)
   exists "x".
   eexists.
   split. 2: {
@@ -972,26 +979,27 @@ Proof.
     applys s_sh.
     simpl. reflexivity.
     }
-  (* now we know what the extension fk looks like *)
+  (* now we know what the extension looks like. we just need a prove a triple about it *)
 
-  (* use what we have about the cont. here it's just the identity *)
+  (* find out about ek0, the body of the function being applied.
+    it's just the identity *)
   inverts Htek.
-  2: { inverts H8. exfalso. applys H0. applys eval_pvar. reflexivity. reflexivity. }
-  (* the cont does not evaluate to a shift, and if value, we have a triple *)
+  2: { exfalso. applys H0. applys eval_pvar. reflexivity. reflexivity. }
+  (* we have that it does not evaluate to a shift, and if value, we have a triple *)
 
-  inverts H8.
-
-  (* now, prove that the extension has a corresponding execution in the spec *)
+  (* now, prove triple about the extension *)
   applys sav_base.
   {
     (* have to prove the cont has no shift *)
-    intros * H2.
-    inverts H2.
-    { specializes H14. inverts H14. injects H3. inverts H15. }
-    { inverts H13. injects H3. false H H16. }
+    intros * H3.
+    inverts H3.
+    { specializes H14. inverts H14. injects H4. inverts H15. }
+    { inverts H13. injects H4. false H H16. }
   }
   introv H1.
-  (* recall: we know ek0 has no shift *)
+
+  (* we have to show given a program execution from s1 to s0,
+    there is a corresponding execution in the spec *)
 
   (* reason about let inside the cont *)
   (* symbolically execute the let to find out about the stores *)
