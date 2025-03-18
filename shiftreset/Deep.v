@@ -496,9 +496,9 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
     spec_assert_valid_under penv env eb rb fb ->
     (forall s1 s2 h1 h2 v,
       not (bigstep penv s1 h1 e s2 h2 (enorm v))) ->
-    (forall s1 s2 h1 h2, forall k r1 ek,
-      bigstep penv s1 h1 e s2 h2 (eshft (vfun k eb) r1 ek) ->
-      exists fk,
+    (forall s1 s2 h1 h2, forall k ek,
+      (forall r1, bigstep penv s1 h1 e s2 h2 (eshft (vfun k eb) r1 ek)) ->
+      exists r1 fk,
         spec_assert_valid_under penv env ek r fk /\
           satisfies env s1 s2 h1 h2 (shft k rb fb r1 r fk) r f) ->
     spec_assert_valid_under penv env e r f.
@@ -610,9 +610,9 @@ Proof.
   fmap_eq.
 Qed.
 
-Lemma pshift_sound: forall r k eb fb,
-  spec_assert_valid eb r fb ->
-  spec_assert_valid (pshift k eb) r (sh k r fb r).
+Lemma pshift_sound: forall r r1 k eb fb,
+  spec_assert_valid eb r1 fb ->
+  spec_assert_valid (pshift k eb) r (sh k r1 fb r).
 Proof.
   unfold spec_assert_valid. intros r **.
   specializes H penv0 env.
@@ -631,21 +631,23 @@ Proof.
   introv Hb.
   (* exs. *)
   (* intros. *)
+  specializes Hb r.
   inverts Hb.
   (* rename k0 into k. *)
   (* exists r0. *)
   (* exists r r0. *)
   exs.
   split.
-  
-  apply pvar_sound.
+
   (* applys_eq pvar_sound. *)
   2: {
     (* applys_eq s_sh. *)
     (* f_equal. *)
+
     applys s_sh.
     }
 
+  apply pvar_sound.
 
   (* apply pvar_sound. *)
   (* apply s_fexs. exists v. *)
