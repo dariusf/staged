@@ -245,7 +245,7 @@ Inductive flow : Type :=
   | fex_fresh : var -> flow -> flow
   | fex : forall (A:Type), (A -> flow) -> flow
 
-  | sh : var -> (var -> flow) -> var -> flow
+  | sh : var -> var -> flow -> var -> flow
   | rs : flow -> val -> flow
 
   (* may return the result of a shift.
@@ -261,7 +261,6 @@ Inductive flow : Type :=
   .
 
 Implicit Types f : flow.
-Implicit Types c : var -> flow.
 
 (* Definition ens_ H := ens (fun r s => \[r = vunit] \* H s). *)
 
@@ -288,21 +287,21 @@ Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 
 Inductive result : Type :=
   | norm : val -> result
-  | shft : var -> (var -> flow) -> var -> (var -> flow) -> result.
+  | shft : var -> var -> flow -> var -> var -> flow -> result.
 
-(* Fixpoint flow_res f : option var :=
+Fixpoint flow_res f : option var :=
   match f with
   | ens r _ => Some r
   | ens_ _ => None
   | req _ f => flow_res f
   | seq _ f => flow_res f
-  | sh _ _ r => Some r
+  | sh _ _ _ r => Some r
   | fexs _ f => flow_res f
   | fex_fresh _ f => flow_res f
   | unk _ _ r => Some r
   | fex f => None (* TODO remove *)
   | rs _ r => None (* TODO remove *)
-  end. *)
+  end.
 
 Inductive satisfies : senv -> store -> store ->
   heap -> heap -> result -> var -> flow -> Prop :=
@@ -332,10 +331,10 @@ Inductive satisfies : senv -> store -> store ->
     satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H)
     (* TODO r is a problem, as ens does nothing to it, so *)
 
-  | s_sh : forall env s1 h1 k cfb r,
+  | s_sh : forall env s1 h1 k fb r r1,
     satisfies env s1 s1 h1 h1
-      (shft k cfb r (fun r1 => ens r1 (fun _ => \[]))) r
-      (sh k cfb r)
+      (shft k r1 fb r r (ens r (fun _ => \[]))) r
+      (sh k r1 fb r)
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
 
   | s_seq : forall env s3 h3 v s1 s2 f1 f2 h1 h2 R r r1 ,
@@ -344,9 +343,10 @@ Inductive satisfies : senv -> store -> store ->
     satisfies env s1 s2 h1 h2 R r (seq f1 f2)
   (* if it's a value, we ignore the variable of f1, same as before *)
 
-  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 cfb k r r3 r4,
-    satisfies env s1 s2 h1 h2 (shft k cfb r fk) r4 f1 ->
-    satisfies env s1 s2 h1 h2 (shft k cfb r (fun r => fk r;; f2)) r3 (f1;; f2)
+  | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r r1 r2 r3 r4,
+    satisfies env s1 s2 h1 h2 (shft k r1 shb r r2 fk) r4 f1 ->
+    Some r3 = flow_res f2 ->
+    satisfies env s1 s2 h1 h2 (shft k r1 shb r r3 (fk;; f2)) r3 (f1;; f2)
   (* f2 is depending on r *)
 
   (* | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
@@ -478,26 +478,26 @@ Notation "f '$(' v ',' r ')'" :=
 (* The cases in the triple definition have to be disjoint, meaning one must know exactly what the next outcome is to prove
 
 If there is a program which could be either shift or not, you have to case, then pick the appropriate triple case *)
-Inductive spec_assert_valid_under penv env : expr -> (var -> flow) -> Prop :=
-  | sav_base: forall e r (f:var->flow),
+Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
+  | sav_base: forall e r f,
     (forall s1 s2 h1 h2 v x e1,
       not (bigstep penv s1 h1 e s2 h2 (eshft v x e1))) ->
     (forall s1 s2 h1 h2 v,
       bigstep penv s1 h1 e s2 h2 (enorm v) ->
-      satisfies env s1 (Fmap.update s2 r v) h1 h2 (norm v) r (f r)) ->
-    spec_assert_valid_under penv env e f
+      satisfies env s1 (Fmap.update s2 r v) h1 h2 (norm v) r f) ->
+    spec_assert_valid_under penv env e r f
 
-  | sav_shift: forall e r cf, forall eb cfb,
-    spec_assert_valid_under penv env eb cfb ->
+  | sav_shift: forall e r f, forall eb rb fb,
+    spec_assert_valid_under penv env eb rb fb ->
     (forall s1 s2 h1 h2 v,
       not (bigstep penv s1 h1 e s2 h2 (enorm v))) ->
     (forall s1 s2 h1 h2, forall k r1 ek,
     (* r1 is the input to the continuation *)
       bigstep penv s1 h1 e s2 h2 (eshft (vfun k eb) r1 ek) ->
-      exists cfk,
-        spec_assert_valid_under penv env ek cfk /\
-          satisfies env s1 s2 h1 h2 (shft k cfb r1 cfk) r (cf r)) ->
-    spec_assert_valid_under penv env e cf.
+      exists fk,
+        spec_assert_valid_under penv env ek r fk /\
+          satisfies env s1 s2 h1 h2 (shft k rb fb r1 r fk) r f) ->
+    spec_assert_valid_under penv env e r f.
     
 
 
@@ -505,21 +505,21 @@ Inductive spec_assert_valid_under penv env : expr -> (var -> flow) -> Prop :=
   (spec_assert_valid_under penv env e r f) (at level 30, only printing,
   format " '[v  ' penv ','  env  '|-'  e  ':::'  r '.'  f ']' "). *)
 
-(* Definition env_compatible penv env :=
+Definition env_compatible penv env :=
   forall e (f:var) x r,
     Fmap.read penv f = (x, e) ->
     exists f1, Fmap.read env f = (x, r, f1) /\
-    spec_assert_valid_under penv env e r f1. *)
+    spec_assert_valid_under penv env e r f1.
 
 (* this has the env_compatible premise. kept for posterity, for now. *)
-(* Definition spec_assert_valid_env e r f : Prop :=
+Definition spec_assert_valid_env e r f : Prop :=
   forall penv env,
     env_compatible penv env ->
-    spec_assert_valid_under penv env e r f. *)
+    spec_assert_valid_under penv env e r f.
 
-Definition spec_assert_valid e cf : Prop :=
+Definition spec_assert_valid e r f : Prop :=
   forall penv env,
-    spec_assert_valid_under penv env e cf.
+    spec_assert_valid_under penv env e r f.
 
 (* Notation "e ':::' r '.' f" :=
   (spec_assert_valid e r f) (at level 30, only printing,
@@ -581,19 +581,21 @@ Qed.
 
 Example ex2 : exists R,
   satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
-    (sh "k" (fun r2 => unk "k" 1 r2) "r";;
+    (sh "k" "r2" (unk "k" 1 "r2") "r";;
       ens "r1" (fun s => \[exists i, s "r" = vint i /\ s "r1" = i + 2])).
 Proof.
   exs.
   applys s_seq_sh.
+  (* applys_eq s_sh. *)
   applys s_sh.
+  simpl. reflexivity.
   Show Proof.
 Qed.
 
 End Examples.
 
 Lemma pvar_sound: forall x,
-  spec_assert_valid (pvar x) (fun x => ens x (fun s => \[])).
+  spec_assert_valid (pvar x) x (ens x (fun s => \[])).
 Proof.
   unfold spec_assert_valid. intros.
   applys sav_base. { intros * H. false_invert H. }
@@ -617,9 +619,9 @@ Proof.
   fmap_eq.
 Qed. *)
 
-Lemma pshift_sound: forall k eb cfb,
-  spec_assert_valid eb cfb ->
-  spec_assert_valid (pshift k eb) (fun r => sh k cfb r).
+Lemma pshift_sound: forall r r1 k eb fb,
+  spec_assert_valid eb r1 fb ->
+  spec_assert_valid (pshift k eb) r (sh k r1 fb r).
 Proof.
   unfold spec_assert_valid. intros r **.
   specializes H penv0 env.
@@ -635,16 +637,13 @@ pose proof Hb.
   split.
   (* TODO how to know that r is the return val of the cont in the big step? *)
 
-2: {
-  applys_eq s_sh.
-  f_equal.
-  (* reflexivity. *)
-  applys s_sh.
-}
   apply pvar_sound.
   (* apply pval_sound. *)
 
+  applys_eq s_sh.
+  f_equal.
 
+  applys s_sh.
 
 Qed.
 (* Abort. *)
