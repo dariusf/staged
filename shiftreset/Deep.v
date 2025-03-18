@@ -1151,7 +1151,9 @@ Proof.
     (* figure out the shape of the continuation fk first *)
     2: {
       applys s_seq_sh.
-      apply He1.
+      (* applys_eq s_sh. *)
+      { apply He1. }
+      { simpl. admit. }
     }
     (* now we know everything after the seq is part of the continuation *)
     (* case on whether the continuation itself performs any shifts *)
