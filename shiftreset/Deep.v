@@ -168,11 +168,15 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re
 
   (* _4 *)
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek r s1 s2 r1 r2 r3,
-    bigstep p1 s1 h1 e1 s2 h2 r2 (eshft (vfun k eb) r1 ek) ->
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek s1 s2 r1 r3,
+    (forall r2, bigstep p1 s1 h1 e1 s2 h2 r2 (eshft (vfun k eb) r1 ek)) ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r3
-      (eshft (vfun k eb)
-        y (plet x (papp (pval (vfun r1 ek)) (pvar y)) e2))
+      (eshft (vfun k eb) y
+        (plet r3
+          (plet x
+            (papp (pval (vfun r1 ek)) (pvar y))
+            e2)
+          (pvar r3)))
 
 
   | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3 r,
@@ -575,11 +579,12 @@ Example ex1 : exists Re,
 Proof.
   exs.
   applys eval_plet_sh.
-  exact "z".
-  applys eval_pshift.
+  intros.
+  applys_eq eval_pshift.
+  (* applys eval_pshift. *)
   Unshelve.
   exact "y".
-  exact "r".
+  exact "r1".
   Show Proof.
 Qed.
 
@@ -961,9 +966,12 @@ Proof.
 
   (* see how the let evaluates *)
   inverts Hb. { specializes H9. false_invert H9. }
+  pose proof H8 as H.
+  inverts H.
   (* the e1 evaluates to a shift *)
   (* use the validity fact we have *)
   (* forwards: He1. applys_eq H8. f_equal. *)
+
   specializes He1 H8.
   destruct He1 as (r0&fk&Htek&Hek).
   (* now we have a triple about the continuation,
