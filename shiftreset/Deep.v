@@ -216,7 +216,7 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
   .
 
 
-Notation " '[' penv ','  s1 ',' h1  '|'  e ']'  '~~>'  '[' s1 ','  s2 ','  h2  '|'  r ','  Re ']'" :=
+Notation " '[' penv ','  s1 ',' h1  '|'  e ']'  '~~>'  '[' s2 ','  h2  '|'  r ','  Re ']'" :=
   (bigstep penv s1 h1 e s2 h2 r Re) (at level 30, only printing).
 
 Notation "'pshift' k '.' e" :=
@@ -956,11 +956,12 @@ Proof.
   inverts Hb. { specializes H9. false_invert H9. }
   (* the e1 evaluates to a shift *)
   (* use the validity fact we have *)
-  forwards: He1. applys_eq H8. f_equal.
+  (* forwards: He1. applys_eq H8. f_equal. *)
 
   specializes He1 H8.
   destruct He1 as (?&fk&Htek&Hek).
   inverts Hek.
+  (* clear H2 H5. *)
   (* now we have info about the continuation,
     and have to prove something about the continuation's extension *)
 
@@ -971,12 +972,14 @@ Proof.
     applys s_sh.
     simpl. reflexivity.
     }
-  (* now we know what the extension looks like *)
+  (* now we know what the extension fk looks like *)
 
   (* use what we have about the cont. here it's just the identity *)
   inverts Htek.
-  2: { inverts H8. exfalso. applys H1. applys eval_pvar. reflexivity. reflexivity. }
+  2: { inverts H8. exfalso. applys H0. applys eval_pvar. reflexivity. reflexivity. }
   (* the cont does not evaluate to a shift, and if value, we have a triple *)
+
+  inverts H8.
 
   (* now, prove that the extension has a corresponding execution in the spec *)
   applys sav_base.
@@ -984,30 +987,38 @@ Proof.
     (* have to prove the cont has no shift *)
     intros * H2.
     inverts H2.
-    { specializes H14. inverts H14. injects H4. inverts H15. }
-    { inverts H13. injects H4. false H0 H16. }
+    { specializes H14. inverts H14. injects H3. inverts H15. }
+    { inverts H13. injects H3. false H H16. }
   }
-  intros.
+  introv H1.
   (* recall: we know ek0 has no shift *)
 
   (* reason about let inside the cont *)
-  inverts H2.
-  specializes H14.
-  inverts H14.
-  injects H4.
-
-  applys s_seq s1 s0.
-  applys s_ens.
-  reflexivity.
-  reflexivity.
-  hintro.
-  fmap_eq. reflexivity.
-  fmap_disjoint.
-
+  (* symbolically execute the let to find out about the stores *)
+  inverts H1 as Hke1 Hke2.
+  (* v0 is the value from evaluating the let, it's bound in s5 *)
+  specializes Hke1 "x". inverts Hke1. injects H3.
   inverts H15.
+  (* rewrite fmap_read_update in Hke2. *)
+
+  inverts Hke2.
   simpl in H9. injects H9.
-  simpl in H13. injects H13.
-  rewrite fmap_read_update in TEMP. subst.
+  simpl in H14. injects H14.
+  rewrite fmap_read_update in TEMP.
+  subst.
+
+  applys s_seq.
+  { (* trivial ens *)
+    applys s_ens.
+    reflexivity.
+    reflexivity.
+    hintro.
+    fmap_eq. reflexivity.
+    fmap_disjoint.
+  }
+
+  (* inverts H15. *)
+  (* subst v1. *)
 
   (* inverts H17. *)
 
@@ -1029,7 +1040,7 @@ Proof.
   fmap_eq.
   fmap_disjoint.
 
-Admitted.
+Abort.
 
 
 
