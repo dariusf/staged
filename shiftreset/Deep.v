@@ -870,7 +870,7 @@ Proof.
   hintro. *)
 Abort. *)
 
-Lemma plet_inside: forall p env e2 r f2 rk fk ek x,
+(* Lemma plet_inside: forall p env e2 r f2 rk fk ek x,
   spec_assert_valid_under p env e2 r f2 ->
   spec_assert_valid_under p env ek rk fk ->
   spec_assert_valid_under p env (plet x (papp (vfun r ek) r) e2) rk
@@ -927,7 +927,7 @@ Proof.
     }
   { admit. }
 
-Abort.
+Abort. *)
 
 Definition plet_test x e1 e2 r f1 f2 :=
   (forall y, spec_assert_valid e1 y f1) ->
@@ -963,6 +963,7 @@ Proof.
   inverts Hb. { specializes H9. false_invert H9. }
   (* the e1 evaluates to a shift *)
   (* use the validity fact we have *)
+  (* forwards: He1. applys_eq H8. f_equal. *)
   specializes He1 H8.
   destruct He1 as (r0&fk&Htek&Hek).
   (* now we have a triple about the continuation,
