@@ -768,7 +768,10 @@ Proof.
     inverts H as H H1. injects H.
     specializes He H1. clear H1.
     (* applys s_fex_fresh. intros. exists va. *)
-    applys s_fexs. exists va.
+    applys s_fexs.
+    Abort.
+
+    (* exists va.
     applys s_seq He. clear He.
     applys s_ens_.
     hintro. unfold store_read. resolve_fn_in_env.
@@ -806,7 +809,7 @@ Proof.
     exact "anything".
     (* this is due to the ens_ variable being unconstrained *)
   }
-Qed.
+Qed. *)
 
 
 
@@ -951,7 +954,7 @@ Proof.
 
 Abort. *)
 
-Definition plet_test x e1 e2 r f1 f2 :=
+(* Definition plet_test x e1 e2 r f1 f2 :=
   (forall y, spec_assert_valid e1 y f1) ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
@@ -1239,4 +1242,4 @@ Proof.
     }
     
   }
-Abort.
+Abort. *)
