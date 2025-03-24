@@ -106,6 +106,10 @@ Inductive eresult : Type :=
   | enorm : val -> eresult
   | eshft : val -> var -> var -> expr -> eresult.
 
+Notation "'eshft(' eb ',' 'λ' r r1 '.' ek ')'" :=
+  (eshft eb r r1 ek) (at level 30, only printing,
+  format "'eshft(' eb ','  'λ' r  r1 '.'  ek ')'" ).
+
 (* Definition penv := Fmap.fmap var (val -> expr). *)
 Definition pfun : Type := var * expr.
 Definition penv := Fmap.fmap var pfun.
@@ -162,13 +166,12 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> eresult ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 Re
 
   (* _4 *)
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek s1 s2 r r1,
-    bigstep p1 s1 h1 e1 s2 h2 (eshft (vfun k eb) r r1 ek) ->
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek s1 s2 r r1 r_,
+    bigstep p1 s1 h1 e1 s2 h2 (eshft (vfun k eb) r1 r_ ek) ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2
-      (eshft (vfun k eb) y y (* TODO *)
-        (plet x
-          (papp (pval (vfun r1 ek)) (pvar y))
-          e2))
+      (eshft (vfun k eb) y r
+        (plet x (papp (pval (vfun r1 ek)) (pvar y))
+          (plet r e2 (pvar r))))
 
 
   | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3,
@@ -288,6 +291,13 @@ Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 Inductive result : Type :=
   | norm : val -> result
   | shft : var -> var -> flow -> var -> var -> flow -> result.
+
+Notation "'shft(λ' k  r '.'  fb ',' 'λ' x  r1 '.'  fk ')'" :=
+(* Notation "'shft(λ' k r '.' fb ',' 'λ' x r1 '.' fk ')'" := *)
+  (shft k r fb x r1 fk) (at level 30, only printing
+  (* , *)
+  (* format "'shft(λ' k  r '.'  fb ','  'λ' x  r1 '.'  fk ')'"  *)
+  ).
 
 Fixpoint flow_res f : option var :=
   match f with
@@ -437,17 +447,6 @@ Notation "'sh(λ' k r '.' fb ',' r1 ')'" :=
   (sh k r fb r1) (at level 30, only printing,
   format "'sh(λ' k  r '.'  fb ','  r1 ')'" ).
 
-Notation "'shft(λ' k  r '.'  fb ',' 'λ' x  r1 '.'  fk ')'" :=
-(* Notation "'shft(λ' k r '.' fb ',' 'λ' x r1 '.' fk ')'" := *)
-  (shft k r fb x r1 fk) (at level 30, only printing
-  (* , *)
-  (* format "'shft(λ' k  r '.'  fb ','  'λ' x  r1 '.'  fk ')'"  *)
-  ).
-
-Notation "'eshft(' eb ',' 'λ' r '.' ek ')'" :=
-  (eshft eb r ek) (at level 30, only printing,
-  format "'eshft(' eb ','  'λ' r '.'  ek ')'" ).
-
 Notation "'ens[' r ']' H" :=
   (ens r H) (at level 30, only printing,
   format "ens[ r ] H").
@@ -455,6 +454,7 @@ Notation "'ens[' r ']' H" :=
 Notation "f '$(' v ',' r ')'" :=
   (unk f v r) (at level 30, only printing,
   format "f '$(' v ','  r ')'").
+
 
 (* Notation "'ens' H" :=
   (ens_ H) (at level 30, only printing,
@@ -474,7 +474,51 @@ Notation "f '$(' v ',' r ')'" :=
     spec_assert (pshift k e) r (fexs r (sh k fe r))
 
   . *)
-(*
+
+
+Module Examples.
+
+
+Example ex0 : exists Re,
+  bigstep empty_penv empty_store empty_heap
+  (pshift "k" (papp (pvar "k") 1))
+    empty_store empty_heap Re.
+Proof.
+  exs.
+  applys eval_pshift "r".
+  Show Proof.
+Qed.
+
+Example ex1 : exists Re,
+  bigstep empty_penv empty_store empty_heap
+  (plet "x" (pshift "k" (papp (pvar "k") 1))
+    (padd (pvar "x") 2))
+    empty_store empty_heap Re.
+Proof.
+  exs.
+  applys eval_plet_sh.
+  applys eval_pshift.
+  Unshelve.
+  exact "y".
+  exact "r1".
+  exact "r2".
+  Show Proof.
+Qed.
+
+Example ex2 : exists R,
+  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
+    (sh "k" "r2" (unk "k" 1 "r2") "r";;
+      ens "r1" (fun s => \[exists i, s "r" = vint i /\ s "r1" = i + 2])).
+Proof.
+  exs.
+  applys s_seq_sh.
+  (* applys_eq s_sh. *)
+  applys s_sh.
+  simpl. reflexivity.
+  Show Proof.
+Qed.
+
+End Examples.
 
 
 (* The cases in the triple definition have to be disjoint, meaning one must know exactly what the next outcome is to prove
@@ -482,8 +526,8 @@ Notation "f '$(' v ',' r ')'" :=
 If there is a program which could be either shift or not, you have to case, then pick the appropriate triple case *)
 Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
   | sav_base: forall e r f,
-    (forall s1 s2 h1 h2 v x e1,
-      not (bigstep penv s1 h1 e s2 h2 (eshft v x e1))) ->
+    (forall s1 s2 h1 h2 v x e1 r,
+      not (bigstep penv s1 h1 e s2 h2 (eshft v x r e1))) ->
     (forall s1 s2 h1 h2 v,
       bigstep penv s1 h1 e s2 h2 (enorm v) ->
       satisfies env s1 (Fmap.update s2 r v) h1 h2 (norm v) r f) ->
@@ -493,9 +537,9 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
     spec_assert_valid_under penv env eb rb fb ->
     (forall s1 s2 h1 h2 v,
       not (bigstep penv s1 h1 e s2 h2 (enorm v))) ->
-    (forall s1 s2 h1 h2, forall k r1 ek,
+    (forall s1 s2 h1 h2, forall k r1 ek r,
     (* r1 is the input to the continuation *)
-      bigstep penv s1 h1 e s2 h2 (eshft (vfun k eb) r1 ek) ->
+      bigstep penv s1 h1 e s2 h2 (eshft (vfun k eb) r1 r ek) ->
       exists fk,
         spec_assert_valid_under penv env ek r fk /\
           satisfies env s1 s2 h1 h2 (shft k rb fb r1 r fk) r f) ->
@@ -550,50 +594,6 @@ Proof.
     admit. }
 Abort. *)
 
-Module Examples.
-
-
-Example ex0 : exists Re,
-  bigstep empty_penv empty_store empty_heap
-  (pshift "k" (papp (pvar "k") 1))
-    empty_store empty_heap Re.
-Proof.
-  exs.
-  applys eval_pshift.
-  Unshelve.
-  exact "r".
-  Show Proof.
-Qed.
-
-Example ex1 : exists Re,
-  bigstep empty_penv empty_store empty_heap
-  (plet "x" (pshift "k" (papp (pvar "k") 1))
-    (padd (pvar "x") 2))
-    empty_store empty_heap Re.
-Proof.
-  exs.
-  applys eval_plet_sh.
-  applys eval_pshift.
-  Unshelve.
-  exact "y".
-  exact "r1".
-  Show Proof.
-Qed.
-
-Example ex2 : exists R,
-  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
-    (sh "k" "r2" (unk "k" 1 "r2") "r";;
-      ens "r1" (fun s => \[exists i, s "r" = vint i /\ s "r1" = i + 2])).
-Proof.
-  exs.
-  applys s_seq_sh.
-  (* applys_eq s_sh. *)
-  applys s_sh.
-  simpl. reflexivity.
-  Show Proof.
-Qed.
-
-End Examples.
 
 Lemma pvar_sound: forall x,
   spec_assert_valid (pvar x) x (ens x (fun s => \[])).
@@ -631,8 +631,8 @@ Proof.
   introv Hb.
   (* r0 is the input to ek *)
 
-(* invert Hb. *)
-pose proof Hb.
+  (* invert Hb. *)
+  pose proof Hb.
   inverts Hb.
   exs.
   split.
@@ -1216,5 +1216,3 @@ Proof.
     
   }
 Abort.
-
-*)
