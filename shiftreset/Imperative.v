@@ -347,7 +347,7 @@ Inductive satisfies : senv -> store -> store ->
       H s3 h3 ->
       Fmap.disjoint h1 h3 -> h2 = Fmap.union h1 h3 ->
       (* Fmap.disjoint s1 s3 -> *)
-      s2 = Fmap.union s1 s3 ->
+      s2 = Fmap.union s3 s1 ->
       (* Fmap.read s3 r = v -> *)
     satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H)
 
@@ -791,8 +791,8 @@ Proof.
     hintro. apply Fmap.read_single.
     fmap_disjoint.
     fmap_eq.
-    unfold Fmap.update.
-    fmap_eq.
+    fold (Fmap.update (Fmap.update s1 x0 vunit) x0 va).
+    rewrite* update_precedence.
   }
   {
     intros * Heb Hne He.
@@ -810,17 +810,21 @@ Proof.
     splits*.
 
     (* applys s_fex_fresh. intros. exists va. *)
-    applys s_fexs. exists va.
+    applys s_fexs.
     applys s_seq.
-    applys s_ens_.
+    applys s_ens_ (Fmap.single x0 va).
     hintro. unfold store_read. resolve_fn_in_env.
+    fmap_disjoint.
     fmap_eq.
     reflexivity.
-    fmap_disjoint.
-    eassumption.
+    reflexivity.
+    fold (Fmap.update (Fmap.update s1 x0 vunit) x0 va).
+    rewrite update_precedence.
+    assumption.
     Unshelve.
-    exact "anything".
-    (* this is due to the ens_ variable being unconstrained *)
+    exact "?".
+    exact "??".
+    (* TODO not sure where these are coming from yet *)
   }
 Qed.
 

@@ -175,12 +175,19 @@ Proof.
   { case_if. reflexivity. }
 Qed.
 
-Lemma update_update_idem: forall A (B:Type) (s:fmap A B) x v,
-  Fmap.update (Fmap.update s x v) x v = Fmap.update s x v.
+Lemma update_precedence: forall A (B:Type) (s:fmap A B) (x: A) (v v1:B),
+  Fmap.update (Fmap.update s x v) x v1 = Fmap.update s x v1.
 Proof.
   unfold Fmap.update, single, Fmap.union, Fmap.map_union. intros.
   applys fmap_extens. intros y. simpls.
   case_if; reflexivity.
+Qed.
+
+Lemma update_update_idem: forall A (B:Type) (s:fmap A B) x v,
+  Fmap.update (Fmap.update s x v) x v = Fmap.update s x v.
+Proof.
+  intros.
+  applys update_precedence v v.
 Qed.
 
 Lemma fmap_update_read : forall A B {IB:Inhab B} (k:A) (m:fmap A B),
