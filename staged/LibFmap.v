@@ -34,6 +34,7 @@ Proof.
   apply indom_single.
 Qed.
 
+
 #[global]
 Hint Rewrite fmap_read_update : rew_fmap rew_fmap_for_fmap_eq.
 
@@ -180,4 +181,15 @@ Proof.
   unfold Fmap.update, single, Fmap.union, Fmap.map_union. intros.
   applys fmap_extens. intros y. simpls.
   case_if; reflexivity.
+Qed.
+
+Lemma fmap_update_read : forall A B {IB:Inhab B} (k:A) (m:fmap A B),
+  indom m k ->
+  update m k (read m k) = m.
+Proof.
+  intros. unfold update.
+  rewrite <- Fmap.update_eq_union_single.
+  applys update_idem.
+  assumption.
+  reflexivity.
 Qed.

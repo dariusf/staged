@@ -606,6 +606,7 @@ Proof.
   fmap_eq.
 Qed.
 
+
 (* Lemma pvar_sound1: forall x r,
   spec_assert_valid (pvar x) r (fexs "r" (ens r (fun s => \[s "x" = s "r"]))).
 Proof.
@@ -618,6 +619,9 @@ Proof.
   (* hintro. *)
   fmap_eq.
 Qed. *)
+
+(*
+
 
 Lemma pshift_sound: forall r r1 k eb fb,
   spec_assert_valid eb r1 fb ->
@@ -1215,3 +1219,5 @@ Proof.
     
   }
 Abort.
+
+*)

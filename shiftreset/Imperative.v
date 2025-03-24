@@ -138,11 +138,11 @@ Definition get_val s e :=
 
 Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> eresult -> Prop :=
   | eval_pval : forall s1 s2 h v p r,
-    (* s2 = Fmap.update s1 r v -> *)
+    s2 = Fmap.update s1 r v ->
     bigstep p s1 h (pval v) s2 h r (enorm v)
 
   | eval_padd : forall s1 s2 h v1 v2 p e1 e2 r,
-    (* s2 = Fmap.update s1 r (vint (v1 + v2)) -> *)
+    s2 = Fmap.update s1 r (vint (v1 + v2)) ->
     Some (vint v1) = get_val s1 e1 ->
     Some (vint v2) = get_val s1 e2 ->
     bigstep p s1 h (padd e1 e2) s1 h r (enorm (vint (v1 + v2)))
@@ -159,7 +159,9 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r1 Re *)
 
   | eval_pvar : forall s1 h x v p r,
+    Fmap.indom s1 x ->
     v = Fmap.read s1 x ->
+    (* s2 = Fmap.update s1 r v -> *)
     bigstep p s1 h (pvar x) s1 h r (enorm v)
 
   | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r r_,
@@ -327,21 +329,27 @@ Inductive satisfies : senv -> store -> store ->
       satisfies env s1 s2 hr h2 R r f) ->
     satisfies env s1 s2 h1 h2 R r (req H f)
 
-  | s_ens : forall env s1 s2 H h1 h2 R v h3 r,
-      R = norm v ->
-      Fmap.read s1 r = v ->
-      (* s2 = Fmap.update s1 r v -> *)
-      H s1 h3 ->
-      h2 = Fmap.union h1 h3 ->
-      Fmap.disjoint h1 h3 ->
-    satisfies env s1 s2 h1 h2 R r (ens r H)
+  | s_ens : forall env s1 s2 s3 H h1 h2 v h3 r,
+      H s3 h3 ->
+      Fmap.disjoint h1 h3 -> h2 = Fmap.union h1 h3 ->
+      Fmap.disjoint s1 s3 -> s2 = Fmap.union s1 s3 ->
+      Fmap.read s3 r = v ->
+    satisfies env s1 s2 h1 h2 (norm v) r (ens r H)
 
-  | s_ens_ : forall env s1 s2 H h1 h2 h3 r,
+  | s_ens_ : forall env s1 s2 s3 H h1 h2 v h3 r,
+      H s3 h3 ->
+      Fmap.disjoint h1 h3 -> h2 = Fmap.union h1 h3 ->
+      Fmap.disjoint s1 s3 -> s2 = Fmap.union s1 s3 ->
+      (* Fmap.read s3 r = v -> *)
+    satisfies env s1 s2 h1 h2 (norm v) r (ens_ H)
+
+  (* | s_ens_ : forall env s1 s2 H h1 h2 h3 r,
       H s1 h3 ->
       (* s2 = Fmap.update s1 r vunit -> *)
       h2 = Fmap.union h1 h3 ->
       Fmap.disjoint h1 h3 ->
-    satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H)
+    satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H) *)
+
     (* TODO r is a problem, as ens does nothing to it, so *)
 
   | s_sh : forall env s1 h1 k fb r r1,
@@ -519,6 +527,20 @@ Proof.
   Show Proof.
 Qed.
 
+(* setting the value of a loc *)
+Example ex3 : exists R,
+  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
+    (sh "k" "r2" (unk "k" 1 "r2") "r";;
+      ens "r1" (fun s => \[exists i, s "r" = vint i /\ s "r1" = i + 2])).
+Proof.
+  exs.
+  applys s_seq_sh.
+  (* applys_eq s_sh. *)
+  applys s_sh.
+  simpl. reflexivity.
+  Show Proof.
+Qed.
+
 End Examples.
 
 
@@ -531,7 +553,7 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
       not (bigstep penv s1 h1 e s2 h2 r (eshft v x r e1))) ->
     (forall s1 s2 h1 h2 v,
       bigstep penv s1 h1 e s2 h2 r (enorm v) ->
-      satisfies env s1 (Fmap.update s2 r v) h1 h2 (norm v) r f) ->
+      satisfies env s1 s2 h1 h2 (norm v) r f) ->
     spec_assert_valid_under penv env e r f
 
   | sav_shift: forall e r f, forall eb rb fb,
@@ -597,14 +619,16 @@ Abort. *)
 
 
 Lemma pvar_sound: forall x,
-  spec_assert_valid (pvar x) x (ens x (fun s => \[])).
+  spec_assert_valid (pvar x) x (ens_ (fun s => \[])).
 Proof.
   unfold spec_assert_valid. intros.
   applys sav_base. { intros * H. false_invert H. }
-  intros.
-  inverts H. (* eval_pvar *)
-  applys* s_ens.
+  introv Hb.
+  inverts Hb. (* eval_pvar *)
+  (* rewrite fmap_update_read. 2: assumption. *)
+  applys* s_ens_.
   hintro.
+  fmap_eq.
   fmap_eq.
 Qed.
 
@@ -705,27 +729,26 @@ Qed.
 
 Lemma pval_sound: forall v r,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
-  spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))).
+  (* spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))). *)
+  spec_assert_valid (pval v) r (ens r (fun s => \[Fmap.read s r = v])).
 Proof.
   unfold spec_assert_valid. intros.
   (* TODO remove these after confirming that they are useless *)
   (* useless, value case must be proved entirely using semantics *)
   (* inverts H. *)
   (* clear H. *)
-  applys sav_base.
-  {
-    unfold not. intros.
-    false_invert H.
-  }
-  intros.
-  inverts H as H. (* eval_pval *)
-  apply s_fexs. exists v0.
+  applys sav_base. { intros * H. false_invert H. }
+  introv Hb.
+  inverts Hb. (* eval_pval *)
+  (* apply s_fexs. exists v0. *)
   applys* s_ens.
-  resolve_fn_in_env.
+  hintro.
+  (* resolve_fn_in_env.
+  resolve_fn_in_env. *)
   (* rewrite* update_update_idem. *)
-  hintro. resolve_fn_in_env.
-  fmap_eq.
-Qed.
+  (* fmap_eq. *)
+Abort.
+(* Qed. *)
 
 
 Lemma papp_sound: forall x e r (va:val) f,
