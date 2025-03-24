@@ -343,12 +343,13 @@ Inductive satisfies : senv -> store -> store ->
       Fmap.read s3 r = v ->
     satisfies env s1 s2 h1 h2 (norm v) r (ens r H)
 
-  | s_ens_ : forall env s1 s2 s3 H h1 h2 v h3 r,
+  | s_ens_ : forall s3 h3 H env s1 s2 h1 h2 r,
       H s3 h3 ->
       Fmap.disjoint h1 h3 -> h2 = Fmap.union h1 h3 ->
-      Fmap.disjoint s1 s3 -> s2 = Fmap.union s1 s3 ->
+      (* Fmap.disjoint s1 s3 -> *)
+      s2 = Fmap.union s1 s3 ->
       (* Fmap.read s3 r = v -> *)
-    satisfies env s1 s2 h1 h2 (norm v) r (ens_ H)
+    satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H)
 
   (* | s_ens_ : forall env s1 s2 H h1 h2 h3 r,
       H s1 h3 ->
@@ -361,7 +362,7 @@ Inductive satisfies : senv -> store -> store ->
 
   | s_sh : forall env s1 h1 k fb r r1,
     satisfies env s1 s1 h1 h1
-      (shft k r1 fb r r (ens_ (fun _ => \[]))) r
+      (shft k r1 fb r r (ens r (fun _ => \[]))) r
       (sh k r1 fb r)
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
 
@@ -531,18 +532,20 @@ Proof.
 Qed.
 
 (* setting the value of a loc *)
-Example ex3 : exists R,
-  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
-    (sh "k" "r2" (unk "k" 1 "r2") "r";;
-      ens "r1" (fun s => \[exists i, s "r" = vint i /\ s "r1" = i + 2])).
+Example ex3 : exists R s,
+  satisfies empty_env empty_store s empty_heap empty_heap R "r"
+    (ens_ (fun s => \[s "x" = 1])).
 Proof.
   exs.
-  applys s_seq_sh.
-  (* applys_eq s_sh. *)
-  applys s_sh.
-  simpl. reflexivity.
-  Show Proof.
-Qed.
+  applys s_ens_ (Fmap.single "x" (vint 1)).
+  hintro.
+  apply Fmap.read_single.
+  fmap_disjoint.
+  fmap_eq.
+  fmap_eq.
+  reflexivity.
+
+Abort.
 
 End Examples.
 
@@ -622,17 +625,19 @@ Abort. *)
 
 
 Lemma pvar_sound: forall x,
-  spec_assert_valid (pvar x) x (ens_ (fun s => \[])).
+  spec_assert_valid (pvar x) x (ens x (fun s => \[])).
 Proof.
   unfold spec_assert_valid. intros.
   applys sav_base. { intros * H. false_invert H. }
   introv Hb.
   inverts Hb. (* eval_pvar *)
   (* rewrite fmap_update_read. 2: assumption. *)
-  applys* s_ens_.
+  applys* s_ens (Fmap.single x (s2 x)).
   hintro.
   fmap_eq.
-  fmap_eq.
+  { fold (Fmap.update s2 x (s2 x)).
+    rewrites* (>> update_idem H4). }
+  { rewrite Fmap.read_single. reflexivity. }
 Qed.
 
 (* Lemma pvar_sound1: forall x r,
@@ -670,8 +675,8 @@ Proof.
   apply pvar_sound.
   (* apply pval_sound. *)
 
-  (* applys_eq s_sh. *)
-  (* f_equal. *)
+  (* applys_eq s_sh.
+  f_equal. *)
 
   applys s_sh.
 Qed.
@@ -780,17 +785,14 @@ Proof.
     specializes He H1. clear H1.
     (* applys s_fex_fresh. intros. exists va. *)
     applys s_fexs.
-    Abort.
-
-    (* exists va.
-    applys s_seq He. clear He.
-    applys s_ens_.
-    hintro. unfold store_read. resolve_fn_in_env.
-    fmap_eq.
+    (* exists va. *)
+    applys s_seq He.
+    applys s_ens_ (Fmap.single x0 va).
+    hintro. apply Fmap.read_single.
     fmap_disjoint.
-    Unshelve.
-    exact "anything".
-    (* this is due to the ens_ variable being unconstrained *)
+    fmap_eq.
+    unfold Fmap.update.
+    fmap_eq.
   }
   {
     intros * Heb Hne He.
@@ -820,7 +822,7 @@ Proof.
     exact "anything".
     (* this is due to the ens_ variable being unconstrained *)
   }
-Qed. *)
+Qed.
 
 
 
