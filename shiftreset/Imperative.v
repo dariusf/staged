@@ -267,6 +267,10 @@ Inductive flow : Type :=
   *)
   .
 
+Notation "'ens[' r ']' H" :=
+  (ens r H) (at level 30, only printing,
+  format "ens[ r ] H").
+
 Implicit Types f : flow.
 
 (* Definition ens_ H := ens (fun r s => \[r = vunit] \* H s). *)
@@ -329,10 +333,13 @@ Inductive satisfies : senv -> store -> store ->
       satisfies env s1 s2 hr h2 R r f) ->
     satisfies env s1 s2 h1 h2 R r (req H f)
 
-  | s_ens : forall env s1 s2 s3 H h1 h2 v h3 r,
+  | s_ens : forall s3 h3 env s1 s2 H h1 h2 v r,
       H s3 h3 ->
       Fmap.disjoint h1 h3 -> h2 = Fmap.union h1 h3 ->
-      Fmap.disjoint s1 s3 -> s2 = Fmap.union s1 s3 ->
+      (* Fmap.disjoint s1 s3 -> *)
+      s2 = Fmap.union s3 s1 ->
+      (* the order of the union is important,
+        as we don't have commutativity due to non-disjointness *)
       Fmap.read s3 r = v ->
     satisfies env s1 s2 h1 h2 (norm v) r (ens r H)
 
@@ -456,10 +463,6 @@ Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
 Notation "'sh(λ' k r '.' fb ',' r1 ')'" :=
   (sh k r fb r1) (at level 30, only printing,
   format "'sh(λ' k  r '.'  fb ','  r1 ')'" ).
-
-Notation "'ens[' r ']' H" :=
-  (ens r H) (at level 30, only printing,
-  format "ens[ r ] H").
 
 Notation "f '$(' v ',' r ')'" :=
   (unk f v r) (at level 30, only printing,
@@ -729,7 +732,7 @@ Qed.
 Lemma pval_sound: forall v r,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
   (* spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))). *)
-  spec_assert_valid (pval v) r (ens r (fun s => \[Fmap.read s r = v])).
+  spec_assert_valid (pval v) r (ens r (fun s => \[s r = v])).
 Proof.
   unfold spec_assert_valid. intros.
   (* TODO remove these after confirming that they are useless *)
@@ -740,14 +743,22 @@ Proof.
   introv Hb.
   inverts Hb. (* eval_pval *)
   (* apply s_fexs. exists v0. *)
-  applys* s_ens.
-  hintro.
-  (* resolve_fn_in_env.
+  applys* s_ens (Fmap.single r v0).
+  hintro. apply Fmap.read_single.
+  fmap_eq.
+  (* admit. *)
+  (* unfold update. fmap_eq.
+  admit. *)
+  apply Fmap.read_single.
+  
+  (* fmap_disjoint. *)
+(* resolve_fn_in_env. *)
+  (* 
   resolve_fn_in_env. *)
   (* rewrite* update_update_idem. *)
   (* fmap_eq. *)
-Abort.
-(* Qed. *)
+(* Abort. *)
+Qed.
 
 
 Lemma papp_sound: forall x e r (va:val) f,
