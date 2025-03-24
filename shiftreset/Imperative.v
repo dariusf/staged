@@ -354,7 +354,7 @@ Inductive satisfies : senv -> store -> store ->
 
   | s_sh : forall env s1 h1 k fb r r1,
     satisfies env s1 s1 h1 h1
-      (shft k r1 fb r r (ens r (fun _ => \[]))) r
+      (shft k r1 fb r r (ens_ (fun _ => \[]))) r
       (sh k r1 fb r)
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
 
@@ -667,11 +667,10 @@ Proof.
   apply pvar_sound.
   (* apply pval_sound. *)
 
-  applys s_sh.
+  (* applys_eq s_sh. *)
   (* f_equal. *)
 
-  (* applys s_sh. *)
-
+  applys s_sh.
 Qed.
 (* Abort. *)
 
