@@ -170,8 +170,8 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re
 
   (* _4 *)
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek s1 s2 r r1 r_,
-    bigstep p1 s1 h1 e1 s2 h2 r_ (eshft (vfun k eb) r1 r_ ek) ->
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek s1 s2 r r1 r2,
+    bigstep p1 s1 h1 e1 s2 h2 r2 (eshft (vfun k eb) r1 r2 ek) ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r
       (eshft (vfun k eb) y r
         (plet x (papp (pval (vfun r1 ek)) (pvar y))
@@ -268,9 +268,11 @@ Inductive flow : Type :=
   *)
   .
 
-Notation "'ens[' r ']' H" :=
-  (ens r H) (at level 30, only printing,
-  format "ens[ r ] H").
+(* Notation "'ens[' r ']' H" :=
+  (ens r H) (at level 30, only printing
+  (* , *)
+  (* format "ens[ r ] H" *)
+  ). *)
 
 Implicit Types f : flow.
 
@@ -1001,7 +1003,7 @@ Proof.
 
 Abort. *)
 
-(* Module SpecialCaseLet.
+Module SpecialCaseLet.
 
 Definition plet_test x e1 e2 r f1 f2 :=
   (forall y, spec_assert_valid e1 y f1) ->
@@ -1015,7 +1017,7 @@ Lemma plet_test1:
       (padd (pvar "x") 2)
     "r"
     (sh "k" "r1" (unk "k" 1 "r1") "x")
-      (ens "r" (fun s => \[exists i, s "x" = vint i /\ s "r" = i + 2])).
+      (ens "r" (fun s => \[exists i, Fmap.read s "x" = vint i /\ Fmap.read s "r" = i + 2])).
 Proof.
   unfold plet_test.
   unfold spec_assert_valid.
@@ -1025,13 +1027,15 @@ Proof.
   (* preamble done *)
   inverts He1 as. { introv H. exfalso. eapply H. applys eval_pshift. }
   introv Heb Hne1 He1.
-  (* e1/f1 is a shift, so we have a triple about the body,
+  (* e1/f1 is a shift, so we have a triple about the shift body,
     that it's not norm, and a validity premise for if it's a shift *)
 
-  (* start reasoning backwards using the body premise *)
+  (* start reasoning backwards using the shift body premise *)
   applys sav_shift Heb. { intros * Hb. inverts Hb. specializes H9. false_invert H9. }
   introv Hb.
-  (* if whole let evaluates to a shift (Hb), then we have to prove a triple about the cont, and that there is a corresponding exec in the spec. *)
+  (* given that whole let evaluates to a shift (Hb),
+    we have to prove (the two conjuncts in the goal) a triple about the cont,
+    and that there is a corresponding exec in the spec. *)
 
   (* see how the let evaluates *)
   inverts Hb. { specializes H9. false_invert H9. }
@@ -1039,10 +1043,11 @@ Proof.
   inverts H.
   (* the e1 evaluates to a shift *)
   (* use the validity fact we have *)
-  (* forwards: He1. applys_eq H8. f_equal. *)
+
+  forwards: He1. applys_eq H8. f_equal.
 
   specializes He1 H8.
-  destruct He1 as (r0&fk&Htek&Hek).
+  destruct He1 as (fk&Htek&Hek).
   (* now we have a triple about the continuation,
     and we know how the sh evaluates to produce it.
     we have to prove a triple about the continuation's extension. *)
@@ -1050,10 +1055,12 @@ Proof.
   inverts H8.
 
   (* first find out what the extension is by swapping to the other goal *)
-  exists "x".
+  (* exists "x". *)
   eexists.
   split. 2: {
     applys s_seq_sh.
+    applys_eq s_sh. f_equal.
+
     applys s_sh.
     simpl. reflexivity.
     }
@@ -1129,7 +1136,7 @@ Proof.
 Abort.
 
 
-End SpecialCaseLet. *)
+End SpecialCaseLet.
 
 (* Lemma plet_sound: forall x e1 e2 r f1 f2,
   (forall y, spec_assert_valid e1 y f1) ->
