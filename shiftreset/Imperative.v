@@ -230,8 +230,8 @@ Coercion pval : val >-> expr.
 Coercion pvar : var >-> expr.
 Coercion vint : Z >-> val.
 
-Definition store_read s x : val := Fmap.read s x.
-Coercion store_read : store >-> Funclass.
+(* Definition store_read s x : val := Fmap.read s x.
+Coercion store_read : store >-> Funclass. *)
 (* Coercion papp : expr >-> Funclass. *)
 
 
@@ -254,7 +254,7 @@ Inductive flow : Type :=
   | fex : forall (A:Type), (A -> flow) -> flow *)
 
   | sh : var -> var -> flow -> var -> flow
-  | rs : flow -> val -> flow
+  | rs : flow -> var -> flow
 
   (* may return the result of a shift.
     input is assumed to be a value most of the time. *)
@@ -335,23 +335,23 @@ Inductive satisfies : senv -> store -> store ->
       satisfies env s1 s2 hr h2 R r f) ->
     satisfies env s1 s2 h1 h2 R r (req H f)
 
-  | s_ens : forall s3 h3 env s1 s2 H h1 h2 v r,
-      H s3 h3 ->
+  | s_ens : forall h3 env s1 s2 H h1 h2 v r,
+      H s2 h3 ->
       Fmap.disjoint h1 h3 -> h2 = Fmap.union h1 h3 ->
       (* Fmap.disjoint s1 s3 -> *)
-      s2 = Fmap.union s3 s1 ->
+      s2 = Fmap.update s1 r v ->
       (* the order of the union is important,
         as we don't have commutativity due to non-disjointness *)
-      Fmap.read s3 r = v ->
+      (* Fmap.read s3 r = v -> *)
     satisfies env s1 s2 h1 h2 (norm v) r (ens r H)
 
-  | s_ens_ : forall s3 h3 H env s1 s2 h1 h2 r,
-      H s3 h3 ->
+  | s_ens_ : forall h3 H env s1 h1 h2 r,
+      H s1 h3 ->
       Fmap.disjoint h1 h3 -> h2 = Fmap.union h1 h3 ->
       (* Fmap.disjoint s1 s3 -> *)
-      s2 = Fmap.union s3 s1 ->
+      (* s2 = Fmap.update s1 -> *)
       (* Fmap.read s3 r = v -> *)
-    satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H)
+    satisfies env s1 s1 h1 h2 (norm vunit) r (ens_ H)
 
   | s_upd : forall env s1 s2 H h1 v x r,
     s2 = Fmap.update s1 x v ->
@@ -527,7 +527,7 @@ Qed.
 Example ex2 : exists R,
   satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
     (sh "k" "r2" (unk "k" 1 "r2") "r";;
-      ens "r1" (fun s => \[exists i, s "r" = vint i /\ s "r1" = i + 2])).
+      ens "r1" (fun s => \[exists i, Fmap.read s "r" = vint i /\ Fmap.read s "r1" = i + 2])).
 Proof.
   exs.
   applys s_seq_sh.
@@ -539,7 +539,7 @@ Qed.
 
 (* setting the value of a loc *)
 (* TODO r? *)
-Example ex3 : exists R s,
+(* Example ex3 : exists R s,
   satisfies empty_env empty_store s empty_heap empty_heap R "r"
     (ens_ (fun s => \[s "x" = 1])).
 Proof.
@@ -552,10 +552,10 @@ Proof.
   fmap_eq.
   reflexivity.
   Show Proof.
-Qed.
+Qed. *)
 
 (* constraining the value of a loc *)
-Example ex4 : exists R s,
+(* Example ex4 : exists R s,
   satisfies empty_env empty_store s empty_heap empty_heap R "r"
     (ens_ (fun s => \[s "x" = 1])).
 Proof.
@@ -567,7 +567,7 @@ Proof.
   fmap_eq.
   fmap_eq.
   reflexivity.
-Qed.
+Qed. *)
 
 End Examples.
 
@@ -654,13 +654,13 @@ Proof.
   introv Hb.
   inverts Hb. (* eval_pvar *)
   (* rewrite fmap_update_read. 2: assumption. *)
-  applys* s_ens (Fmap.single x (s2 x)).
+  applys* s_ens.
   hintro.
   fmap_eq.
   { (* rewrite <- update_inv. *)
-    fold (Fmap.update s2 x (s2 x)).
+    fold (Fmap.update s2 x (Fmap.read s2 x)).
     rewrites* (>> update_idem H4). }
-  { rewrite Fmap.read_single. reflexivity. }
+  (* { rewrite Fmap.read_single. reflexivity. } *)
 Qed.
 
 (* Lemma pvar_sound1: forall x r,
@@ -760,7 +760,7 @@ Qed.
 Lemma pval_sound: forall v r,
   (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
   (* spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))). *)
-  spec_assert_valid (pval v) r (ens r (fun s => \[s r = v])).
+  spec_assert_valid (pval v) r (ens r (fun s => \[Fmap.read s r = v])).
 Proof.
   unfold spec_assert_valid. intros.
   (* TODO remove these after confirming that they are useless *)
@@ -771,13 +771,17 @@ Proof.
   introv Hb.
   inverts Hb. (* eval_pval *)
   (* apply s_fexs. exists v0. *)
-  applys* s_ens (Fmap.single r v0).
-  hintro. apply Fmap.read_single.
+  applys* s_ens.
+  hintro.
+  (* Set Printing Coercions.  *)
+  (* unfold store_read. *)
+  (* Search (Fmap.read (Fmap.update _ _ _) _) in Fmap. *)
+  (* apply Fmap.upda. *)
+  fmap_eq. reflexivity.
   fmap_eq.
   (* admit. *)
   (* unfold update. fmap_eq.
   admit. *)
-  apply Fmap.read_single.
   
   (* fmap_disjoint. *)
 (* resolve_fn_in_env. *)
@@ -792,7 +796,7 @@ Qed.
 Lemma papp_sound: forall x e r (va:val) f,
   spec_assert_valid e r f ->
   spec_assert_valid (papp (vfun x e) va) r
-    (fexs x (ens_ (fun s => \[s x = va]);; f)).
+    (fexs x (ens x (fun s => \[Fmap.read s x = va]);; f)).
 Proof.
   unfold spec_assert_valid.
   intros * He penv env.
@@ -810,8 +814,9 @@ Proof.
     applys s_fexs.
     (* exists va. *)
     applys s_seq He.
-    applys s_ens_ (Fmap.single x0 va).
-    hintro. apply Fmap.read_single.
+    
+    applys s_ens.
+    hintro. apply fmap_read_update.
     fmap_disjoint.
     fmap_eq.
     fold (Fmap.update (Fmap.update s1 x0 vunit) x0 va).
@@ -835,18 +840,20 @@ Proof.
     (* applys s_fex_fresh. intros. exists va. *)
     applys s_fexs.
     applys s_seq.
-    applys s_ens_ (Fmap.single x0 va).
-    hintro. unfold store_read. resolve_fn_in_env.
+    applys s_ens (Fmap.update s1 x0 va).
+    hintro. resolve_fn_in_env.
     fmap_disjoint.
     fmap_eq.
     reflexivity.
-    reflexivity.
-    fold (Fmap.update (Fmap.update s1 x0 vunit) x0 va).
+    (* fmap *)
+    (* reflexivity. *)
+    (* fold (Fmap.update (Fmap.update s1 x0 vunit) x0 va). *)
     rewrite update_precedence.
+    reflexivity.
     assumption.
-    Unshelve.
-    exact "?".
-    exact "??".
+    (* Unshelve. *)
+    (* exact "?". *)
+    (* exact "??". *)
     (* TODO not sure where these are coming from yet *)
   }
 Qed.
