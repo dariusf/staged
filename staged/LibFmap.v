@@ -200,3 +200,10 @@ Proof.
   assumption.
   reflexivity.
 Qed.
+
+Lemma update_inv : forall A B {IB:Inhab B} (k:A) (v:B) (m:fmap A B),
+  update m k v = union (single k v) m.
+Proof.
+  intros. unfold update.
+  reflexivity.
+Qed.

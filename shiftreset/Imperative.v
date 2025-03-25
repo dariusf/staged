@@ -246,6 +246,7 @@ Inductive flow : Type :=
   | req : asn -> flow -> flow
   (* | ens : (val -> asn) -> flow *)
   | ens : var -> asn -> flow
+  | upd : var -> val -> flow
   | ens_ : asn -> flow
   | seq : flow -> flow -> flow
   | fexs : var -> flow -> flow (* exists in store *)
@@ -311,6 +312,7 @@ Fixpoint flow_res f : option var :=
   match f with
   | ens r _ => Some r
   | ens_ _ => None
+  | upd _ _ => None
   | req _ f => flow_res f
   | seq _ f => flow_res f
   | sh _ _ _ r => Some r
@@ -350,6 +352,10 @@ Inductive satisfies : senv -> store -> store ->
       s2 = Fmap.union s3 s1 ->
       (* Fmap.read s3 r = v -> *)
     satisfies env s1 s2 h1 h2 (norm vunit) r (ens_ H)
+
+  | s_upd : forall env s1 s2 H h1 v x r,
+    s2 = Fmap.update s1 x v ->
+    satisfies env s1 s2 h1 h1 (norm vunit) r (upd x v)
 
   (* | s_ens_ : forall env s1 s2 H h1 h2 h3 r,
       H s1 h3 ->
@@ -532,6 +538,7 @@ Proof.
 Qed.
 
 (* setting the value of a loc *)
+(* TODO r? *)
 Example ex3 : exists R s,
   satisfies empty_env empty_store s empty_heap empty_heap R "r"
     (ens_ (fun s => \[s "x" = 1])).
@@ -544,8 +551,23 @@ Proof.
   fmap_eq.
   fmap_eq.
   reflexivity.
+  Show Proof.
+Qed.
 
-Abort.
+(* constraining the value of a loc *)
+Example ex4 : exists R s,
+  satisfies empty_env empty_store s empty_heap empty_heap R "r"
+    (ens_ (fun s => \[s "x" = 1])).
+Proof.
+  exs.
+  applys s_ens_ (Fmap.single "x" (vint 1)).
+  hintro.
+  apply Fmap.read_single.
+  fmap_disjoint.
+  fmap_eq.
+  fmap_eq.
+  reflexivity.
+Qed.
 
 End Examples.
 
@@ -635,7 +657,8 @@ Proof.
   applys* s_ens (Fmap.single x (s2 x)).
   hintro.
   fmap_eq.
-  { fold (Fmap.update s2 x (s2 x)).
+  { (* rewrite <- update_inv. *)
+    fold (Fmap.update s2 x (s2 x)).
     rewrites* (>> update_idem H4). }
   { rewrite Fmap.read_single. reflexivity. }
 Qed.
@@ -971,7 +994,9 @@ Proof.
 
 Abort. *)
 
-(* Definition plet_test x e1 e2 r f1 f2 :=
+(* Module SpecialCaseLet.
+
+Definition plet_test x e1 e2 r f1 f2 :=
   (forall y, spec_assert_valid e1 y f1) ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
@@ -1097,8 +1122,9 @@ Proof.
 Abort.
 
 
+End SpecialCaseLet. *)
 
-Lemma plet_sound: forall x e1 e2 r f1 f2,
+(* Lemma plet_sound: forall x e1 e2 r f1 f2,
   (forall y, spec_assert_valid e1 y f1) ->
   spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
