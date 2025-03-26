@@ -91,31 +91,6 @@ Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   | preset e => preset (aux e)
   end.
 
-Fixpoint subst_var (y:var) (v:var) (e:expr) : expr :=
-  let aux t := subst_var y v t in
-  let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
-  match e with
-  | pval v => pval v
-  | padd x z => padd x z
-(*
-  | pminus x z => pminus x z
-  | pfst x => pfst x
-  | psnd x => psnd x *)
-  | pvar x => if_y_eq x (pvar v) e
-  (* | passert b => passert (aux b)
-  | pderef r => pderef (aux r)
-  | passign x z => passign (aux x) (aux z)
-  | pref v => pref (aux v)
-  | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
-  | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
-  *)
-  | papp e v => papp e v
-  | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
-  (* | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2) *)
-  | pshift k e1 => pshift k (aux e1)
-  | preset e => preset (aux e)
-  end.
-
 Module Val.
   Definition value := val.
 End Val.
@@ -1030,26 +1005,24 @@ Abort. *)
 
 Module SpecialCaseLet.
 
-Definition plet_test x e1 e2 y r f1 f2 :=
-  spec_assert_valid e1 y f1 ->
-  spec_assert_valid (subst_var x y e2) r f2 ->
+Definition plet_test x e1 e2 r f1 f2 :=
+  (forall y, spec_assert_valid e1 y f1) ->
+  spec_assert_valid e2 r f2 ->
   spec_assert_valid (plet x e1 e2) r
-    (f1;; f2).
-(* fexs x  *)
+    (f1;; fexs x f2).
 
 Lemma plet_test1:
   plet_test "x"
     (pshift "k" (papp (pvar "k") 1))
       (padd (pvar "x") 2)
-    "y" "r"
+    "r"
     (sh "k" "r1" (unk "k" 1 "r1") "x")
       (ens "r" (fun s => \[exists i, Fmap.read s "x" = vint i /\ Fmap.read s "r" = i + 2])).
 Proof.
   unfold plet_test.
   unfold spec_assert_valid.
   introv He1 He2. intros.
-  specializes He1 penv0 env.
-  (* specializes He1 "x" penv0 env. *)
+  specializes He1 "x" penv0 env.
   specializes He2 penv0 env.
   (* preamble done *)
   inverts He1 as. { introv H. exfalso. eapply H. applys eval_pshift. }
@@ -1072,8 +1045,6 @@ Proof.
   (* use the validity fact we have *)
 
   forwards: He1. applys_eq H8. f_equal.
-  (* r0 is a fresh variable, produced in evaluation.
-    we need to prove it is equal to x *)
 
   specializes He1 H8.
   destruct He1 as (fk&Htek&Hek).
