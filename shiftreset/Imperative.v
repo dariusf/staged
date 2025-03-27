@@ -102,10 +102,9 @@ Definition empty_heap : heap := Fmap.empty.
 
 
 
-Inductive eresult : Type :=
+Inductive eresult : Type := (* for the program *)
   | enorm : val -> eresult
-  | eshft : val -> var -> var -> expr -> eresult.
-
+  | eshft : val -> var -> var -> expr -> eresult. (* the first val must be a val_fun, the body of the shift *)
 Notation "'eshft(' eb ',' 'λ' r r1 '.' ek ')'" :=
   (eshft eb r r1 ek) (at level 30, only printing,
   format "'eshft(' eb ','  'λ' r  r1 '.'  ek ')'" ).
@@ -149,7 +148,7 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
 
   | eval_pshift : forall s1 h p k eb r,
     (* TODO is r in s1? *)
-    bigstep p s1 h (pshift k eb) s1 h r (eshft (vfun k eb) r r (pvar r))
+    bigstep p s1 h (pshift k eb) s1 h r (eshft (vfun k eb) r r (pvar r)) (* r r r, duplication? *)
 
       (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
 
@@ -167,14 +166,15 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> var -> ere
   | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r r_,
     bigstep p1 s1 h1 e1 s3 h3 r_ (enorm v) ->
     bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 r Re ->
-    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re (* let here is like sequencing, because we ignore the "reference" returned from the first
+expression *)
 
   (* _4 *)
   | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek s1 s2 r r1 r2,
     bigstep p1 s1 h1 e1 s2 h2 r2 (eshft (vfun k eb) r1 r2 ek) ->
-    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r (* r here is the "reference" to the eventual output of the continuation *)
       (eshft (vfun k eb) y r
-        (plet x (papp (pval (vfun r1 ek)) (pvar y))
+        (plet x (papp (pval (vfun r1 ek)) (pvar y)) (* this is just function composition. question: do we need to be this careful? *)
           (plet r e2 (pvar r))))
 
 
@@ -245,7 +245,7 @@ Implicit Types H : asn.
 Inductive flow : Type :=
   | req : asn -> flow -> flow
   (* | ens : (val -> asn) -> flow *)
-  | ens : var -> asn -> flow
+  | ens : var -> asn -> flow (* update the store *)
   | upd : var -> val -> flow
   | ens_ : asn -> flow
   | seq : flow -> flow -> flow
@@ -301,7 +301,7 @@ Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 
 Inductive result : Type :=
   | norm : val -> result
-  | shft : var -> var -> flow -> var -> var -> flow -> result.
+  | shft : var -> var -> flow -> var -> var -> flow -> result. (* input output of body, input output of cont *)
 
 Notation "'shft(λ' k  r '.'  fb ',' 'λ' x  r1 '.'  fk ')'" :=
 (* Notation "'shft(λ' k r '.' fb ',' 'λ' x r1 '.' fk ')'" := *)
@@ -370,7 +370,7 @@ Inductive satisfies : senv -> store -> store ->
 
   | s_sh : forall env s1 h1 k fb r r1,
     satisfies env s1 s1 h1 h1
-      (shft k r1 fb r r (ens r (fun _ => \[]))) r
+      (shft k r1 fb r r (ens r (fun _ => \[]))) r (* the final r is on the satisfy *)
       (sh k r1 fb r)
 (* (fun r1 => rs (ens r (fun s => \[r = v])) r1) *)
 
@@ -382,7 +382,7 @@ Inductive satisfies : senv -> store -> store ->
 
   | s_seq_sh : forall env s1 s2 f1 f2 fk h1 h2 shb k r r1 r2 r3 r4,
     satisfies env s1 s2 h1 h2 (shft k r1 shb r r2 fk) r4 f1 ->
-    Some r3 = flow_res f2 ->
+    Some r3 = flow_res f2 -> (* some location r3 is the final "reference" returned by f2 *)
     satisfies env s1 s2 h1 h2 (shft k r1 shb r r3 (fk;; f2)) r3 (f1;; f2)
   (* f2 is depending on r *)
 
@@ -501,10 +501,10 @@ Notation "f '$(' v ',' r ')'" :=
 Module Examples.
 
 
-Example ex0 : exists Re,
+Example ex0 : exists (Re : eresult),
   bigstep empty_penv empty_store empty_heap
   (pshift "k" (papp (pvar "k") 1))
-    empty_store empty_heap "r" Re.
+    empty_store empty_heap "r" Re. (* if we have a shift w.o. a reset outside, should we allow this *)
 Proof.
   exs.
   applys eval_pshift.
@@ -538,6 +538,21 @@ Proof.
   simpl. reflexivity.
   Show Proof.
 Qed.
+
+Example ex3 : exists (Re : eresult),
+  bigstep empty_penv empty_store empty_heap
+    (pval 1)
+    (Fmap.update empty_store "r" 1)
+    empty_heap
+    "r"
+    Re.
+Proof.
+  exs.
+  constructor.
+  reflexivity.
+  Show Proof.
+Qed.
+  
 
 (* setting the value of a loc *)
 (* TODO r? *)
@@ -578,24 +593,36 @@ End Examples.
 
 If there is a program which could be either shift or not, you have to case, then pick the appropriate triple case *)
 Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
-  | sav_base: forall e r f,
-    (forall s1 s2 h1 h2 v x e1 r,
-      not (bigstep penv s1 h1 e s2 h2 r (eshft v x r e1))) ->
+  | sav_base: forall (e : expr)
+                     (r : var)
+                     (f : flow),
+    (forall (s1 s2 : store)
+            (h1 h2 : heap)
+            (v : val) (* v must be a val_fun here. This is not the best representation *)
+            (x : var)
+            (e1 : expr)
+            (r : var),
+        not (bigstep penv s1 h1 e s2 h2 r (eshft v x r e1))) -> (* e never evaluates to a shift, e is a normal expression *)
+    (* why do we need this, again *)
     (forall s1 s2 h1 h2 v,
-      bigstep penv s1 h1 e s2 h2 r (enorm v) ->
-      satisfies env s1 s2 h1 h2 (norm v) r f) ->
-    spec_assert_valid_under penv env e r f
+        bigstep penv s1 h1 e s2 h2 r (enorm v) ->
+        satisfies env s1 s2 h1 h2 (norm v) r f) ->
+    spec_assert_valid_under penv env e r f (* both the program and the spec follows the same computation *)
 
-  | sav_shift: forall e r f, forall eb rb fb,
-    spec_assert_valid_under penv env eb rb fb ->
-    (forall s1 s2 h1 h2 v r,
-      not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
-    (forall s1 s2 h1 h2, forall k r1 ek,
-    (* r1 is the input to the continuation *)
-      bigstep penv s1 h1 e s2 h2 r (eshft (vfun k eb) r1 r ek) ->
-      exists fk,
-        spec_assert_valid_under penv env ek r fk /\
-          satisfies env s1 s2 h1 h2 (shft k rb fb r1 r fk) r f) ->
+| sav_shift: forall e r f,
+    (forall s1 s2 h1 h2 v r, not (bigstep penv s1 h1 e s2 h2 r (enorm v))) -> (* must evaluate to a shfit *)
+    (forall s1 s2 h1 h2,
+      forall (k : var)
+             (r1 : var)
+             (ek : expr)
+             (eb : expr),
+        (* r1 is the input to the continuation *)
+        (* r is the "eventual output" of the continuation? *)
+        bigstep penv s1 h1 e s2 h2 r (eshft (vfun k eb) r1 r ek) ->
+        exists fk fb rb,
+          satisfies env s1 s2 h1 h2 (shft k rb fb r1 r fk) r f /\
+            spec_assert_valid_under penv env eb rb fb /\
+            spec_assert_valid_under penv env ek r fk) -> (* about the continuation *)
     spec_assert_valid_under penv env e r f.
     
 
@@ -684,8 +711,9 @@ Lemma pshift_sound: forall r r1 k eb fb,
 Proof.
   unfold spec_assert_valid. intros r **.
   specializes H penv0 env.
+  
 
-  applys sav_shift H. { intros * H0. false_invert H0. }
+  eapply sav_shift. { intros * H0. false_invert H0. }
   introv Hb.
   (* r0 is the input to ek *)
 
@@ -695,15 +723,15 @@ Proof.
   (* r2=r0 *)
   exs.
   split.
+  econstructor.
   (* TODO how to know that r is the return val of the cont in the big step? *)
-
+  split.
+  assumption.
   apply pvar_sound.
   (* apply pval_sound. *)
 
   (* applys_eq s_sh.
   f_equal. *)
-
-  applys s_sh.
 Qed.
 (* Abort. *)
 
@@ -739,23 +767,21 @@ Proof.
     eassumption.
     reflexivity.
     assumption. }
-  { intros * Heb Hne He.
-    applys sav_shift Heb.
+  { intros * Hne He.
+    applys sav_shift.
     { unfold not. intros.
       inverts H1 as H1 H2.
       rewrite H in H1. injects H1.
       false Hne H2. }
     intros * Hb.
-    specializes Hb.
-    inverts Hb as H3 H4. intros.
+    inverts Hb as H3 H4.
     rewrite H in H3. injects H3.
-    specializes He H4. destruct He as (fk&?&?).
+    specializes He H4. destruct He as (fk&fb&rb&?&?).
     exs.
     split*.
     applys s_unk.
     eassumption.
     reflexivity.
-    destr H1.
     eassumption. }
 Qed.
 
@@ -825,9 +851,9 @@ Proof.
     rewrite* update_precedence.
   }
   {
-    intros * Heb Hne He.
+    intros * Hne He.
     (* shift *)
-    applys sav_shift Heb.
+    applys sav_shift.
     {
       unfold not. intros.
       inverts H as H H1. injects H.
@@ -859,8 +885,6 @@ Proof.
     (* TODO not sure where these are coming from yet *)
   }
 Qed.
-
-
 
 (* papp (pvar "k") (pval (vint 1)) *)
 
@@ -1022,16 +1046,16 @@ Proof.
   unfold plet_test.
   unfold spec_assert_valid.
   introv He1 He2. intros.
-  specializes He1 "x" penv0 env.
+  (*specializes He1 "x" penv0 env.*)
   specializes He2 penv0 env.
   (* preamble done *)
-  inverts He1 as. { introv H. exfalso. eapply H. applys eval_pshift. }
-  introv Heb Hne1 He1.
+  (*inverts He1 as. { introv H. exfalso. eapply H. applys eval_pshift. }
+  introv Hne1 He1.*)
   (* e1/f1 is a shift, so we have a triple about the shift body,
     that it's not norm, and a validity premise for if it's a shift *)
 
   (* start reasoning backwards using the shift body premise *)
-  applys sav_shift Heb. { intros * Hb. inverts Hb. specializes H9. false_invert H9. }
+  applys sav_shift. { intros * Hb. inverts Hb. specializes H9. false_invert H9. }
   introv Hb.
   (* given that whole let evaluates to a shift (Hb),
     we have to prove (the two conjuncts in the goal) a triple about the cont,
@@ -1043,6 +1067,17 @@ Proof.
   inverts H.
   (* the e1 evaluates to a shift *)
   (* use the validity fact we have *)
+
+  (* ----- *)
+  (*exs.
+  split*.
+  eapply s_seq_sh.
+  eapply s_sh. (* fail here *)
+   *)
+  (* ----- *)
+  (* stare at the goal: it is not clear how to instatiate fk, fb and rb *)
+  (* why is that the case? Because the definition is not clean, this
+     generate goals that are hard to understand *)
 
   forwards: He1. applys_eq H8. f_equal.
 
