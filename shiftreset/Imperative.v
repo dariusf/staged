@@ -336,15 +336,15 @@ Notation "'∃' a1 .. an , H" :=
   end. *)
 
 Inductive satisfies : senv -> store -> store ->
-  heap -> heap -> result -> var -> flow -> Prop :=
+  heap -> heap -> result -> flow -> Prop :=
 
   | s_req : forall env s1 s2 H (h1 h2:heap) R f r,
     (forall (hp hr:heap),
       H s1 hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies env s1 s2 hr h2 R r f) ->
-    satisfies env s1 s2 h1 h2 R r (req H f)
+      satisfies env s1 s2 hr h2 R f) ->
+    satisfies env s1 s2 h1 h2 R (req H f)
 
   | s_ens : forall h3 env s1 s2 H h1 h2 v r,
       H s2 h3 ->
@@ -354,15 +354,15 @@ Inductive satisfies : senv -> store -> store ->
       (* the order of the union is important,
         as we don't have commutativity due to non-disjointness *)
       (* Fmap.read s3 r = v -> *)
-    satisfies env s1 s2 h1 h2 (norm v) r (ens r H)
+    satisfies env s1 s2 h1 h2 (norm v) (ens r H)
 
-  | s_ens_ : forall h3 H env s1 h1 h2 r,
+  | s_ens_ : forall h3 H env s1 h1 h2,
       H s1 h3 ->
       Fmap.disjoint h1 h3 -> h2 = Fmap.union h1 h3 ->
       (* Fmap.disjoint s1 s3 -> *)
       (* s2 = Fmap.update s1 -> *)
       (* Fmap.read s3 r = v -> *)
-    satisfies env s1 s1 h1 h2 (norm vunit) r (ens_ H)
+    satisfies env s1 s1 h1 h2 (norm vunit) (ens_ H)
 
   (* | s_upd : forall env s1 s2 H h1 v x r,
     s2 = Fmap.update s1 x v ->
@@ -380,33 +380,32 @@ Inductive satisfies : senv -> store -> store ->
   | s_sh : forall env s1 h1 (fb:var->var->flow) r,
     satisfies env s1 s1 h1 h1
       (shft fb (fun ri ro => ens ro (fun _ => \[])))
-      r
       (sh fb r)
 
-  | s_seq : forall env s3 h3 v s1 s2 f1 (f2:var->flow) h1 h2 R r r1 ,
-    satisfies env s1 s3 h1 h3 (norm v) r1 f1 ->
-    satisfies env s3 s2 h3 h2 R r (f2 r) ->
-    satisfies env s1 s2 h1 h2 R r (seq f1 f2)
+  | s_seq : forall env s3 h3 v s1 s2 f1 (f2:var->flow) h1 h2 R r,
+    satisfies env s1 s3 h1 h3 (norm v) f1 ->
+    satisfies env s3 s2 h3 h2 R (f2 r) ->
+    satisfies env s1 s2 h1 h2 R (seq f1 f2)
   (* if it's a value, we ignore the variable of f1, same as before *)
 
-  | s_seq_sh : forall env s1 s2 f1 (f2:var->flow) h1 h2 (fb fk:var->var->flow) r3 r4,
-    satisfies env s1 s2 h1 h2 (shft fb fk) r4 f1 ->
+  | s_seq_sh : forall env s1 s2 f1 (f2:var->flow) h1 h2 (fb fk:var->var->flow),
+    satisfies env s1 s2 h1 h2 (shft fb fk) f1 ->
     satisfies env s1 s2 h1 h2
-      (shft fb (fun r r2 => ∃ r1, fk r r1;; (fun r3 => f2 r2))) r3 (f1;; f2)
+      (shft fb (fun r r2 => ∃ r1, fk r r1;; (fun r3 => f2 r2))) (f1;; f2)
 
   (* | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
     (H: exists b,
       satisfies s1 s2 h1 h2 R (f b)) :
     satisfies s1 s2 h1 h2 R (@fex A f) *)
 
-  | s_fex : forall env s1 s2 h1 h2 R (A:Type) (f:A->flow) r,
+  | s_fex : forall env s1 s2 h1 h2 R (A:Type) (f:A->flow),
     (exists b,
-      satisfies env s1 s2 h1 h2 R r (f b)) ->
-    satisfies env s1 s2 h1 h2 R r (@fex A f)
+      satisfies env s1 s2 h1 h2 R (f b)) ->
+    satisfies env s1 s2 h1 h2 R (@fex A f)
 
-  | s_fexs : forall env s1 s2 h1 h2 R f x r,
-    satisfies env (Fmap.update s1 x vunit) s2 h1 h2 R r f ->
-    satisfies env s1 s2 h1 h2 R r (fexs x f)
+  | s_fexs : forall env s1 s2 h1 h2 R f x,
+    satisfies env (Fmap.update s1 x vunit) s2 h1 h2 R f ->
+    satisfies env s1 s2 h1 h2 R (fexs x f)
 
   (* | s_fex_fresh : forall env s1 s2 h1 h2 R f x r,
     (~ Fmap.indom s1 x -> exists v,
@@ -417,8 +416,8 @@ Inductive satisfies : senv -> store -> store ->
   | s_unk : forall env s1 s2 s3 h1 h2 R xf fb va r y r1,
     Fmap.read env xf = (y, r1, fb) ->
     s3 = Fmap.update s1 y va ->
-    satisfies env s3 s2 h1 h2 R r1 fb ->
-    satisfies env s1 s2 h1 h2 R r1 (unk xf va r)
+    satisfies env s3 s2 h1 h2 R fb ->
+    satisfies env s1 s2 h1 h2 R (unk xf va r)
 
   (* | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow)
     (H: forall b,
@@ -515,7 +514,7 @@ Proof.
 Qed.
 
 Example ex2 : exists R,
-  satisfies empty_env empty_store empty_store empty_heap empty_heap R "r1"
+  satisfies empty_env empty_store empty_store empty_heap empty_heap R
     (sh (fun k r2 => unk k 1 r2) "r";;
       (fun r1 => ens r1 (fun s =>
         \[exists i, Fmap.read s "r" = vint i /\ Fmap.read s r1 = i + 2]))).
@@ -552,7 +551,7 @@ Inductive spec_assert_valid_under penv env : expr -> (var -> flow) -> Prop :=
         not (bigstep penv s1 h1 e s2 h2 r (eshft k eb x r e1))) ->
     (forall s1 s2 h1 h2 v,
         bigstep penv s1 h1 e s2 h2 r (enorm v) ->
-        satisfies env s1 s2 h1 h2 (norm v) r (f r)) ->
+        satisfies env s1 s2 h1 h2 (norm v) (f r)) ->
     spec_assert_valid_under penv env e f
 
 | sav_shift: forall e r (f:var->flow),
@@ -562,7 +561,7 @@ Inductive spec_assert_valid_under penv env : expr -> (var -> flow) -> Prop :=
         (* r is the "eventual output" of the continuation? *)
         bigstep penv s1 h1 e s2 h2 r (eshft k eb r1 r ek) ->
         exists (fk fb:var->var->flow),
-          satisfies env s1 s2 h1 h2 (shft fb fk) r (f r) /\
+          satisfies env s1 s2 h1 h2 (shft fb fk) (f r) /\
             spec_assert_valid_under penv env eb (fb k) /\
             spec_assert_valid_under penv env ek (fk r1)) ->
     spec_assert_valid_under penv env e f.
@@ -666,6 +665,41 @@ Qed.
 (* Abort. *)
 
 
+Lemma pval_sound: forall v,
+  (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
+  (* spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))). *)
+  spec_assert_valid (pval v) (fun r => ens r (fun s => \[Fmap.read s r = v])).
+Proof.
+  unfold spec_assert_valid. intros.
+  (* TODO remove these after confirming that they are useless *)
+  (* useless, value case must be proved entirely using semantics *)
+  (* inverts H. *)
+  (* clear H. *)
+  applys sav_base. { intros * H. false_invert H. }
+  introv Hb.
+  inverts Hb. (* eval_pval *)
+  (* apply s_fexs. exists v0. *)
+  applys* s_ens.
+  hintro.
+  (* Set Printing Coercions.  *)
+  (* unfold store_read. *)
+  (* Search (Fmap.read (Fmap.update _ _ _) _) in Fmap. *)
+  (* apply Fmap.upda. *)
+  fmap_eq. reflexivity.
+  fmap_eq.
+  (* admit. *)
+  (* unfold update. fmap_eq.
+  admit. *)
+  
+  (* fmap_disjoint. *)
+(* resolve_fn_in_env. *)
+  (* 
+  resolve_fn_in_env. *)
+  (* rewrite* update_update_idem. *)
+  (* fmap_eq. *)
+(* Abort. *)
+Qed.
+
 
 Lemma papp_unk_sound: forall penv env (f:var) (v:val) r,
   forall x e f1,
@@ -713,41 +747,6 @@ Proof.
     eassumption.
     reflexivity.
     eassumption. }
-Qed.
-
-Lemma pval_sound: forall v r,
-  (* spec_assert (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))) -> *)
-  (* spec_assert_valid (pval v) r (fexs r (ens r (fun s => \[Fmap.read s r = v]))). *)
-  spec_assert_valid (pval v) r (ens r (fun s => \[Fmap.read s r = v])).
-Proof.
-  unfold spec_assert_valid. intros.
-  (* TODO remove these after confirming that they are useless *)
-  (* useless, value case must be proved entirely using semantics *)
-  (* inverts H. *)
-  (* clear H. *)
-  applys sav_base. { intros * H. false_invert H. }
-  introv Hb.
-  inverts Hb. (* eval_pval *)
-  (* apply s_fexs. exists v0. *)
-  applys* s_ens.
-  hintro.
-  (* Set Printing Coercions.  *)
-  (* unfold store_read. *)
-  (* Search (Fmap.read (Fmap.update _ _ _) _) in Fmap. *)
-  (* apply Fmap.upda. *)
-  fmap_eq. reflexivity.
-  fmap_eq.
-  (* admit. *)
-  (* unfold update. fmap_eq.
-  admit. *)
-  
-  (* fmap_disjoint. *)
-(* resolve_fn_in_env. *)
-  (* 
-  resolve_fn_in_env. *)
-  (* rewrite* update_update_idem. *)
-  (* fmap_eq. *)
-(* Abort. *)
 Qed.
 
 
