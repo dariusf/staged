@@ -104,7 +104,7 @@ Definition empty_heap : heap := Fmap.empty.
 
 Inductive eresult : Type := (* for the program *)
   | enorm : val -> eresult
-  | eshft : var -> expr -> var -> var -> expr -> eresult.
+  | eshft : var -> expr -> (var -> expr) -> eresult.
 
 Notation "'eshft(' k ',' eb ',' 'λ' r r1 '.' ek ')'" :=
   (eshft k eb r r1 ek) (at level 30, only printing,
@@ -137,7 +137,7 @@ Definition get_val s e :=
   end.
 
 Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> eresult -> Prop :=
-  | eval_pval : forall s1 s2 h v p r,
+  | eval_pval : forall s1 s2 h v p,
     (* s2 = Fmap.update s1 r v -> *)
     bigstep p s1 h (pval v) s2 h (enorm v)
 
@@ -147,9 +147,9 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> eresult ->
     Some (vint v2) = get_val s1 e2 ->
     bigstep p s1 h (padd e1 e2) s1 h (enorm (vint (v1 + v2)))
 
-  | eval_pshift : forall s1 h p k eb r,
+  | eval_pshift : forall s1 h p k eb,
     (* TODO is r in s1? *)
-    bigstep p s1 h (pshift k eb) s1 h (eshft k eb r r (pvar r)) (* r r r, duplication? *)
+    bigstep p s1 h (pshift k eb) s1 h (eshft k eb (fun r => pvar r))
 
       (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
 
@@ -171,12 +171,10 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> eresult ->
 expression *)
 
   (* _4 *)
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k (y:var) eb ek s1 s2 r r1 r2,
-    bigstep p1 s1 h1 e1 s2 h2 (eshft k eb r1 r2 ek) ->
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k eb (ek:var->expr) s1 s2,
+    bigstep p1 s1 h1 e1 s2 h2 (eshft k eb ek) ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 (* r here is the "reference" to the eventual output of the continuation *)
-      (eshft k eb y r
-        (plet x (papp (pval (vfun r1 ek)) (pvar y)) (* this is just function composition. question: do we need to be this careful? *)
-          (plet r e2 (pvar r))))
+      (eshft k eb (fun y => plet x (ek y) e2))
 
 
   | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3,
@@ -377,7 +375,7 @@ Inductive satisfies : senv -> store -> store ->
 
     (* TODO r is a problem, as ens does nothing to it, so *)
 
-  | s_sh : forall env s1 h1 (fb:var->var->flow) r,
+  | s_sh : forall r env s1 h1 (fb:var->var->flow),
     satisfies env s1 s1 h1 h1
       (shft fb (fun ri ro => ens ro (fun _ => \[])))
       (sh fb r)
@@ -491,7 +489,7 @@ Module Examples.
 Example ex0 : exists Re,
   bigstep empty_penv empty_store empty_heap
   (pshift "k" (papp (pvar "k") 1))
-    empty_store empty_heap Re. (* if we have a shift w.o. a reset outside, should we allow this *)
+    empty_store empty_heap Re.
 Proof.
   exs.
   applys eval_pshift.
@@ -502,14 +500,11 @@ Example ex1 : exists Re,
   bigstep empty_penv empty_store empty_heap
   (plet "x" (pshift "k" (papp (pvar "k") 1))
     (padd (pvar "x") 2))
-    empty_store empty_heap "r2" Re.
+    empty_store empty_heap Re.
 Proof.
   exs.
   applys eval_plet_sh.
   applys eval_pshift.
-  Unshelve.
-  exact "y".
-  exact "r1".
   Show Proof.
 Qed.
 
@@ -530,12 +525,10 @@ Example ex3 : exists Re,
     (pval 1)
     (Fmap.update empty_store "r" 1)
     empty_heap
-    "r"
     Re.
 Proof.
   exs.
-  constructor.
-  reflexivity.
+  apply eval_pval.
   Show Proof.
 Qed.
   
@@ -547,23 +540,23 @@ End Examples.
 If there is a program which could be either shift or not, you have to case, then pick the appropriate triple case *)
 Inductive spec_assert_valid_under penv env : expr -> (var -> flow) -> Prop :=
   | sav_base: forall e r (f:var->flow),
-    (forall s1 s2 h1 h2 k eb x e1 r,
-        not (bigstep penv s1 h1 e s2 h2 r (eshft k eb x r e1))) ->
+    (forall s1 s2 h1 h2 k eb (ek:var->expr),
+        not (bigstep penv s1 h1 e s2 h2 (eshft k eb ek))) ->
     (forall s1 s2 h1 h2 v,
-        bigstep penv s1 h1 e s2 h2 r (enorm v) ->
+        bigstep penv s1 h1 e (Fmap.update s2 r v) h2 (enorm v) ->
         satisfies env s1 s2 h1 h2 (norm v) (f r)) ->
     spec_assert_valid_under penv env e f
 
 | sav_shift: forall e r (f:var->flow),
-    (forall s1 s2 h1 h2 v r, not (bigstep penv s1 h1 e s2 h2 r (enorm v))) ->
-    (forall s1 s2 h1 h2 k r1 ek eb,
+    (forall s1 s2 h1 h2 v, not (bigstep penv s1 h1 e s2 h2 (enorm v))) ->
+    (forall s1 s2 h1 h2 k r1 (ek:var->expr) eb,
         (* r1 is the input to the continuation *)
         (* r is the "eventual output" of the continuation? *)
-        bigstep penv s1 h1 e s2 h2 r (eshft k eb r1 r ek) ->
+        bigstep penv s1 h1 e s2 h2 (eshft k eb ek) ->
         exists (fk fb:var->var->flow),
           satisfies env s1 s2 h1 h2 (shft fb fk) (f r) /\
             spec_assert_valid_under penv env eb (fb k) /\
-            spec_assert_valid_under penv env ek (fk r1)) ->
+            spec_assert_valid_under penv env (ek r1) (fk r1)) ->
     spec_assert_valid_under penv env e f.
     
 
@@ -620,7 +613,7 @@ Lemma pvar_sound: forall x,
   spec_assert_valid (pvar x) (fun x => ens x (fun s => \[])).
 Proof.
   unfold spec_assert_valid. intros.
-  applys sav_base. { intros * H. false_invert H. }
+  applys sav_base x. { intros * H. false_invert H. }
   introv Hb.
   inverts Hb. (* eval_pvar *)
   (* rewrite fmap_update_read. 2: assumption. *)
@@ -639,28 +632,15 @@ Lemma pshift_sound: forall k eb (fb:var->var->flow),
 Proof.
   unfold spec_assert_valid. intros r **.
   specializes H penv0 env.
-  
-
   eapply sav_shift. { intros * H0. false_invert H0. }
   introv Hb.
-  (* r0 is the input to ek *)
-
-  (* invert Hb. *)
   pose proof Hb as H0.
   inverts Hb.
-  (* r2=r0 *)
   exs.
   splits.
-  econstructor.
-  (* TODO how to know that r is the return val of the cont in the big step? *)
+  applys s_sh "shift_r". (* the variable can be anything but must be provided *)
   assumption.
   apply pvar_sound.
-  (* apply pval_sound. *)
-
-(* Unshelve. *)
-
-  (* applys_eq s_sh.
-  f_equal. *)
 Qed.
 (* Abort. *)
 
@@ -675,7 +655,7 @@ Proof.
   (* useless, value case must be proved entirely using semantics *)
   (* inverts H. *)
   (* clear H. *)
-  applys sav_base. { intros * H. false_invert H. }
+  applys sav_base "r". { intros * H. false_invert H. }
   introv Hb.
   inverts Hb. (* eval_pval *)
   (* apply s_fexs. exists v0. *)
