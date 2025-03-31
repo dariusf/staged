@@ -136,20 +136,22 @@ Definition get_val s e :=
   | _ => None
   end.
 
-Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> eresult -> Prop :=
-  | eval_pval : forall s1 s2 h v p,
-    (* s2 = Fmap.update s1 r v -> *)
-    bigstep p s1 h (pval v) s2 h (enorm v)
+Inductive bigstep : penv -> store -> heap -> expr ->
+  store -> heap -> var -> eresult -> Prop :=
 
-  | eval_padd : forall s1 s2 h v1 v2 p e1 e2,
-    (* s2 = Fmap.update s1 r (vint (v1 + v2)) -> *)
+  | eval_pval : forall s1 s2 h v p r,
+    s2 = Fmap.update s1 r v ->
+    bigstep p s1 h (pval v) s2 h r (enorm v)
+
+  | eval_padd : forall s1 s2 h v1 v2 p e1 e2 r,
+    s2 = Fmap.update s1 r (vint (v1 + v2)) ->
     Some (vint v1) = get_val s1 e1 ->
     Some (vint v2) = get_val s1 e2 ->
-    bigstep p s1 h (padd e1 e2) s1 h (enorm (vint (v1 + v2)))
+    bigstep p s1 h (padd e1 e2) s1 h r (enorm (vint (v1 + v2)))
 
-  | eval_pshift : forall s1 h p k eb,
+  | eval_pshift : forall s1 h p k eb r,
     (* TODO is r in s1? *)
-    bigstep p s1 h (pshift k eb) s1 h (eshft k eb (fun r => pvar r))
+    bigstep p s1 h (pshift k eb) s1 h r (eshft k eb (fun r => pvar r))
 
       (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
 
@@ -158,37 +160,39 @@ Inductive bigstep : penv -> store -> heap -> expr -> store -> heap -> eresult ->
     bigstep p1 s3 h3 (subst x v e2) s2 h2 r1 Re ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r1 Re *)
 
-  | eval_pvar : forall s1 h x v p,
+  | eval_pvar : forall s1 h x v p r,
     Fmap.indom s1 x ->
     v = Fmap.read s1 x ->
     (* s2 = Fmap.update s1 r v -> *)
-    bigstep p s1 h (pvar x) s1 h (enorm v)
+    (* no update to the store *)
+    bigstep p s1 h (pvar x) s1 h r (enorm v)
 
-  | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1,
-    bigstep p1 s1 h1 e1 s3 h3 (enorm v) ->
-    bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 Re ->
-    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 Re (* let here is like sequencing, because we ignore the "reference" returned from the first
+  | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r1 r,
+    bigstep p1 s1 h1 e1 s3 h3 r1 (enorm v) ->
+    bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 r Re ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re (* let here is like sequencing, because we ignore the "reference" returned from the first
 expression *)
 
   (* _4 *)
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k eb (ek:var->expr) s1 s2,
-    bigstep p1 s1 h1 e1 s2 h2 (eshft k eb ek) ->
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 k eb (ek:var->expr) s1 s2 r1 r,
+    bigstep p1 s1 h1 e1 s2 h2 r1 (eshft k eb ek) ->
     bigstep p1 s1 h1 (plet x e1 e2) s2 h2 (* r here is the "reference" to the eventual output of the continuation *)
+    r
       (eshft k eb (fun y => plet x (ek y) e2))
 
 
-  | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3,
+  | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3 r,
     v1 = vfun x e ->
     s3 = Fmap.update s1 x v2 ->
-    bigstep p s3 h e s2 h Re ->
-    bigstep p s1 h (papp (pval v1) (pval v2)) s2 h Re
+    bigstep p s3 h e s2 h r Re ->
+    bigstep p s1 h (papp (pval v1) (pval v2)) s2 h r Re
 
-  | eval_papp_fun_var : forall v1 v2 h x x1 e Re p s1 s2 s3,
+  | eval_papp_fun_var : forall v1 v2 h x x1 e Re p s1 s2 s3 r,
     v1 = vfun x e ->
     v2 = Fmap.read s1 x1 ->
     s3 = Fmap.update s1 x v2 ->
-    bigstep p s3 h e s2 h Re ->
-    bigstep p s1 h (papp (pval v1) (pvar x1)) s2 h Re
+    bigstep p s3 h e s2 h r Re ->
+    bigstep p s1 h (papp (pval v1) (pvar x1)) s2 h r Re
     (* TODO s2 keeps bindings produced by the app? *)
 
   (* | eval_app_fix : forall v1 v2 h x e Re xf p,
@@ -196,12 +200,12 @@ expression *)
     bigstep p h (subst x v2 (subst xf v1 e)) h Re ->
     bigstep p h (papp (pval v1) (pval v2)) h Re *)
 
-  | eval_papp_unk : forall v h1 h2 Re fe (f:var) p s1 s2 s3 x,
+  | eval_papp_unk : forall v h1 h2 Re fe (f:var) p s1 s2 s3 x r,
     Fmap.read p f = (x, fe) ->
     s3 = Fmap.update s1 x v ->
     (* s4 = Fmap.update s2 r r -> *)
-    bigstep p s3 h1 fe s2 h2 Re ->
-    bigstep p s1 h1 (papp (pvar f) (pval v)) s2 h2 Re
+    bigstep p s3 h1 fe s2 h2 r Re ->
+    bigstep p s1 h1 (papp (pvar f) (pval v)) s2 h2 r Re
 
 
   (*
@@ -489,7 +493,7 @@ Module Examples.
 Example ex0 : exists Re,
   bigstep empty_penv empty_store empty_heap
   (pshift "k" (papp (pvar "k") 1))
-    empty_store empty_heap Re.
+    empty_store empty_heap "r" Re.
 Proof.
   exs.
   applys eval_pshift.
@@ -500,11 +504,13 @@ Example ex1 : exists Re,
   bigstep empty_penv empty_store empty_heap
   (plet "x" (pshift "k" (papp (pvar "k") 1))
     (padd (pvar "x") 2))
-    empty_store empty_heap Re.
+    empty_store empty_heap "r" Re.
 Proof.
   exs.
   applys eval_plet_sh.
   applys eval_pshift.
+  Unshelve.
+  exact "anything".
   Show Proof.
 Qed.
 
@@ -524,11 +530,12 @@ Example ex3 : exists Re,
   bigstep empty_penv empty_store empty_heap
     (pval 1)
     (Fmap.update empty_store "r" 1)
-    empty_heap
+    empty_heap "r"
     Re.
 Proof.
   exs.
   apply eval_pval.
+  reflexivity.
   Show Proof.
 Qed.
   
@@ -540,19 +547,19 @@ End Examples.
 If there is a program which could be either shift or not, you have to case, then pick the appropriate triple case *)
 Inductive spec_assert_valid_under penv env : expr -> (var -> flow) -> Prop :=
   | sav_base: forall e r (f:var->flow),
-    (forall s1 s2 h1 h2 k eb (ek:var->expr),
-        not (bigstep penv s1 h1 e s2 h2 (eshft k eb ek))) ->
+    (forall s1 s2 h1 h2 k eb (ek:var->expr) r1,
+        not (bigstep penv s1 h1 e s2 h2 r1 (eshft k eb ek))) ->
     (forall s1 s2 h1 h2 v,
-        bigstep penv s1 h1 e (Fmap.update s2 r v) h2 (enorm v) ->
+        bigstep penv s1 h1 e s2 h2 r (enorm v) ->
         satisfies env s1 s2 h1 h2 (norm v) (f r)) ->
     spec_assert_valid_under penv env e f
 
 | sav_shift: forall e r (f:var->flow),
-    (forall s1 s2 h1 h2 v, not (bigstep penv s1 h1 e s2 h2 (enorm v))) ->
+    (forall s1 s2 h1 h2 v r1, not (bigstep penv s1 h1 e s2 h2 r1 (enorm v))) ->
     (forall s1 s2 h1 h2 k r1 (ek:var->expr) eb,
         (* r1 is the input to the continuation *)
         (* r is the "eventual output" of the continuation? *)
-        bigstep penv s1 h1 e s2 h2 (eshft k eb ek) ->
+        bigstep penv s1 h1 e s2 h2 r (eshft k eb ek) ->
         exists (fk fb:var->var->flow),
           satisfies env s1 s2 h1 h2 (shft fb fk) (f r) /\
             spec_assert_valid_under penv env eb (fb k) /\
