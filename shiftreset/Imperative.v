@@ -285,7 +285,8 @@ Implicit Types φ : var -> var -> flow. *)
 (* Definition ens_ H := ens (fun r s => \[r = vunit] \* H s). *)
 
 (* Definition ufun := val -> val -> flow. *)
-Definition ufun : Type := var * var * flow.
+(* Definition ufun : Type := var * var * flow. *)
+Definition ufun : Type := var -> var -> flow.
 (* Definition senv := Fmap.fmap var ufun. *)
 Definition senv := Fmap.fmap var ufun.
 Implicit Types u : ufun.
@@ -296,7 +297,8 @@ Definition empty_env : senv := Fmap.empty.
 Instance Inhab_ufun : Inhab ufun.
 Proof.
   constructor.
-  exists ("a", "b", ens_ (fun s => \[True])).
+  (* exists ("a", fun b:var => ens_ (fun s => \[True])). *)
+  exists (fun a:var => fun b:var => ens_ (fun s => \[True])).
   constructor.
 Qed.
 
@@ -415,10 +417,10 @@ Inductive satisfies : senv -> store -> store ->
       satisfies env (Fmap.update s1 x v) s2 h1 h2 R r f) ->
     satisfies env s1 s2 h1 h2 R r (fex_fresh x f) *)
 
-  | s_unk : forall env s1 s2 s3 h1 h2 R xf fb va r y r1,
-    Fmap.read env xf = (y, r1, fb) ->
+  | s_unk : forall env s1 s2 s3 h1 h2 R xf (fb:var->var->flow) va r y,
+    Fmap.read env xf = fb ->
     s3 = Fmap.update s1 y va ->
-    satisfies env s3 s2 h1 h2 R fb ->
+    satisfies env s3 s2 h1 h2 R (fb y r) ->
     satisfies env s1 s2 h1 h2 R (unk xf va r)
 
   (* | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow)
@@ -617,7 +619,8 @@ Abort. *)
 
 
 Lemma pvar_sound: forall x,
-  spec_assert_valid (pvar x) (fun x => ens x (fun s => \[])).
+  (* spec_assert_valid (pvar x) (fun y => ens y (fun s => \[Fmap.read s "x" = Fmap.read "y"])). *)
+  spec_assert_valid (pvar x) (fun y => ens y (fun s => \[])).
 Proof.
   unfold spec_assert_valid. intros.
   applys sav_base x. { intros * H. false_invert H. }
@@ -662,7 +665,7 @@ Proof.
   (* useless, value case must be proved entirely using semantics *)
   (* inverts H. *)
   (* clear H. *)
-  applys sav_base "r". { intros * H. false_invert H. }
+  applys sav_base "result". { intros * H. false_invert H. }
   introv Hb.
   inverts Hb. (* eval_pval *)
   (* apply s_fexs. exists v0. *)
@@ -688,17 +691,15 @@ Proof.
 Qed.
 
 
-Lemma papp_unk_sound: forall penv env (f:var) (v:val) r,
-  forall x e f1,
+Lemma papp_unk_sound: forall penv env (f:var) (v:val) x e (f1:var->var->flow),
   Fmap.read penv f = (x, e) ->
-  Fmap.read env f = (x, r, f1) ->
-  spec_assert_valid_under penv env e r f1 ->
-
-  spec_assert_valid_under penv env (papp f v) r (unk f v r).
+  Fmap.read env f = f1 ->
+  spec_assert_valid_under penv env e (f1 x) ->
+  spec_assert_valid_under penv env (papp f v) (unk f v).
 Proof.
   unfold spec_assert_valid. intros * ? ? He.
   inverts He as.
-  { intros Hne He.
+  { introv Hne He.
     (* eval_papp_unk *)
     applys sav_base.
     {
@@ -717,7 +718,7 @@ Proof.
     applys s_unk.
     eassumption.
     reflexivity.
-    assumption. }
+    eassumption. }
   { intros * Hne He.
     applys sav_shift.
     { unfold not. intros.
@@ -737,17 +738,17 @@ Proof.
 Qed.
 
 
-Lemma papp_sound: forall x e r (va:val) f,
-  spec_assert_valid e r f ->
-  spec_assert_valid (papp (vfun x e) va) r
-    (fexs x (ens x (fun s => \[Fmap.read s x = va]);; f)).
+Lemma papp_sound: forall x e (va:val) (f:var->flow),
+  spec_assert_valid e f ->
+  spec_assert_valid (papp (vfun x e) va)
+    (fun r => fexs x (ens x (fun s => \[Fmap.read s x = va]);; f)).
 Proof.
   unfold spec_assert_valid.
   intros * He penv env.
   specializes He penv env.
   (* eval_papp_fun *)
   inverts He as.
-  { intros Hne He.
+  { introv Hne He.
     (* no shift in the body of the fn being applied *)
     applys sav_base.
     { intros * H. inverts H as H H1. injects H. false Hne H1. }
@@ -794,7 +795,7 @@ Proof.
     (* fold (Fmap.update (Fmap.update s1 x0 vunit) x0 va). *)
     rewrite update_precedence.
     reflexivity.
-    assumption.
+    eassumption.
     (* Unshelve. *)
     (* exact "?". *)
     (* exact "??". *)
