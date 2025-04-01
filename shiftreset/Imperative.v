@@ -492,17 +492,18 @@ Notation "f '$(' v ',' r ')'" :=
 Module Examples.
 
 
-Example ex0 : exists Re,
+Example ex0_eval_shift : exists Re,
   bigstep empty_penv empty_store empty_heap
   (pshift "k" (papp (pvar "k") 1))
     empty_store empty_heap "r" Re.
 Proof.
   exs.
   applys eval_pshift.
+  (* look at the second arg of ex_intro *)
   Show Proof.
 Qed.
 
-Example ex1 : exists Re,
+Example ex1_eval_let_shift : exists Re,
   bigstep empty_penv empty_store empty_heap
   (plet "x" (pshift "k" (papp (pvar "k") 1))
     (padd (pvar "x") 2))
@@ -512,11 +513,11 @@ Proof.
   applys eval_plet_sh.
   applys eval_pshift.
   Unshelve.
-  exact "anything".
+  exact "anything". (* the name of the binder in eval_pshift *)
   Show Proof.
 Qed.
 
-Example ex2 : exists R,
+Example ex2_satisfies_let_shift : exists R,
   satisfies empty_env empty_store empty_store empty_heap empty_heap R
     (sh (fun k r2 => unk k 1 r2) "r";;
       (fun r1 => ens r1 (fun s =>
@@ -946,11 +947,10 @@ Abort. *)
 
 Module SpecialCaseLet.
 
-Definition plet_test x e1 e2 r f1 f2 :=
-  (forall y, spec_assert_valid e1 y f1) ->
-  spec_assert_valid e2 r f2 ->
-  spec_assert_valid (plet x e1 e2) r
-    (f1;; fexs x f2).
+Definition plet_test x e1 e2 r (f1 f2:var->flow) :=
+  spec_assert_valid e1 f1 ->
+  spec_assert_valid e2 f2 ->
+  spec_assert_valid (plet x e1 e2) (fun r => fexs x (f1 x;; (fun r1 => f2 r))).
 
 Lemma plet_test1:
   plet_test "x"
