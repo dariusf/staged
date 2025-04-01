@@ -450,19 +450,17 @@ Inductive satisfies : senv -> store -> store ->
     (** A [sh] on its own reduces to a [shft] containing an identity continuation. *)
 
     (** This rule extends the continuation in a [shft] on the left side of a [seq]. Notably, it moves whatever comes next #<i>under the reset</i>#, preserving shift-freedom by constructon. *)
+    *)
 
-  | s_rs_sh s1 s2 f h1 h2 r rf s3 h3 fb fk k v1 :
-    satisfies s1 s3 h1 h3 (shft k fb v1 (fun r2 => rs fk r2)) f ->
-    (* ~ Fmap.indom s3 k -> *)
-    satisfies
-        (Fmap.update s3 k (fun a r =>
-          rs (ens_ \[v1 = a];; fk) r)) s2
-      h3 h2 rf (rs fb r) ->
-    satisfies s1 s2 h1 h2 rf (rs f r)
+  | s_rs_val : forall env s1 s2 h1 h2 v f r,
+    satisfies env s1 s2 h1 h2 (norm v) f ->
+    satisfies env s1 s2 h1 h2 (norm v) (rs f r)
 
-  | s_rs_val s1 s2 h1 h2 v f
-    (H: satisfies s1 s2 h1 h2 (norm v) f) :
-    satisfies s1 s2 h1 h2 (norm v) (rs f v) *)
+  | s_rs_sh : forall env s1 s2 h1 h2 f r r1 R s3 h3 fb fk k,
+    satisfies env s1 s3 h1 h3 (shft fb fk) f ->
+    satisfies (Fmap.update env k fk) s3
+        s2 h3 h2 R (rs (fb k r1) r) ->
+    satisfies env s1 s2 h1 h2 R (rs f r)
 
   .
 
@@ -472,8 +470,8 @@ Inductive satisfies : senv -> store -> store ->
    format "'[' '∀' '/ '  a1  ..  an , '/ '  H ']'") : flow_scope. *)
 
 
-Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R ','  r  '|=' f" :=
-  (satisfies env s1 s2 h1 h2 R r f) (at level 30, only printing).
+Notation "env ','  s1 ',' s2 ','  h1 ','  h2 ','  R  '|=' f" :=
+  (satisfies env s1 s2 h1 h2 R f) (at level 30, only printing).
 
 Notation "'sh(λ' k r '.' fb ',' r1 ')'" :=
   (sh k r fb r1) (at level 30, only printing,
@@ -503,6 +501,19 @@ Proof.
   Show Proof.
 Qed.
 
+Example ex0_eval_val : exists Re,
+  bigstep empty_penv empty_store empty_heap
+    (pval 1)
+    (Fmap.update empty_store "r" 1)
+    empty_heap "r"
+    Re.
+Proof.
+  exs.
+  apply eval_pval.
+  reflexivity.
+  Show Proof.
+Qed.
+  
 Example ex1_eval_let_shift : exists Re,
   bigstep empty_penv empty_store empty_heap
   (plet "x" (pshift "k" (papp (pvar "k") 1))
@@ -529,19 +540,53 @@ Proof.
   Show Proof.
 Qed.
 
-Example ex3 : exists Re,
-  bigstep empty_penv empty_store empty_heap
-    (pval 1)
-    (Fmap.update empty_store "r" 1)
-    empty_heap "r"
-    Re.
+Example ex3_reset_val : exists R,
+  satisfies empty_env empty_store (Fmap.single "r" (vint 1))
+    empty_heap empty_heap R
+    (rs (ens "r" (fun s => \[Fmap.read s "r" = 1])) "r").
 Proof.
   exs.
-  apply eval_pval.
-  reflexivity.
+  applys s_rs_val.
+  applys s_ens.
+  hintro. resolve_fn_in_env.
+  fmap_disjoint.
+  fmap_eq.
+  unfold Fmap.update. fmap_eq. reflexivity.
   Show Proof.
 Qed.
-  
+
+Example ex3_reset_sh : exists R,
+  satisfies empty_env empty_store (Fmap.single "r" (vint 3))
+    empty_heap empty_heap R
+    (rs (sh (fun k r2 => unk k 1 r2) "r";;
+      (fun r1 => ens r1 (fun s =>
+        \[exists i, Fmap.read s "r" = vint i /\ Fmap.read s r1 = i + 2]))) "r").
+Proof.
+  exs.
+  applys s_rs_sh.
+  - applys s_seq_sh.
+    applys s_sh.
+  - simpl.
+    applys s_rs_val.
+    applys s_unk "k". reflexivity. reflexivity.
+    rewrite fmap_read_update.
+    applys s_fex. exists "?".
+    applys s_seq "??". { applys s_ens. hintro. fmap_disjoint. reflexivity. reflexivity. }
+
+    applys s_ens.
+    hintro.
+    exists 1.
+    split.
+    applys Fmap.read_single.
+    admit.
+    fmap_disjoint.
+    fmap_eq.
+    admit.
+
+  Show Proof.
+Qed.
+
+
 End Examples.
 
 
