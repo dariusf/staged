@@ -241,6 +241,7 @@ Coercion store_read : store >-> Funclass. *)
 
 
 Definition asn := store -> heap -> Prop.
+Definition relasn := store -> store -> heap -> Prop.
 Implicit Types H : asn.
 (* Implicit Types Q : val -> asn. *)
 
@@ -248,7 +249,7 @@ Implicit Types H : asn.
 Inductive flow : Type :=
   | req : asn -> flow -> flow
   (* | ens : (val -> asn) -> flow *)
-  | ens : var -> asn -> flow (* update the store *)
+  | ens : var -> relasn -> flow (* update the store *)
   (* | upd : var -> val -> flow *)
   | ens_ : asn -> flow
   | seq : flow -> (var -> flow) -> flow
@@ -350,11 +351,11 @@ Inductive satisfies : senv -> store -> store ->
       satisfies env s1 s2 hr h2 R f) ->
     satisfies env s1 s2 h1 h2 R (req H f)
 
-  | s_ens : forall h3 env s1 s2 H h1 h2 v r,
-      H s2 h3 ->
+  | s_ens : forall h3 env s1 s2 (H:relasn) h1 h2 v r,
+      s2 = Fmap.update s1 r v ->
+      H s1 s2 h3 ->
       Fmap.disjoint h1 h3 -> h2 = Fmap.union h1 h3 ->
       (* Fmap.disjoint s1 s3 -> *)
-      s2 = Fmap.update s1 r v ->
       (* the order of the union is important,
         as we don't have commutativity due to non-disjointness *)
       (* Fmap.read s3 r = v -> *)
@@ -383,7 +384,7 @@ Inductive satisfies : senv -> store -> store ->
 
   | s_sh : forall r env s1 h1 (fb:var->var->flow),
     satisfies env s1 s1 h1 h1
-      (shft fb (fun ri ro => ens ro (fun _ => \[])))
+      (shft fb (fun ri ro => ens ro (fun _ _ => \[])))
       (sh fb r)
 
   | s_seq : forall env s3 h3 v s1 s2 f1 (f2:var->flow) h1 h2 R r,
@@ -531,7 +532,7 @@ Qed.
 Example ex2_satisfies_let_shift : exists R,
   satisfies empty_env empty_store empty_store empty_heap empty_heap R
     (sh (fun k r2 => unk k 1 r2) "r";;
-      (fun r1 => ens r1 (fun s =>
+      (fun r1 => ens r1 (fun old s =>
         \[exists i, Fmap.read s "r" = vint i /\ Fmap.read s r1 = i + 2]))).
 Proof.
   exs.
@@ -543,24 +544,24 @@ Qed.
 Example ex3_reset_val : exists R,
   satisfies empty_env empty_store (Fmap.single "r" (vint 1))
     empty_heap empty_heap R
-    (rs (ens "r" (fun s => \[Fmap.read s "r" = 1])) "r").
+    (rs (ens "r" (fun old s => \[Fmap.read s "r" = 1])) "r").
 Proof.
   exs.
   applys s_rs_val.
   applys s_ens.
+  unfold Fmap.update. fmap_eq. reflexivity.
   hintro. resolve_fn_in_env.
   fmap_disjoint.
   fmap_eq.
-  unfold Fmap.update. fmap_eq. reflexivity.
   Show Proof.
 Qed.
 
-Example ex3_reset_sh : exists R,
-  satisfies empty_env empty_store (Fmap.single "r" (vint 3))
+Example ex3_reset_sh : exists R s1,
+  satisfies empty_env empty_store s1
     empty_heap empty_heap R
     (rs (sh (fun k r2 => unk k 1 r2) "r";;
-      (fun r1 => ens r1 (fun s =>
-        \[exists i, Fmap.read s "r" = vint i /\ Fmap.read s r1 = i + 2]))) "r").
+      (fun r1 => ens r1 (fun old s =>
+        \[exists i, Fmap.read old "r" = vint i /\ Fmap.read s r1 = i + 2]))) "rr").
 Proof.
   exs.
   applys s_rs_sh.
@@ -568,21 +569,26 @@ Proof.
     applys s_sh.
   - simpl.
     applys s_rs_val.
-    applys s_unk "k". reflexivity. reflexivity.
+    applys s_unk "k" "r1" "r". reflexivity. reflexivity.
     rewrite fmap_read_update.
     applys s_fex. exists "?".
-    applys s_seq "??". { applys s_ens. hintro. fmap_disjoint. reflexivity. reflexivity. }
+    applys s_seq "??". { applys s_ens. reflexivity. hintro. fmap_disjoint. reflexivity. }
 
     applys s_ens.
+    reflexivity.
     hintro.
     exists 1.
     split.
+    unfold Fmap.update.
+    rewrite Fmap.read_union_r.
+    2: { apply fmap_not_indom_of_neq. intros H. false_invert H. }
+    fmap_eq.
     applys Fmap.read_single.
-    admit.
+    rewrite fmap_read_update. reflexivity.
     fmap_disjoint.
     fmap_eq.
-    admit.
-
+    Unshelve.
+    exact vunit.
   Show Proof.
 Qed.
 
