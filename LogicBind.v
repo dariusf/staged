@@ -103,27 +103,27 @@ Inductive flow : Type :=
   | bind : flow -> (val -> flow) -> flow
   | fex : forall (A:Type), (A -> flow) -> flow
   | fall : forall (A:Type), (A -> flow) -> flow
-  | unk : var -> val -> val -> flow
+  | unk : var -> val -> flow
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
 (** The following are new: *)
-  | sh : var -> flow -> val -> flow
+  | sh : var -> flow -> flow
 (** [sh k fb vr] is a shift with body [fb] and #<i>result</i># [vr]. *)
 (** [k] names the continuation delimited by an enclosing [rs], and may occur in [fb] as an [unk] or [vfptr]. *)
 (** [vr] is the #<i>result</i># of the shift, which is the value a shift appears to evaluate to when a continuation is taken. [vr] will be equal to the value that the continuation will be resumed with, and can be depended on in anything sequenced after a [sh]. *)
-  | shc : var -> flow -> val -> (val -> flow) -> flow
+  (* | shc : var -> flow -> val -> (val -> flow) -> flow *)
 (** [shc k fb vr fc] is a [sh] in CPS form, or the syntactic counterpart of [shft]. It carries a continuation whose argument is the equivalent of [sh]'s [r]. This continuation has a mixed first-/higher-order representation and has a [rs] as its topmost form. *)
 (** Examples:
 - the formula [Sh#(k. fb, vr, Rs(fc, r))] is represented as
   [shc "k" fb vr (fun r => rs fc r)]
 - the continuation [(λ vr. < fc >)] is represented as
   a tuple [(vr, fun r => rs fc r)]. *)
-  | rs : flow -> val -> flow
+  | rs : flow -> flow
 (** [rs f vr] is a reset with body [f] and return value [vr]. *)
-  | defun : var -> (val -> val -> flow) -> flow
+  | defun : var -> (val -> flow) -> flow
 (** [defun x uf] is equivalent to [ens_ (x=(λ x r. uf x r))], where [x] can reside in the environment (which regular [ens_] cannot access).
   Should defun be scoped? We don't think so, because the resulting continuation is first-class and does not have a well-defined lifetime. *)
-  | discard : flow -> var -> flow
+  (* | discard : flow -> var -> flow *)
   .
 
 Definition seq (f1 f2:flow) := bind f1 (fun _ => f2).
@@ -134,13 +134,13 @@ Definition empty := ens_ \[True].
 
 Notation req_ H := (req H empty).
 
-Definition ufun := val -> val -> flow.
+Definition ufun := val -> flow.
 
 #[global]
 Instance Inhab_ufun : Inhab ufun.
 Proof.
   constructor.
-  exists (fun (r v:val) => ens_ \[r = v]).
+  exists (fun (v:val) => ens_ \[]).
   constructor.
 Qed.
 
@@ -151,7 +151,7 @@ Definition empty_env : senv := Fmap.empty.
 (* shft's continuation could have a more general [A -> flow] type, but it can't be used in the semantics as long as it has to pass through ufun *)
 Inductive result : Type :=
   | norm : val -> result
-  | shft : var -> flow -> val -> (val -> flow) -> result.
+  | shft : var -> flow -> (val -> flow) -> result.
   (** See [shc] for what the arguments mean. *)
 
 Declare Scope flow_scope.
@@ -175,7 +175,6 @@ Proof.
   unfold ex_bind1 in f.
   unfold ex_bind in f. *)
 
-
 Notation "'∃' x1 .. xn , H" :=
   (fex (fun x1 => .. (fex (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
@@ -198,8 +197,8 @@ Notation "f '$' '(' x ',' r ')'" := (unk f x r)
 Notation "'sh' '(' k '.' fb '),' vr" := (sh k fb vr)
   (at level 80, format "'sh'  '(' k '.'  fb '),'  vr", only printing) : flow_scope.
 
-Notation "'shc' '(' k '.' fb ')' '(' vr '.' '⟨' fk '⟩' ')'" := (shc k fb vr (fun r => rs fk r))
-  (at level 80, format "'shc'  '(' k '.'  fb ')'  '(' vr '.'  '⟨' fk '⟩' ')'", only printing) : flow_scope.
+(* Notation "'shc' '(' k '.' fb ')' '(' vr '.' '⟨' fk '⟩' ')'" := (shc k fb vr (fun r => rs fk r))
+  (at level 80, format "'shc'  '(' k '.'  fb ')'  '(' vr '.'  '⟨' fk '⟩' ')'", only printing) : flow_scope. *)
 
 Notation "'ens' r '.' Q" := (ens (fun r => Q))
   (at level 80, format "'ens'  r '.'  Q" , only printing) : flow_scope.
@@ -235,10 +234,10 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
       Fmap.disjoint h1 h3) :
     satisfies s1 s1 h1 h2 R (ens q)
 
-  | s_seq s3 h3 r1 s1 s2 f1 f2 h1 h2 R :
+  (* | s_seq s3 h3 r1 s1 s2 f1 f2 h1 h2 R :
     satisfies s1 s3 h1 h3 (norm r1) f1 ->
     satisfies s3 s2 h3 h2 R f2 ->
-    satisfies s1 s2 h1 h2 R (seq f1 f2)
+    satisfies s1 s2 h1 h2 R (seq f1 f2) *)
   (** seq is changed to require a value from the first flow *)
 
   | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R,
@@ -258,8 +257,8 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
 
   | s_unk s1 s2 h1 h2 r xf uf a
     (He: Fmap.read s1 xf = uf)
-    (Hr: satisfies s1 s2 h1 h2 (norm r) (uf a r)) :
-    satisfies s1 s2 h1 h2 (norm r) (unk xf a r)
+    (Hr: satisfies s1 s2 h1 h2 (norm r) (uf a)) :
+    satisfies s1 s2 h1 h2 (norm r) (unk xf a)
 
   | s_intersect s1 s2 h1 h2 R f1 f2
     (H1: satisfies s1 s2 h1 h2 R f1)
@@ -276,56 +275,61 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
 
     (** The new rules for shift/reset are as follows. *)
 
-  | s_sh s1 h1 x shb (v:val) :
+  | s_sh : forall s1 h1 x shb,
     satisfies s1 s1 h1 h1
-      (shft x shb v (fun r1 => rs (ens (fun r => \[r = v])) r1))
-      (sh x shb v)
+      (* (shft x shb v (fun r1 => rs (ens (fun r => \[r = v])) r1)) *)
+      (shft x shb (fun r1 => ens (fun r => \[r = r1])))
+      (sh x shb)
     (** A [sh] on its own reduces to a [shft] containing an identity continuation. *)
 
-  | s_shc s1 h1 x shb fk v :
+  (* | s_shc s1 h1 x shb fk v :
     satisfies s1 s1 h1 h1
       (shft x shb v (fun r2 => rs fk r2))
-      (shc x shb v (fun r2 => rs fk r2))
+      (shc x shb v (fun r2 => rs fk r2)) *)
     (** [shc] corresponds directly to [shft]. *)
 
-  | s_seq_sh s1 s2 f1 f2 fk h1 h2 shb k (v:val) :
+  (* | s_seq_sh s1 s2 f1 f2 fk h1 h2 shb k (v:val) :
     satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs fk r1)) f1 ->
-    satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs (fk;; f2) r1)) (f1;; f2)
+    satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs (fk;; f2) r1)) (f1;; f2) *)
+
+  | s_bind_sh : forall s1 s2 f1 (f2:val->flow) fk h1 h2 shb k,
+    satisfies s1 s2 h1 h2 (shft k shb fk) f1 ->
+    satisfies s1 s2 h1 h2 (shft k shb (fun r1 => bind (fk r1) f2))
+      (bind f1 f2)
+
     (** This rule extends the continuation in a [shft] on the left side of a [seq]. Notably, it moves whatever comes next #<i>under the reset</i>#, preserving shift-freedom by constructon. *)
 
-  | s_rs_sh s1 s2 f h1 h2 r rf s3 h3 fb fk k v1 :
-    satisfies s1 s3 h1 h3 (shft k fb v1 (fun r2 => rs fk r2)) f ->
-    (* ~ Fmap.indom s3 k -> *)
-    satisfies
-        (Fmap.update s3 k (fun a r =>
-          rs (ens_ \[v1 = a];; fk) r)) s2
-      h3 h2 rf (rs fb r) ->
-    satisfies s1 s2 h1 h2 rf (rs f r)
+  | s_rs_sh : forall s1 s2 fr h1 h2 rf s3 h3 fb fk k,
+    satisfies s1 s3 h1 h3 (shft k fb fk) fr ->
+    satisfies (Fmap.update s3 k (fun a => rs (fk a))) s2
+      h3 h2 rf (rs fb) ->
+    satisfies s1 s2 h1 h2 rf (rs fr)
 
     (** This rule applies when the body of a [rs] #<i>evaluates to</i># a [shft] (not when a [sh] is directly inside a [rs]; that happens in reduction). The continuation carried by the [shft] is known, so it is bound in (the environment of) the [sh]ift body before that is run. *)
     (** The two resets in the semantics are accounted for: one is around the shift body, and one is already the topmost form in the continuation. *)
     (** Note: because staged formulae are turned into values (via [shft] and being added to the [senv]), rewriting can no longer be done to weaken them. Environment entailment was an attempt at solving this problem; the Proper instances might have to be tweaked to allow rewriting too. Another possible solution is a syntactic entailment relation in the relevant rules to allow weakening. *)
 
-  | s_rs_val s1 s2 h1 h2 v f
-    (H: satisfies s1 s2 h1 h2 (norm v) f) :
-    satisfies s1 s2 h1 h2 (norm v) (rs f v)
+  | s_rs_val : forall s1 s2 h1 h2 v f,
+    satisfies s1 s2 h1 h2 (norm v) f ->
+    satisfies s1 s2 h1 h2 (norm v) (rs f)
 
   | s_defun s1 s2 h1 x uf :
     (* ~ Fmap.indom s1 x -> *)
     s2 = Fmap.update s1 x uf ->
     satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
 
-  | s_discard s1 s2 h x R f :
+  (* | s_discard s1 s2 h x R f :
     satisfies s1 s2 h h R f ->
     s2 = Fmap.remove s1 x ->
-    satisfies s1 s2 h h R (discard f x)
+    satisfies s1 s2 h h R (discard f x) *)
+
   .
 
 Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f" :=
   (satisfies s1 s2 h1 h2 r f) (at level 30, only printing).
 
 (** A specialization of [equal_f] for exposing the equalities in continuations after inversion. *)
-Lemma cont_inj : forall fk1 fk2,
+(* Lemma cont_inj : forall fk1 fk2,
   (fun r1 => rs fk1 r1) = (fun r2 => rs fk2 r2) ->
   fk1 = fk2.
 Proof.
@@ -333,14 +337,14 @@ Proof.
   apply equal_f with (x := arbitrary) in H.
   injects H.
   reflexivity.
-Qed.
+Qed. *)
 
-Ltac cont_eq :=
+(* Ltac cont_eq :=
   lazymatch goal with
   | H: (fun _ => rs _ _) = (fun _ => rs _ _) |- _ =>
     lets ?: cont_inj H; subst; clear H; cont_eq
   | _ => idtac
-  end.
+  end. *)
 
 (* Lemma cont_inj1 : forall fk1 fk2,
   (fun r1 => fk1) = (fun r2 => fk2) ->
@@ -531,7 +535,7 @@ Section Propriety.
     subst.
     inverts H1 as H1; destr H1.
     {
-      apply equal_f with (x := arbitrary) in H0. subst.
+      (* apply equal_f with (x := arbitrary) in H0. subst. *)
 
       (* injects H. *)
 
@@ -539,9 +543,9 @@ Section Propriety.
     (* subst; clear H; cont_eq *)
     (* cont_inj H0. subst; clear H; cont_eq *)
       (* cont_eq. *)
-      applys* s_seq. }
-    { apply s_seq_sh.
-      apply H. assumption. }
+      applys* s_bind. }
+    { applys s_bind_sh.
+      eauto. }
   Qed.
 
   #[global]
@@ -550,9 +554,9 @@ Section Propriety.
     unfold Proper, entails, respectful.
     intros.
     inverts H1 as H1; destr H1.
-    { apply* s_seq. }
+    { apply* s_bind. }
     { apply H in H1.
-      pose proof s_seq_sh.
+      pose proof s_bind_sh.
       specializes H2 H1.
       applys_eq H2. clear H2.
       f_equal.
@@ -572,47 +576,46 @@ Section Propriety.
     intros.
     subst.
     inverts H1 as H1; destr H1.
-    { applys* s_seq. }
-    { eapply s_seq_sh. jauto. }
+    { applys* s_bind. }
+    { eapply s_bind_sh. jauto. }
   Qed.
 
   #[global]
-  Instance Proper_rs : Proper (entails ====> eq ====> entails) rs.
+  Instance Proper_rs : Proper (entails ====> entails) rs.
   Proof.
     unfold Proper, entails, respectful.
     intros. subst.
-    inverts H1 as H1; destr H1.
+    inverts H0 as H0; destr H0.
     { eapply s_rs_sh.
-      apply H. exact H1.
-      apply H8. }
+      eauto.
+      assumption. }
     { apply s_rs_val. eauto. }
   Qed.
 
   #[global]
   Instance Proper_bientails_rs : Proper
-    (bientails ====> eq ====> bientails)
+    (bientails ====> bientails)
     rs.
   Proof.
     unfold bientails, Proper, respectful, impl.
     split; subst; intros.
     { inverts H0 as H0.
-      { eapply s_rs_sh. apply H. exact H0. exact H8. }
+      { eapply s_rs_sh. apply H. exact H0. exact H7. }
       { apply H in H0. apply s_rs_val. assumption. } }
     { inverts H0 as H0.
-      { eapply s_rs_sh. apply H. exact H0. exact H8. }
+      { eapply s_rs_sh. apply H. eauto. eauto. }
       { apply H in H0. apply s_rs_val. assumption. } }
   Qed.
 
   #[global]
   Instance Proper_rs_under : forall s,
-    Proper (entails_under s ====> eq ====> entails_under s) rs.
+    Proper (entails_under s ====> entails_under s) rs.
   Proof.
     unfold Proper, entails_under, respectful.
     intros. subst.
-    inverts H1 as H1; destr H1.
+    inverts H0 as H0; destr H0.
     { eapply s_rs_sh.
-      apply H. exact H1.
-      apply H8. }
+      apply H. eauto. eauto. }
     { apply s_rs_val. eauto. }
   Qed.
 
@@ -727,8 +730,8 @@ forall k,
     Fmap.indom s1 k -> Fmap.indom s2 k ->
     Fmap.read s1 k = uf1 ->
     Fmap.read s2 k = uf2 ->
-    forall a v,
-    entails (uf1 a v) (uf2 a v).
+    forall a,
+    entails (uf1 a) (uf2 a).
 
 Lemma entails_ens_void : forall H1 H2,
   H1 ==> H2 ->
@@ -744,9 +747,21 @@ Proof.
   intuition.
 Qed.
 
+Lemma entails_ens : forall Q1 Q2,
+  Q1 ===> Q2 ->
+  entails (ens Q1) (ens Q2).
+Proof.
+  unfold entails.
+  intros.
+  inverts H0 as H3. destruct H3 as (v&h3&?&?&?&?).
+  constructor. exists v. exists h3.
+  intuition.
+  apply* H.
+Qed.
+
 Example e1: env_entails
-  (Fmap.single "x" (fun a r => ens_ \[r = vint 0]))
-  (Fmap.single "x" (fun a r => ens_ \[r = vint 0 \/ r = vint 1])).
+  (Fmap.single "x" (fun a => ens (fun r => \[r = vint 0])))
+  (Fmap.single "x" (fun a => ens (fun r => \[r = vint 0 \/ r = vint 1]))).
 Proof.
   unfold env_entails.
   intros.
@@ -758,7 +773,7 @@ Proof.
   rewrite Fmap.read_single.
   rewrite Fmap.read_single.
 
-  apply entails_ens_void.
+  apply entails_ens.
   xsimpl.
   intuition.
 Qed.
