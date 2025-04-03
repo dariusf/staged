@@ -4,11 +4,11 @@ Local Open Scope string_scope.
 
 Inductive eresult : Type :=
   | enorm : val -> eresult
-  | eshft : var -> expr -> var -> expr -> eresult.
+  | eshft : var -> expr -> (var -> expr) -> eresult.
 
-Notation "'eshft(' k ',' eb ',' x ',' ek ')'" :=
-  (eshft k eb x ek) (at level 30, only printing,
-  format "'eshft(' k ','  eb ','  x ','  ek ')'" ).
+Notation "'eshft(' k ',' eb ',' ek ')'" :=
+  (eshft k eb ek) (at level 30, only printing,
+  format "'eshft(' k ','  eb ','  ek ')'" ).
 
 Definition penv := Fmap.fmap var (val -> expr).
 Implicit Types p penv : penv.
@@ -40,17 +40,17 @@ Inductive bigstep : penv -> heap -> expr -> penv -> heap -> eresult -> Prop :=
     vint i2 = v2 ->
     bigstep p1 h (padd (pval v1) (pval v2)) p1 h (enorm (vint (i1 + i2)))
 
-  | eval_pshift : forall x h p k eb,
-    bigstep p h (pshift k eb) p h (eshft k eb x (pvar x))
+  | eval_pshift : forall h p k eb,
+    bigstep p h (pshift k eb) p h (eshft k eb (fun r => pvar r))
 
   | eval_plet : forall p1 p2 p3 h1 h3 h2 x e1 e2 v Re,
     bigstep p1 h1 e1 p3 h3 (enorm v) ->
     bigstep p1 h3 (subst x v e2) p2 h2 Re ->
     bigstep p1 h1 (plet x e1 e2) p2 h2 Re
 
-  | eval_plet_sh : forall x e1 e2 h1 h2 p1 p2 k eb ek y x1,
-    bigstep p1 h1 e1 p2 h2 (eshft k eb x1 ek) ->
-    bigstep p1 h1 (plet x e1 e2) p2 h2 (eshft k eb y (plet x (papp (vfun x1 ek) y) e2))
+  | eval_plet_sh : forall x e1 e2 h1 h2 p1 p2 k eb (ek:var->expr),
+    bigstep p1 h1 e1 p2 h2 (eshft k eb ek) ->
+    bigstep p1 h1 (plet x e1 e2) p2 h2 (eshft k eb (fun y => plet x (ek y) e2))
 
   | eval_papp_fun : forall v1 v2 h x e Re p1 p2,
     v1 = vfun x e ->
@@ -73,9 +73,9 @@ Inductive bigstep : penv -> heap -> expr -> penv -> heap -> eresult -> Prop :=
     bigstep p1 h1 e p2 h2 (enorm v) ->
     bigstep p1 h1 (preset e) p2 h2 (enorm v)
 
-  | eval_preset_sh : forall x p1 p2 p3 h1 h2 h3 e k eb ek Re,
-    bigstep p1 h1 e p3 h3 (eshft k eb x ek) ->
-    bigstep p3 h3 (subst k (vfun x ek) eb) p2 h2 Re ->
+  | eval_preset_sh : forall x p1 p2 p3 h1 h2 h3 e k eb (ek:var->expr) Re,
+    bigstep p1 h1 e p3 h3 (eshft k eb ek) ->
+    bigstep p3 h3 (subst k (vfun x (ek x)) eb) p2 h2 Re ->
     bigstep p1 h1 (preset e) p2 h2 Re
 
   .
@@ -88,7 +88,7 @@ Example e1_shift : forall k, exists Re,
     empty_penv empty_heap Re.
 Proof.
   intros. eexists.
-  applys eval_pshift "x".
+  applys eval_pshift.
   (* Show Proof. *)
 Qed.
 
@@ -97,8 +97,8 @@ Example e2_shift_reset : forall k, exists Re,
     empty_penv empty_heap Re.
 Proof.
   intros. eexists.
-  applys eval_preset_sh.
-  applys eval_pshift "r".
+  applys eval_preset_sh "r".
+  applys eval_pshift.
   simpl.
   applys eval_pval.
   (* Show Proof. *)
@@ -118,15 +118,14 @@ Proof.
   { applys eval_preset_sh "x3".
     (* we have to name the binders of the new functions created *)
     applys eval_plet_sh.
-    applys eval_pshift "r".
+    applys eval_pshift.
     simpl.
     applys eval_pfun. }
   { simpl.
     applys eval_papp_fun. reflexivity. simpl.
     applys eval_papp_fun. reflexivity. simpl.
     applys eval_plet.
-    { applys eval_papp_fun. reflexivity. simpl.
-      applys eval_pval. }
+    { applys eval_pval. }
     simpl.
     applys* eval_padd.
   }
@@ -145,8 +144,8 @@ Notation "'pshift' k '.' e" :=
 
 Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
   | sav_base: forall e f,
-    (forall p1 p2 h1 h2 k eb x ek,
-        not (bigstep p1 h1 e p2 h2 (eshft k eb x ek))) ->
+    (forall p1 p2 h1 h2 k eb x (ek:var->expr),
+        not (bigstep p1 h1 e p2 h2 (eshft k eb ek))) ->
     (forall p1 p2 s1 s2 h1 h2 v,
       (* TODO use penv env *)
         bigstep p1 h1 e p2 h2 (enorm v) ->
@@ -156,7 +155,7 @@ Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
 | sav_shift: forall e f,
     (forall p1 p2 h1 h2 v, not (bigstep p1 h1 e p2 h2 (enorm v))) ->
     (forall p1 p2 s1 s2 h1 h2 k eb x ek,
-        bigstep p1 h1 e p2 h2 (eshft k eb x ek) ->
+        bigstep p1 h1 e p2 h2 (eshft k eb ek) ->
         exists fb (fk:val->flow),
           satisfies s1 s2 h1 h2 (shft k fb fk) f /\
             spec_assert_valid_under penv env eb fb /\
