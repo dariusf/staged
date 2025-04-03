@@ -182,6 +182,7 @@ Proof.
   applys sav_base. { introv H. false_invert H. }
   introv H.
   inverts H.
-  (* applys s_ens. *)
-  (* admit *)
-Admitted.
+  applys s_ens.
+  exs. intuition. hintro. reflexivity.
+  fmap_eq.
+Qed.
