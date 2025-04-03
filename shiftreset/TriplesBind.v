@@ -168,13 +168,6 @@ Definition spec_assert_valid e f : Prop :=
     spec_assert_valid_under penv env e f.
 
 
-Lemma pshift_sound: forall k eb fb,
-  spec_assert_valid eb fb ->
-  spec_assert_valid (pshift k eb) (sh k fb).
-Proof.
-  intros.
-Admitted.
-
 Lemma pval_sound: forall v,
   spec_assert_valid (pval v) (ens (fun r => \[r = v])).
 Proof.
@@ -185,4 +178,22 @@ Proof.
   applys s_ens.
   exs. intuition. hintro. reflexivity.
   fmap_eq.
+Qed.
+
+Lemma pshift_sound: forall k eb fb,
+  spec_assert_valid eb fb ->
+  spec_assert_valid (pshift k eb) (sh k fb).
+Proof.
+  unfold spec_assert_valid. intros.
+  specializes H penv0 env.
+  applys sav_shift. { intros. introv H1. false_invert H1. } intros.
+  inverts H0.
+  exs.
+  splits.
+  applys s_sh.
+  assumption.
+  intros.
+  simpl.
+  destruct (var_eq x x). 2: { false. }
+  applys pval_sound.
 Qed.
