@@ -3560,3 +3560,161 @@ Abort.
 - #<a href="&num;red_extend">red_extend</a>#
 - #<a href="&num;red_acc">red_acc</a>#
 - #<a href="&num;red_shift_elim">red_shift_elim</a># *)
+
+
+Inductive eresult : Type := (* for the program *)
+  | enorm : val -> eresult
+  | eshft : var -> expr -> (val -> expr) -> eresult.
+
+Notation "'eshft(' k ',' eb ',' ek ')'" :=
+  (eshft k eb ek) (at level 30, only printing,
+  format "'eshft(' k ','  eb ','  ek ')'" ).
+
+Definition penv := Fmap.fmap var (val -> expr).
+Implicit Types p penv : penv.
+
+#[global]
+Instance Inhab_pfun : Inhab (val -> expr).
+Proof.
+  constructor.
+  exists (fun a => pval vunit).
+  constructor.
+Qed.
+
+Definition empty_penv : penv := Fmap.empty.
+
+Inductive bigstep : penv -> heap -> expr -> penv -> heap -> eresult -> Prop :=
+
+  | eval_pval : forall p1 h v,
+    bigstep p1 h (pval v) p1 h (enorm v)
+
+  (* | eval_padd : forall s1 s2 h v1 v2 p e1 e2 r,
+    s2 = Fmap.update s1 r (vint (v1 + v2)) ->
+    Some (vint v1) = get_val s1 e1 ->
+    Some (vint v2) = get_val s1 e2 ->
+    bigstep p s1 h (padd e1 e2) s1 h r (enorm (vint (v1 + v2))) *)
+
+  | eval_pshift : forall h p k eb,
+    (* TODO is r in s1? *)
+    bigstep p h (pshift k eb) p h (eshft k eb (fun r => pval r))
+
+      (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
+
+  (* | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r r1,
+    bigstep p1 s1 h1 e1 s3 h3 r (enorm v) ->
+    bigstep p1 s3 h3 (subst x v e2) s2 h2 r1 Re ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r1 Re *)
+
+  (* | eval_pvar : forall s1 h x v p r,
+    Fmap.indom s1 x ->
+    v = Fmap.read s1 x ->
+    (* s2 = Fmap.update s1 r v -> *)
+    (* no update to the store *)
+    bigstep p s1 h (pvar x) s1 h r (enorm v) *)
+
+  (* | eval_plet : forall s1 s2 s3 h1 h3 h2 x e1 e2 v Re p1 r1 r,
+    bigstep p1 s1 h1 e1 s3 h3 r1 (enorm v) ->
+    bigstep p1 (Fmap.update s3 x v) h3 e2 s2 h2 r Re ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 r Re (* let here is like sequencing, because we ignore the "reference" returned from the first
+expression *) *)
+
+  (* _4 *)
+  (* | eval_plet_sh : forall x e1 e2 h1 h2 p1 k eb (ek:var->expr) s1 s2 r1 r,
+    bigstep p1 s1 h1 e1 s2 h2 r1 (eshft k eb ek) ->
+    bigstep p1 s1 h1 (plet x e1 e2) s2 h2 (* r here is the "reference" to the eventual output of the continuation *)
+    r
+      (eshft k eb (fun y => plet x (ek y) e2)) *)
+
+
+  (* | eval_papp_fun : forall v1 v2 h x e Re p s1 s2 s3 r,
+    v1 = vfun x e ->
+    s3 = Fmap.update s1 x v2 ->
+    bigstep p s3 h e s2 h r Re ->
+    bigstep p s1 h (papp (pval v1) (pval v2)) s2 h r Re *)
+
+  (* | eval_papp_fun_var : forall v1 v2 h x x1 e Re p s1 s2 s3 r,
+    v1 = vfun x e ->
+    v2 = Fmap.read s1 x1 ->
+    s3 = Fmap.update s1 x v2 ->
+    bigstep p s3 h e s2 h r Re ->
+    bigstep p s1 h (papp (pval v1) (pvar x1)) s2 h r Re *)
+
+    (* TODO s2 keeps bindings produced by the app? *)
+
+  (* | eval_app_fix : forall v1 v2 h x e Re xf p,
+    v1 = vfix xf x e ->
+    bigstep p h (subst x v2 (subst xf v1 e)) h Re ->
+    bigstep p h (papp (pval v1) (pval v2)) h Re *)
+
+  (* | eval_papp_unk : forall v h1 h2 Re fe (f:var) p s1 s2 s3 x r,
+    Fmap.read p f = (x, fe) ->
+    s3 = Fmap.update s1 x v ->
+    (* s4 = Fmap.update s2 r r -> *)
+    bigstep p s3 h1 fe s2 h2 r Re ->
+    bigstep p s1 h1 (papp (pvar f) (pval v)) s2 h2 r Re *)
+
+
+  (*
+
+  | eval_preset_val : forall s1 s2 h1 h2 p e v,
+    bigstep p s1 h1 e s2 h2 (enorm v) ->
+    bigstep p s1 h1 (preset e) s2 h2 (enorm v)
+
+  | eval_preset_sh : forall s1 s2 s3 h1 h2 h3 R p e x1 x2 eb ek,
+    bigstep p s1 h1 e s3 h3 (eshft (vfun x1 eb) (vfun x2 ek)) ->
+    bigstep p s3 h3 ((* non-0 *) (subst x1 (vfun x2 ek) eb)) s2 h2 R ->
+    bigstep p s1 h1 (preset e) s2 h2 R *)
+
+  .
+
+Notation " '[' p1 ','  h1  '|'  e ']'  '~~>'  '[' p2 ','  h2  '|'  Re ']'" :=
+  (bigstep p1 h1 e p2 h2 Re) (at level 30, only printing).
+
+Notation "'pshift' k '.' e" :=
+  (pshift k e) (at level 30, only printing,
+  format "'pshift'  k '.'  e" ).
+
+
+Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
+  | sav_base: forall e f,
+    (forall p1 p2 h1 h2 k eb (ek:val->expr),
+        not (bigstep p1 h1 e p2 h2 (eshft k eb ek))) ->
+    (forall p1 p2 s1 s2 h1 h2 v,
+      (* TODO use penv env *)
+        bigstep p1 h1 e p2 h2 (enorm v) ->
+        satisfies s1 s2 h1 h2 (norm v) f) ->
+    spec_assert_valid_under penv env e f
+
+| sav_shift: forall e f,
+    (forall p1 p2 h1 h2 v, not (bigstep p1 h1 e p2 h2 (enorm v))) ->
+    (forall p1 p2 s1 s2 h1 h2 k (ek:val->expr) eb,
+        bigstep p1 h1 e p2 h2 (eshft k eb ek) ->
+        exists fb (fk:val->flow),
+          satisfies s1 s2 h1 h2 (shft k fb fk) f /\
+            spec_assert_valid_under penv env eb fb /\
+            forall v, spec_assert_valid_under penv env (ek v) (fk v)) ->
+    spec_assert_valid_under penv env e f.
+
+
+Definition spec_assert_valid e f : Prop :=
+  forall penv env,
+    spec_assert_valid_under penv env e f.
+
+
+Lemma pshift_sound: forall k eb fb,
+  spec_assert_valid eb fb ->
+  spec_assert_valid (pshift k eb) (sh k fb).
+Proof.
+  intros.
+Admitted.
+
+Lemma pval_sound: forall v,
+  spec_assert_valid (pval v) (ens (fun r => \[r = v])).
+Proof.
+  unfold spec_assert_valid. intros.
+  applys sav_base. { introv H. false_invert H. }
+  introv H.
+  inverts H.
+  (* applys s_ens. *)
+  (* admit *)
+Admitted.
