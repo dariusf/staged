@@ -3562,13 +3562,13 @@ Abort.
 - #<a href="&num;red_shift_elim">red_shift_elim</a># *)
 
 
-Inductive eresult : Type := (* for the program *)
+Inductive eresult : Type :=
   | enorm : val -> eresult
-  | eshft : var -> expr -> (val -> expr) -> eresult.
+  | eshft : var -> expr -> var -> expr -> eresult.
 
-Notation "'eshft(' k ',' eb ',' ek ')'" :=
-  (eshft k eb ek) (at level 30, only printing,
-  format "'eshft(' k ','  eb ','  ek ')'" ).
+Notation "'eshft(' k ',' eb ',' x ',' ek ')'" :=
+  (eshft k eb x ek) (at level 30, only printing,
+  format "'eshft(' k ','  eb ','  x ','  ek ')'" ).
 
 Definition penv := Fmap.fmap var (val -> expr).
 Implicit Types p penv : penv.
@@ -3594,9 +3594,9 @@ Inductive bigstep : penv -> heap -> expr -> penv -> heap -> eresult -> Prop :=
     Some (vint v2) = get_val s1 e2 ->
     bigstep p s1 h (padd e1 e2) s1 h r (enorm (vint (v1 + v2))) *)
 
-  | eval_pshift : forall h p k eb,
+  | eval_pshift : forall h p k eb x,
     (* TODO is r in s1? *)
-    bigstep p h (pshift k eb) p h (eshft k eb (fun r => pval r))
+    bigstep p h (pshift k eb) p h (eshft k eb x (pvar x))
 
       (* (eshft (vfun k eb) (vfun "x" (preset (pvar "x")))) *)
 
@@ -3654,18 +3654,56 @@ expression *) *)
     bigstep p s1 h1 (papp (pvar f) (pval v)) s2 h2 r Re *)
 
 
-  (*
+  
 
-  | eval_preset_val : forall s1 s2 h1 h2 p e v,
-    bigstep p s1 h1 e s2 h2 (enorm v) ->
-    bigstep p s1 h1 (preset e) s2 h2 (enorm v)
+  | eval_preset_val : forall p1 p2 h1 h2 p e v,
+    bigstep p1 h1 e p2 h2 (enorm v) ->
+    bigstep p1 h1 (preset e) p2 h2 (enorm v)
 
-  | eval_preset_sh : forall s1 s2 s3 h1 h2 h3 R p e x1 x2 eb ek,
-    bigstep p s1 h1 e s3 h3 (eshft (vfun x1 eb) (vfun x2 ek)) ->
-    bigstep p s3 h3 ((* non-0 *) (subst x1 (vfun x2 ek) eb)) s2 h2 R ->
-    bigstep p s1 h1 (preset e) s2 h2 R *)
+  | eval_preset_sh : forall p1 p2 p3 h1 h2 h3 e k x eb ek Re,
+    bigstep p1 h1 e p3 h3 (eshft k eb x ek) ->
+    bigstep p3 h3 (subst k (vfun x ek) eb) p2 h2 Re ->
+    bigstep p1 h1 (preset e) p2 h2 Re
 
   .
+
+
+Module BigStepExamples.
+
+Example e1_shift : forall k, exists Re,
+  bigstep empty_penv empty_heap (pshift k (pval (vint 1)))
+    empty_penv empty_heap Re.
+Proof.
+  intros. eexists.
+  applys eval_pshift "x".
+  (* Show Proof. *)
+Qed.
+
+Example e2_shift_reset : forall k, exists Re,
+  bigstep empty_penv empty_heap (preset (pshift k (pval (vint 1))))
+    empty_penv empty_heap Re.
+Proof.
+  intros. eexists.
+  applys eval_preset_sh.
+  applys eval_pshift "x".
+  simpl.
+  applys eval_pval.
+  (* Show Proof. *)
+Qed.
+
+Example e3_shift_k_k : forall k, exists Re,
+  bigstep empty_penv empty_heap (preset (pshift k (pval (vint 1))))
+    empty_penv empty_heap Re.
+Proof.
+  intros. eexists.
+  applys eval_preset_sh.
+  applys eval_pshift "x".
+  simpl.
+  applys eval_pval.
+  (* Show Proof. *)
+Qed.
+
+End BigStepExamples.
 
 Notation " '[' p1 ','  h1  '|'  e ']'  '~~>'  '[' p2 ','  h2  '|'  Re ']'" :=
   (bigstep p1 h1 e p2 h2 Re) (at level 30, only printing).
