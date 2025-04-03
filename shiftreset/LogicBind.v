@@ -67,7 +67,7 @@ Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
-  | padd x z => padd x z
+  | padd e1 e2 => padd (aux e1) (aux e2)
   | pminus x z => pminus x z
   | pfst x => pfst x
   | psnd x => psnd x

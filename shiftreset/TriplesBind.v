@@ -73,7 +73,7 @@ Inductive bigstep : penv -> heap -> expr -> penv -> heap -> eresult -> Prop :=
     bigstep p1 h1 e p2 h2 (enorm v) ->
     bigstep p1 h1 (preset e) p2 h2 (enorm v)
 
-  | eval_preset_sh : forall p1 p2 p3 h1 h2 h3 e k x eb ek Re,
+  | eval_preset_sh : forall x p1 p2 p3 h1 h2 h3 e k eb ek Re,
     bigstep p1 h1 e p3 h3 (eshft k eb x ek) ->
     bigstep p3 h3 (subst k (vfun x ek) eb) p2 h2 Re ->
     bigstep p1 h1 (preset e) p2 h2 Re
@@ -115,26 +115,23 @@ Example e3_shift_k_k : exists Re,
 Proof.
   intros. eexists.
   applys eval_plet.
-  { applys eval_preset_sh.
+  { applys eval_preset_sh "x3".
+    (* we have to name the binders of the new functions created *)
     applys eval_plet_sh.
     applys eval_pshift "r".
     simpl.
     applys eval_pfun. }
   { simpl.
-    (* destruct (var_eq x k). false.
-    destruct (var_eq x2 x2). 2: { false. }
-    destruct (var_eq k k). 2: { false. } *)
     applys eval_papp_fun. reflexivity. simpl.
-    (* destruct (var_eq x x). 2: { false. } *)
     applys eval_papp_fun. reflexivity. simpl.
-    (* simpl. *)
-    (* destruct (var_eq k x). false. *)
-    (* destruct (var_eq x x). 2: { false. } *)
-    admit.
+    applys eval_plet.
+    { applys eval_papp_fun. reflexivity. simpl.
+      applys eval_pval. }
+    simpl.
+    applys* eval_padd.
   }
   (* Show Proof. *)
-(* Qed. *)
-Admitted.
+Qed.
 
 End BigStepExamples.
 
