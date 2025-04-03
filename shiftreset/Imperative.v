@@ -670,7 +670,7 @@ Proof.
 Abort. *)
 
 
-Lemma pvar_sound: forall x,
+(* Lemma pvar_sound: forall x,
   (* spec_assert_valid (pvar x) (fun y => ens y (fun s => \[Fmap.read s "x" = Fmap.read "y"])). *)
   spec_assert_valid (pvar x) (fun y => ens y (fun s => \[])).
 Proof.
@@ -1302,4 +1302,4 @@ Proof.
     }
     
   }
-Abort. *)
+Abort. *) *)
