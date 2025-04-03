@@ -227,12 +227,12 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
       satisfies s1 s2 hr h2 R f) :
     satisfies s1 s2 h1 h2 R (req p f)
 
-  | s_ens s1 q h1 h2 R
-    (H: exists v h3,
+  | s_ens : forall s1 q h1 h2 R,
+    (exists v h3,
       R = norm v /\
       q v h3 /\
       h2 = Fmap.union h1 h3 /\
-      Fmap.disjoint h1 h3) :
+      Fmap.disjoint h1 h3) ->
     satisfies s1 s1 h1 h2 R (ens q)
 
   | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R,
@@ -330,6 +330,18 @@ Lemma s_seq : forall s3 h3 r1 s1 s2 f1 f2 h1 h2 R,
 Proof.
   unfold seq. intros.
   applys* s_bind.
+Qed.
+
+Lemma s_ens_ : forall H h1 h2 s1,
+  (exists h3,
+    H h3 /\
+    h2 = Fmap.union h1 h3 /\
+    Fmap.disjoint h1 h3) ->
+  satisfies s1 s1 h1 h2 (norm vunit) (ens_ H).
+Proof.
+  unfold ens_. intros.
+  applys* s_ens.
+  destr H0. exs. intuition. hintro. jauto.
 Qed.
 
 (** A specialization of [equal_f] for exposing the equalities in continuations after inversion. *)
@@ -962,17 +974,17 @@ End Examples.
 (** * Shift-freedom *)
 (** Semantic definition of shift-freedom. *)
 Definition shift_free (f:flow) : Prop :=
-  forall s1 s2 h1 h2 k fk r b,
+  forall s1 s2 h1 h2 k fb fk,
   (* exists v, *)
     (* satisfies s1 s2 h1 h2 (norm v) f /\ *)
-      not (satisfies s1 s2 h1 h2 (shft k fk r (fun r2 => rs b r2)) f).
+      not (satisfies s1 s2 h1 h2 (shft k fb fk) f).
 
 (** [Sh#], the syntactic analogue of [shft], or a CPS version of [Sh], where the continuation is shift-free. *)
-Definition shs x fb vr c : flow :=
-  ens_ \[forall r, shift_free (c r)];; shc x fb vr c.
+(* Definition shs x fb vr c : flow :=
+  ens_ \[forall r, shift_free (c r)];; shc x fb vr c. *)
 
-Notation "'shs' '(' k '.' fb ')' '(' vr '.' '⟨' fk '⟩' ')'" := (shs k fb vr (fun r => rs fk r))
-  (at level 80, format "'shs'  '(' k '.'  fb ')'  '(' vr '.'  '⟨'  fk  '⟩' ')'", only printing) : flow_scope.
+(* Notation "'shs' '(' k '.' fb ')' '(' vr '.' '⟨' fk '⟩' ')'" := (shs k fb vr (fun r => rs fk r))
+  (at level 80, format "'shs'  '(' k '.'  fb ')'  '(' vr '.'  '⟨'  fk  '⟩' ')'", only printing) : flow_scope. *)
 
 Class ShiftFree (f:flow) : Prop :=
   { shift_free_pf: shift_free f }.
@@ -1030,17 +1042,17 @@ Proof.
   assumption.
 Qed.
 
-Lemma sf_rs_val : forall f r,
+Lemma sf_rs_val : forall f,
   shift_free f ->
-  shift_free (rs f r).
+  shift_free (rs f).
 Proof.
   unfold shift_free, not; intros.
   inverts H0 as H0. destr H0.
   applys~ H H0.
 Qed.
 
-Lemma sf_rs : forall f r,
-  shift_free (rs f r).
+Lemma sf_rs : forall f,
+  shift_free (rs f).
 Proof.
   unfold shift_free, not; intros.
   (* TODO try this again without dependent induction? *)
@@ -1054,8 +1066,8 @@ Proof.
   reflexivity.
 Qed.
 
-Instance ShiftFreeRs : forall f r,
-  ShiftFree (rs f r).
+Instance ShiftFreeRs : forall f,
+  ShiftFree (rs f).
 Proof.
   intros.
   constructor. apply* sf_rs.
@@ -1133,7 +1145,7 @@ Proof.
   unfold shift_free, not. intros.
   split; intros.
   { eapply H.
-    apply s_seq_sh.
+    apply s_bind_sh.
     eassumption. }
   { eapply H.
     eapply s_seq.
@@ -1150,7 +1162,7 @@ Lemma sf_seq_inv1 : forall f1 f2,
 Proof.
   unfold shift_free, not. intros.
   eapply H.
-  apply s_seq_sh.
+  apply s_bind_sh.
   eassumption.
 Qed.
 
@@ -1165,16 +1177,17 @@ Ltac shiftfree :=
   | _ => auto
   end.
 
-(* Immediately dispatch goals where we have an assumption that a shift-free thing produces a shift *)
+(* Immediately dispatch goals where we have an assumption that
+  a shift-free thing produces a shift *)
 Ltac no_shift :=
   lazymatch goal with
-  | H: satisfies _ _ _ _ (shft _ _ _ _) (ens _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) (ens _) |- _ =>
     apply sf_ens in H; false
-  | H: satisfies _ _ _ _ (shft _ _ _ _) (ens_ _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) (ens_ _) |- _ =>
     unfold ens_ in H; apply sf_ens in H; false
-  | H: satisfies _ _ _ _ (shft _ _ _ _) (rs _ _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) (rs _ _) |- _ =>
     apply sf_rs in H; false
-  | H: satisfies _ _ _ _ (shft _ _ _ _) (defun _ _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) (defun _ _) |- _ =>
     apply sf_defun in H; false
   | _ => idtac
   end.
@@ -1184,7 +1197,7 @@ Ltac vacuity ::= false; no_shift.
 (* Given a [satisfies ... (shs ... k)] hypothesis,
   produces [satisfies ... (shc ... k)] and an assumption
   that k is shift-free *)
-Ltac elim_shs H :=
+(* Ltac elim_shs H :=
   lazymatch type of H with
   | satisfies _ _ _ _ _ (shs _ _ _ _) =>
     inverts H as H; no_shift; destr H;
@@ -1194,17 +1207,17 @@ Ltac elim_shs H :=
     end;
     subst
   | _ => fail
-  end.
+  end. *)
 
 (* Given a [satisfies ... (shs ... k)] goal,
   we have to prove [k] is shift-free before we can reduce
   it into a [satisfies ... (shc ... k)] goal. *)
-Ltac intro_shs :=
+(* Ltac intro_shs :=
   lazymatch goal with
   | |- satisfies _ _ _ _ _ (shs _ _ _ _) =>
     eapply s_seq; [ apply ens_void_pure_intro | ]
   | _ => fail
-  end.
+  end. *)
 
   #[global]
   Instance Proper_seq_sf : forall f1,
@@ -1379,9 +1392,9 @@ Proof.
 Qed. *)
 
 (** * Reduction rules *)
-Lemma red_normal : forall f r,
+Lemma red_normal : forall f,
   shift_free f ->
-  entails (rs f r) f.
+  entails (rs f) f.
 Proof.
   introv Hsf.
   unfold entails. intros.
@@ -1392,9 +1405,9 @@ Proof.
   { assumption. }
 Qed.
 
-Lemma red_skip : forall f1 f2 r,
+Lemma red_skip : forall f1 f2,
     shift_free f1 ->
-    entails (rs (f1;; f2) r) (f1;; rs f2 r).
+    entails (rs (f1;; f2)) (f1;; rs f2).
 Proof.
   introv Hsf.
   unfold entails. intros.
@@ -1417,9 +1430,9 @@ Proof.
     assumption. }
 Qed.
 
-Lemma red_skip_conv : forall f1 f2 r,
+Lemma red_skip_conv : forall f1 f2,
     shift_free f1 ->
-    entails (f1;; rs f2 r) (rs (f1;; f2) r).
+    entails (f1;; rs f2) (rs (f1;; f2)).
 Proof.
   introv Hsf. unfold entails. intros.
 
@@ -1433,9 +1446,9 @@ Proof.
     apply* s_seq. }
 Qed.
 
-Lemma red_skip2 : forall f1 f2 r,
+Lemma red_skip2 : forall f1 f2,
     shift_free f1 ->
-    bientails (rs (f1;; f2) r) (f1;; rs f2 r).
+    bientails (rs (f1;; f2)) (f1;; rs f2).
 Proof.
   introv Hsf.
   unfold bientails. iff H.
@@ -1451,7 +1464,7 @@ Proof.
     apply* s_seq. }
 Qed.
 
-Lemma red_init : forall x b r,
+(* Lemma red_init : forall x b r,
   entails (sh x b r)
     (shs x b r (fun r2 => rs (ens (fun r1 => \[r1 = r])) r2)).
 Proof.
@@ -1462,9 +1475,9 @@ Proof.
     (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
   intro_shs. intros. shiftfree.
   apply s_shc. 
-Qed.
+Qed. *)
 
-Lemma red_extend : forall f2 x b fk v,
+(* Lemma red_extend : forall f2 x b fk v,
   shift_free f2 ->
   entails (shs x b v (fun r2 => rs fk r2);; f2)
     (shs x b v (fun r2 => rs (fk;; f2) r2)).
@@ -1477,9 +1490,9 @@ Proof.
     inverts H7 as H7.
     cont_eq.
     apply s_shc. }
-Qed.
+Qed. *)
 
-Lemma red_acc : forall f2 x v r fk fb,
+(* Lemma red_acc : forall f2 x v r fk fb,
   entails (rs (shs x fb v (fun r2 => rs fk r2);; f2) r)
     (rs (shs x fb v (fun r2 => rs (fk;; f2) r2)) r).
 Proof.
@@ -1510,9 +1523,9 @@ Proof.
     apply s_shc.
     assumption.
   }
-Qed.
+Qed. *)
 
-Lemma red_shift_elim : forall x v r fk fb,
+(* Lemma red_shift_elim : forall x v r fk fb,
   entails (rs (shs x fb v (fun r2 => rs fk r2)) r)
     (defun x (fun a r =>
       rs (ens_ \[v = a];; fk) r);; rs fb r).
@@ -1527,7 +1540,7 @@ Proof.
   (* assumption. *)
   reflexivity.
   applys_eq H7.
-Qed.
+Qed. *)
 
 (* try to prove the continuation is shift-free *)
 (* Lemma red_shift_elim1 : forall x v r fk fb a1 r1,
@@ -1560,7 +1573,7 @@ Proof.
     apply s_req. intros.
     inverts H0 as H0.
     specializes H0 H1 H2 H3.
-    apply s_seq_sh.
+    apply s_bind_sh.
     assumption.
     (* apply H0 in H1. *)
     (* false. *)
@@ -1574,10 +1587,10 @@ Proof.
   (* prove the req *)
   inverts H0 as H0.
   specializes H0 hp hr H2 ___.
-  applys* s_seq h3 r1.
+  applys* s_seq h3.
 Qed.
 
-Lemma norm_discard : forall f1 f2 x,
+(* Lemma norm_discard : forall f1 f2 x,
   entails f1 f2 ->
   entails (discard f1 x) (discard f2 x).
 Proof.
@@ -1586,10 +1599,10 @@ Proof.
   apply s_discard.
   eauto.
   reflexivity.
-Qed.
+Qed. *)
 
-Lemma norm_defun : forall x uf a r,
-  entails (defun x uf;; unk x a r) (defun x uf;; uf a r).
+Lemma norm_defun : forall x uf a,
+  entails (defun x uf;; unk x a) (defun x uf;; uf a).
 Proof.
   unfold entails. intros.
   inverts H as H; [ | vacuous ]. destr H.
@@ -2268,7 +2281,7 @@ Proof.
   rewrites* (>> cancel_update_remove s1).
 Qed.
 
-Lemma ent_defun_both : forall x u f1 f2 s1,
+(* Lemma ent_defun_both : forall x u f1 f2 s1,
   Fmap.indom s1 x ->
   Fmap.read s1 x = u ->
   entails_under (Fmap.remove s1 x) (defun x u;; f1) (defun x u;; f2) ->
@@ -2284,7 +2297,7 @@ Proof.
   assumption.
   assumption.
   assumption.
-Qed.
+Qed. *)
 
 
 
@@ -2596,10 +2609,10 @@ Proof.
 
 Abort. *)
 
-Lemma unk_inv : forall s1 s2 h1 h2 R x a v uf,
+Lemma unk_inv : forall s1 s2 h1 h2 R x a uf,
   Fmap.read s1 x = uf ->
-  satisfies s1 s2 h1 h2 R (unk x a v) ->
-  satisfies s1 s2 h1 h2 R (uf a v).
+  satisfies s1 s2 h1 h2 R (unk x a) ->
+  satisfies s1 s2 h1 h2 R (uf a).
 Proof.
   intros.
   inverts H0 as H0.
@@ -2607,9 +2620,9 @@ Proof.
   assumption.
 Qed.
 
-Lemma ent_unk : forall s (x:var) a v uf,
+Lemma ent_unk : forall s (x:var) a uf,
   Fmap.read s x = uf ->
-  entails_under s (unk x a v) (uf a v).
+  entails_under s (unk x a) (uf a).
 Proof.
   unfold entails_under. intros.
   eapply unk_inv.
@@ -2617,13 +2630,13 @@ Proof.
   assumption.
 Qed.
 
-Lemma norm_rs_rs : forall f r r1,
-  entails (rs (rs f r1) r) (rs f r1).
+Lemma norm_rs_rs : forall f r,
+  entails (rs (rs f)) (rs f).
 Proof.
   unfold entails. intros.
   inverts H as H.
-  { no_shift. }
-  { assumption. }
+  false sf_rs H.
+  assumption.
 Qed.
 
 Lemma seq_assoc : forall s1 s2 h1 h2 R f1 f2 f3,
@@ -2663,7 +2676,7 @@ Lemma norm_seq_pure_l : forall p f,
   entails (ens (fun r => \[p r]);; f) f.
 Proof.
   unfold entails. intros.
-  inverts H as H; [ | vacuous ]. destr H.
+  inverts H as H. 2: { no_shift. }
   inverts H as H. destr H. hinv H. injects H0. subst.
   rew_fmap *.
 Qed.
@@ -2672,7 +2685,7 @@ Lemma norm_ens_true : forall f,
   entails (ens_ \[True];; f) f.
 Proof.
   unfold entails. intros.
-  inverts H as H; [ | no_shift ]. destr H.
+  inverts H as H. 2: { no_shift. }
   inverts H as H. destr H. hinv H. hinv H. hinv H2. injects H0. subst.
   rew_fmap *.
 Qed.
@@ -2681,7 +2694,7 @@ Lemma norm_ens_eq : forall f (a:val),
   entails (ens_ \[a = a];; f) f.
 Proof.
   unfold entails. intros.
-  inverts H as H; [ | no_shift ]. destr H.
+  inverts H as H. 2: { no_shift. }
   inverts H as H. destr H. hinv H. hinv H. hinv H2. injects H0. subst.
   rew_fmap *.
 Qed.
@@ -2727,17 +2740,18 @@ Lemma norm_ens_ens_void_l : forall H Q,
 Proof.
   unfold entails.
   iff H0.
-  { inverts H0 as H1; destr H1; no_shift.
-    inverts H1 as H1; destr H1; no_shift. injects H0. hinv H1. hinv H0.
-    inverts H8 as H8; destr H8; no_shift.
-    constructor.
-    exists v0 (h4 \u x0).
+  { inverts H0 as H0. 2: { no_shift. }
+    inverts H0 as H0.
+    destr H0. hinv H0. hinv H0. injects H1.
+    inverts H8 as H8. destr H8.
+    applys s_ens.
+    exists v (h4 \u x0).
     splits*.
     subst. rew_fmap *.
     apply* hstar_intro. }
   { inverts H0 as H0. destr H0. hinv H0.
     eapply s_seq.
-    constructor.
+    eapply s_ens.
     exists vunit.
     exists x0.
     splits*.
@@ -2771,12 +2785,13 @@ Proof.
   inverts H as H. destr H.
   inverts H9 as H9. destr H9.
   hinv H. hinv H. hinv H6. hinv H6.
-  constructor. exists v0. exists (h0 \u h4).
+  applys_eq s_ens_. injects H0. subst. reflexivity.
+  exists (h0 \u h4).
   splits*.
-  rewrite <- hstar_assoc.
-  subst. rew_fmap *.
+  subst.
   hintro; jauto.
-  hintro; jauto.
+  rew_fmap *.
+  rew_fmap *.
 Qed.
 
 Lemma norm_ens_ens_void_split : forall H1 H2,
@@ -2850,8 +2865,8 @@ Proof.
   - apply norm_req_sep_combine.
 Qed.
 
-Lemma norm_rs_req : forall H f r,
-  entails (rs (req H f) r) (req H (rs f r)).
+Lemma norm_rs_req : forall H f,
+  entails (rs (req H f)) (req H (rs f)).
 Proof.
   unfold entails. intros.
   apply s_req. intros.
@@ -2863,8 +2878,8 @@ Proof.
     apply* s_rs_val. }
 Qed.
 
-Lemma norm_rs_seq_ens : forall Q f r,
-  entails (rs (ens Q;; f) r) (ens Q;; (rs f r)).
+Lemma norm_rs_seq_ens : forall Q f,
+  entails (rs (ens Q;; f)) (ens Q;; (rs f)).
 Proof.
   unfold entails. intros.
   apply red_skip.
@@ -3276,7 +3291,7 @@ Proof.
   { inverts H0 as H0. specializes H0 b.
     applys* s_seq. }
   { inverts H0 as H0. specializes H0 b.
-    apply* s_seq_sh. }
+    apply* s_bind_sh. }
 Qed.
 
 Lemma ent_seq_ex_l : forall f f1 A (fctx:A -> flow) env,
@@ -3370,8 +3385,8 @@ Proof.
   inverts H1 as H1; auto.
 Qed.
 
-Lemma norm_rs_ex : forall A ctx r,
-  entails (rs (∃ (x:A), ctx x) r) (∃ (x:A), rs (ctx x) r).
+Lemma norm_rs_ex : forall A ctx,
+  entails (rs (∃ (x:A), ctx x)) (∃ (x:A), rs (ctx x)).
 Proof.
   unfold entails. intros.
   inverts H as H.
@@ -3385,13 +3400,12 @@ Proof.
     assumption. }
 Qed.
 
-Lemma norm_rs_all : forall A ctx r,
-  entails (rs (∀ (x:A), ctx x) r) (∀ (x:A), rs (ctx x) r).
+Lemma norm_rs_all : forall A ctx,
+  entails (rs (∀ (x:A), ctx x)) (∀ (x:A), rs (ctx x)).
 Proof.
   unfold entails. intros.
   inverts H as H.
-  {
-    constructor. intros b.
+  { constructor. intros b.
     inverts H as H. specializes H b.
     eapply s_rs_sh; jauto. }
   { constructor. intros b.
@@ -3439,12 +3453,12 @@ Qed.
   k1 takes i1, result is i1 + i2
   k2 takes i2, result is also i1 + i2
 *)
-Example e1_red : forall x1 x2 i1 i2 r3, exists f,
+(* Example e1_red : forall x1 x2 i1 i2 r3, exists f,
   entails_under empty_env
     (rs
-      (sh x1 (unk x1 (vint i1) (vint (i1 + i2))) (vint i1);;
-        sh x2 (unk x2 (vint i2) (vint (i1 + i2))) (vint i2);;
-        ens (fun r => \[r = vint (i1 + i2)])) r3) f.
+      (sh x1 (unk x1 (vint i1));;
+        sh x2 (unk x2 (vint i2));;
+        ens (fun r => \[r = vint (i1 + i2)]))) f.
 Proof.
   intros.
   eexists.
@@ -3478,7 +3492,7 @@ Proof.
 
   rewrite (norm_seq_pure_l (fun r4 => r4 = vint i2)).
   apply entails_under_refl.
-Qed.
+Qed. *)
 
 Example ex_rewrite_right:
   (* entails (ens_ \[True]) (ens_ \[True];; ens_ \[True]). *)
@@ -3504,12 +3518,12 @@ Proof.
 Abort.
 
 Example ex_rewrite_right1:
-  entails_under (Fmap.update empty_env "k" (fun a r => ens_ \[a = r]))
-   (ens_ \[True];; unk "k" (vint 1) (vint 1)) (ens_ \[True]).
+  entails_under (Fmap.update empty_env "k" (fun a => ens (fun r => \[a = r])))
+   (ens_ \[True];; unk "k" (vint 1)) (ens_ \[True]).
 Proof.
   (* funfold1 "k". *)
-  pose proof (@ent_unk (Fmap.update empty_env "k" (fun a r => ens_ \[a = r])) "k").
-  specializes H (vint 1) (vint 1) ___.
+  pose proof (@ent_unk (Fmap.update empty_env "k" (fun a => ens (fun r => \[a = r]))) "k").
+  specializes H (vint 1) ___.
 
   rewrite H.
   rew_fmap.
@@ -3517,12 +3531,12 @@ Proof.
 Abort.
 
 Example ex_rewrite_right1:
-  entails_under (Fmap.update empty_env "k" (fun a r => ens_ \[a = r]))
-   (unk "k" (vint 1) (vint 1);; ens_ \[True]) (ens_ \[True]).
+  entails_under (Fmap.update empty_env "k" (fun a => ens (fun r => \[a = r])))
+   (unk "k" (vint 1);; ens_ \[True]) (ens_ \[True]).
 Proof.
   (* funfold1 "k". *)
-  pose proof (@ent_unk (Fmap.update empty_env "k" (fun a r => ens_ \[a = r])) "k").
-  specializes H (vint 1) (vint 1) ___.
+  pose proof (@ent_unk (Fmap.update empty_env "k" (fun a => ens (fun r => \[a = r]))) "k").
+  specializes H (vint 1) ___.
 
 (* Set Typeclasses Debug. *)
   (* setoid_rewrite H. *)
