@@ -18,7 +18,7 @@ Set Implicit Arguments.
 
 (** * Programs *)
 Definition var : Type := string.
-Definition var_eq := String.string_dec.
+Notation var_eq := String.string_dec.
 
 Definition loc := nat.
 

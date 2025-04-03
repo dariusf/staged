@@ -184,16 +184,14 @@ Lemma pshift_sound: forall k eb fb,
   spec_assert_valid eb fb ->
   spec_assert_valid (pshift k eb) (sh k fb).
 Proof.
-  unfold spec_assert_valid. intros.
-  specializes H penv0 env.
-  applys sav_shift. { intros. introv H1. false_invert H1. } intros.
-  inverts H0.
+  unfold spec_assert_valid. intros * Heb **.
+  specializes Heb penv0 env.
+  applys sav_shift. { intros. introv H. false_invert H. } intros.
+  inverts H.
   exs.
   splits.
   applys s_sh.
   assumption.
-  intros.
-  simpl.
-  destruct (var_eq x x). 2: { false. }
-  applys pval_sound.
+  { intros. simpl. case_if.
+    applys pval_sound. }
 Qed.
