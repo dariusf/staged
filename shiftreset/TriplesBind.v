@@ -256,3 +256,41 @@ Proof.
     splits*.
   }
 Qed.
+
+
+Lemma plet_sound: forall x e1 e2 f1 (f2:val->flow),
+  spec_assert_valid e1 f1 ->
+  (forall v, spec_assert_valid (subst x v e2) (f2 v)) ->
+  spec_assert_valid (plet x e1 e2) (bind f1 f2).
+Proof.
+  unfold spec_assert_valid. introv He1 He2. intros. specializes He1 penv0 env.
+  inverts He1 as.
+  {
+    (* e1 has no shift *)
+    introv Hne1 Hb1.
+    specializes He2 penv0 env.
+    inverts He2 as.
+    {
+      (* e2 has no shift *)
+      introv Hne2 Hb2.
+      applys sav_base.
+      {
+        introv H1.
+        inverts H1.
+        (* false Hne2 H8. *)
+        applys_eq Hne2. applys_eq H8. f_equal.
+        (* reflexivity. *)
+        admit.
+        admit.
+      }
+      admit.
+    }
+    {
+      (* e2 has shift *)
+      admit.
+    }
+  }
+  {
+    admit.
+  }
+Admitted.
