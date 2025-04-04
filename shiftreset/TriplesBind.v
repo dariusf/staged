@@ -62,12 +62,10 @@ Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
     bigstep p h (subst x v2 (subst xf v1 e)) h Re ->
     bigstep p h (papp (pval v1) (pval v2)) h Re *)
 
-  (* | eval_papp_unk : forall v h1 h2 Re fe (f:var) p s1 s2 s3 x r,
-    Fmap.read p f = (x, fe) ->
-    s3 = Fmap.update s1 x v ->
-    (* s4 = Fmap.update s2 r r -> *)
-    bigstep p s3 h1 fe s2 h2 r Re ->
-    bigstep p s1 h1 (papp (pvar f) (pval v)) s2 h2 r Re *)
+  | eval_papp_unk : forall v h1 h2 Re (ef:val->expr) (f:var) p1,
+    Fmap.read p1 f = ef ->
+    bigstep p1 h1 (ef v) h2 Re ->
+    bigstep p1 h1 (papp (pvar f) (pval v)) h2 Re
 
   | eval_preset_val : forall p1 h1 h2 p e v,
     bigstep p1 h1 e h2 (enorm v) ->
@@ -145,15 +143,15 @@ Notation "'pshift' k '.' e" :=
 
 Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
   | sav_base: forall e f,
-    (forall p1 h1 h2 k eb x ek,
-        not (bigstep p1 h1 e h2 (eshft k eb x ek))) ->
+    (forall h1 h2 k eb x ek,
+        not (bigstep penv h1 e h2 (eshft k eb x ek))) ->
     (forall h1 h2 v,
         bigstep penv h1 e h2 (enorm v) ->
         satisfies env env h1 h2 (norm v) f) ->
     spec_assert_valid_under penv env e f
 
 | sav_shift: forall e f,
-    (forall p1 h1 h2 v, not (bigstep p1 h1 e h2 (enorm v))) ->
+    (forall h1 h2 v, not (bigstep penv h1 e h2 (enorm v))) ->
     (forall h1 h2 k eb x ek,
         bigstep penv h1 e h2 (eshft k eb x ek) ->
         exists fb (fk:val->flow),
@@ -195,3 +193,43 @@ Proof.
   { intros. simpl. case_if.
     applys pval_sound. }
 Qed.
+
+Lemma papp_unk_sound: forall penv (env:senv) (f:var) v (ef:val->expr) (f1:val->flow),
+  Fmap.read penv f = ef ->
+  Fmap.read env f = f1 ->
+  spec_assert_valid_under penv env (ef v) (f1 v) ->
+  spec_assert_valid_under penv env (papp f v) (unk f v).
+Proof.
+  unfold spec_assert_valid. intros * ? ? He.
+  inverts He as.
+  { introv Hne He.
+    applys sav_base.
+    { introv H1. inverts H1 as H1 H2. rewrite H in H1. false Hne H1. }
+    intros * Hb.
+    inverts Hb as. intros Hb.
+    rewrite H in Hb.
+    specializes He Hb.
+    applys s_unk.
+    eassumption.
+    assumption. }
+  { intros * Hne He.
+    applys sav_shift.
+    { introv H1. inverts H1 as H1 H2. rewrite H in H1. false Hne H1. }
+    intros * Hb.
+    inverts Hb as H3 H4.
+    rewrite H in H3.
+    specializes He H3. destruct He as (fk&fb&rb&?&?).
+    exs.
+    split*.
+    applys s_unk.
+    eassumption.
+    assumption. }
+Qed.
+
+
+Lemma papp_sound: forall x e (va:val) (f:var->flow),
+  spec_assert_valid e f ->
+  spec_assert_valid (papp (vfun x e) va)
+    (fun r => fexs x (ens x (fun s => \[Fmap.read s x = va]);; f)).
+Proof.
+Admitted.

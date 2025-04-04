@@ -250,10 +250,10 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
       satisfies s1 s2 h1 h2 R (f b)) :
     satisfies s1 s2 h1 h2 R (@fall A f)
 
-  | s_unk s1 s2 h1 h2 r xf uf a
-    (He: Fmap.read s1 xf = uf)
-    (Hr: satisfies s1 s2 h1 h2 (norm r) (uf a)) :
-    satisfies s1 s2 h1 h2 (norm r) (unk xf a)
+  | s_unk : forall s1 s2 h1 h2 R xf uf a,
+    Fmap.read s1 xf = uf ->
+    satisfies s1 s2 h1 h2 R (uf a) ->
+    satisfies s1 s2 h1 h2 R (unk xf a)
 
   | s_intersect s1 s2 h1 h2 R f1 f2
     (H1: satisfies s1 s2 h1 h2 R f1)
