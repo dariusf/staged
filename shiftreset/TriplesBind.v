@@ -279,7 +279,8 @@ Proof.
         inverts H1.
         (* false Hne2 H8. *)
         applys_eq Hne2. applys_eq H8. f_equal.
-        (* reflexivity. *)
+        Fail reflexivity.
+        (* cyclic dependency, we need to know how e2 evaluates to choose shift or no *)
         admit.
         admit.
       }
@@ -287,10 +288,38 @@ Proof.
     }
     {
       (* e2 has shift *)
+      introv Hne2 Hb2.
       admit.
     }
   }
   {
-    admit.
+    (* e1 has shift *)
+    introv Hne1 Hb1.
+    applys sav_shift.
+    { introv H. inverts H as H1. false Hne1 H1. }
+    { intros.
+      inverts H.
+      {
+          false Hne1 H7. }
+        (* specializes He2 v penv0 env.
+        inverts He2 as. { (* e2 has no shift *) introv Hne2 Hb2. false Hne2 H8. }
+        { (* e2 has shift *)
+          false Hne1 H7. }
+      } *)
+      {
+        (* e1 has a shift *)
+        specializes Hb1 H6.
+        destruct Hb1 as (fb&fk&?&?&?).
+        exs. splits.
+        applys s_bind_sh H.
+        assumption.
+        intros. specializes H1 v.
+        simpl. case_if. clear C.
+        assert (x<>x0) as ?. admit.
+        case_if. clear H2 C.
+        (* prove the continuation satisfies triple *)
+        admit.
+      }
+    }
   }
 Admitted.
