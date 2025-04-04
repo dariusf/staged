@@ -281,6 +281,7 @@ Proof.
         applys_eq Hne2. applys_eq H8. f_equal.
         Fail reflexivity.
         (* cyclic dependency, we need to know how e2 evaluates to choose shift or no *)
+        (* supply v -> invert He2 -> reason backwards -> supply v *)
         admit.
         admit.
       }
