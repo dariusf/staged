@@ -227,9 +227,32 @@ Proof.
 Qed.
 
 
-Lemma papp_sound: forall x e (va:val) (f:var->flow),
-  spec_assert_valid e f ->
-  spec_assert_valid (papp (vfun x e) va)
-    (fun r => fexs x (ens x (fun s => \[Fmap.read s x = va]);; f)).
+Lemma papp_sound: forall x e (v:val) f,
+  spec_assert_valid (subst x v e) f ->
+  spec_assert_valid (papp (vfun x e) v) f.
 Proof.
-Admitted.
+  unfold spec_assert_valid.
+  intros * He penv env.
+  specializes He penv env.
+  inverts He as.
+  { introv Hne He.
+    (* no shift in the body of the fn being applied *)
+    applys sav_base.
+    { intros * H. inverts H as H H1. injects H. false Hne H1. }
+    intros.
+    inverts H as H H1. injects H.
+    specializes He H1.
+    assumption. }
+  { intros * Hne He.
+    (* shift *)
+    applys sav_shift.
+    { introv H.
+      inverts H as H H1. injects H.
+      false Hne H1. }
+    intros.
+    inverts H as H H1. injects H.
+    specializes He H1. destr He.
+    exs.
+    splits*.
+  }
+Qed.
