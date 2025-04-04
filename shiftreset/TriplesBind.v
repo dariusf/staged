@@ -322,4 +322,88 @@ Proof.
       }
     }
   }
-Admitted.
+Abort.
+
+Lemma plet_sound_test: forall x e1 e2 f1 (f2:val->flow),
+  spec_assert_valid e1 f1 ->
+  (forall v, spec_assert_valid (subst x v e2) (f2 v)) ->
+  spec_assert_valid (plet x e1 e2) (bind f1 f2).
+Proof.
+  unfold spec_assert_valid. introv He1 He2. intros. specializes He1 penv0 env.
+  assert (x = "x") as ?. admit.
+  assert (e1 = pshift "k" (papp (pvar "k") 1)) as ?. admit.
+  assert (f1 = sh "k" (unk "k" 1)) as ?. admit.
+  assert (e2 = padd (pvar "x") 1) as ?. admit.
+  assert (f2 = (fun x => ens (fun r => \[exists i, x = vint i /\ r = i + 1]))) as ?. admit.
+  subst.
+
+  inverts He1.
+  { applys sav_base.
+    { intros. introv H1. inverts H1. false_invert H9. false H H8. }
+    { intros. inverts H1. false_invert H9. } }
+  applys sav_shift. { intros. introv H1. inverts H1. inverts H9. }
+  intros.
+  inverts H1. { false_invert H9. }
+  specializes H0 H8.
+  clear H.
+  destr H0.
+
+  exs. splits.
+
+  - applys s_bind_sh.
+    applys H.
+  
+  - applys H0.
+
+  - intros.
+    specializes He2 v penv0 env.
+    (* simpl in He2. *)
+    specializes H2 v.
+
+    applys sav_base.
+    {
+      intros.
+      introv H1.
+      
+      admit.
+
+      (* inverts H8. *)
+
+      (* inverts H1. *)
+
+
+
+    }
+
+    simpl.
+Abort.
+
+Lemma plet_sound_test: forall x e1 e2 f1 (f2:val->flow),
+  spec_assert_valid e1 f1 ->
+  (forall v, spec_assert_valid (subst x v e2) (f2 v)) ->
+  spec_assert_valid (plet x e1 e2) (bind f1 f2).
+Proof.
+  unfold spec_assert_valid. introv He1 He2. intros. specializes He1 penv0 env.
+  assert (x = "x") as ?. admit.
+  assert (e1 = 1) as ?. admit.
+  assert (f1 = ens (fun r => \[r = 1])) as ?. admit.
+  assert (e2 = padd (pvar "x") 1) as ?. admit.
+  assert (f2 = (fun x => ens (fun r => \[exists i, x = vint i /\ r = i + 1]))) as ?. admit.
+  subst.
+
+  inverts He1.
+  2: { applys sav_shift. intros. introv H1. inverts H1. false H H9. intros. inverts H1. inverts H10. inverts H8. }
+
+  applys sav_base.
+  { intros. introv H1. inverts H1. inverts H10. inverts H8. }
+  intros.
+  inverts H1.
+  specializes H0 H9.
+  specializes He2 v0 penv0 env.
+  simpl in He2.
+  inverts He2. 2: { false H1 H10. }
+
+  applys s_bind H0.
+  applys* H2.
+
+Abort.
