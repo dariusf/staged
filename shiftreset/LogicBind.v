@@ -107,7 +107,7 @@ Inductive flow : Type :=
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
 (** The following are new: *)
-  | sh : var -> flow -> flow
+  | sh : (var -> flow) -> flow
 (** [sh k fb vr] is a shift with body [fb] and #<i>result</i># [vr]. *)
 (** [k] names the continuation delimited by an enclosing [rs], and may occur in [fb] as an [unk] or [vfptr]. *)
 (** [vr] is the #<i>result</i># of the shift, which is the value a shift appears to evaluate to when a continuation is taken. [vr] will be equal to the value that the continuation will be resumed with, and can be depended on in anything sequenced after a [sh]. *)
@@ -151,7 +151,7 @@ Definition empty_env : senv := Fmap.empty.
 (* shft's continuation could have a more general [A -> flow] type, but it can't be used in the semantics as long as it has to pass through ufun *)
 Inductive result : Type :=
   | norm : val -> result
-  | shft : var -> flow -> (val -> flow) -> result.
+  | shft : (var -> flow) -> (val -> flow) -> result.
   (** See [shc] for what the arguments mean. *)
 
 Declare Scope flow_scope.
@@ -270,11 +270,11 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
 
     (** The new rules for shift/reset are as follows. *)
 
-  | s_sh : forall s1 h1 x shb,
+  | s_sh : forall s1 h1 (fb:var->flow),
     satisfies s1 s1 h1 h1
       (* (shft x shb v (fun r1 => rs (ens (fun r => \[r = v])) r1)) *)
-      (shft x shb (fun r1 => ens (fun r => \[r = r1])))
-      (sh x shb)
+      (shft fb (fun r1 => ens (fun r => \[r = r1])))
+      (sh fb)
     (** A [sh] on its own reduces to a [shft] containing an identity continuation. *)
 
   (* | s_shc s1 h1 x shb fk v :
@@ -287,17 +287,17 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs fk r1)) f1 ->
     satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs (fk;; f2) r1)) (f1;; f2) *)
 
-  | s_bind_sh : forall s1 s2 f1 (f2:val->flow) fk h1 h2 shb k,
-    satisfies s1 s2 h1 h2 (shft k shb fk) f1 ->
-    satisfies s1 s2 h1 h2 (shft k shb (fun r1 => bind (fk r1) f2))
+  | s_bind_sh : forall s1 s2 f1 (f2:val->flow) fk h1 h2 (fb:var->flow),
+    satisfies s1 s2 h1 h2 (shft fb fk) f1 ->
+    satisfies s1 s2 h1 h2 (shft fb (fun r1 => bind (fk r1) f2))
       (bind f1 f2)
 
     (** This rule extends the continuation in a [shft] on the left side of a [seq]. Notably, it moves whatever comes next #<i>under the reset</i>#, preserving shift-freedom by constructon. *)
 
-  | s_rs_sh : forall s1 s2 fr h1 h2 rf s3 h3 fb fk k,
-    satisfies s1 s3 h1 h3 (shft k fb fk) fr ->
+  | s_rs_sh : forall k s1 s2 fr h1 h2 rf s3 h3 (fb:var->flow) fk,
+    satisfies s1 s3 h1 h3 (shft fb fk) fr ->
     satisfies (Fmap.update s3 k (fun a => rs (fk a))) s2
-      h3 h2 rf (rs fb) ->
+      h3 h2 rf (rs (fb k)) ->
     satisfies s1 s2 h1 h2 rf (rs fr)
 
     (** This rule applies when the body of a [rs] #<i>evaluates to</i># a [shft] (not when a [sh] is directly inside a [rs]; that happens in reduction). The continuation carried by the [shft] is known, so it is bound in (the environment of) the [sh]ift body before that is run. *)
@@ -604,7 +604,7 @@ Section Propriety.
     inverts H0 as H0; destr H0.
     { eapply s_rs_sh.
       eauto.
-      assumption. }
+      eassumption. }
     { apply s_rs_val. eauto. }
   Qed.
 
@@ -813,9 +813,9 @@ Qed.
 (** * Examples for semantics *)
 Module Examples.
 
-Example e1_undelimited : forall x, exists R,
+Example e1_undelimited : exists R,
   satisfies empty_env empty_env empty_heap empty_heap R
-    (sh x (ens (fun r2 => \[r2 = vint 1]))).
+    (sh (fun k => ens (fun r2 => \[r2 = vint 1]))).
 Proof.
   intros.
   eexists.
@@ -834,15 +834,15 @@ Proof.
   reflexivity.
 Qed.
 
-Example e3_rs_sh_no_k : forall x, exists s,
+Example e3_rs_sh_no_k : forall k1, exists s,
   satisfies empty_env s empty_heap empty_heap (norm (vint 1))
-    (rs (sh x (ens (fun r => \[r = vint 1])))).
+    (rs (sh (fun k => ens (fun r => \[r = vint 1])))).
 Proof.
   intros.
   eexists.
   (* the ret of the shift can be anything because the cont is never taken *)
-  eapply s_rs_sh.
-  { constructor. }
+  applys s_rs_sh k1.
+  { apply s_sh. }
   { apply s_rs_val.
     (* produced by eapply, never instantiated because continuation is never taken *)
     apply ens_pure_intro.
@@ -856,43 +856,43 @@ Definition vplus (a b:val) : val :=
   end.
 
 (** [reset (1 + shift k (k 2))]. *)
-Example e4_rs_sh_k : forall k, exists s,
+Example e4_rs_sh_k : forall k1, exists s,
 satisfies empty_env s empty_heap empty_heap (norm (vint 3))
-  (rs (sh k (unk k (vint 2));; ens (fun r => \[r = vint (1 + 2)]))).
+  (rs (sh (fun k => unk k (vint 2));; ens (fun r => \[r = vint (1 + 2)]))).
 Proof.
-intros.
-eexists. (* this is okay because it's an output *)
-eapply s_rs_sh.
-(* put the ens into the cont *)
-{
-  (* show that the body produces a shift *)
-  apply s_bind_sh.
-  apply s_sh. }
-{ apply s_rs_val. (* handle reset *)
+  intros.
+  eexists. (* this is okay because it's an output *)
+  applys s_rs_sh k1.
+  (* put the ens into the cont *)
+  {
+    (* show that the body produces a shift *)
+    apply s_bind_sh.
+    apply s_sh. }
+  { apply s_rs_val. (* handle reset *)
 
-  eapply s_unk. resolve_fn_in_env. (* reset body *)
-  simpl.
-  apply s_rs_val.
-  eapply s_bind.
-  { apply ens_pure_intro. jauto. }
-  { apply ens_pure_intro. jauto. }
-}
+    eapply s_unk. resolve_fn_in_env. (* reset body *)
+    simpl.
+    apply s_rs_val.
+    eapply s_bind.
+    { apply ens_pure_intro. jauto. }
+    { apply ens_pure_intro. jauto. }
+  }
 Qed.
 
 (** [(reset (shift k (fun a -> k a))) 4 ==> 4]
 - The whole thing returns what the application of f/k returns
 - The result of the shift is 4 due to the identity k
 - The result of the reset is a function; 4 is the result of an inner reset that appears in the course of reduction *)
-Example e5_shift_k : forall k xf, k <> xf -> exists s,
+Example e5_shift_k : forall k1 xf, k1 <> xf -> exists s,
   satisfies empty_env s empty_heap empty_heap (norm (vint 4))
-    (rs (sh k (defun xf (unk k);;
+    (rs (sh (fun k => defun xf (unk k);;
       ens (fun r => \[r = vfptr xf])));; unk xf (vint 4)).
 Proof.
   intros.
   eexists.
   eapply s_bind.
   { (* show that reset produces a function *)
-    eapply s_rs_sh.
+    applys s_rs_sh k1.
     (* handle the shift *)
     apply s_sh.
     (* show how the shift body goes through the reset to produce the function *)
@@ -929,9 +929,9 @@ Qed.
 - res of shift = arg of k = 4
 - res of reset = res of shift body = fptr
 - final res is that of the inner reset, which doesn't occur syntacically in the code as it is produced by the "handling" of the shift. *)
-Example e6_shift_k : forall k xf, k <> xf -> exists s,
+Example e6_shift_k : forall k1 xf, k1 <> xf -> exists s,
   satisfies empty_env s empty_heap empty_heap (norm (vint 5))
-    (rs (bind (sh k (defun xf (unk k);; ens (fun r => \[r = vfptr xf])))
+    (rs (bind (sh (fun k => defun xf (unk k);; ens (fun r => \[r = vfptr xf])))
             (fun sr => ens (fun r => \[r = vplus (vint 1) sr])));;
       unk xf (vint 4)).
 Proof.
@@ -941,7 +941,7 @@ Proof.
   { (* reset *)
     (* the shift is still "handled", but produces a lambda without
       applying the continuation *)
-    eapply s_rs_sh.
+    applys s_rs_sh k1.
     { apply s_bind_sh. (* this moves the ens into the continuation *)
       apply s_sh. }
     { apply s_rs_val.
@@ -974,10 +974,10 @@ End Examples.
 (** * Shift-freedom *)
 (** Semantic definition of shift-freedom. *)
 Definition shift_free (f:flow) : Prop :=
-  forall s1 s2 h1 h2 k fb fk,
+  forall s1 s2 h1 h2 fb fk,
   (* exists v, *)
     (* satisfies s1 s2 h1 h2 (norm v) f /\ *)
-      not (satisfies s1 s2 h1 h2 (shft k fb fk) f).
+      not (satisfies s1 s2 h1 h2 (shft fb fk) f).
 
 (** [Sh#], the syntactic analogue of [shft], or a CPS version of [Sh], where the continuation is shift-free. *)
 (* Definition shs x fb vr c : flow :=
@@ -1181,13 +1181,13 @@ Ltac shiftfree :=
   a shift-free thing produces a shift *)
 Ltac no_shift :=
   lazymatch goal with
-  | H: satisfies _ _ _ _ (shft _ _ _) (ens _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _) (ens _) |- _ =>
     apply sf_ens in H; false
-  | H: satisfies _ _ _ _ (shft _ _ _) (ens_ _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _) (ens_ _) |- _ =>
     unfold ens_ in H; apply sf_ens in H; false
-  | H: satisfies _ _ _ _ (shft _ _ _) (rs _ _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _) (rs _ _) |- _ =>
     apply sf_rs in H; false
-  | H: satisfies _ _ _ _ (shft _ _ _) (defun _ _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _) (defun _ _) |- _ =>
     apply sf_defun in H; false
   | _ => idtac
   end.
@@ -1418,7 +1418,7 @@ Proof.
       eapply s_seq.
       exact H.
       eapply s_rs_sh.
-      exact H8. assumption. }
+      exact H8. eassumption. }
     { (* f1 cannot produce a shift as it is shift-free *)
       apply Hsf in H.
       false. } }
@@ -1441,7 +1441,7 @@ Proof.
   
   { eapply s_rs_sh.
     apply* s_seq.
-    assumption. }
+    eassumption. }
   { apply s_rs_val.
     apply* s_seq. }
 Qed.
@@ -1459,7 +1459,7 @@ Proof.
   
   { eapply s_rs_sh.
     apply* s_seq.
-    assumption. }
+    eassumption. }
   { apply s_rs_val.
     apply* s_seq. }
 Qed.
@@ -2873,7 +2873,7 @@ Proof.
   inverts H0 as H0.
   { eapply s_rs_sh.
     inverts H0 as H0. specializes H0 H1 H2 H3.
-    assumption. }
+    eassumption. }
   { inverts H0 as H0. specializes H0 H1 H2 H3.
     apply* s_rs_val. }
 Qed.
