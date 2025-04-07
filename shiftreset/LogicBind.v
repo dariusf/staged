@@ -51,7 +51,7 @@ with expr : Type :=
   | passign (e1: expr) (e2: expr)
   | pif (v: expr) (e1: expr) (e2: expr)
   | papp (e1: expr) (e2: expr)
-  | pshift (k: var) (e: expr)
+  | pshift (eb: var -> expr)
   | preset (e: expr).
 
 #[global]
@@ -81,7 +81,7 @@ Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   | papp e1 e2 => papp (aux e1) (aux e2)
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
   | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2)
-  | pshift k e1 => pshift k (aux e1)
+  | pshift e => pshift (fun k => aux (e k))
   | preset e => preset (aux e)
   end.
 
