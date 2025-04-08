@@ -360,25 +360,56 @@ Proof.
 
   - intros.
     specializes He2 v penv0 env.
-    (* simpl in He2. *)
+    simpl in He2.
     specializes H2 v.
-
-    applys sav_base.
+    
+    (* see whether ek has shift *)
+    inverts H2.
     {
+      (* ek has no shift *)
+      applys sav_base.
+      { intros.
+        introv H2.
+        inverts H2.
+        { false_invert H13. }
+        { false H1 H11. } }
       intros.
-      introv H1.
-      
-      admit.
+      inverts H2.
+      specializes H3 H12.
+      applys s_bind H3.
 
-      (* inverts H8. *)
+      simpl in H13.
+      inverts H13.
+      injects H11.
 
-      (* inverts H1. *)
-
-
-
+      applys s_ens.
+      exs.
+      splits*.
+      hintro.
+      Set Printing Coercions.
+      exists i1.
+      splits*.
+      fmap_eq.
     }
+    {
+      (* ek has shift *)
+      applys sav_shift. { introv H2. inverts H2. false H1 H12. }
+      intros.
+      inverts H2.
+      { simpl in H13. inverts H13. }
+      
+      specializes H3 H11.
+      destr H3.
+      exs.
+      splits.
+      applys s_bind_sh.
+      applys H2.
+      assumption.
+      intros.
+      (* induction? *)
 
-    simpl.
+      admit.
+    }
 Abort.
 
 Lemma plet_sound_test: forall x e1 e2 f1 (f2:val->flow),
