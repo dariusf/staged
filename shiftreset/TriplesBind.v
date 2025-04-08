@@ -186,15 +186,13 @@ Lemma pshift_sound: forall eb fb,
   spec_assert_valid (pshift eb) (sh fb).
 Proof.
   unfold spec_assert_valid. intros * Heb **.
-  applys sav_shift. { intros. introv H. false_invert H. } intros.
+  applys sav_shift. { introv H. false_invert H. } intros.
   inverts H.
   exs.
   splits.
   { applys s_sh. }
-  { intros.
-    specializes Heb x penv0 env. }
-  { intros. simpl.
-    applys pval_sound. }
+  { intros x. specializes Heb x penv0 env. }
+  { intros v. simpl. applys pval_sound. }
 Qed.
 
 Lemma papp_unk_sound: forall penv (env:senv) (f:var) v (ef:val->expr) (f1:val->flow),
@@ -318,9 +316,10 @@ Proof.
         applys s_bind_sh H.
         assumption.
         intros. specializes H1 v.
-        simpl. case_if. clear C.
-        assert (x<>x0) as ?. admit.
-        case_if. clear H2 C.
+        (* simpl. case_if. clear C. *)
+        (* assert (x<>x0) as ?. admit. *)
+        (* case_if. clear H2 C. *)
+
         (* prove the continuation satisfies triple *)
         admit.
       }
@@ -335,8 +334,8 @@ Lemma plet_sound_test: forall x e1 e2 f1 (f2:val->flow),
 Proof.
   unfold spec_assert_valid. introv He1 He2. intros. specializes He1 penv0 env.
   assert (x = "x") as ?. admit.
-  assert (e1 = pshift "k" (papp (pvar "k") 1)) as ?. admit.
-  assert (f1 = sh "k" (unk "k" 1)) as ?. admit.
+  assert (e1 = pshift (fun k => papp (pvar k) 1)) as ?. admit.
+  assert (f1 = sh (fun k => unk k 1)) as ?. admit.
   assert (e2 = padd (pvar "x") 1) as ?. admit.
   assert (f2 = (fun x => ens (fun r => \[exists i, x = vint i /\ r = i + 1]))) as ?. admit.
   subst.
