@@ -371,8 +371,8 @@ Proof.
   specializes H v.
   (* inverts H. *)
   (* dependent induction H. *)
-  induction H.
-  admit.
+  induction H using spec_assert_valid_under_ind1.
+  (* admit. *)
 
   (* induction H. *)
   { (* ek has no shift *)
@@ -381,11 +381,11 @@ Proof.
         introv H2.
         inverts H2.
         { false_invert H10. }
-        { false H0 H8. } }
+        { false H H8. } }
       intros.
-      inverts H. simpl in H10.
-      specializes H1 H9.
-      applys s_bind H1.
+      inverts H1. simpl in H10.
+      specializes H0 H9.
+      applys s_bind H0.
 
       (* simpl in H13. *)
       inverts H10.
@@ -402,14 +402,28 @@ Proof.
   }
   {
     (* ek has shift *)
-    applys sav_shift. { introv H. inverts H. false H0 H9. }
+    applys sav_shift. { introv H1. inverts H1. false H H9. }
     intros.
     (* induction H. *)
-    inverts H. { false H0 H9. }
-    specializes H1 H8.
-    destr H1.
-    (* exs. *)
-    admit.
+    inverts H1. { false H H9. } clear H.
+    specializes H0 H8.
+    destr H0.
+    exs.
+    splits.
+    applys s_bind_sh H.
+    {
+      (* clear H2. *)
+      intros x.
+      applys H0 x. clear H0.
+
+      admit.
+    }
+    {
+      (* clear H0. *)
+      intros v1.
+      (* applys H2 v1. *)
+      admit.
+    }
   }
 
 (* Abort. *)
