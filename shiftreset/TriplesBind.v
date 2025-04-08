@@ -327,6 +327,59 @@ Proof.
   }
 Abort.
 
+Require Import Coq.Program.Equality.
+
+Lemma plet_sound_aux: forall penv env v (ek:val->expr) fk,
+  (forall v, spec_assert_valid_under penv env (ek v) (fk v)) ->
+  spec_assert_valid_under penv env (plet "x" (ek v) (padd (pvar "x") 1))
+    ((fun r1 => let x = fk r1 in (ens (fun r => \[exists i : int, x = i /\ r = i + 1])))
+    v).
+Proof.
+  intros.
+  specializes H v.
+  inverts H.
+  (* dependent induction H. *)
+  (* induction H. *)
+  { (* ek has no shift *)
+      applys sav_base.
+      { intros.
+        introv H2.
+        inverts H2.
+        { false_invert H10. }
+        { false H0 H8. } }
+      intros.
+      inverts H. simpl in H10.
+      specializes H1 H9.
+      applys s_bind H1.
+
+      (* simpl in H13. *)
+      inverts H10.
+      injects H8.
+
+      applys s_ens.
+      exs.
+      splits*.
+      hintro.
+      Set Printing Coercions.
+      exists i1.
+      splits*.
+      fmap_eq.
+  }
+  {
+    (* ek has shift *)
+    applys sav_shift. { introv H. inverts H. false H0 H9. }
+    intros.
+    (* induction H. *)
+    inverts H. { false H0 H9. }
+    specializes H1 H8.
+    destr H1.
+    (* exs. *)
+    admit.
+  }
+
+(* Abort. *)
+Admitted.
+
 Lemma plet_sound_test: forall x e1 e2 f1 (f2:val->flow),
   spec_assert_valid e1 f1 ->
   (forall v, spec_assert_valid (subst x v e2) (f2 v)) ->
@@ -358,7 +411,17 @@ Proof.
   
   - applys H0.
 
-  - intros.
+  - 
+    pose proof plet_sound_aux.
+    intros.
+    specializes H1 penv0 env v H2.
+
+
+    (* specializes H1 v. *)
+    (* specializes H1 H0. *)
+
+
+  (* - intros.
     specializes He2 v penv0 env.
     simpl in He2.
     specializes H2 v.
@@ -409,7 +472,7 @@ Proof.
       (* induction? *)
 
       admit.
-    }
+    } *)
 Abort.
 
 Lemma plet_sound_test: forall x e1 e2 f1 (f2:val->flow),
