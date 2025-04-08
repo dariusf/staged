@@ -163,6 +163,38 @@ Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
             forall v, spec_assert_valid_under penv env (ek v) (fk v)) ->
     spec_assert_valid_under penv env e f.
 
+(* Check spec_assert_valid_under_ind. *)
+Lemma spec_assert_valid_under_ind1 :
+  forall penv env (P:expr->flow->Prop),
+    (forall e f,
+      (forall h1 h2 eb ek, ~ bigstep penv h1 e h2 (eshft eb ek)) ->
+      (forall h1 h2 v,
+        bigstep penv h1 e h2 (enorm v) ->
+        satisfies env env h1 h2 (norm v) f) ->
+      P e f) ->
+    (forall e f,
+      (forall h1 h2 v, ~ bigstep penv h1 e h2 (enorm v)) ->
+      (forall h1 h2 eb ek,
+        bigstep penv h1 e h2 (eshft eb ek) ->
+        exists fb fk, satisfies env env h1 h2 (shft fb fk) f /\
+        (forall x, P (eb x) (fb x) -> spec_assert_valid_under penv env (eb x) (fb x)) /\
+        (forall v, P (ek v) (fk v) -> spec_assert_valid_under penv env (ek v) (fk v))) ->
+      P e f) ->
+    forall e f,
+      spec_assert_valid_under penv env e f -> P e f.
+Proof.
+  intros.
+  specializes H e f.
+  specializes H0 e f.
+  induction H1.
+  - clear H0. specializes H H1 H2.
+  - clear H. specializes H0 H1.
+    applys H0. clear H0.
+    intros.
+    specializes H2 H.
+    destr H2.
+    exists fb fk. splits*.
+Qed.
 
 Definition spec_assert_valid e f : Prop :=
   forall penv env,
@@ -329,16 +361,19 @@ Abort.
 
 Require Import Coq.Program.Equality.
 
-Lemma plet_sound_aux: forall penv env v (ek:val->expr) fk,
-  (forall v, spec_assert_valid_under penv env (ek v) (fk v)) ->
-  spec_assert_valid_under penv env (plet "x" (ek v) (padd (pvar "x") 1))
+Lemma plet_sound_aux: forall penv env v (ek:expr) (fk:val->flow),
+  (forall v, spec_assert_valid_under penv env ek (fk v)) ->
+  spec_assert_valid_under penv env (plet "x" ek (padd (pvar "x") 1))
     ((fun r1 => let x = fk r1 in (ens (fun r => \[exists i : int, x = i /\ r = i + 1])))
     v).
 Proof.
   intros.
   specializes H v.
-  inverts H.
+  (* inverts H. *)
   (* dependent induction H. *)
+  induction H.
+  admit.
+
   (* induction H. *)
   { (* ek has no shift *)
       applys sav_base.
