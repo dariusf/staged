@@ -361,20 +361,21 @@ Abort.
 
 Require Import Coq.Program.Equality.
 
-Lemma plet_sound_aux: forall penv env v (ek:expr) (fk:val->flow),
-  (forall v, spec_assert_valid_under penv env ek (fk v)) ->
-  spec_assert_valid_under penv env (plet "x" ek (padd (pvar "x") 1))
+Lemma plet_sound_aux: forall penv env v (ek:val->expr) (fk:val->flow),
+  (forall v, spec_assert_valid_under penv env (ek v) (fk v)) ->
+  spec_assert_valid_under penv env (plet "x" (ek v) (padd (pvar "x") 1))
     ((fun r1 => let x = fk r1 in (ens (fun r => \[exists i : int, x = i /\ r = i + 1])))
     v).
 Proof.
   intros.
   specializes H v.
   (* inverts H. *)
+  (* induction H. *)
   (* dependent induction H. *)
   induction H using spec_assert_valid_under_ind1.
-  (* admit. *)
-
-  (* induction H. *)
+  (* remember (ek v) as e. *)
+  (* remember (fk v) as f. *)
+  (* induction H using spec_assert_valid_under_ind1; subst. *)
   { (* ek has no shift *)
       applys sav_base.
       { intros.
@@ -387,7 +388,6 @@ Proof.
       specializes H0 H9.
       applys s_bind H0.
 
-      (* simpl in H13. *)
       inverts H10.
       injects H8.
 
@@ -395,7 +395,6 @@ Proof.
       exs.
       splits*.
       hintro.
-      Set Printing Coercions.
       exists i1.
       splits*.
       fmap_eq.
@@ -404,7 +403,6 @@ Proof.
     (* ek has shift *)
     applys sav_shift. { introv H1. inverts H1. false H H9. }
     intros.
-    (* induction H. *)
     inverts H1. { false H H9. } clear H.
     specializes H0 H8.
     destr H0.
@@ -415,6 +413,7 @@ Proof.
       (* clear H2. *)
       intros x.
       applys H0 x. clear H0.
+      
 
       admit.
     }
@@ -464,6 +463,11 @@ Proof.
     pose proof plet_sound_aux.
     intros.
     specializes H1 penv0 env v H2.
+
+    (* specializes H1 fk. *)
+
+
+    (* v H2. *)
 
 
     (* specializes H1 v. *)
