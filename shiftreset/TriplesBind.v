@@ -160,7 +160,7 @@ Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
         exists (fb:var->flow) (fk:val->flow),
           satisfies env env h1 h2 (shft fb fk) f /\
             (forall x, spec_assert_valid_under penv env (eb x) (fb x)) /\
-            forall v, spec_assert_valid_under penv env (ek v) (fk v)) ->
+            (forall v, spec_assert_valid_under penv env (ek v) (fk v))) ->
     spec_assert_valid_under penv env e f.
 
 (* Check spec_assert_valid_under_ind. *)
@@ -290,7 +290,6 @@ Proof.
   }
 Qed.
 
-
 Lemma plet_sound: forall x e1 e2 f1 (f2:val->flow),
   spec_assert_valid e1 f1 ->
   (forall v, spec_assert_valid (subst x v e2) (f2 v)) ->
@@ -301,6 +300,23 @@ Proof.
   {
     (* e1 has no shift *)
     introv Hne1 Hb1.
+
+    (* if i am able to predict, this is all good *)
+    (* applys sav_shift.
+    admit. *)
+    (* intros.
+    inverts H.
+    { specializes He2 v penv0 env.
+    inverts He2. { false H H8. }
+    specializes H0 H8.
+    destr H0. exists fb fk.
+    splits*.
+    applys s_bind.
+    specializes Hb1 H7. eassumption.
+    assumption.
+    }
+    { false Hne1 H6. } *)
+
     specializes He2 penv0 env.
     inverts He2 as.
     {
@@ -353,6 +369,7 @@ Proof.
         (* case_if. clear H2 C. *)
 
         (* prove the continuation satisfies triple *)
+        (* need the induction hypothesis for ek and e2 *)
         admit.
       }
     }
