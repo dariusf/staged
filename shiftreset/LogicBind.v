@@ -2639,6 +2639,19 @@ Proof.
   assumption.
 Qed.
 
+Lemma seq_assoc_unrestricted : forall s1 s2 h1 h2 R f1 f2 f3,
+  satisfies s1 s2 h1 h2 R (f1;; f2;; f3) <->
+  satisfies s1 s2 h1 h2 R ((f1;; f2);; f3).
+Proof.
+  iff Hs.
+  { inverts Hs.
+    { inverts H7.
+      { applys s_seq H9. applys* s_seq. }
+      { applys s_bind_sh. applys* s_seq. } }
+    {
+      (* at this point we don't know which to pick *)
+Abort.
+
 Lemma seq_assoc : forall s1 s2 h1 h2 R f1 f2 f3,
   shift_free f1 ->
   shift_free f2 ->
