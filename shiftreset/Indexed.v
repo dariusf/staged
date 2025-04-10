@@ -200,7 +200,6 @@ Inductive flow : Type :=
   | defun : var -> (val -> flow) -> flow
   .
 
-
 (* Notation "'ens[' r ']' H" :=
   (ens r H) (at level 30, only printing
   (* , *)
@@ -235,6 +234,10 @@ Qed.
 
 Declare Scope flow_scope.
 Open Scope flow_scope.
+
+Notation "'let' x '=' f1 'in' f2" :=
+  (bind f1 (fun x => f2))
+  (at level 38, x binder, right associativity) : flow_scope.
 
 Definition seq (f1 f2:flow) := bind f1 (fun _ => f2).
 
@@ -272,15 +275,15 @@ Notation "'∃' a1 .. an , H" :=
   | rs _ r => None (* TODO remove *)
   end. *)
 
-Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
+Inductive satisfies : senv -> senv -> heap -> heap -> result -> int -> flow -> Prop :=
 
-  | s_req : forall (s1 s2:senv) H (h1 h2:heap) R f,
+  | s_req : forall (s1 s2:senv) H (h1 h2:heap) R f n,
     (forall (hp hr:heap),
       H hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies s1 s2 hr h2 R f) ->
-    satisfies s1 s2 h1 h2 R (req H f)
+      satisfies s1 s2 hr h2 R n f) ->
+    satisfies s1 s2 h1 h2 R n (req H f)
 
   | s_ens : forall s1 Q h1 h2 R,
     (exists v h3,
@@ -288,47 +291,47 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
       Q v h3 /\
       h2 = Fmap.union h1 h3 /\
       Fmap.disjoint h1 h3) ->
-    satisfies s1 s1 h1 h2 R (ens Q)
+    satisfies s1 s1 h1 h2 R 0 (ens Q)
 
-  | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R,
-    satisfies s1 s3 h1 h3 (norm v) f1 ->
-    satisfies s3 s2 h3 h2 R (f2 v) ->
-    satisfies s1 s2 h1 h2 R (bind f1 f2)
+  | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R n,
+    satisfies s1 s3 h1 h3 (norm v) 0 f1 ->
+    satisfies s3 s2 h3 h2 R n (f2 v) ->
+    satisfies s1 s2 h1 h2 R n (bind f1 f2)
 
-  | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
+  | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow) n
     (H: exists b,
-      satisfies s1 s2 h1 h2 R (f b)) :
-    satisfies s1 s2 h1 h2 R (@fex A f)
+      satisfies s1 s2 h1 h2 R n (f b)) :
+    satisfies s1 s2 h1 h2 R n (@fex A f)
 
-  | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow)
+  | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow) n
     (H: forall b,
-      satisfies s1 s2 h1 h2 R (f b)) :
-    satisfies s1 s2 h1 h2 R (@fall A f)
+      satisfies s1 s2 h1 h2 R n (f b)) :
+    satisfies s1 s2 h1 h2 R n (@fall A f)
 
-  | s_unk : forall s1 s2 h1 h2 R xf uf a,
+  | s_unk : forall s1 s2 h1 h2 R xf uf a n,
     Fmap.read s1 xf = uf ->
-    satisfies s1 s2 h1 h2 R (uf a) ->
-    satisfies s1 s2 h1 h2 R (unk xf a)
+    satisfies s1 s2 h1 h2 R n (uf a) ->
+    satisfies s1 s2 h1 h2 R n (unk xf a)
 
-  | s_intersect s1 s2 h1 h2 R f1 f2
+  (* | s_intersect s1 s2 h1 h2 R f1 f2
     (H1: satisfies s1 s2 h1 h2 R f1)
     (H2: satisfies s1 s2 h1 h2 R f2) :
-    satisfies s1 s2 h1 h2 R (intersect f1 f2)
+    satisfies s1 s2 h1 h2 R (intersect f1 f2) *)
 
-  | s_disj_l s1 s2 h1 h2 R f1 f2
+  (* | s_disj_l s1 s2 h1 h2 R f1 f2
     (H: satisfies s1 s2 h1 h2 R f1) :
     satisfies s1 s2 h1 h2 R (disj f1 f2)
 
   | s_disj_r s1 s2 h1 h2 R f1 f2
     (H: satisfies s1 s2 h1 h2 R f2) :
-    satisfies s1 s2 h1 h2 R (disj f1 f2)
+    satisfies s1 s2 h1 h2 R (disj f1 f2) *)
 
     (** The new rules for shift/reset are as follows. *)
 
   | s_sh : forall s1 h1 (fb:var->flow),
     satisfies s1 s1 h1 h1
       (* (shft x shb v (fun r1 => rs (ens (fun r => \[r = v])) r1)) *)
-      (shft fb (fun r1 => ens (fun r => \[r = r1])))
+      (shft fb (fun r1 => ens (fun r => \[r = r1]))) 1
       (sh fb)
     (** A [sh] on its own reduces to a [shft] containing an identity continuation. *)
 
@@ -342,31 +345,28 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs fk r1)) f1 ->
     satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs (fk;; f2) r1)) (f1;; f2) *)
 
-  | s_bind_sh : forall s1 s2 f1 (f2:val->flow) fk h1 h2 (fb:var->flow),
-    satisfies s1 s2 h1 h2 (shft fb fk) f1 ->
-    satisfies s1 s2 h1 h2 (shft fb (fun r1 => bind (fk r1) f2))
+  | s_bind_sh : forall s1 s2 f1 (f2:val->flow) fk h1 h2 (fb:var->flow) n,
+    satisfies s1 s2 h1 h2 (shft fb fk) (n-1) f1 ->
+    satisfies s1 s2 h1 h2 (shft fb (fun r1 => bind (fk r1) f2)) n
       (bind f1 f2)
 
     (** This rule extends the continuation in a [shft] on the left side of a [seq]. Notably, it moves whatever comes next #<i>under the reset</i>#, preserving shift-freedom by constructon. *)
 
-  | s_rs_sh : forall k s1 s2 fr h1 h2 rf s3 h3 (fb:var->flow) fk,
-    satisfies s1 s3 h1 h3 (shft fb fk) fr ->
+  | s_rs_sh : forall k s1 s2 fr h1 h2 rf s3 h3 (fb:var->flow) fk n n1,
+    satisfies s1 s3 h1 h3 (shft fb fk) n1 fr ->
+    n >= n1 ->
     satisfies (Fmap.update s3 k (fun a => rs (fk a))) s2
-      h3 h2 rf (rs (fb k)) ->
-    satisfies s1 s2 h1 h2 rf (rs fr)
+      h3 h2 rf (n - n1) (rs (fb k)) ->
+    satisfies s1 s2 h1 h2 rf n (rs fr)
 
-    (** This rule applies when the body of a [rs] #<i>evaluates to</i># a [shft] (not when a [sh] is directly inside a [rs]; that happens in reduction). The continuation carried by the [shft] is known, so it is bound in (the environment of) the [sh]ift body before that is run. *)
-    (** The two resets in the semantics are accounted for: one is around the shift body, and one is already the topmost form in the continuation. *)
-    (** Note: because staged formulae are turned into values (via [shft] and being added to the [senv]), rewriting can no longer be done to weaken them. Environment entailment was an attempt at solving this problem; the Proper instances might have to be tweaked to allow rewriting too. Another possible solution is a syntactic entailment relation in the relevant rules to allow weakening. *)
-
-  | s_rs_val : forall s1 s2 h1 h2 v f,
-    satisfies s1 s2 h1 h2 (norm v) f ->
-    satisfies s1 s2 h1 h2 (norm v) (rs f)
+  | s_rs_val : forall s1 s2 h1 h2 v f n,
+    satisfies s1 s2 h1 h2 (norm v) n f ->
+    satisfies s1 s2 h1 h2 (norm v) n (rs f)
 
   | s_defun s1 s2 h1 x uf :
     (* ~ Fmap.indom s1 x -> *)
     s2 = Fmap.update s1 x uf ->
-    satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
+    satisfies s1 s2 h1 h1 (norm vunit) 0 (defun x uf)
 
   (* | s_discard s1 s2 h x R f :
     satisfies s1 s2 h h R f ->
@@ -381,10 +381,113 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
    format "'[' '∀' '/ '  a1  ..  an , '/ '  H ']'") : flow_scope. *)
 
 
-Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f" :=
-  (satisfies s1 s2 h1 h2 r f) (at level 30, only printing).
+Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' n  f" :=
+  (satisfies s1 s2 h1 h2 r n f) (at level 30, only printing).
 
-Lemma s_seq : forall s3 h3 r1 s1 s2 f1 f2 h1 h2 R,
+(* Lemma satisfies_value : forall s1 s2 h1 h2 R v f, *)
+Lemma satisfies_value : forall s1 s2 h1 h2 R f,
+  satisfies s1 s2 h1 h2 R O f ->
+  (* satisfies s1 s2 h1 h2 (norm v) O f. *)
+  exists v, satisfies s1 s2 h1 h2 (norm v) O f.
+Proof.
+  intros.
+  induction H.
+  (* { applys s_req. intros. specializes H1 hp hr H2 H3. } *)
+  (* { exs. applys s_req. intros. specializes H1 hp hr H2 H3. } *)
+  (* {
+    destr H. applys s_ens. exists v h3. splits*.
+  } *)
+Abort.
+
+Example ex1_satisfies:
+  satisfies empty_env empty_env empty_heap empty_heap (norm 1) 0
+    (ens (fun r => \[r = 1])).
+Proof.
+  applys s_ens.
+  exs. splits*. hintro. reflexivity. fmap_eq.
+Qed.
+
+Example ex2_satisfies_sh:
+  satisfies empty_env empty_env empty_heap empty_heap
+    (shft (fun k => ens_ \[]) (fun v => ens (fun r => \[r = v])))
+    1
+    (sh (fun k => ens_ \[])).
+Proof.
+  applys s_sh.
+Qed.
+
+Example ex3_satisfies_bind:
+  satisfies empty_env empty_env empty_heap empty_heap 
+    (shft
+      (fun k => ens_ \[])
+      (fun a =>
+        bind ((fun r1 => ens (fun r => \[r = r1])) a)
+          (fun v => ens (fun r => \[r = v]))))
+    2
+    (bind (sh (fun k => ens_ \[]))
+      (fun v => ens (fun r => \[r = v]))).
+Proof.
+  simpl.
+  applys_eq s_bind_sh.
+  applys s_sh.
+Qed.
+
+Example ex4_satisfies_rs:
+  satisfies empty_env
+    (Fmap.update empty_env "k" (fun a => rs (ens (fun r => \[r = a])))) 
+    empty_heap empty_heap (norm 42) 1
+    (rs (sh (fun k => ens (fun r => \[r = 42])))).
+Proof.
+  applys s_rs_sh.
+  applys s_sh.
+  math.
+  simpl.
+  applys s_rs_val.
+  applys s_ens.
+  exs. splits*. hintro. reflexivity. fmap_eq.
+Qed.
+
+Definition vadd (v1 v2 : val) : val :=
+  match v1, v2 with
+  | vint i1, vint i2 => vint (i1 + i2)
+  | _, _ => vunit
+  end.
+
+Example ex5_consecutive_shifts: exists s2,
+  satisfies empty_env
+    s2 
+    empty_heap empty_heap (norm 3) 3 (* only 3 should work *)
+    (rs (bind
+      (sh (fun k => unk k 2))
+      (fun v => sh (fun k => unk k (vadd v 1))))).
+Proof.
+  exs.
+  applys s_rs_sh "k".
+  (* a shift occurs in the reset *)
+  { applys s_bind_sh 2. applys_eq s_sh. }
+  (* building the cont consumes 2 fuel, due to 2 shfts *)
+  math. simpl.
+  (* now deal with the reset around the first shift body.
+    it returns a value after one more shift. *)
+  applys s_rs_val.
+  (* it does perform another shift. see how that shift is generated *)
+  applys s_unk. resolve_fn_in_env. simpl.
+  applys s_rs_sh "k1".
+  { applys s_bind. { applys s_ens. exs. splits*. hintro. reflexivity. }
+    applys s_sh. } 
+  math. simpl.
+  (* the second shift body *)
+  applys s_rs_val.
+  { applys s_unk. resolve_fn_in_env. simpl.
+    applys_eq s_rs_val.
+    applys_eq s_ens.
+    exs. splits*. hintro. reflexivity. fmap_eq. }
+Qed.
+
+(* the index is the number of times a shift is returned, or the number of times the continuation changes or is created. does it have to be in the shft too? *)
+
+
+(* Lemma s_seq : forall s3 h3 r1 s1 s2 f1 f2 h1 h2 R,
   satisfies s1 s3 h1 h3 (norm r1) f1 ->
   satisfies s3 s2 h3 h2 R f2 ->
   satisfies s1 s2 h1 h2 R (seq f1 f2).
@@ -403,7 +506,7 @@ Proof.
   unfold ens_. intros.
   applys* s_ens.
   destr H0. exists vunit h3. intuition. hintro. jauto.
-Qed.
+Qed. *)
 
 
 (* Notation "'ens' H" :=
