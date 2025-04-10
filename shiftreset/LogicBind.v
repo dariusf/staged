@@ -219,21 +219,21 @@ Implicit Types e : expr.
 (** * Interpretation of a staged formula *)
 Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
 
-  | s_req (s1 s2:senv) p (h1 h2:heap) R f
-    (H: forall (hp hr:heap),
-      p hp ->
+  | s_req : forall (s1 s2:senv) H (h1 h2:heap) R f,
+    (forall (hp hr:heap),
+      H hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies s1 s2 hr h2 R f) :
-    satisfies s1 s2 h1 h2 R (req p f)
+      satisfies s1 s2 hr h2 R f) ->
+    satisfies s1 s2 h1 h2 R (req H f)
 
-  | s_ens : forall s1 q h1 h2 R,
+  | s_ens : forall s1 Q h1 h2 R,
     (exists v h3,
       R = norm v /\
-      q v h3 /\
+      Q v h3 /\
       h2 = Fmap.union h1 h3 /\
       Fmap.disjoint h1 h3) ->
-    satisfies s1 s1 h1 h2 R (ens q)
+    satisfies s1 s1 h1 h2 R (ens Q)
 
   | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R,
     satisfies s1 s3 h1 h3 (norm v) f1 ->
