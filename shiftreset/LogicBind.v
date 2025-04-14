@@ -107,7 +107,8 @@ Inductive flow : Type :=
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
 (** The following are new: *)
-  | sh : (var -> flow) -> flow
+  (* | sh : (var -> flow) -> flow *)
+  | shc : (var -> flow) -> (val -> flow) -> flow
 (** [sh k fb vr] is a shift with body [fb] and #<i>result</i># [vr]. *)
 (** [k] names the continuation delimited by an enclosing [rs], and may occur in [fb] as an [unk] or [vfptr]. *)
 (** [vr] is the #<i>result</i># of the shift, which is the value a shift appears to evaluate to when a continuation is taken. [vr] will be equal to the value that the continuation will be resumed with, and can be depended on in anything sequenced after a [sh]. *)
@@ -127,6 +128,8 @@ Inductive flow : Type :=
   .
 
 Definition seq (f1 f2:flow) := bind f1 (fun _ => f2).
+
+Definition sh fb := shc fb (fun v => ens (fun r => \[r = v])).
 
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
 
@@ -211,6 +214,8 @@ Implicit Types Q : postcond.
 Implicit Types u : ufun.
 (* Implicit Types c : val -> flow. *)
 Implicit Types f : flow.
+Implicit Types fb : var -> flow.
+Implicit Types fk : val -> flow.
 Implicit Types x y z k : var.
 Implicit Types a v r : val.
 Implicit Types R : result.
@@ -270,11 +275,12 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
 
     (** The new rules for shift/reset are as follows. *)
 
-  | s_sh : forall s1 h1 (fb:var->flow),
+  | s_shc : forall s1 h1 fb fk,
     satisfies s1 s1 h1 h1
       (* (shft x shb v (fun r1 => rs (ens (fun r => \[r = v])) r1)) *)
-      (shft fb (fun r1 => ens (fun r => \[r = r1])))
-      (sh fb)
+      (shft fb fk)
+      (shc fb fk)
+
     (** A [sh] on its own reduces to a [shft] containing an identity continuation. *)
 
   (* | s_shc s1 h1 x shb fk v :
@@ -322,6 +328,15 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
 
 Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f" :=
   (satisfies s1 s2 h1 h2 r f) (at level 30, only printing).
+
+Lemma s_sh : forall s1 h1 (fb:var->flow),
+  satisfies s1 s1 h1 h1
+    (shft fb (fun r1 => ens (fun r => \[r = r1])))
+    (sh fb).
+Proof.
+  unfold sh. intros.
+  applys* s_shc.
+Qed.
 
 Lemma s_seq : forall s3 h3 r1 s1 s2 f1 f2 h1 h2 R,
   satisfies s1 s3 h1 h3 (norm r1) f1 ->
@@ -1390,6 +1405,24 @@ Proof.
   inverts H0 as H0. 2: { apply H1 in H0. false. }
   apply* s_seq.
 Qed. *)
+
+(** * New reduction rules *)
+
+(* shinit is just unfolding *)
+
+Lemma red_extend : forall f,
+  shift_free f ->
+  entails (rs f) f.
+Proof.
+  introv Hsf.
+  unfold entails. intros.
+  inverts H as H; destr H.
+  { (* this case cannot be as f is shift-free *)
+    apply Hsf in H.
+    false. }
+  { assumption. }
+Qed.
+
 
 (** * Reduction rules *)
 Lemma red_normal : forall f,
