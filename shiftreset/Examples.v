@@ -3,6 +3,7 @@
 From ShiftReset Require Import LogicBind AutomationBind.
 Local Open Scope string_scope.
 
+
 Module Multi.
 
 (* < sh k. let a = k true in let b = k false in a + b > *)
@@ -80,11 +81,10 @@ defun k (fun v : val => rs (ens (fun r => \[r = v])))
 
     (* Check ent_seq_ex_l. *)
 
-finst k.
+finst k. { intros. shiftfree. }
 (* pose proof ent_seq_ex_r. *)
 
     (* applys ent_seq_ex_r. *)
-    { intros. shiftfree. }
 
     (* exists k. *)
   (* finst k. *)
@@ -101,10 +101,36 @@ finst k.
   match goal with
   | |- entails_under ?env _ _ =>
     (* rewrite (@ent_unk env k) *)
-    specializes H env k
+    specializes H env k (vbool true)
   end.
+  specializes H.
+resolve_fn_in_env.
+  simpl in H.
 
-  2: { resolve_fn_in_env. }
+(* Set Typeclasses Debug. *)
+  rewrite H.
+
+
+  (* match goal with
+  | |- entails_under ?env _ _ =>
+    setoid_rewrite (@ent_unk env k)
+  end. *)
+
+  pose proof rs_elim.
+  specializes H0 (ens (fun r => \[r = vbool true])).
+  forward H0. shiftfree.
+  (* destruct H0. *)
+  (* unfolds in H0. *)
+
+  (* setoid_rewrite H0. *)
+  (* rewrite H0. *)
+
+  (* 2: { shiftfree. } *)
+  (* rewrite H. *)
+  (* rewrite H. *)
+
+
+  (* 2: { resolve_fn_in_env. } *)
   simpl.
 
   (* TODO this loses conditions on r1 *)

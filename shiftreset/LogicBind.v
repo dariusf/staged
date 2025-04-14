@@ -559,6 +559,26 @@ Section Propriety.
     auto.
   Qed.
 
+  #[global]
+  Instance Proper_bind_left : Proper (entails ====> eq ====> entails) bind.
+  Proof.
+    (* unfold Proper, cont_eq, entails, respectful. intros. *)
+    unfold Proper, entails, respectful. intros.
+    inverts H1.
+    {
+      (* specializes H0 v. *)
+      applys* s_bind.
+      rewrite* <- H0. }
+    { specializes H H8.
+      applys_eq s_bind_sh.
+      2: { applys H. }
+      (* f_equal. *)
+      congruence.
+      (* applys fun_ext_dep. *)
+      (* eauto. *)
+      }
+  Qed.
+
   (* A weaker Proper instance that only allows rewriting in the left
      side of a seq. Intuitively, we can no longer rely on the right side
      being weaker because it may change entirely, if we rewrite to a
@@ -586,7 +606,7 @@ Section Propriety.
   Qed.
 
   #[global]
-  Instance Proper_seq : Proper (entails ====> entails ====> entails) seq.
+  Instance Proper_seq_fail : Proper (entails ====> entails ====> entails) seq.
   Proof.
     unfold Proper, entails, respectful.
     intros.
@@ -615,6 +635,20 @@ Section Propriety.
     inverts H1 as H1; destr H1.
     { applys* s_bind. }
     { eapply s_bind_sh. jauto. }
+  Qed.
+
+  #[global]
+  Instance Proper_bind_entails_under_left : forall env,
+    Proper (entails_under env ====> eq ====> entails_under env) bind.
+  Proof.
+    unfold Proper, entails_under, respectful. intros.
+    inverts H1.
+    { applys* s_bind.
+      rewrite* <- H0. }
+    { specializes H H8.
+      applys_eq s_bind_sh.
+      2: { applys H. }
+      congruence. }
   Qed.
 
   #[global]
@@ -725,6 +759,34 @@ Section Propriety.
       intros.
       apply~ H. }
   Qed.
+
+  #[global]
+  Instance Proper_bind_bi_left : Proper (bientails ====> eq ====> bientails) bind.
+  Proof.
+    unfold Proper, bientails, respectful.
+    intros.
+    split; intros.
+
+    { pose proof Proper_bind_left.
+      unfold Proper, entails, respectful in H2.
+      applys H2 H1; auto.
+      intros.
+      apply~ H. }
+
+    { pose proof Proper_bind_left.
+      unfold Proper, entails, respectful in H2.
+      applys H2 H1; auto.
+      intros.
+      apply~ H. }
+  Qed.
+
+Example rewrite :
+  bientails (rs (ens_ \[1 = 1])) (rs (ens_ \[2 = 2])) ->
+  entails (rs (bind (rs (ens_ \[1 = 1])) (fun v => empty))) empty.
+Proof.
+  intros H.
+  rewrite H.
+Abort.
 
   #[global]
   Instance Proper_req_entails : Proper (eq ====> entails ====> entails) req.
@@ -1239,6 +1301,118 @@ Ltac vacuity ::= false; no_shift.
     eapply s_seq; [ apply ens_void_pure_intro | ]
   | _ => fail
   end. *)
+
+  Definition cont_entails fk1 fk2 := forall v, entails (fk1 v) (fk2 v).
+
+  #[global]
+  Instance Proper_bind_sf : forall f1,
+    (* shift_free f1 -> *)
+    ShiftFree f1 ->
+    Proper (cont_entails ====> entails) (bind f1).
+  Proof.
+    unfold Proper, cont_entails, entails, respectful.
+    intros.
+    inverts H1 as H1; destr H1.
+    { apply* s_bind. }
+    { apply H in H1. false. }
+  Qed.
+
+  (* Notation cont_entails_under fk1 fk2 :=
+    (forall v env, entails_under env (fk1 v) (fk2 v)). *)
+ 
+ (* Print Relation_Definitions.relation. *)
+
+  #[global]
+  Instance Proper_bind_sf2 : forall f1,
+    ShiftFree f1 ->
+    Proper ((fun fk2 fk3 =>
+        forall v env, entails_under env (fk2 v) (fk3 v)) ====>
+      (fun f2 f3 => forall env, entails_under env f2 f3)) (bind f1).
+  Proof.
+    unfold Proper, entails_under, entails, respectful.
+    intros.
+    inverts H1. 2: { apply H in H8. false. }
+    applys* s_bind.
+  Qed.
+
+  #[global]
+  Instance bind_entails_under_morphism1 f1 :
+    Proper (Morphisms.pointwise_relation val eq ====> bientails)
+      (@bind f1).
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation, bientails. intros.
+    iff H0.
+    { inverts H0.
+      { applys* s_bind. rewrite* H in H9. }
+      { applys_eq s_bind_sh. 2: { eassumption. }
+        f_equal.
+        applys fun_ext_dep.
+        eauto. } }
+    { inverts H0.
+      { applys* s_bind. rewrite* H. }
+      { applys_eq s_bind_sh. 2: { eassumption. }
+        f_equal.
+        applys fun_ext_dep.
+        eauto. } }
+  Qed.
+
+  #[global]
+  Instance bind_entails_under_morphism f1 :
+    Proper (Morphisms.pointwise_relation val eq ====> entails)
+      (@bind f1).
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation, entails.
+    intros.
+    inverts H0.
+    { applys* s_bind. rewrite* H in H9. }
+    { applys_eq s_bind_sh. 2: { eassumption. }
+      f_equal.
+      applys fun_ext_dep.
+      eauto. }
+  Qed.
+
+  #[global]
+  Instance bind_entails_under_morphism_sf f1 :
+    ShiftFree f1 ->
+    Proper (Morphisms.pointwise_relation val entails ====> entails)
+      (@bind f1).
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation, entails.
+    intros * Hsf **.
+    inverts H0.
+    2: { destruct Hsf as (Hsf). false Hsf H7. }
+    applys* s_bind.
+  Qed.
+
+Example rewrite :
+  entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+  entails
+    (ens_ \[1 = 1])
+    empty.
+Proof.
+  intros H.
+  rewrite H.
+Abort.
+
+Example rewrite :
+  entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+  entails
+    (bind (ens_ \[1 = 1]) (fun v => empty))
+    empty.
+Proof.
+  intros H.
+  rewrite H.
+Abort.
+
+Example rewrite :
+  entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+  entails
+    (bind empty (fun v => ens_ \[1 = 1]))
+    empty.
+Proof.
+  intros H.
+  setoid_rewrite H.
+Abort.
 
   #[global]
   Instance Proper_seq_sf : forall f1,
