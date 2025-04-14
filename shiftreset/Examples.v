@@ -95,22 +95,13 @@ Proof.
   fintro k.
   finst k. { intros. shiftfree. }
   apply ent_seq_defun.
-
-  match goal with
-  | |- entails_under ?env _ _ =>
-    rewrite (@ent_unk env k); [ | resolve_fn_in_env ]; simpl
-  end.
+  funfold1 k.
   rewrites (>> rs_elim (ens (fun r => \[r = vbool true]))). { shiftfree. }
   rewrite norm_bind_val.
-
-  match goal with
-  | |- entails_under ?env _ _ =>
-    rewrite (@ent_unk env k); [ | resolve_fn_in_env ]; simpl
-  end.
-
+  funfold1 k.
+  (* TODO bad printing *)
   rewrites (>> rs_elim (ens (fun r => \[r = vbool false]))). { shiftfree. }
   rewrite norm_bind_val.
-
   rewrite rs_elim. 2: { shiftfree. }
   applys entails_under_refl.
 Qed.
