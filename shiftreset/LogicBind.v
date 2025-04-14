@@ -1406,23 +1406,118 @@ Proof.
   apply* s_seq.
 Qed. *)
 
+
+(* knowing that there is one norm execution does not mean
+  that there are no shift executions *)
+Lemma norm_sf_attempt : forall s1 s2 h1 h2 v f,
+  satisfies s1 s2 h1 h2 (norm v) f ->
+  shift_free f.
+Proof.
+  intros * Hf.
+  unfold shift_free. intros * H.
+Abort.
+
+Definition det f := forall s1 s2 h1 h2 R1 R2,
+  satisfies s1 s2 h1 h2 R1 f ->
+  satisfies s1 s2 h1 h2 R2 f ->
+  R1 = R2.
+
+(* if all executions end in norm and f is deterministic,
+  then f is shift-free. *)
+Lemma norm_sf : forall f,
+  det f ->
+  (forall s1 s2 h1 h2, exists v, satisfies s1 s2 h1 h2 (norm v) f) ->
+  shift_free f.
+Proof.
+  intros * Hd Hf.
+  unfold shift_free. intros * H.
+  specializes Hf s1 s2 h1 h2.
+  destr Hf.
+  specializes Hd H H0.
+  discriminate.
+Qed.
+
+
 (** * New reduction rules *)
 
-(* shinit is just unfolding *)
+Lemma red_init : forall fb,
+  entails (sh fb) (shc fb (fun v => ens (fun r => \[r = v]))).
+Proof.
+  unfold sh.
+  intros. applys entails_refl.
+Qed.
 
-Lemma red_extend : forall f,
-  shift_free f ->
-  entails (rs f) f.
+Lemma red_extend : forall f fb fk fk1,
+  entails (bind (shc fb fk) fk1)
+    (shc fb (fun v => bind (fk v) fk1)).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  inverts H7.
+  inverts H6.
+  applys s_shc.
+Qed.
+
+(* RNorm1 is seq_assoc *)
+(* RNorm2 is ?? *)
+
+(* aka red_skip *)
+Lemma red_rs_float1 : forall f1 f2,
+  shift_free f1 ->
+  entails (rs (f1;; f2)) (f1;; rs f2).
 Proof.
   introv Hsf.
   unfold entails. intros.
   inverts H as H; destr H.
-  { (* this case cannot be as f is shift-free *)
-    apply Hsf in H.
-    false. }
-  { assumption. }
+  { (* if either f1 or f2 produce a shift *)
+    inverts H as H. destr H.
+    { (* f2 produces a shift *)
+      eapply s_seq.
+      exact H.
+      eapply s_rs_sh.
+      exact H8. eassumption. }
+    { (* f1 cannot produce a shift as it is shift-free *)
+      apply Hsf in H.
+      false. } }
+  { (* if f1 returns *)
+    inverts H as H. destr H.
+    eapply s_seq.
+    exact H.
+    apply s_rs_val.
+    assumption. }
 Qed.
 
+(* TODO <-? *)
+Lemma red_rs_float2 : forall f1 f2,
+  entails (rs (disj f1 f2)) (disj (rs f1) (rs f2)).
+Proof.
+  introv H.
+  unfold entails. intros.
+  inverts H.
+  { inverts H1.
+    { applys s_disj_l.
+      applys* s_rs_sh. }
+    { applys s_disj_r.
+      applys* s_rs_sh. } }
+  { inverts H6.
+    { applys s_disj_l. applys* s_rs_val. }
+    { applys s_disj_r. applys* s_rs_val. } }
+Qed.
+
+
+
+Lemma rs_elim : forall f,
+  shift_free f ->
+  bientails (rs f) f.
+Proof.
+  introv Hsf. iff H.
+  { inverts H.
+    { false Hsf H1. }
+    { assumption. } }
+  { destruct R.
+    2: { false Hsf H. }
+    applys* s_rs_val. }
+Qed.
 
 (** * Reduction rules *)
 Lemma red_normal : forall f,
