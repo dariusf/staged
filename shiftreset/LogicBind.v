@@ -712,8 +712,8 @@ Section Propriety.
     intros.
     constructor. intros.
     rewrite <- H in H2.
-    inverts H1 as H1.
-    specializes H1 H3 ___.
+    inverts H1 as H5.
+    specializes H5 H3 ___.
   Qed.
 
   #[global]
@@ -724,13 +724,13 @@ Section Propriety.
     split; intros H1.
     { constructor. intros hp hr H2 H3 H4.
       rewrite <- H in H2.
-      inverts H1 as H1.
-      specializes H1 H3 ___.
+      inverts H1 as H5.
+      specializes H5 H3 ___.
       apply H0. assumption. }
     { constructor. intros hp hr H2 H3 H4.
       rewrite H in H2.
-      inverts H1 as H1.
-      specializes H1 H3 ___.
+      inverts H1 as H5.
+      specializes H5 H3 ___.
       apply H0. assumption. }
   Qed.
 
@@ -1036,8 +1036,8 @@ Lemma sf_req_pure : forall P f,
   shift_free (req \[P] f).
 Proof.
   unfold shift_free, not. intros.
-  inverts H1 as H1.
-  specializes H1 empty_heap h1 ___.
+  inverts H1 as H2.
+  specializes H2 empty_heap h1 ___.
   hintro.
   assumption.
 Qed.
@@ -1571,8 +1571,8 @@ Proof.
   inverts H0 as H0.
   2: { (* handle shift. it may be possible to relax this *)
     apply s_req. intros.
-    inverts H0 as H0.
-    specializes H0 H1 H2 H3.
+    inverts H0 as H4.
+    specializes H4 H1 H2 H3.
     apply s_bind_sh.
     assumption.
     (* apply H0 in H1. *)
@@ -1585,8 +1585,8 @@ Proof.
   constructor. intros hp hr. intros.
 
   (* prove the req *)
-  inverts H0 as H0.
-  specializes H0 hp hr H2 ___.
+  inverts H0 as H4.
+  specializes H4 hp hr H2 ___.
   applys* s_seq h3.
 Qed.
 
@@ -1978,8 +1978,8 @@ Lemma weaken_req : forall H f,
 Proof.
   unfold can_weaken_env. intros.
   apply s_req. intros.
-  inverts H1 as H1.
-  specializes H1 H2 H3 H4.
+  inverts H1 as H5.
+  specializes H5 H2 H3 H4.
 Qed.
 
 Lemma weaken_ens : forall Q,
@@ -2837,17 +2837,13 @@ Proof.
   apply hstar_inv in H0 as (hH1&hH2&?&?&?&?).
 
   (* start reasoning forward *)
-  inverts H as H.
-  forwards: (H hH1 (hr \u hH2) H0).
+  inverts H as H14.
+  forwards: (H14 hH1 (hr \u hH2) H0).
   fmap_eq.
   fmap_disjoint.
 
-  inverts H8 as H8.
-  specialize (H8 _ hr H5).
-  forward H8. fmap_eq.
-  forward H8. fmap_disjoint.
-
-  assumption.
+  inverts H as H16.
+  specializes H16 hr H5.
 Qed.
 
 Lemma norm_req_sep_split : forall H1 H2 f,
@@ -2861,11 +2857,11 @@ Proof.
   apply s_req.
   intros hH2 hr. intros.
 
-  inverts H as H.
-  specialize (H (hH1 \u hH2) hr ltac:(apply hstar_intro; auto)).
-  forward H. fmap_eq.
-  forward H. fmap_disjoint.
-
+  inverts H as H14.
+  specialize (H14 (hH1 \u hH2) hr ltac:(apply hstar_intro; auto)).
+  forwards: H14.
+  fmap_eq.
+  fmap_disjoint.
   auto.
 Qed.
 
@@ -2885,9 +2881,9 @@ Proof.
   apply s_req. intros.
   inverts H0 as H0.
   { eapply s_rs_sh.
-    inverts H0 as H0. specializes H0 H1 H2 H3.
+    inverts H0 as H11. specializes H11 H1 H2 H3.
     eassumption. }
-  { inverts H0 as H0. specializes H0 H1 H2 H3.
+  { inverts H0 as H10. specializes H10 H1 H2 H3.
     apply* s_rs_val. }
 Qed.
 
@@ -3001,8 +2997,8 @@ Proof.
 
   inverts H11 as H11. destr H11. hinv H11. hinv H11. (* find out h(H1) *)
   rewrite norm_req_req in H10.
-  inverts H10 as H10. specializes H10 hp (x1 \u hr \u x3) H12.
-  forward H10 by fmap_eq. forward H10 by fmap_disjoint.
+  inverts H10 as H32. specializes H32 hp (x1 \u hr \u x3) H12.
+  forward H32 by fmap_eq. forward H32 by fmap_disjoint.
 
   (* now we are trying to supply the premise of H. to do this
     we need to remove h(y->2) from both sides of H10. *)
@@ -3013,14 +3009,14 @@ Proof.
   clear H18.
 
   (* finally, we can use H. build a seq to do that *)
-  lets: s_seq H4. specializes H13. applys_eq H10. fmap_eq. clear H4 H10.
+  lets H13: s_seq H4. specializes H13. applys_eq H32. fmap_eq. clear H4 H32.
 
   specializes H H13. clear H13.
 
   (* Ha is in the way, but otherwise we are done *)
   subst. rew_fmap *.
-  inverts H as H.
-  specializes H hp0 H15.
+  inverts H as H13.
+  specializes H13 hp0 H15.
 Qed.
 
 Lemma ens_req_inv : forall s1 s2 h1 h2 R H f,
@@ -3030,7 +3026,7 @@ Proof.
   intros.
   inverts H0 as H0; no_shift.
   inverts H0 as H0. destr H0. hinv H0. hinv H0.
-  inverts H8 as H8. specializes H8 H3.
+  inverts H8 as H15. specializes H15 H3.
   subst. rew_fmap *.
 Qed.
 
@@ -3039,7 +3035,7 @@ Lemma req_empty_inv : forall s1 s2 h1 h2 R f,
   satisfies s1 s2 h1 h2 R f.
 Proof.
   intros.
-  inverts H as H. specializes H empty_heap h1 ___.
+  inverts H as H6. specializes H6 empty_heap h1 ___.
   apply hempty_intro.
 Qed.
 
@@ -3433,8 +3429,8 @@ Lemma req_pure_inv: forall s1 s2 h1 h2 R P f,
   satisfies s1 s2 h1 h2 R f.
 Proof.
   intros.
-  inverts H0 as H0.
-  specialize (H0 empty_heap h1). apply H0.
+  inverts H0 as H7.
+  specializes H7 empty_heap h1. apply H7.
   hintro. assumption. fmap_eq. fmap_disjoint.
 Qed.
 

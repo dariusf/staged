@@ -516,7 +516,7 @@ Qed. *)
 
 
 
-Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
+(* Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
   | sav_base: forall e f,
     (forall h1 h2 (eb:var->expr) (ek:val->expr),
         not (bigstep penv h1 e h2 (eshft eb ek))) ->
@@ -538,4 +538,4 @@ Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
 
 Definition spec_assert_valid e f : Prop :=
   forall penv env,
-    spec_assert_valid_under penv env e f.
+    spec_assert_valid_under penv env e f. *)
