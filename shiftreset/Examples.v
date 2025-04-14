@@ -12,7 +12,7 @@ Definition f : ufun := fun _ =>
     sh (fun k =>
       bind (unk k (vbool true)) (fun r1 =>
       bind (unk k (vbool false)) (fun r2 =>
-        ens (fun r => \[r = vadd r1 r2])
+        ens (fun r => \[r = vand r1 r2])
       )))).
 
 Lemma norm_seq_ex_widen : forall f1 A (fctx:A -> flow),
@@ -40,119 +40,80 @@ Proof.
   specializes H1 A (fun b => f1;; fctx b).
 Qed.
 
+
+Definition flow_res (f:flow) (v:val) : Prop :=
+  forall s1 s2 h1 h2, satisfies s1 s2 h1 h2 (norm v) f.
+
+Lemma norm_bind_seq : forall f fk v,
+  shift_free f ->
+  det f ->
+  flow_res f v ->
+  entails (bind f fk) (f;; fk v).
+Proof.
+  unfold flow_res, entails. intros * Hsf Hd Hfr * H.
+  inverts H. 2: { false Hsf H6. }
+  specializes Hfr s1 s3 h1 h3.
+  specializes Hd H7 Hfr. injects Hd.
+  applys s_seq H7.
+  assumption.
+Qed.
+
+(* which definition of flow_res should be used? *)
+Definition flow_res1 (f:flow) (v1:val) : Prop :=
+  forall s1 s2 h1 h2 v, satisfies s1 s2 h1 h2 (norm v) f -> v1 = v.
+
+Lemma norm_bind_seq1 : forall f fk v,
+  shift_free f ->
+  flow_res1 f v ->
+  entails (bind f fk) (f;; fk v).
+Proof.
+  unfold entails. intros * Hsf Hfr * H.
+  inverts H. 2: { false Hsf H6. }
+  specializes Hfr H7.
+  subst.
+  applys* s_seq H7.
+Qed.
+
+(* TODO can this be generalised (to norm_bind_pure)? *)
+Lemma norm_bind_val : forall fk v,
+  entails (bind (ens (fun r => \[r = v])) fk) (fk v).
+Proof.
+  unfold entails. intros * H.
+  inverts H. 2: { false sf_ens H6. }
+  inverts H7. destr H5. injects H. hinv H0. subst. rew_fmap.
+  assumption.
+Qed.
+
 Lemma f_reduction: forall v1, exists f1,
-  entails_under empty_env (f v1) (f1;; ens_ \[True]).
+  entails_under empty_env (f v1) (f1;; ens (fun r => \[r = vbool false])).
 Proof.
   intros.
-  (* eexists. *)
-  exists (∃ k,
-defun k (fun v : val => rs (ens (fun r => \[r = v])))
-    ).
+  exists (∃ k, defun k (fun v : val => rs (ens (fun r => \[r = v])))).
   unfold f.
-  (* fintro r. *)
   rewrite red_init.
-
-  (* rewrite red_acc. *)
-
   rewrite red_rs_sh_elim.
-
-    (* apply ent_ex_l. intros x. *)
-    
-    (* simple apply ent_ex_l; intros k. *)
-
-  (* lazymatch goal with
-  (* base cases *)
-  | |- entails_under _ (∃ _, _) _ =>
-    idtac "?"
-  | _ => idtac "."
-  end. *)
-
-(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-(* Print fintro. *)
   fintro k.
-  (* finst k. *)
-
-(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-
-
-  (* (forall b, shift_free (fctx b)) ->
-  (forall b, entails_under env (fctx b;; f1) f) ->
-  entails_under env ((∃ b, fctx b);; f1) f. *)
-
-    (* Check ent_seq_ex_l. *)
-
-finst k. { intros. shiftfree. }
-(* pose proof ent_seq_ex_r. *)
-
-    (* applys ent_seq_ex_r. *)
-
-    (* exists k. *)
-  (* finst k. *)
-
-  (* apply ent_seq_ex_r. { intros. shiftfree. }
-  exists r. *)
+  finst k. { intros. shiftfree. }
   apply ent_seq_defun.
 
-    (* Check norm_rs_ex. *)
-  (* rewrite norm_rs_ex. fintro r1. *)
-
-    pose proof ent_unk.
-    (* funfold1 k. *)
   match goal with
   | |- entails_under ?env _ _ =>
-    (* rewrite (@ent_unk env k) *)
-    specializes H env k (vbool true)
+    rewrite (@ent_unk env k); [ | resolve_fn_in_env ]; simpl
   end.
-  specializes H.
-resolve_fn_in_env.
-  simpl in H.
-
-(* Set Typeclasses Debug. *)
-  rewrite H.
-
-
-  (* match goal with
-  | |- entails_under ?env _ _ =>
-    setoid_rewrite (@ent_unk env k)
-  end. *)
-
-  pose proof rs_elim.
-  specializes H0 (ens (fun r => \[r = vbool true])).
-  forward H0. shiftfree.
-  (* destruct H0. *)
-  (* unfolds in H0. *)
-
-  (* setoid_rewrite H0. *)
-  (* rewrite H0. *)
-
-  (* 2: { shiftfree. } *)
-  (* rewrite H. *)
-  (* rewrite H. *)
-
-
-  (* 2: { resolve_fn_in_env. } *)
-  simpl.
-
-  (* TODO this loses conditions on r1 *)
-  rewrites (>> red_normal (vint r1)). { shiftfree. }
-
-  rewrite norm_rs_seq_ex_l.
-  2: { shiftfree. }
-  fintro r2.
+  rewrites (>> rs_elim (ens (fun r => \[r = vbool true]))). { shiftfree. }
+  rewrite norm_bind_val.
 
   match goal with
   | |- entails_under ?env _ _ =>
-    rewrite (@ent_unk env "k")
+    rewrite (@ent_unk env k); [ | resolve_fn_in_env ]; simpl
   end.
-  2: { resolve_fn_in_env. }
-  simpl.
 
-  rewrites (>> red_normal (vint r2)). { shiftfree. }
-  rewrites (>> red_normal v2). { shiftfree. }
-  (* TODO both true and false *)
+  rewrites (>> rs_elim (ens (fun r => \[r = vbool false]))). { shiftfree. }
+  rewrite norm_bind_val.
 
-  Abort.
-(* Qed. *)
+  rewrite rs_elim. 2: { shiftfree. }
+  applys entails_under_refl.
+Qed.
 
 End Multi.
 

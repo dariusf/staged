@@ -60,6 +60,12 @@ Definition vadd (v1 v2 : val) : val :=
   | _, _ => vunit
   end.
 
+Definition vand (v1 v2 : val) : val :=
+  match v1, v2 with
+  | vbool b1, vbool b2 => vbool (andb b1 b2)
+  | _, _ => vunit
+  end.
+
 #[global]
 Instance Inhab_val : Inhab val.
 Proof.
