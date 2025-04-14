@@ -1,17 +1,18 @@
 
-From ShiftReset Require Import Logic Automation.
+(* From ShiftReset Require Import Logic Automation. *)
+From ShiftReset Require Import LogicBind AutomationBind.
 Local Open Scope string_scope.
 
 Module Multi.
 
-Definition f : ufun := fun _ r3 =>
-    ∃ r,
+(* < sh k. let a = k true in let b = k false in a + b > *)
+Definition f : ufun := fun _ =>
   rs (
-    sh "k" (
-      ∃ r1, unk "k" (vbool true) (vint r1);;
-      ∃ r2, unk "k" (vbool false) (vint r2);;
-      ens (fun r => \[r = vint (r1 + r2)])) r;;
-      ens_ \[r3 = r]) r3.
+    sh (fun k =>
+      bind (unk k (vbool true)) (fun r1 =>
+      bind (unk k (vbool false)) (fun r2 =>
+        ens (fun r => \[r = vadd r1 r2])
+      )))).
 
 Lemma norm_seq_ex_widen : forall f1 A (fctx:A -> flow),
   shift_free f1 ->
@@ -26,10 +27,10 @@ Proof.
   { false Hsf H1. }
 Qed.
 
-Lemma norm_rs_seq_ex_l : forall f1 A (fctx:A -> flow) r,
+Lemma norm_rs_seq_ex_l : forall f1 A (fctx:A -> flow),
   shift_free f1 ->
-  entails (rs (f1;; (∃ b, fctx b)) r)
-    (∃ b, rs (f1;; (fctx b)) r).
+  entails (rs (f1;; (∃ b, fctx b)))
+    (∃ b, rs (f1;; (fctx b))).
 Proof.
   intros.
   rewrite norm_seq_ex_widen.
@@ -38,15 +39,16 @@ Proof.
   specializes H1 A (fun b => f1;; fctx b).
 Qed.
 
-Lemma f_reduction: forall v1 v2, exists f1,
-  entails_under empty_env (f v1 v2) (f1;; ens_ \[True]).
+Lemma f_reduction: forall v1, exists f1,
+  entails_under empty_env (f v1) (f1;; ens_ \[True]).
 Proof.
   intros.
-  exists (∃ r,
+  eexists.
+  (* exists (∃ r,
     defun "k"
-    (fun a r0 => rs (ens_ \[r = a];; (ens (fun r1 => \[r1 = r]));; ens_ \[v2 = r]) r0)).
+    (fun a => rs (ens_ \[r = a];; (ens (fun r1 => \[r1 = r]));; ens_ \[v2 = r]))). *)
   unfold f.
-  fintro r.
+  (* fintro r. *)
   rewrite red_init.
   rewrite red_acc.
 

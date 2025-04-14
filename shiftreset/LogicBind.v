@@ -54,6 +54,12 @@ with expr : Type :=
   | pshift (eb: var -> expr)
   | preset (e: expr).
 
+Definition vadd (v1 v2 : val) : val :=
+  match v1, v2 with
+  | vint i1, vint i2 => vint (i1 + i2)
+  | _, _ => vunit
+  end.
+
 #[global]
 Instance Inhab_val : Inhab val.
 Proof.
@@ -1517,6 +1523,26 @@ Proof.
   { destruct R.
     2: { false Hsf H. }
     applys* s_rs_val. }
+Qed.
+
+
+Lemma red_rs_sh_elim : forall fb fk,
+  entails (rs (shc fb fk))
+    (∃ k, defun k (fun v => rs (fk v));; rs (fb k)).
+Proof.
+  unfold entails. intros.
+  inverts H. 2: { false_invert H6. }
+  inverts H1.
+  inverts H7.
+  { (* body has shift *)
+    applys s_fex. exists k.
+    applys s_seq. { applys s_defun. reflexivity. }
+    applys* s_rs_sh. }
+  { (* body has no shift *)
+    applys s_fex. exists k.
+    applys s_seq. { applys s_defun. reflexivity. }
+    applys s_rs_val.
+    applys H5. }
 Qed.
 
 (** * Reduction rules *)
