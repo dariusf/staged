@@ -1,5 +1,5 @@
 
-From ShiftReset Require Import Logic.
+From ShiftReset Require Import LogicBind.
 
 Ltac funfold_hyp H env f :=
   rewrites (>> ent_unk env f) in H; [ unfold env; resolve_fn_in_env | ].
@@ -61,6 +61,8 @@ Ltac finst a :=
     apply ent_all_l; exists a
   | |- entails_under _ _ (∃ _, _) =>
     apply ent_ex_r; exists a
+  | |- entails_under _ _ ((∃ _, _);; _) =>
+    apply ent_seq_ex_r; try exists a
   end.
 
 (** Move assumptions to the Coq context.

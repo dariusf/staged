@@ -43,26 +43,67 @@ Lemma f_reduction: forall v1, exists f1,
   entails_under empty_env (f v1) (f1;; ens_ \[True]).
 Proof.
   intros.
-  eexists.
-  (* exists (∃ r,
-    defun "k"
-    (fun a => rs (ens_ \[r = a];; (ens (fun r1 => \[r1 = r]));; ens_ \[v2 = r]))). *)
+  (* eexists. *)
+  exists (∃ k,
+defun k (fun v : val => rs (ens (fun r => \[r = v])))
+    ).
   unfold f.
   (* fintro r. *)
   rewrite red_init.
-  rewrite red_acc.
 
-  rewrite red_shift_elim.
-  apply ent_seq_ex_r. { intros. shiftfree. }
-  exists r.
+  (* rewrite red_acc. *)
+
+  rewrite red_rs_sh_elim.
+
+    (* apply ent_ex_l. intros x. *)
+    
+    (* simple apply ent_ex_l; intros k. *)
+
+  (* lazymatch goal with
+  (* base cases *)
+  | |- entails_under _ (∃ _, _) _ =>
+    idtac "?"
+  | _ => idtac "."
+  end. *)
+
+(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+(* Print fintro. *)
+  fintro k.
+  (* finst k. *)
+
+(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+
+
+  (* (forall b, shift_free (fctx b)) ->
+  (forall b, entails_under env (fctx b;; f1) f) ->
+  entails_under env ((∃ b, fctx b);; f1) f. *)
+
+    (* Check ent_seq_ex_l. *)
+
+finst k.
+(* pose proof ent_seq_ex_r. *)
+
+    (* applys ent_seq_ex_r. *)
+    { intros. shiftfree. }
+
+    (* exists k. *)
+  (* finst k. *)
+
+  (* apply ent_seq_ex_r. { intros. shiftfree. }
+  exists r. *)
   apply ent_seq_defun.
 
-  rewrite norm_rs_ex. fintro r1.
+    (* Check norm_rs_ex. *)
+  (* rewrite norm_rs_ex. fintro r1. *)
 
+    pose proof ent_unk.
+    (* funfold1 k. *)
   match goal with
   | |- entails_under ?env _ _ =>
-    rewrite (@ent_unk env "k")
+    (* rewrite (@ent_unk env k) *)
+    specializes H env k
   end.
+
   2: { resolve_fn_in_env. }
   simpl.
 
