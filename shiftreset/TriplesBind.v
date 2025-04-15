@@ -163,7 +163,6 @@ Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
             (forall v, spec_assert_valid_under penv env (ek v) (fk v))) ->
     spec_assert_valid_under penv env e f.
 
-(* Check spec_assert_valid_under_ind. *)
 Lemma spec_assert_valid_under_ind1 :
   forall penv env (P:expr->flow->Prop),
     (forall e f,
@@ -177,23 +176,25 @@ Lemma spec_assert_valid_under_ind1 :
       (forall h1 h2 eb ek,
         bigstep penv h1 e h2 (eshft eb ek) ->
         exists fb fk, satisfies env env h1 h2 (shft fb fk) f /\
-        (forall x, P (eb x) (fb x) -> spec_assert_valid_under penv env (eb x) (fb x)) /\
-        (forall v, P (ek v) (fk v) -> spec_assert_valid_under penv env (ek v) (fk v))) ->
+        (forall x, spec_assert_valid_under penv env (eb x) (fb x)) /\
+        (forall x, P (eb x) (fb x)) /\
+        (forall v, spec_assert_valid_under penv env (ek v) (fk v)) /\
+        (forall v, P (ek v) (fk v))) ->
       P e f) ->
     forall e f,
       spec_assert_valid_under penv env e f -> P e f.
 Proof.
+  intros * Hbase Hrec.
+  fix ind 3.
   intros.
-  specializes H e f.
-  specializes H0 e f.
-  induction H1.
-  - clear H0. specializes H H1 H2.
-  - clear H. specializes H0 H1.
-    applys H0. clear H0.
+  destruct H.
+  - eauto.
+  - apply* Hrec.
     intros.
-    specializes H2 H.
-    destr H2.
-    exists fb fk. splits*.
+    specializes H0 H1.
+    destr H0.
+    exists fb fk.
+    splits*.
 Qed.
 
 Definition spec_assert_valid e f : Prop :=
@@ -426,24 +427,11 @@ Proof.
     exs.
     splits.
     applys s_bind_sh H.
-    {
-      (* clear H2. *)
-      intros x.
-      applys H0 x. clear H0.
-      
-
-      admit.
-    }
-    {
-      (* clear H0. *)
-      intros v1.
-      (* applys H2 v1. *)
-      admit.
+    { assumption. }
+    { eauto.
     }
   }
-
-(* Abort. *)
-Admitted.
+Qed.
 
 Lemma plet_sound_test: forall x e1 e2 f1 (f2:val->flow),
   spec_assert_valid e1 f1 ->
