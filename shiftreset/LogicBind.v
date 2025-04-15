@@ -176,7 +176,7 @@ Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 
 Notation "'let' x '=' f1 'in' f2" :=
   (bind f1 (fun x => f2))
-  (at level 38, x binder, right associativity) : flow_scope.
+  (at level 38, x binder, right associativity, only printing) : flow_scope.
     (* format "'[' 'let'  x  '='  f1  'in' ']' '/' '[' f2 ']'") : flow_scope. *)
     (* format "'[v' '[' 'let'  x  '='  f1  'in' ']' '/' '[' f2 ']' ']'") : flow_scope. *)
 
