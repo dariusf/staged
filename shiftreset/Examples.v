@@ -98,17 +98,39 @@ Proof.
   apply ent_seq_defun.
   fintro x. rewrite norm_rs_all. finst x.
   fintro a. rewrite norm_rs_all. finst a.
+
+(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+
+  (* rewrite norm_reassoc. *)
   (* fintro b. rewrite norm_rs_all. finst b. *)
   (* rewrite norm_rs_ex. fintro r1. *)
-  (* rewrite norm_reassoc. *)
   (* funfold1 k. *)
+
+
+  lazymatch goal with
+  | |- entails_under ?env _ _ =>
+    pose proof (@ent_unk env k (vbool true))
+    (* [ | resolve_fn_in_env ]; simpl *)
+  end.
+  specializes H. resolve_fn_in_env. simpl in H.
+
+(* Close Scope flow_scope. *)
+(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+(* Set Typeclasses Debug. *)
+  rewrite H.
+  (* Fail setoid_rewrite H. *)
+
+
+  (* assert (x=(1%nat)) as ?. admit. *)
+  (* assert (k="a") as ?. admit. *)
+  (* rewrite H. *)
 
   (* lazymatch goal with
   | |- entails_under ?env _ _ =>
     setoid_rewrite (@ent_unk env k); [ | try unfold env; resolve_fn_in_env ]; simpl
   end. *)
 
-  rewrite norm_rs_req.
+  (* rewrite norm_rs_req.
   apply ent_req_r.
   rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
   rewrite norm_req_pure_l. 2: { reflexivity. }
@@ -181,9 +203,7 @@ rs
   rewrite H. 2: { shiftfree. }
   clear H.
 
-  (* rewrite <- norm_ens_ens. *)
-
-(* HERE *)
+  rewrite <- norm_ens_ens. *)
 
 Abort.
 
@@ -392,7 +412,7 @@ Check norm_reassoc.
   (* admit.
 Abort. *)
 
-Definition toss : ufun := fun n' r' =>
+(* Definition toss : ufun := fun n' =>
   ∃ n r, ens_ \[vint n = n' /\ vint r = r'];;
   req \[n > 0]
     (disj
@@ -428,4 +448,4 @@ Theorem foon_summary : forall n r,
 Proof.
 Abort.
 
-End Toss.
+End Toss. *)

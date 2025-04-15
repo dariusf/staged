@@ -806,6 +806,18 @@ Abort.
   Qed.
 
   #[global]
+  Instance Proper_req_entails_under : forall env,
+    Proper (eq ====> entails_under env ====> entails_under env) req.
+  Proof.
+    unfold Proper, entails_under, respectful, flip.
+    intros.
+    constructor. intros.
+    rewrite <- H in H2.
+    inverts H1 as H5.
+    specializes H5 H3 ___.
+  Qed.
+
+  #[global]
   Instance Proper_req_bi : Proper (eq ====> bientails ====> bientails) req.
   Proof.
     unfold Proper, bientails, respectful.
@@ -1091,10 +1103,24 @@ Qed.
 (* previous attempt at automation *)
 (* #[local] Hint Resolve sf_ens : core. *)
 
+Lemma sf_ens_ : forall H,
+  shift_free (ens_ H).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H0. destr H7.
+  false.
+Qed.
+
 Instance ShiftFreeEns : forall Q,
   ShiftFree (ens Q).
 Proof.
   intros. constructor. apply sf_ens.
+Qed.
+
+Instance ShiftFreeEnsVoid : forall H,
+  ShiftFree (ens_ H).
+Proof.
+  intros. constructor. apply sf_ens_.
 Qed.
 
 Lemma sf_defun : forall x uf,
@@ -4075,3 +4101,12 @@ Abort.
 - #<a href="&num;red_acc">red_acc</a>#
 - #<a href="&num;red_shift_elim">red_shift_elim</a># *)
 
+Example rewrite : forall l,
+  entails_under empty_env (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+  entails_under empty_env
+    (rs (bind (req (l~~>vint 1) (ens_ (l~~>vint 1);; ens_ \[1 = 1]))
+      (fun _ => empty))) empty.
+Proof.
+  intros.
+  rewrite H.
+Abort.
