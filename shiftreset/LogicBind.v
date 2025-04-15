@@ -1633,7 +1633,7 @@ Proof.
   intros. applys entails_refl.
 Qed.
 
-Lemma red_extend : forall f fb fk fk1,
+Lemma red_extend : forall fb fk fk1,
   entails (bind (shc fb fk) fk1)
     (shc fb (fun v => bind (fk v) fk1)).
 Proof.
@@ -3046,7 +3046,18 @@ Proof.
   rew_fmap *.
 Qed.
 
-Lemma ent_seq_ens_l : forall env f f1 P,
+Lemma ent_seq_ens_l : forall env f f1 (P:val->Prop),
+  (forall r, P r -> entails_under env f1 f) ->
+  entails_under env (ens (fun r => \[P r]);; f1) f.
+Proof.
+  unfold entails_under. intros.
+  inverts H0 as H0; no_shift. destr H0.
+  inverts H0 as H0. destr H0.
+  hinv H0. injects H1.
+  subst. rew_fmap *.
+Qed.
+
+Lemma ent_seq_ens_void_l : forall env f f1 P,
   (P -> entails_under env f1 f) ->
   entails_under env (ens_ \[P];; f1) f.
 Proof.
@@ -3223,6 +3234,15 @@ Qed.
 
 Lemma norm_rs_seq_ens : forall Q f,
   entails (rs (ens Q;; f)) (ens Q;; (rs f)).
+Proof.
+  unfold entails. intros.
+  apply red_skip.
+  apply sf_ens.
+  assumption.
+Qed.
+
+Lemma norm_rs_seq_ens_void : forall H f,
+  entails (rs (ens_ H;; f)) (ens_ H;; (rs f)).
 Proof.
   unfold entails. intros.
   apply red_skip.
@@ -3680,7 +3700,7 @@ Proof.
   { rewrite <- H3. assumption. }
 Qed.
 
-Lemma ent_ens_l : forall env f P,
+Lemma ent_ens_void_l : forall env f P,
   (P -> entails_under env empty f) ->
   entails_under env (ens_ \[P]) f.
 Proof.
@@ -3787,6 +3807,157 @@ Proof.
     assumption.
     assumption. }
   { apply req_pure_intro. auto. }
+Qed.
+
+Lemma norm_seq_all_reassoc_ctx: forall (A:Type) (f:A->flow) f1,
+  shift_free f1 ->
+  entails (f1;; (∀ x:A, f x)) (∀ x:A, f1;; f x).
+Proof.
+  unfold entails. introv Hsf H0.
+  inverts H0. 2: { false Hsf H6. }
+  applys s_fall. intros.
+  inverts H8. specializes H5 b.
+  applys* s_seq.
+Qed.
+
+Lemma norm_seq_ex_reassoc_ctx: forall (A:Type) (f:A->flow) f1,
+  shift_free f1 ->
+  entails (f1;; (∃ x:A, f x)) (∃ x:A, f1;; f x).
+Proof.
+  unfold entails. introv Hsf H0.
+  inverts H0. 2: { false Hsf H6. }
+  inverts H8. destr H5.
+  applys s_fex. exists b.
+  applys* s_seq.
+Qed.
+
+Lemma norm_rs_seq_distr : forall f1 f2,
+  shift_free f1 ->
+  entails (rs (f1;; f2)) (rs f1;; rs f2).
+Proof.
+  unfold entails. intros.
+  inverts H0 as H0.
+  { (* f1;; f2 has a shift *)
+    inverts H0 as H0.
+    2: { false H H0. }
+    eapply s_seq.
+    apply s_rs_val. eassumption.
+    eapply s_rs_sh. eassumption.
+    eassumption. }
+  { inverts H0 as H0.
+    eapply s_seq.
+    apply s_rs_val.
+    eassumption.
+    apply s_rs_val.
+    eassumption. }
+Qed.
+
+Lemma norm_seq_all : forall f1 (f2:var->flow),
+  shift_free f1 ->
+  entails (f1;; ∀ x, f2 x) (∀ x, f1;; f2 x).
+Proof.
+  unfold entails. intros * Hsf * H.
+  inverts H.
+  2: { false Hsf H6. }
+  applys s_fall. intros.
+  inverts H8. specializes H5 b.
+  applys* s_seq. 
+Qed.
+
+Lemma norm_ens_ens_void_swap : forall H Q f,
+  bientails (ens Q;; ens_ H;; f) (ens_ H;; ens Q;; f).
+Proof.
+  iff H0.
+  { inverts H0. 2: { inverts H7. destr H6. discriminate. }
+    inverts H8. destr H6. injects H0.
+    inverts H9. 2: { inverts H10. destr H9. discriminate. }
+    inverts H11. destr H9. injects H0. hinv H3. hinv H0.
+    applys s_seq.
+    applys s_ens.
+    { exists vunit x0. splits*. hintro. splits*. }
+    applys s_seq H12.
+    applys s_ens.
+    { exists v0 h0. splits*. } }
+  { inverts H0. 2: { inverts H7. destr H6. discriminate. }
+    inverts H8. destr H6. injects H0.
+    inverts H9. 2: { inverts H10. destr H9. discriminate. }
+    inverts H11. destr H9. injects H0. hinv H1. hinv H0.
+    applys s_seq.
+    applys s_ens.
+    { exists v1 h5. splits*. }
+    applys s_seq H12.
+    applys s_ens.
+    { exists vunit x0. splits*. hintro. splits*. } }
+Qed.
+
+
+Lemma norm_seq_ex_widen : forall f1 A (fctx:A -> flow),
+  shift_free f1 ->
+  entails (f1;; (∃ b, fctx b))
+    (∃ b, f1;; (fctx b)).
+Proof.
+  unfold entails. intros * Hsf * H.
+  inverts H as H1 H2.
+  { inverts H2 as (b&H2).
+    apply s_fex. exists b.
+    applys s_seq H1 H2. }
+  { false Hsf H1. }
+Qed.
+
+Lemma norm_rs_seq_ex_l : forall f1 A (fctx:A -> flow),
+  shift_free f1 ->
+  entails (rs (f1;; (∃ b, fctx b)))
+    (∃ b, rs (f1;; (fctx b))).
+Proof.
+  intros.
+  rewrite norm_seq_ex_widen.
+  2: { assumption. }
+  lets H1: norm_rs_ex.
+  specializes H1 A (fun b => f1;; fctx b).
+Qed.
+
+
+Definition flow_res (f:flow) (v:val) : Prop :=
+  forall s1 s2 h1 h2, satisfies s1 s2 h1 h2 (norm v) f.
+
+Lemma norm_bind_seq : forall f fk v,
+  shift_free f ->
+  det f ->
+  flow_res f v ->
+  entails (bind f fk) (f;; fk v).
+Proof.
+  unfold flow_res, entails. intros * Hsf Hd Hfr * H.
+  inverts H. 2: { false Hsf H6. }
+  specializes Hfr s1 s3 h1 h3.
+  specializes Hd H7 Hfr. injects Hd.
+  applys s_seq H7.
+  assumption.
+Qed.
+
+(* which definition of flow_res should be used? *)
+Definition flow_res1 (f:flow) (v1:val) : Prop :=
+  forall s1 s2 h1 h2 v, satisfies s1 s2 h1 h2 (norm v) f -> v1 = v.
+
+Lemma norm_bind_seq1 : forall f fk v,
+  shift_free f ->
+  flow_res1 f v ->
+  entails (bind f fk) (f;; fk v).
+Proof.
+  unfold entails. intros * Hsf Hfr * H.
+  inverts H. 2: { false Hsf H6. }
+  specializes Hfr H7.
+  subst.
+  applys* s_seq H7.
+Qed.
+
+(* TODO can this be generalised (to norm_bind_pure)? *)
+Lemma norm_bind_val : forall fk v,
+  entails (bind (ens (fun r => \[r = v])) fk) (fk v).
+Proof.
+  unfold entails. intros * H.
+  inverts H. 2: { false sf_ens H6. }
+  inverts H7. destr H5. injects H. hinv H0. subst. rew_fmap.
+  assumption.
 Qed.
 
 (** * Reduction example *)

@@ -3,7 +3,6 @@
 From ShiftReset Require Import LogicBind AutomationBind.
 Local Open Scope string_scope.
 
-
 Module Multi.
 
 (* < sh k. let a = k true in let b = k false in a + b > *)
@@ -14,75 +13,6 @@ Definition f : ufun := fun _ =>
       bind (unk k (vbool false)) (fun r2 =>
         ens (fun r => \[r = vand r1 r2])
       )))).
-
-Lemma norm_seq_ex_widen : forall f1 A (fctx:A -> flow),
-  shift_free f1 ->
-  entails (f1;; (∃ b, fctx b))
-    (∃ b, f1;; (fctx b)).
-Proof.
-  unfold entails. intros * Hsf * H.
-  inverts H as H1 H2.
-  { inverts H2 as (b&H2).
-    apply s_fex. exists b.
-    applys s_seq H1 H2. }
-  { false Hsf H1. }
-Qed.
-
-Lemma norm_rs_seq_ex_l : forall f1 A (fctx:A -> flow),
-  shift_free f1 ->
-  entails (rs (f1;; (∃ b, fctx b)))
-    (∃ b, rs (f1;; (fctx b))).
-Proof.
-  intros.
-  rewrite norm_seq_ex_widen.
-  2: { assumption. }
-  lets H1: norm_rs_ex.
-  specializes H1 A (fun b => f1;; fctx b).
-Qed.
-
-
-Definition flow_res (f:flow) (v:val) : Prop :=
-  forall s1 s2 h1 h2, satisfies s1 s2 h1 h2 (norm v) f.
-
-Lemma norm_bind_seq : forall f fk v,
-  shift_free f ->
-  det f ->
-  flow_res f v ->
-  entails (bind f fk) (f;; fk v).
-Proof.
-  unfold flow_res, entails. intros * Hsf Hd Hfr * H.
-  inverts H. 2: { false Hsf H6. }
-  specializes Hfr s1 s3 h1 h3.
-  specializes Hd H7 Hfr. injects Hd.
-  applys s_seq H7.
-  assumption.
-Qed.
-
-(* which definition of flow_res should be used? *)
-Definition flow_res1 (f:flow) (v1:val) : Prop :=
-  forall s1 s2 h1 h2 v, satisfies s1 s2 h1 h2 (norm v) f -> v1 = v.
-
-Lemma norm_bind_seq1 : forall f fk v,
-  shift_free f ->
-  flow_res1 f v ->
-  entails (bind f fk) (f;; fk v).
-Proof.
-  unfold entails. intros * Hsf Hfr * H.
-  inverts H. 2: { false Hsf H6. }
-  specializes Hfr H7.
-  subst.
-  applys* s_seq H7.
-Qed.
-
-(* TODO can this be generalised (to norm_bind_pure)? *)
-Lemma norm_bind_val : forall fk v,
-  entails (bind (ens (fun r => \[r = v])) fk) (fk v).
-Proof.
-  unfold entails. intros * H.
-  inverts H. 2: { false sf_ens H6. }
-  inverts H7. destr H5. injects H. hinv H0. subst. rew_fmap.
-  assumption.
-Qed.
 
 Lemma f_reduction: forall v1, exists f1,
   entails_under empty_env (f v1) (f1;; ens (fun r => \[r = vbool false])).
@@ -118,216 +48,123 @@ Module Toss.
     let r2 = k false in
     r1 + r2
 *)
-Definition s : ufun := fun _ r =>
-  (* ∀ k, *)
-  sh "k" (
-    ∀ x a, ∃ r1, req (x~~>vint a) (ens_ (x~~>vint (a+1));; unk "k" (vbool true) (vint r1));;
-    ∀ b, ∃ r2, req (x~~>vint b) (ens_ (x~~>vint (b+1));; unk "k" (vbool false) (vint r2));;
-    ens (fun r3 => \[r3 = (vint (r1 + r2))])) r.
+Definition s : ufun := fun _ =>
+  sh (fun k => ∀ x a,
+    bind (req (x~~>vint a) (ens_ (x~~>vint (a+1));; unk k (vbool true))) (fun r1 =>
+      ∀ b, bind (req (x~~>vint b) (ens_ (x~~>vint (b+1));; unk k (vbool false))) (fun r2 =>
+        ens (fun r3 => \[r3 = vadd r1 r2])))).
 
 Definition s_env := Fmap.update empty_env "s" s.
 
 (* let foo () = < let v = s () in if v then 1 else 0 > *)
-Definition foo r : flow :=
+Definition foo : flow :=
   rs (
-    ∃ v, unk "s" vunit (vbool v);;
-    ens (fun r1 => \[v = true /\ r1 = vint 1 \/ v = false /\ r1 = vint 0])
-  ) (vint r).
+    bind (unk "s" vunit) (fun v =>
+    ens (fun r1 => \[v = vbool true /\ r1 = vint 1 \/ v = vbool false /\ r1 = vint 0]))
+  ).
 
 Definition foo_spec : flow :=
-  ∀ x a,
-  (* cannot quantify over something involving flow inside flow *)
-  (* ∃ (uf:val->val->flow), defun "k" uf;; *)
+  ∀ x a, req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
 
-  (* terrible defun workaround *)
-  (* end terrible workarounds *)
-  
-  req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
 
-(* Lemma norm_rs_seq_seq_ens : forall s1 H x v1 v2 f r f1,
-  entails_under s1 (ens_ H;; rs (unk x v1 v2;; f) r) f1 ->
-  entails_under s1 (rs ((ens_ H;; unk x v1 v2);; f) r) f1.
+Lemma norm_bind_req : forall f fk H,
+  shift_free (req H f) ->
+  entails (bind (req H f) fk) (req H (bind f fk)).
 Proof.
-  unfold entails_under.
-  intros.
-Admitted. *)
-
-(* Qed. *)
-
-Lemma norm_rs_seq_distr : forall f1 f2 r,
-  shift_free f1 ->
-  entails (rs (f1;; f2) r) (∃ r1, rs f1 r1;; rs f2 r).
-Proof.
-  unfold entails. intros.
-  inverts H0 as H0.
-  {
-    (* f1;; f2 has a shift *)
-    inverts H0 as H0.
-    {
-      (* f1 is norm *)
-    apply s_fex. exists r1.
-    eapply s_seq.
-    apply s_rs_val. eassumption.
-    eapply s_rs_sh. eassumption.
-    eassumption.
-    }
-    {
-      (* unsure if this is needed, could relax *)
-      cont_eq.
-      (* apply s_fex. exs. *)
-      (* eapply s_seq. *)
-      (* eapply s_rs_sh. eassumption. *)
-      (* Fail apply H8. *)
-      (* applys_eq H8. *)
-
-      apply H in H0. false.
-
-      (* f1 is shift *)
-    (* cont_eq.
-    (* exact H7. *)
-    admit. *)
-    (* eassumption. *)
-    (* subst. *)
-    (* apply s_rs_val. eassumption. *)
-    (* eassumption. *)
-
-    (* applys_eq H7. *)
-
-    (* apply s_rs_val. eassumption. *)
-    (* eassumption. *)
-(* admit. *)
-    }
-  }
-  {
-    inverts H0 as H0.
-    apply s_fex. exists r1.
-    eapply s_seq.
-    apply s_rs_val.
-    eassumption.
-    apply s_rs_val.
-    eassumption.
-  }
-
+  unfold entails. intros * Hsf * H.
+  applys s_req. intros.
+  inverts H.
+  2: { false Hsf H10. }
+  { inverts H11. specializes H10 H1 H2 H3.
+    applys* s_bind. }
 Qed.
-(* Abort. *)
-
-(* Lemma ent_rs_seq_assoc_unk : forall s1 x u v1 v2 f1 f2 f r,
-  (* entails_under s1 (ens_ H;; rs (unk x v1 v2;; f) r) f1 -> *)
-  entails_under (Fmap.update s1 x u) (rs ((f1;; u v1 v2);; f2) r) f ->
-  entails_under (Fmap.update s1 x u) (rs ((f1;; unk x v1 v2);; f2) r) f.
-Proof.
-  unfold entails_under. intros.
-  apply H.
-  inverts H0 as H0.
-  {
-    eapply s_rs_sh.
-
-    (* applys_eq H0. *)
-    admit.
-    admit.
-  }
-  {
-    apply s_rs_val.
-    assert (shift_free f1) as ?. admit.
-    inverts H0 as H0.
-    2: {
-
-    }
 
 
-  }
-
-
-(* Qed. *)
-Admitted. *)
-
-
-Theorem foo_summary : forall r, exists f,
-  entails_under s_env (foo r) (f;; foo_spec).
+Theorem foo_summary : exists f,
+  entails_under s_env foo (f;; foo_spec).
 Proof.
   intros.
-
-(* eexists. *)
-  exists (∃ b,
-defun "k"
-  (fun a0 r0 : val =>
-rs
-  (ens_ \[vbool b = a0];;
-(ens (fun r1 => \[r1 = vbool b]));;
-(ens (fun r1 => \[b = true /\ r1 = vint 1 \/ b = false /\ r1 = vint 0])))
-  r0)).
-
+  exists (∃ k,
+    defun k (fun v : val => rs (bind (ens (fun r => \[r = v]))
+    (fun v0 => ens (fun r1 => \[v0 = vbool true /\ r1 = vint 1 \/ v0 = vbool false /\ r1 = vint 0]))))).
   unfold foo, foo_spec.
-  rewrite norm_rs_ex. fintro x.
-  (* rewrite ent_seq_all_r. *)
-  (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-  (* eapply ent_seq_all_r. *)
-
-  (* Search (entails_under _ (_;; ∀ _, _) _). *)
-  (* Search (entails_under _ _ (_;; ∀ _, _)). *)
-  (* rewrite norm_rs_all. fintro x. *)
-  (* fintro x0. fintro a. *)
-
-  (* pose proof (@ent_unk s_env "s" vunit (vbool x) s).
-  specializes H. unfold s_env. fmap_eq. reflexivity. *)
-
-  (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-
-(* Set Typeclasses Debug. *)
-  (* rewrite H. *)
-
 
   funfold1 "s". unfold s.
   rewrite red_init.
   rewrite red_extend.
-  rewrite red_shift_elim. 2: { shiftfree. }
-
-  (* Search (entails_under _ ((∃ _, _);; _) _). *)
-  (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-
-  apply ent_seq_ex_r. { intros. shiftfree. }
-  exists x.
-
-  (* eapply ent_seq_ex_l. *)
-
-  (* finst x. *)
+  rewrite red_rs_sh_elim.
+  fintro k.
+  finst k. { intros. shiftfree. }
   apply ent_seq_defun.
-
-
-  fintro x0. rewrite norm_rs_all. finst x0.
+  fintro x. rewrite norm_rs_all. finst x.
   fintro a. rewrite norm_rs_all. finst a.
-  rewrite norm_rs_ex. fintro r1.
+  (* fintro b. rewrite norm_rs_all. finst b. *)
+  (* rewrite norm_rs_ex. fintro r1. *)
+  (* rewrite norm_reassoc. *)
+  (* funfold1 k. *)
 
-  (* rewrite H. *)
-
-  (* rewrite (@ent_unk (env a b) f); [ | unfold env; resolve_fn_in_env ]. *)
-(* 
-  funfold1 "k". unfold k.
-
-  rewrite red_normal.
-  2: {
-    shiftfree.
-    shiftfree.
-  } *)
-
-  rewrite norm_reassoc.
-
+  (* lazymatch goal with
+  | |- entails_under ?env _ _ =>
+    setoid_rewrite (@ent_unk env k); [ | try unfold env; resolve_fn_in_env ]; simpl
+  end. *)
 
   rewrite norm_rs_req.
   apply ent_req_r.
   rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
-
   rewrite norm_req_pure_l. 2: { reflexivity. }
   rewrite norm_seq_ens_empty.
+  funfold1 k.
+  rewrite norm_bind_val.
+  match goal with
+  | |- context[ens ?H] =>
+    rewrites (>> rs_elim (ens H))
+  end.
+  shiftfree.
+  rewrite <- norm_seq_assoc; shiftfree.
+  rewrite norm_rs_seq_ens_void.
+  rewrite norm_rs_seq_ens.
+  rewrite norm_rs_all.
+  rewrite <- norm_ens_ens_void_swap.
+  fassume v. intros H.
+  rewrite norm_seq_all_reassoc_ctx. 2: { shiftfree. }
+  finst (a + 1).
+  rewrite norm_rs_ex.
+  rewrite norm_seq_ex_reassoc_ctx. 2: { shiftfree. }
+  fintro x0.
+  rewrite norm_reassoc.
+  rewrite norm_rs_req.
+  rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
+  rewrite norm_req_pure_l. 2: { congruence. }
+  rewrite norm_seq_ens_empty.
+
+  funfold1 k.
 
 
-    (* rewrite (@ent_unk (env a b) f); [ | unfold env; resolve_fn_in_env ] *)
+  rewrite <- norm_seq_assoc; shiftfree.
+  rewrite norm_rs_seq_ens_void.
 
-    (* funfold1 "k". *)
+
+
+  apply ent_req_r.
+
+Search (entails_under _ (ens_ _;; _) _).
+  (* rewrite norm_seq_all. *)
+
+    (* apply ent_seq_all_l. exists a *)
+
+  (* finst x. *)
+
+  Search (rs (fex _)).
+  Search (seq _ (fall _)).
+
+
+  (* 2: { shiftfree. rewrite rs_elim. shiftfree. } *)
+
+  (* rewrites (>> norm_bind_val (f)). *)
 
   pose proof ent_unk.
   specializes H (Fmap.update s_env "k"
-  (fun a0 r0 : val =>
+  (fun a0 : val =>
 rs
   (ens_ \[vbool x = a0];;
 (ens (fun r2=> \[r2 = vbool x]));;

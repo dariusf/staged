@@ -18,7 +18,7 @@ Ltac funfold1 f :=
   | |- entails_under (?env ?a) _ _ =>
     rewrite (@ent_unk (env a) f); [ | try unfold env; resolve_fn_in_env ]; simpl
   | |- entails_under ?env _ _ =>
-    rewrite (@ent_unk env f); [ | resolve_fn_in_env ]; simpl
+    rewrite (@ent_unk env f); [ | try unfold env; resolve_fn_in_env ]; simpl
   end.
 
 (* introduce variables *)
@@ -46,12 +46,15 @@ Ltac fintro x :=
     rewrite ent_seq_ens_sl_ex; fintro x
   end.
 
+
 (* instantiate an existential or specialize a forall *)
 Ltac finst a :=
   lazymatch goal with
-  (* | |- entails_under _ (ens_ _;; ∀ _, _) _ =>
+  | |- entails_under _ (ens_ _;; ∀ _, _) _ =>
     rewrite norm_seq_all_reassoc_ctx; finst a
-  | |- entails_under _ (ens_ _;; ∀ _, _;; _) _ =>
+  | |- entails_under _ (ens_ _;; ∃ _, _) _ =>
+    rewrite norm_seq_all_reassoc_ctx; fintro a
+  (* | |- entails_under _ (ens_ _;; ∀ _, _;; _) _ =>
     rewrite norm_seq_all_reassoc_ctx; finst a *)
 
   | |- entails_under _ ((∀ _, _);; _) _ =>
@@ -71,8 +74,10 @@ Ltac finst a :=
 Ltac fassume_ H :=
   lazymatch goal with
   | |- entails_under _ (ens_ \[_]) _ =>
-    apply ent_ens_l; intros H
+    apply ent_ens_void_l; intros H
   | |- entails_under _ (ens_ \[_];; _) _ =>
+    apply ent_seq_ens_void_l; intros H
+  | |- entails_under _ (ens (fun _ => \[_]);; _) _ =>
     apply ent_seq_ens_l; intros H
   | |- entails_under _ _ (req \[_] _) =>
     apply ent_req_r; apply ent_seq_ens_l; intros H
