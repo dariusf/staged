@@ -31,6 +31,20 @@ Notation vand a b := (vbop (fun x y => x && y) a b).
 Coercion vint : Z >-> val.
 Coercion vbool : bool >-> val.
 
+Global Hint Rewrite
+  (* move universal quantifiers on the left outwards *)
+  norm_rs_all norm_req_all norm_seq_all_r
+  (* associate things out of binds *)
+  norm_bind_req norm_bind_seq_assoc
+  (* associate things out of resets *)
+  norm_rs_req
+  (* eliminate trivial resets and binds *)
+  red_rs_ens norm_bind_val
+
+  using shiftfree : staged_norm.
+
+Ltac fnorm := autorewrite with staged_norm.
+
 Module Multi.
 
 (* < sh k. let a = k true in let b = k false in a + b > *)
@@ -50,17 +64,15 @@ Proof.
   unfold f.
   rewrite red_init.
   rewrite red_rs_sh_elim.
-  fintro k.
-  finst k. { intros. shiftfree. }
+  fintro k. finst k. { intros. shiftfree. }
   apply ent_seq_defun.
   funfold1 k.
-  rewrite red_rs_ens.
-  rewrite norm_bind_val.
+  fnorm.
   funfold1 k.
-  (* TODO bad printing *)
-  rewrite red_rs_ens.
-  rewrite norm_bind_val.
-  rewrite red_rs_ens.
+  lazymatch goal with
+  | |- entails_under ?e _ _ => remember e as env
+  end.
+  fnorm.
   applys entails_under_refl.
 Qed.
 
@@ -107,31 +119,23 @@ Proof.
   rewrite red_init.
   rewrite red_extend.
   rewrite red_rs_sh_elim.
-  fintro k.
-  finst k. { intros. shiftfree. }
+  fintro k. finst k. { intros. shiftfree. }
 
   apply ent_seq_defun.
   fintro x. finst x.
   fintro a. finst a.
   funfold1 k.
 
-  rewrite norm_bind_req. 2: { shiftfree. }
-  rewrite norm_rs_req.
+  fnorm.
   apply ent_req_req. xsimpl.
 
   (* fix printing due to overly-long env *)
   lazymatch goal with
   | |- entails_under ?e _ _ => remember e as env
   end.
-  rewrite norm_bind_seq_assoc; shiftfree.
-
-  rewrite norm_bind_val.
-  rewrite red_rs_ens.
 
   case_if.
-  rewrite norm_bind_val.
-
-  rewrite norm_seq_all_r; shiftfree.
+  fnorm.
   finst (a + 1).
 
   (* somehow automate this... *)
@@ -141,8 +145,7 @@ Proof.
   | |- entails_under ?e _ _ => remember e as env
   end.
 
-  rewrite norm_bind_val.
-  rewrite red_rs_ens.
+  fnorm.
   case_if.
 
   (* lazymatch goal with
@@ -152,14 +155,11 @@ Proof.
   end.
   specializes H. resolve_fn_in_env. simpl in H. *)
 
-  rewrite norm_bind_req; shiftfree.
-
   rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
   rewrite norm_req_pure_l. 2: { reflexivity. }
   rewrite norm_seq_ens_empty.
 
-  rewrite norm_bind_seq_assoc; shiftfree.
-  rewrite norm_bind_val.
+  fnorm.
 
   rewrite red_rs_elim; shiftfree.
   rewrite norm_ens_ens_void_l.
@@ -186,14 +186,14 @@ Definition toss_n : ufun := fun (n:val) =>
       (ens_ \[veq n 1];; toss vunit)
       (ens_ \[vneq n 1];;
         bind (toss vunit) (fun r1 =>
-        bind (unk "toss" (vsub n 1)) (fun r2 =>
+        bind (unk "toss_n" (vsub n 1)) (fun r2 =>
         ens (fun r => \[r = vand r1 r2]))))).
 
-Definition toss_n_env := Fmap.update empty_env "toss" toss.
+Definition toss_n_env := Fmap.update empty_env "toss_n" toss_n.
 
 Definition main n : flow :=
   rs (
-    bind (unk "toss" n) (fun v =>
+    bind (unk "toss_n" n) (fun v =>
     ens (fun r => \[If v = true then r = 1 else r = 0]))).
 
 Definition main_spec_weaker n : flow :=
@@ -203,7 +203,7 @@ Definition main_spec_weaker n : flow :=
 
 Lemma lemma_weaker : forall acc x n,
   entails
-    (rs (bind (unk "toss" (vint n)) (fun v =>
+    (rs (bind (unk "toss_n" (vint n)) (fun v =>
       ens (fun r1 =>
         \[vand acc v = true /\ r1 = vint 1 \/
           vand acc v = false /\ r1 = vint 0]))))
@@ -245,16 +245,19 @@ in (ens r. \[If v0 = true then r = 1 else r = 0])));; *)
   | |- entails_under ?e _ _ => remember e as env
   end.
 
-  rewrite norm_bind_req; shiftfree.
+  fnorm; shiftfree.
+
+  (* rewrite norm_bind_req; shiftfree.
   rewrite norm_bind_val.
-  rewrite red_rs_ens.
+  rewrite red_rs_ens. *)
   case_if.
-  rewrite norm_bind_seq_assoc; shiftfree.
+  fnorm.
+  (* rewrite norm_bind_seq_assoc; shiftfree.
   rewrite norm_bind_val.
 
   (* finst does not work contextually *)
-  rewrite norm_seq_all_r; shiftfree.
-  rewrite norm_req_all.
+  rewrite norm_seq_all_r; shiftfree. *)
+  (* rewrite norm_req_all. *)
   finst (a+1).
 
   subst.
@@ -263,7 +266,7 @@ in (ens r. \[If v0 = true then r = 1 else r = 0])));; *)
   | |- entails_under ?e _ _ => remember e as env
   end.
 
-  rewrite norm_bind_req. 2: { shiftfree. }
+  fnorm.
   rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
   rewrite norm_req_pure_l. 2: { reflexivity. }
   rewrite norm_seq_ens_empty.
@@ -272,14 +275,10 @@ in (ens r. \[If v0 = true then r = 1 else r = 0])));; *)
   (* finst b. *)
 
 
-  rewrite norm_bind_val.
-  rewrite red_rs_ens.
-  rewrite norm_bind_seq_assoc; shiftfree.
   case_if.
 
-  rewrite norm_bind_val.
+  fnorm.
   (* rewrite red_rs_elim. *)
-  rewrite norm_rs_req.
   rewrite norm_req_req.
   apply ent_req_req. xsimpl.
   (* rewrite norm_req_pure_l.
