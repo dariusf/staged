@@ -26,13 +26,13 @@ Proof.
   finst k. { intros. shiftfree. }
   apply ent_seq_defun.
   funfold1 k.
-  rewrites (>> rs_elim (ens (fun r => \[r = vbool true]))). { shiftfree. }
+  rewrites (>> red_rs_elim (ens (fun r => \[r = vbool true]))). { shiftfree. }
   rewrite norm_bind_val.
   funfold1 k.
   (* TODO bad printing *)
-  rewrites (>> rs_elim (ens (fun r => \[r = vbool false]))). { shiftfree. }
+  rewrites (>> red_rs_elim (ens (fun r => \[r = vbool false]))). { shiftfree. }
   rewrite norm_bind_val.
-  rewrite rs_elim. 2: { shiftfree. }
+  rewrite red_rs_elim. 2: { shiftfree. }
   applys entails_under_refl.
 Qed.
 
@@ -60,25 +60,50 @@ Definition s_env := Fmap.update empty_env "s" s.
 Definition foo : flow :=
   rs (
     bind (unk "s" vunit) (fun v =>
-    ens (fun r1 => \[v = vbool true /\ r1 = vint 1 \/ v = vbool false /\ r1 = vint 0]))
+    ens (fun r1 => \[If v = (vbool true) then r1 = vint 1 else r1 = vint 0]))
   ).
+(* v = vbool true /\ r1 = vint 1 \/ v = vbool false /\ r1 = vint 0 *)
 
 Definition foo_spec : flow :=
   ∀ x a, req (x~~>vint a) (ens (fun r => x~~>vint(a+2) \* \[r=vint 1])).
 
 
+Lemma norm_bind_seq : forall fk f1 f2,
+  entails (bind (f1;; f2) fk) (f1;; bind f2 fk).
+Admitted.
+
+Lemma norm_bind_ens_void : forall fk H,
+  entails (bind (ens_ H) fk) (seq (ens_ H) (fk vunit)).
+Proof.
+  unfold entails. intros * H.
+  inverts H.
+  { pose proof H8.
+    inverts H8. destr H7. hinv H2. hinv H2. injects H1. subst.
+    applys* s_seq. }
+  { false sf_ens_ H7. }
+Qed.
+
 Lemma norm_bind_req : forall f fk H,
-  shift_free (req H f) ->
+  shift_free f ->
   entails (bind (req H f) fk) (req H (bind f fk)).
 Proof.
   unfold entails. intros * Hsf * H.
   applys s_req. intros.
   inverts H.
-  2: { false Hsf H10. }
+  2: { inverts H10. specializes H11 H1 H2 H3. false Hsf H11. }
   { inverts H11. specializes H10 H1 H2 H3.
     applys* s_bind. }
 Qed.
 
+Lemma ent_req_req : forall f1 f2 H1 H2 env,
+  H2 ==> H1 ->
+  entails_under env f1 f2 ->
+  entails_under env (req H1 f1) (req H2 f2).
+Proof.
+  unfold entails_under. intros.
+  constructor. intros.
+  inverts H3. specializes H14 H6; auto.
+Qed.
 
 Theorem foo_summary : exists f,
   entails_under s_env foo (f;; foo_spec).
@@ -86,7 +111,7 @@ Proof.
   intros.
   exists (∃ k,
     defun k (fun v : val => rs (bind (ens (fun r => \[r = v]))
-    (fun v0 => ens (fun r1 => \[v0 = vbool true /\ r1 = vint 1 \/ v0 = vbool false /\ r1 = vint 0]))))).
+    (fun v => ens (fun r1 => \[If v = (vbool true) then r1 = vint 1 else r1 = vint 0]))))).
   unfold foo, foo_spec.
 
   funfold1 "s". unfold s.
@@ -95,6 +120,7 @@ Proof.
   rewrite red_rs_sh_elim.
   fintro k.
   finst k. { intros. shiftfree. }
+
   apply ent_seq_defun.
   fintro x. rewrite norm_rs_all. finst x.
   fintro a. rewrite norm_rs_all. finst a.
@@ -104,20 +130,46 @@ Proof.
   (* rewrite norm_reassoc. *)
   (* fintro b. rewrite norm_rs_all. finst b. *)
   (* rewrite norm_rs_ex. fintro r1. *)
-  (* funfold1 k. *)
+  funfold1 k.
 
+  rewrite norm_bind_req. 2: { shiftfree. }
+  rewrite norm_rs_req.
+  apply ent_req_req. xsimpl.
 
+  (* fix printing due to overly-long env *)
   lazymatch goal with
+  | |- entails_under ?e _ _ => remember e as env
+  end.
+  (* rewrite norm_bind_ens. *)
+  rewrite norm_bind_seq.
+
+  rewrite norm_bind_val.
+  lazymatch goal with
+  | |- context[rs (ens ?H)] =>
+    rewrites (>> red_rs_elim (ens H))
+  end; shiftfree.
+
+  case_if.
+  rewrite norm_bind_val.
+
+
+
+Search (bind (_ ;; _) _).
+
+
+  Search (entails_under _ _ (req _ _)).
+
+  (* lazymatch goal with
   | |- entails_under ?env _ _ =>
     pose proof (@ent_unk env k (vbool true))
     (* [ | resolve_fn_in_env ]; simpl *)
   end.
-  specializes H. resolve_fn_in_env. simpl in H.
+  specializes H. resolve_fn_in_env. simpl in H. *)
 
 (* Close Scope flow_scope. *)
 (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 (* Set Typeclasses Debug. *)
-  rewrite H.
+  (* rewrite H. *)
   (* Fail setoid_rewrite H. *)
 
 

@@ -1210,6 +1210,28 @@ Proof.
   constructor. apply* sf_seq.
 Qed.
 
+Lemma sf_bind : forall f fk,
+  shift_free f ->
+  (forall v, shift_free (fk v)) ->
+  shift_free (bind f fk).
+Proof.
+  unfold shift_free, not; intros.
+  inverts H1.
+  - false H0 H10.
+  - false H H7.
+Qed.
+
+Instance ShiftFreeBind : forall f fk,
+  ShiftFree f ->
+  (forall v, ShiftFree (fk v)) ->
+  ShiftFree (bind f fk).
+Proof.
+  intros.
+  inverts H.
+  constructor. apply* sf_bind.
+  intros. specializes H0 v. inverts* H0.
+Qed.
+
 (* Definition returns_value (f:flow) : Prop :=
   forall s1 s2 h1 h2 v, satisfies s1 s2 h1 h2 (norm v) f.
 
@@ -1283,11 +1305,12 @@ Qed.
 
 Ltac shiftfree :=
   lazymatch goal with
-  | |- shift_free (rs _ _) => apply sf_rs
+  | |- shift_free (rs _) => apply sf_rs
   | |- shift_free (defun _ _) => apply sf_defun
   | |- shift_free (ens _) => apply sf_ens
   | |- shift_free (ens_ _) => unfold ens_; apply sf_ens
   | |- shift_free (_ ;; _) => apply sf_seq; shiftfree
+  | |- shift_free (bind _ _) => apply sf_bind; shiftfree
   | |- shift_free (fex _) => apply sf_fex; intros; shiftfree
   | _ => auto
   end.
@@ -1718,7 +1741,7 @@ Qed.
 
 
 
-Lemma rs_elim : forall f,
+Lemma red_rs_elim : forall f,
   shift_free f ->
   bientails (rs f) f.
 Proof.
