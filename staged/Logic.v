@@ -1607,10 +1607,7 @@ Lemma entails_req_seq : forall H1 H2 f1 f2,
   entails f1 f2 ->
   entails (req H1 f1) (req H2 f2).
 Proof.
-  unfold entails.
-  intros.
-  constructor. intros hH2 h3. intros.
-  inverts H3 as H3. specializes H3 hH2 h3.
+  applys entails_req.
 Qed.
 
 (** Rule DisjLeft from the paper *)

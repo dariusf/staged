@@ -35,9 +35,9 @@ Ltac fintro x :=
   (* ex under an ens *)
   (* a problem with the automation is quantifiers going into the continuation *)
   (* | |- entails_under _ (ens_ _;; ∃ _, _) _ =>
-    rewrite norm_seq_ex_reassoc_ctx; fintro x
+    rewrite norm_seq_ex; fintro x
   | |- entails_under _ (ens_ _;; ∃ _, _;; _) _ =>
-    rewrite norm_seq_ex_reassoc_ctx; fintro x *)
+    rewrite norm_seq_ex; fintro x *)
 
   (* SL exists *)
   | |- entails_under _ (ens_ (\exists _, _)) _ =>
@@ -50,12 +50,16 @@ Ltac fintro x :=
 (* instantiate an existential or specialize a forall *)
 Ltac finst a :=
   lazymatch goal with
-  | |- entails_under _ (ens_ _;; ∀ _, _) _ =>
-    rewrite norm_seq_all_reassoc_ctx; finst a
-  | |- entails_under _ (ens_ _;; ∃ _, _) _ =>
-    rewrite norm_seq_all_reassoc_ctx; fintro a
-  (* | |- entails_under _ (ens_ _;; ∀ _, _;; _) _ =>
-    rewrite norm_seq_all_reassoc_ctx; finst a *)
+  | |- entails_under _ (rs (∀ _, _)) _ =>
+    rewrite norm_rs_all; finst a
+  | |- entails_under _ (req _ (∀ _, _)) _ =>
+    rewrite norm_req_all; finst a
+  | |- entails_under _ (_;; ∀ _, _) _ =>
+    rewrite norm_seq_all_r; shiftfree; finst a
+  (* | |- entails_under _ ((∃ _, _);; _) _ =>
+    rewrite norm_seq_ex_l; fintro a
+  | |- entails_under _ (_;; ∃ _, _) _ =>
+    rewrite norm_seq_ex_r; fintro a *)
 
   | |- entails_under _ ((∀ _, _);; _) _ =>
     apply ent_seq_all_l; exists a

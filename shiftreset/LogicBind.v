@@ -1308,6 +1308,7 @@ Ltac shiftfree :=
   | |- shift_free (rs _) => apply sf_rs
   | |- shift_free (defun _ _) => apply sf_defun
   | |- shift_free (ens _) => apply sf_ens
+  (* | |- shift_free (req _ _) => apply sf_req *)
   | |- shift_free (ens_ _) => unfold ens_; apply sf_ens
   | |- shift_free (_ ;; _) => apply sf_seq; shiftfree
   | |- shift_free (bind _ _) => apply sf_bind; shiftfree
@@ -1740,7 +1741,6 @@ Proof.
 Qed.
 
 
-
 Lemma red_rs_elim : forall f,
   shift_free f ->
   bientails (rs f) f.
@@ -1754,6 +1754,14 @@ Proof.
     applys* s_rs_val. }
 Qed.
 
+(* this one is slightly easier to use *)
+Lemma red_rs_ens : forall Q,
+  bientails (rs (ens Q)) (ens Q).
+Proof.
+  iff H.
+  { applys red_rs_elim. shiftfree. assumption. }
+  { applys red_rs_elim. shiftfree. assumption. }
+Qed.
 
 Lemma red_rs_sh_elim : forall fb fk,
   entails (rs (shc fb fk))
@@ -3510,6 +3518,18 @@ Proof.
   applys* s_seq h3.
 Qed.
 
+Lemma entails_req : forall H1 H2 f1 f2,
+  H2 ==> H1 ->
+  entails f1 f2 ->
+  entails (req H1 f1) (req H2 f2).
+Proof.
+  unfold entails. intros.
+  apply s_req. intros.
+  apply H in H4.
+  inverts H3.
+  specializes H14 hr H4.
+Qed.
+
 Lemma entails_seq : forall f f1 f2,
   shift_free f ->
   entails f1 f2 ->
@@ -3648,7 +3668,7 @@ Proof.
 Qed.
 
 (* Converse is not true because f1 could depend on b *)
-Lemma ent_seq_all_r : forall f f1 A (fctx:A -> flow) env,
+(* Lemma ent_seq_all_r : forall f f1 A (fctx:A -> flow) env,
   shift_free f1 ->
   entails_under env f (f1;; ∀ b, fctx b) ->
   entails_under env f (∀ b, f1;; fctx b).
@@ -3659,6 +3679,17 @@ Proof.
   inverts H0 as H0. 2: { apply H in H0. false. }
   inverts H9 as H9. specializes H9 b.
   apply* s_seq.
+Qed. *)
+
+Lemma norm_seq_all_r: forall (A:Type) (f:A->flow) f1,
+  shift_free f1 ->
+  entails (f1;; (∀ x:A, f x)) (∀ x:A, f1;; f x).
+Proof.
+  unfold entails. introv Hsf H0.
+  inverts H0. 2: { false Hsf H6. }
+  applys s_fall. intros.
+  inverts H8. specializes H5 b.
+  applys* s_seq.
 Qed.
 
 Lemma ent_all_l : forall f A (fctx:A -> flow) env,
@@ -3733,6 +3764,20 @@ Proof.
   exists b.
   eassumption.
   assumption.
+Qed.
+
+Lemma ent_req_l : forall f f1 P env,
+  P ->
+  entails_under env f1 f ->
+  entails_under env (req \[P] f1) f.
+Proof.
+  unfold entails_under. intros.
+  inverts H1.
+  applys H0.
+  applys H9.
+  hintro. assumption.
+  fmap_eq.
+  fmap_disjoint.
 Qed.
 
 Lemma ent_req_r : forall f f1 H env,
@@ -3837,6 +3882,18 @@ Proof.
     assumption. }
 Qed.
 
+(* norm_req_ex can't be proved *)
+Lemma norm_req_all : forall H (A:Type) (fctx:A->flow),
+  entails (req H (∀ b, fctx b)) (∀ b, req H (fctx b)).
+Proof.
+  unfold entails. intros.
+  applys s_fall. intros.
+  applys s_req. intros.
+  inverts H0. specializes H11 H1 H2 H3.
+  inverts* H11.
+Qed.
+
+
 Lemma req_pure_inv: forall s1 s2 h1 h2 R P f,
   P ->
   satisfies s1 s2 h1 h2 R (req \[P] f) ->
@@ -3869,18 +3926,20 @@ Proof.
   { apply req_pure_intro. auto. }
 Qed.
 
-Lemma norm_seq_all_reassoc_ctx: forall (A:Type) (f:A->flow) f1,
-  shift_free f1 ->
-  entails (f1;; (∀ x:A, f x)) (∀ x:A, f1;; f x).
+Lemma norm_seq_ex_l : forall f1 (A:Type) (fctx:A->flow),
+  entails ((∃ b, fctx b);; f1) (∃ b, fctx b;; f1).
 Proof.
-  unfold entails. introv Hsf H0.
-  inverts H0. 2: { false Hsf H6. }
-  applys s_fall. intros.
-  inverts H8. specializes H5 b.
-  applys* s_seq.
+  unfold entails. intros.
+  inverts H.
+  { inverts H7. destr H5.
+    applys s_fex. exists b.
+    applys* s_seq. }
+  { inverts H6. destr H5.
+    applys s_fex. exists b.
+    applys* s_bind_sh. }
 Qed.
 
-Lemma norm_seq_ex_reassoc_ctx: forall (A:Type) (f:A->flow) f1,
+Lemma norm_seq_ex_r: forall (A:Type) (f:A->flow) f1,
   shift_free f1 ->
   entails (f1;; (∃ x:A, f x)) (∃ x:A, f1;; f x).
 Proof.
@@ -3910,18 +3969,6 @@ Proof.
     eassumption.
     apply s_rs_val.
     eassumption. }
-Qed.
-
-Lemma norm_seq_all : forall f1 (f2:var->flow),
-  shift_free f1 ->
-  entails (f1;; ∀ x, f2 x) (∀ x, f1;; f2 x).
-Proof.
-  unfold entails. intros * Hsf * H.
-  inverts H.
-  2: { false Hsf H6. }
-  applys s_fall. intros.
-  inverts H8. specializes H5 b.
-  applys* s_seq. 
 Qed.
 
 Lemma norm_ens_ens_void_swap : forall H Q f,
