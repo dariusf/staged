@@ -3775,7 +3775,7 @@ Proof.
   hintro. auto.
 Qed.
 
-Lemma ent_ens_single : forall env H H1,
+Lemma ent_ens_void_single : forall env H H1,
   (H1 ==> H) ->
   entails_under env (ens_ H1) (ens_ H).
 Proof.
@@ -3786,6 +3786,17 @@ Proof.
   constructor. exists v. exists h3.
   intuition.
   rewrite hstar_hpure_l. intuition.
+Qed.
+
+Lemma ent_ens_single : forall env Q Q1,
+  (Q1 ===> Q) ->
+  entails_under env (ens Q1) (ens Q).
+Proof.
+  unfold entails_under. intros.
+  inverts H0. destr H7.
+  applys s_ens.
+  exs. splits*.
+  applys* H.
 Qed.
 
 Lemma ent_disj_l : forall f1 f2 f3 env,
@@ -4007,6 +4018,55 @@ Proof.
   inverts H. 2: { false sf_ens H6. }
   inverts H7. destr H5. injects H. hinv H0. subst. rew_fmap.
   assumption.
+Qed.
+
+(* similar to norm_seq_assoc *)
+Lemma norm_bind_seq_assoc : forall fk f1 f2,
+  shift_free f1 ->
+  shift_free f2 ->
+  entails (bind (f1;; f2) fk) (f1;; bind f2 fk).
+Proof.
+  unfold entails. intros * Hsf1 Hsf2 * H.
+  inverts H.
+  { inverts H7.
+    applys s_seq H6.
+    applys* s_bind. }
+  { inverts H6.
+    - false Hsf2 H8.
+    - false Hsf1 H4. }
+Qed.
+
+Lemma norm_bind_ens_void : forall fk H,
+  entails (bind (ens_ H) fk) (seq (ens_ H) (fk vunit)).
+Proof.
+  unfold entails. intros * H.
+  inverts H.
+  { pose proof H8.
+    inverts H8. destr H7. hinv H2. hinv H2. injects H1. subst.
+    applys* s_seq. }
+  { false sf_ens_ H7. }
+Qed.
+
+Lemma norm_bind_req : forall f fk H,
+  shift_free f ->
+  entails (bind (req H f) fk) (req H (bind f fk)).
+Proof.
+  unfold entails. intros * Hsf * H.
+  applys s_req. intros.
+  inverts H.
+  2: { inverts H10. specializes H11 H1 H2 H3. false Hsf H11. }
+  { inverts H11. specializes H10 H1 H2 H3.
+    applys* s_bind. }
+Qed.
+
+Lemma ent_req_req : forall f1 f2 H1 H2 env,
+  H2 ==> H1 ->
+  entails_under env f1 f2 ->
+  entails_under env (req H1 f1) (req H2 f2).
+Proof.
+  unfold entails_under. intros.
+  constructor. intros.
+  inverts H3. specializes H14 H6; auto.
 Qed.
 
 (** * Reduction example *)
