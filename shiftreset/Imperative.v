@@ -499,7 +499,7 @@ Proof.
   exs.
   applys eval_pshift.
   (* look at the second arg of ex_intro *)
-  Show Proof.
+  (* Show Proof. *)
 Qed.
 
 Example ex0_eval_val : exists Re,
@@ -512,7 +512,7 @@ Proof.
   exs.
   apply eval_pval.
   reflexivity.
-  Show Proof.
+  (* Show Proof. *)
 Qed.
   
 Example ex1_eval_let_shift : exists Re,
@@ -526,7 +526,7 @@ Proof.
   applys eval_pshift.
   Unshelve.
   exact "anything". (* the name of the binder in eval_pshift *)
-  Show Proof.
+  (* Show Proof. *)
 Qed.
 
 Example ex2_satisfies_let_shift : exists R,
@@ -538,7 +538,7 @@ Proof.
   exs.
   applys s_seq_sh.
   applys s_sh.
-  Show Proof.
+  (* Show Proof. *)
 Qed.
 
 Example ex3_reset_val : exists R,
@@ -553,7 +553,7 @@ Proof.
   hintro. resolve_fn_in_env.
   fmap_disjoint.
   fmap_eq.
-  Show Proof.
+  (* Show Proof. *)
 Qed.
 
 Example ex3_reset_sh : exists R s1,
@@ -589,7 +589,7 @@ Proof.
     fmap_eq.
     Unshelve.
     exact vunit.
-  Show Proof.
+  (* Show Proof. *)
 Qed.
 
 

@@ -398,18 +398,18 @@ Proof.
 
         (* prove the continuation satisfies triple *)
         (* need the induction hypothesis for ek and e2 *)
-        admit.
+        (* admit. *)
       }
     }
   }
 Abort.
 
-Require Import Coq.Program.Equality.
+(* Require Import Coq.Program.Equality.
 
 Lemma plet_sound_aux: forall penv env v (ek:val->expr) (fk:val->flow),
   (forall v, spec_assert_valid_under penv env (ek v) (fk v)) ->
   spec_assert_valid_under penv env (plet "x" (ek v) (padd (pvar "x") 1))
-    ((fun r1 => let x = fk r1 in (ens (fun r => \[exists i : int, x = i /\ r = i + 1])))
+    ((fun r1 => bind (fk r1) (fun x => ens (fun r => \[exists i : int, x = i /\ r = i + 1])))
     v).
 Proof.
   intros.
@@ -601,4 +601,4 @@ Proof.
   applys s_bind H0.
   applys* H2.
 
-Abort.
+Abort. *)
