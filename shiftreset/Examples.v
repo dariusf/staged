@@ -57,6 +57,9 @@ Definition virel f a b :=
   end.
 
 Notation vgt a b := (virel (fun x y => x > y) a b).
+Notation vlt a b := (virel (fun x y => x < y) a b).
+Notation vge a b := (virel (fun x y => x >= y) a b).
+Notation vle a b := (virel (fun x y => x <= y) a b).
 Notation veq a b := (virel (fun x y => x = y) a b).
 Notation vneq a b := (virel (fun x y => x <> y) a b).
 Notation vsub a b := (viop (fun x y => x - y) a b).
@@ -231,8 +234,8 @@ let toss_n n =
 Definition toss_n : ufun := fun (n:val) =>
   (* req \[vgt n (vint 0)] *)
     (disj
-      (ens_ \[veq n 1];; toss vunit)
-      (ens_ \[vneq n 1];;
+      (ens (fun r => \[r = true /\ veq n 0]))
+      (ens_ \[vneq n 0];;
         bind (toss vunit) (fun r1 =>
         bind (unk "toss_n" (vsub n 1)) (fun r2 =>
         ens (fun r => \[r = vand r1 r2]))))).
@@ -284,7 +287,7 @@ Proof.
   applys ent_disj_l.
   {
     (* base case *)
-    fnorm.
+    (* fnorm.
     feasy. intros.
 
     unfold toss.
@@ -293,7 +296,7 @@ Proof.
     rewrite red_rs_sh_elim.
     fintro k.
 
-    admit.
+    admit. *)
     admit.
   }
   {
