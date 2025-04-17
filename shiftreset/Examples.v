@@ -120,7 +120,7 @@ Proof.
   rewrite red_init.
   rewrite red_rs_sh_elim.
   fintro k. finst k. { intros. shiftfree. }
-  apply ent_seq_defun.
+  apply entails_under_seq_defun_both.
   funfold1 k.
   fsimpl.
   funfold1 k.
@@ -201,7 +201,7 @@ Proof.
   rewrite red_rs_sh_elim.
   fintro k. finst k. { intros. shiftfree. }
 
-  apply ent_seq_defun.
+  apply entails_under_seq_defun_both.
   fintro x. finst x.
   fintro a. finst a.
   funfold1 k.
@@ -230,7 +230,7 @@ Proof.
 
   (* lazymatch goal with
   | |- entails_under ?env _ _ =>
-    pose proof (@ent_unk env k (vbool false))
+    pose proof (@entails_under_unk env k (vbool false))
     (* [ | resolve_fn_in_env ]; simpl *)
   end.
   specializes H. resolve_fn_in_env. simpl in H. *)
@@ -325,7 +325,7 @@ Proof.
 
   (* lazymatch goal with
   | |- entails_under ?env _ _ =>
-    pose proof (@ent_unk env "toss_n" n)
+    pose proof (@entails_under_unk env "toss_n" n)
     (* [ | resolve_fn_in_env ]; simpl *)
   end.
   specializes H. unfold toss_n_env.

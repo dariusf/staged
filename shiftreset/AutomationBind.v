@@ -2,10 +2,10 @@
 From ShiftReset Require Import LogicBind.
 
 Ltac funfold_hyp H env f :=
-  rewrites (>> ent_unk env f) in H; [ unfold env; resolve_fn_in_env | ].
+  rewrites (>> entails_under_unk env f) in H; [ unfold env; resolve_fn_in_env | ].
 
 Ltac funfold_ env f :=
-  rewrites (>> ent_unk env f); [ unfold env; resolve_fn_in_env | ].
+  rewrites (>> entails_under_unk env f); [ unfold env; resolve_fn_in_env | ].
 
 Tactic Notation "funfold" constr(env) constr(f) := funfold_ env f.
 Tactic Notation "funfold" constr(env) constr(f) "in" constr(H) := funfold_hyp H env f.
@@ -14,11 +14,11 @@ Tactic Notation "funfold" constr(env) constr(f) "in" constr(H) := funfold_hyp H 
 Ltac funfold1 f :=
   lazymatch goal with
   | |- entails_under (?env ?a ?b) _ _ =>
-    rewrite (@ent_unk (env a b) f); [ | try unfold env; resolve_fn_in_env ]; simpl
+    rewrite (@entails_under_unk (env a b) f); [ | try unfold env; resolve_fn_in_env ]; simpl
   | |- entails_under (?env ?a) _ _ =>
-    rewrite (@ent_unk (env a) f); [ | try unfold env; resolve_fn_in_env ]; simpl
+    rewrite (@entails_under_unk (env a) f); [ | try unfold env; resolve_fn_in_env ]; simpl
   | |- entails_under ?env _ _ =>
-    rewrite (@ent_unk env f); [ | try unfold env; resolve_fn_in_env ]; simpl
+    rewrite (@entails_under_unk env f); [ | try unfold env; resolve_fn_in_env ]; simpl
   end.
 
 (* introduce variables *)

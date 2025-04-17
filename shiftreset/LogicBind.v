@@ -417,8 +417,8 @@ Definition entails_under s1 f1 f2 :=
   forall h1 h2 s2 R,
     satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
 
-Notation "env '⊢' f1 '⊑' f2" :=
-  (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
+(* Notation "env '⊢' f1 '⊑' f2" :=
+  (entails_under env f1 f2) (at level 90, only printing) : flow_scope. *)
 
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 R s1 s2,
@@ -427,6 +427,9 @@ Definition bientails (f1 f2:flow) : Prop :=
 Definition entails_sequent s1 s3 f1 f2 :=
   forall h1 h2 s2 R,
     satisfies s1 s2 h1 h2 R f1 -> exists s4, satisfies s3 s4 h1 h2 R f2.
+
+Notation "s1 '⊢' f1 '⊑' f2" :=
+  (entails_sequent s1 _ f1 f2) (at level 90, only printing) : flow_scope.
 
 Instance entails_refl : Reflexive entails.
 Proof.
@@ -470,14 +473,14 @@ Proof.
   apply entails_under_trans.
 Qed.
 
-Instance ent_refl : forall env, Reflexive (entails_sequent env env).
+Instance entails_sequent_refl : forall env, Reflexive (entails_sequent env env).
 Proof.
   unfold Reflexive, entails_sequent.
   intros.
   eauto.
 Qed.
 
-Instance ent_trans : forall env, Transitive (entails_sequent env env).
+Instance entails_sequent_trans : forall env, Transitive (entails_sequent env env).
 Proof.
   unfold Transitive, entails_sequent.
   intros.
@@ -486,11 +489,11 @@ Proof.
   auto.
 Qed.
 
-Instance ent_preorder : forall env, PreOrder (entails_sequent env env).
+Instance entails_sequent_preorder : forall env, PreOrder (entails_sequent env env).
 Proof.
   constructor.
-  apply ent_refl.
-  apply ent_trans.
+  apply entails_sequent_refl.
+  apply entails_sequent_trans.
 Qed.
 
 Instance bientails_equiv : Equivalence bientails.
@@ -2025,7 +2028,7 @@ Proof.
   applys* s_seq.
 Qed.
 
-Lemma ent_seq_defun1 : forall s x uf f2 f1,
+Lemma ent_seq_defun : forall s x uf f2 f1,
   entails_sequent (Fmap.update s x uf) s f1 f2 ->
   entails_sequent s s (defun x uf;; f1) f2.
 Proof.
@@ -2036,7 +2039,7 @@ Proof.
   exs. eassumption.
 Qed.
 
-Lemma ent_seq_defun : forall s x uf f2 f1,
+Lemma entails_under_seq_defun_both : forall s x uf f2 f1,
   entails_under (Fmap.update s x uf) f1 f2 ->
   entails_under s (defun x uf;; f1) (defun x uf;; f2).
 Proof.
@@ -2048,7 +2051,7 @@ Proof.
   applys* s_seq.
 Qed.
 
-Lemma ent_seq_defun_idem : forall s x uf f1,
+Lemma entails_under_seq_defun_idem : forall s x uf f1,
   Fmap.indom s x ->
   Fmap.read s x = uf ->
   entails_under s (defun x uf;; f1) f1.
@@ -2081,7 +2084,7 @@ Proof.
   assumption.
 Qed.
 
-Lemma ent_unk : forall s (x:var) a uf,
+Lemma entails_under_unk : forall s (x:var) a uf,
   Fmap.read s x = uf ->
   entails_under s (unk x a) (uf a).
 Proof.
@@ -2195,11 +2198,11 @@ Proof.
   rew_fmap *.
 Qed.
 
-Lemma ent_seq_ens_req : forall env f f1 H,
-  entails_under env (ens_ H;; f1) f ->
-  entails_under env f1 (req H f).
+Lemma norm_seq_ens_req : forall f f1 H,
+  entails (ens_ H;; f1) f ->
+  entails f1 (req H f).
 Proof.
-  unfold entails_under. intros.
+  unfold entails. intros.
   apply s_req. intros.
   apply H0.
   eapply s_seq.
@@ -2210,10 +2213,10 @@ Proof.
 Qed.
 
 Lemma ent_seq_ens_dep_l : forall env f f1 p,
-  (forall r1, p r1 -> entails_under env f1 f) ->
-  entails_under env (ens (fun r => \[p r]);; f1) f.
+  (forall r1, p r1 -> entails_sequent env env f1 f) ->
+  entails_sequent env env (ens (fun r => \[p r]);; f1) f.
 Proof.
-  unfold entails_under. intros.
+  unfold entails_sequent. intros.
   inverts H0 as H0; no_shift. destr H0.
   inverts H0 as H0. destr H0.
   hinv H0. injects H1. subst.
@@ -2588,7 +2591,19 @@ Proof.
   applys* s_seq h3.
 Qed.
 
-Lemma entails_req : forall H1 H2 f1 f2,
+Lemma ent_req_req : forall f1 f2 H1 H2 env,
+  H2 ==> H1 ->
+  entails_under env f1 f2 ->
+  entails_under env (req H1 f1) (req H2 f2).
+Proof.
+  unfold entails_under. intros.
+  constructor. intros.
+  inverts H3. specializes H14 H6; auto.
+Qed.
+
+(* This is not very useful for rewriting.
+  The sequent form [ent_req_req] is more interesting. *)
+Lemma entails_req1 : forall H1 H2 f1 f2,
   H2 ==> H1 ->
   entails f1 f2 ->
   entails (req H1 f1) (req H2 f2).
@@ -3188,16 +3203,6 @@ Proof.
     applys* s_bind. }
 Qed.
 
-Lemma ent_req_req : forall f1 f2 H1 H2 env,
-  H2 ==> H1 ->
-  entails_under env f1 f2 ->
-  entails_under env (req H1 f1) (req H2 f2).
-Proof.
-  unfold entails_under. intros.
-  constructor. intros.
-  inverts H3. specializes H14 H6; auto.
-Qed.
-
 (** * Reduction example *)
 (**
   < (shift k. k i1) + (shift k1. k1 i2) >
@@ -3221,7 +3226,7 @@ Proof.
   apply ent_seq_defun.
 
   (* TODO funfold1 *)
-  rewrites (>> ent_unk x1); [ resolve_fn_in_env | ].
+  rewrites (>> entails_under_unk x1); [ resolve_fn_in_env | ].
   simpl.
 
   rewrite norm_ens_eq.
@@ -3233,7 +3238,7 @@ Proof.
   rewrites (>> red_skip sf_defun).
   apply ent_seq_defun.
 
-  rewrites (>> ent_unk x2); [ resolve_fn_in_env | ].
+  rewrites (>> entails_under_unk x2); [ resolve_fn_in_env | ].
   simpl.
 
   rewrite norm_ens_eq.
@@ -3274,7 +3279,7 @@ Example ex_rewrite_right1:
    (ens_ \[True];; unk "k" (vint 1)) (ens_ \[True]).
 Proof.
   (* funfold1 "k". *)
-  pose proof (@ent_unk (Fmap.update empty_env "k" (fun a => ens (fun r => \[a = r]))) "k").
+  pose proof (@entails_under_unk (Fmap.update empty_env "k" (fun a => ens (fun r => \[a = r]))) "k").
   specializes H (vint 1) ___.
 
   rewrite H.
@@ -3287,7 +3292,7 @@ Example ex_rewrite_right1:
    (unk "k" (vint 1);; ens_ \[True]) (ens_ \[True]).
 Proof.
   (* funfold1 "k". *)
-  pose proof (@ent_unk (Fmap.update empty_env "k" (fun a => ens (fun r => \[a = r]))) "k").
+  pose proof (@entails_under_unk (Fmap.update empty_env "k" (fun a => ens (fun r => \[a = r]))) "k").
   specializes H (vint 1) ___.
 
 (* Set Typeclasses Debug. *)
