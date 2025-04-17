@@ -2017,6 +2017,19 @@ Proof.
   applys* s_seq.
 Qed.
 
+Lemma ent_seq_defun_idem : forall s x uf f1,
+  Fmap.indom s x ->
+  Fmap.read s x = uf ->
+  entails_under s (defun x uf;; f1) f1.
+Proof.
+  unfold entails_under. intros.
+  inverts H1. 2: { vacuous. }
+  inverts H9.
+  lets: update_idem H H0.
+  rewrite H1 in H10.
+  assumption.
+Qed.
+
 (* Check Fmap.update. *)
 (* Definition env_independent1 k f := forall u s1 s2 h1 h2 R,
   satisfies s1 s2 h1 h2 R f ->
