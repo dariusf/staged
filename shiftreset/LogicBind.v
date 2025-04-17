@@ -407,22 +407,26 @@ Ltac cont_eq1 :=
   end. *)
 
 (** * Entailment *)
+Definition entails (f1 f2:flow) : Prop :=
+  forall s1 s2 h1 h2 R,
+    satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
+
+Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
+
 Definition entails_under s1 f1 f2 :=
   forall h1 h2 s2 R,
     satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
 
-Definition entails (f1 f2:flow) : Prop :=
-  forall s1 s2 h1 h2 R,
-    satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
+Notation "env '⊢' f1 '⊑' f2" :=
+  (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
 
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 R s1 s2,
     satisfies s1 s2 h1 h2 R f1 <-> satisfies s1 s2 h1 h2 R f2.
 
-Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
-
-Notation "env '⊢' f1 '⊑' f2" :=
-  (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
+Definition ent s1 s3 f1 f2 :=
+  forall h1 h2 s2 R,
+    satisfies s1 s2 h1 h2 R f1 -> exists s4, satisfies s3 s4 h1 h2 R f2.
 
 Instance entails_refl : Reflexive entails.
 Proof.
@@ -448,7 +452,8 @@ Qed.
 Instance entails_under_refl : forall env, Reflexive (entails_under env).
 Proof.
   unfold Reflexive, entails_under.
-  auto.
+  intros.
+  eauto.
 Qed.
 
 Instance entails_under_trans : forall env, Transitive (entails_under env).
@@ -463,6 +468,29 @@ Proof.
   constructor.
   apply entails_under_refl.
   apply entails_under_trans.
+Qed.
+
+Instance ent_refl : forall env, Reflexive (ent env env).
+Proof.
+  unfold Reflexive, ent.
+  intros.
+  eauto.
+Qed.
+
+Instance ent_trans : forall env, Transitive (ent env env).
+Proof.
+  unfold Transitive, ent.
+  intros.
+  specializes H H1. destr H.
+  specializes H0 H2.
+  auto.
+Qed.
+
+Instance ent_preorder : forall env, PreOrder (ent env env).
+Proof.
+  constructor.
+  apply ent_refl.
+  apply ent_trans.
 Qed.
 
 Instance bientails_equiv : Equivalence bientails.
@@ -503,11 +531,23 @@ Section Propriety.
   Qed.
 
   #[global]
+  Instance Proper_ent : forall env, Proper
+    (flip (ent env env) ====> ent env env ====> impl)
+    (ent env env).
+  Proof.
+    unfold ent, Proper, respectful, impl, flip. intros.
+    specializes H H2. destr H.
+    specializes H1 H3. destr H1.
+    specializes H0 H.
+    auto.
+  Qed.
+
+  #[global]
   Instance Proper_entails_under : forall env, Proper
     (flip (entails_under env) ====> entails_under env ====> impl)
     (entails_under env).
   Proof.
-    unfold entails_under, Proper, respectful, impl.
+    unfold entails_under, Proper, respectful, impl, flip.
     intros.
     auto.
   Qed.
@@ -707,6 +747,30 @@ Section Propriety.
     exists b.
     apply H.
     assumption.
+  Qed.
+
+  #[global]
+  Instance entails_ent : forall env,
+    Proper (flip entails ====> entails ====> impl) (ent env env).
+  Proof.
+    unfold Proper, respectful, ent, entails, flip, impl.
+    intros.
+    specializes H H2.
+    specializes H1 H.
+    destr H1. exs.
+    eauto.
+  Qed.
+
+  #[global]
+  Instance entails_under_ent : forall env,
+    Proper (flip (entails_under env) ====> (entails_under env) ====> impl) (ent env env).
+  Proof.
+    unfold Proper, respectful, ent, entails_under, flip, impl.
+    intros.
+    specializes H H2.
+    specializes H1 H.
+    destr H1. exs.
+    eauto.
   Qed.
 
   #[global]
@@ -2003,6 +2067,17 @@ Proof.
   rewrite fmap_read_update in H7.
   (* injects H7. *)
   applys* s_seq.
+Qed.
+
+Lemma ent_seq_defun1 : forall s x uf f2 f1,
+  ent (Fmap.update s x uf) s f1 f2 ->
+  ent s s (defun x uf;; f1) f2.
+Proof.
+  unfold ent. intros.
+  inverts H0. 2: { false sf_defun H7. }
+  inverts H8.
+  specializes H H9. destr H.
+  exs. eassumption.
 Qed.
 
 Lemma ent_seq_defun : forall s x uf f2 f1,
@@ -3721,6 +3796,16 @@ Lemma ent_ex_l : forall f A (fctx:A -> flow) env,
   entails_under env (fex (fun b => fctx b)) f.
 Proof.
   unfold entails_under. intros.
+  inverts H0 as H0. destr H0.
+  specializes H H1.
+  auto.
+Qed.
+
+Lemma ent_ex_l1 : forall f A (fctx:A -> flow) env env1,
+  (forall b, ent env env1 (fctx b) f) ->
+  ent env env1 (fex (fun b => fctx b)) f.
+Proof.
+  unfold ent. intros.
   inverts H0 as H0. destr H0.
   specializes H H1.
   auto.

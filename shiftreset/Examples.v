@@ -131,6 +131,29 @@ Proof.
   applys entails_under_refl.
 Qed.
 
+Lemma f_reduction1: forall v1,
+  ent empty_env empty_env (f v1) (ens (fun r => \[r = false])).
+Proof.
+  intros.
+  (* exists (∃ k, defun k (fun v : val => rs (ens (fun r => \[r = v])))). *)
+  unfold f.
+  rewrite red_init.
+  rewrite red_rs_sh_elim.
+
+  apply ent_ex_l1. intros k.
+
+  (* fintro k. finst k. { intros. shiftfree. } *)
+  apply ent_seq_defun1.
+  funfold1 k.
+  fsimpl.
+  funfold1 k.
+  lazymatch goal with
+  | |- entails_under ?e _ _ => remember e as env
+  end.
+  fsimpl.
+  applys entails_under_refl.
+Qed.
+
 End Multi.
 
 Module Toss.
