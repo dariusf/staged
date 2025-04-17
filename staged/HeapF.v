@@ -757,6 +757,14 @@ Proof.
   { apply hpure_inv in H. destruct H as ((?&?)&?). subst. intuition. now apply hpure_intro. }
 Qed.
 
+Lemma hstar_pure_post_pure : forall (P:val->Prop) P1,
+  (fun r => \[P r]) \*+ \[P1] = (fun r => \[P r /\ P1]).
+Proof.
+  intros.
+  apply fun_ext_dep. intros h.
+  apply hstar_hpure_conj.
+Qed.
+
 Ltac hinv H :=
   match type of H with
   | \[] _ => apply hempty_inv in H

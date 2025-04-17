@@ -4070,16 +4070,6 @@ Proof.
   applys* s_seq H7.
 Qed.
 
-(* TODO can this be generalised (to norm_bind_pure)? *)
-Lemma norm_bind_val : forall fk v,
-  entails (bind (ens (fun r => \[r = v])) fk) (fk v).
-Proof.
-  unfold entails. intros * H.
-  inverts H. 2: { false sf_ens H6. }
-  inverts H7. destr H5. injects H. hinv H0. subst. rew_fmap.
-  assumption.
-Qed.
-
 (* similar to norm_seq_assoc *)
 Lemma norm_bind_seq_assoc : forall fk f1 f2,
   shift_free f1 ->
@@ -4094,6 +4084,16 @@ Proof.
   { inverts H6.
     - false Hsf2 H8.
     - false Hsf1 H4. }
+Qed.
+
+(* TODO can this be generalised (to norm_bind_pure)? *)
+Lemma norm_bind_val : forall fk v,
+  entails (bind (ens (fun r => \[r = v])) fk) (fk v).
+Proof.
+  unfold entails. intros * H.
+  inverts H. 2: { false sf_ens H6. }
+  inverts H7. destr H5. injects H. hinv H0. subst. rew_fmap.
+  assumption.
 Qed.
 
 Lemma norm_bind_ens_void : forall fk H,

@@ -92,9 +92,12 @@ Global Hint Resolve
 
 Ltac feasy := eauto with staged_closing. *)
 
-(* applies an easy reasoning step *)
+(* applies an "easy" reasoning step,
+  which one would always want to apply *)
 Ltac feasy := first [
-  apply ent_seq_ens_void_l
+  apply ent_seq_ens_void_l |
+  apply ent_ens_single |
+  apply ent_req_req
 ].
 
 Module Multi.
@@ -244,12 +247,12 @@ Definition toss_n_env := Fmap.update empty_env "toss_n" toss_n.
 
 Definition main n : flow :=
   rs (
-    bind (unk "toss_n" n) (fun v =>
+    bind (unk "toss_n" (vint n)) (fun v =>
     ens (fun r => \[If v = true then r = 1 else r = 0]))).
 
 Definition main_spec_weaker n : flow :=
   ∀ x a,
-    req (x~~>vint a \* \[vgt n 0])
+    req (x~~>vint a \* \[vgt (vint n) 0])
       (∃ b, ens (fun r => x~~>b \* \[vgt b (vadd a n) /\ r = 1])).
 
 Lemma lemma_weaker : forall acc x n,
@@ -269,6 +272,8 @@ Theorem main_summary : forall n,
   (* entails_under toss_n_env (main n) (f;; main_spec_weaker n). *)
   entails_under toss_n_env (main n) (main_spec_weaker n).
 Proof.
+  intros n.
+  induction_wf IH: (downto 0) n.
   unfold main_spec_weaker, main. intros.
 
   (* unfold toss_n_env. *)
@@ -287,17 +292,20 @@ Proof.
   applys ent_disj_l.
   {
     (* base case *)
-    (* fnorm.
+    rewrite <- hstar_pure_post_pure.
+    rewrite <- norm_ens_ens_void_l.
+    fnorm.
     feasy. intros.
-
-    unfold toss.
-    rewrite red_init.
-    rewrite red_extend.
-    rewrite red_rs_sh_elim.
-    fintro k.
-
-    admit. *)
-    admit.
+    case_if. clear C.
+    unfold veq in H.
+    fintro x.
+    fintro a.
+    apply ent_req_r.
+    finst a.
+    rewrite norm_ens_ens_void_l.
+    feasy. xsimpl.
+    simpl.
+    math.
   }
   {
     (* rec case *)
