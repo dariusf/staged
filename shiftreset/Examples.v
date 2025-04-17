@@ -270,6 +270,19 @@ Proof.
 Admitted.
 
 
+Lemma norm_bind_assoc: forall f fk fk1,
+  shift_free f ->
+  (forall v, shift_free (fk v)) ->
+  entails (bind (bind f fk) fk1)
+    (bind f (fun r => bind (fk r) fk1)).
+Proof.    
+  unfold entails. intros * Hsf Hsfk * H.
+  inverts H. 2: { inverts H6. false Hsfk H8. false Hsf H4. }
+  inverts H7.
+  applys s_bind H6.
+  applys* s_bind H9.
+Qed.
+
 Theorem main_summary : forall n,
 (* exists f, *)
   (* entails_under toss_n_env (main n) (f;; main_spec_weaker n). *)
@@ -313,32 +326,32 @@ Proof.
     pose proof lemma_weaker.
     (* rewrite H. *)
 
-    fsimpl.
-    fstep. intros.
+    (* TODO toss and n aren't shift free *)
+    (* fsimpl.
+    fstep. intros. *)
 
 
     unfold toss.
-    rewrite red_init.
-    rewrite red_extend.
-    rewrite red_extend.
-    rewrite red_rs_sh_elim.
+    (* rewrite red_init. *)
+    (* rewrite red_extend. *)
+    (* rewrite red_extend. *)
+    (* rewrite red_rs_sh_elim. *)
 
     (* TODO defun problem *)
     (* TODO reduce and unfold everything *)
     (* TODO rewrite after unfolding unk *)
 
-(* THIS IS NOT TRUE *)
 
-    (* assert (forall f fk, entails (rs (bind f fk)) (bind (rs f) (fun v => rs (fk v)))) as ?. admit.
-    rewrite H1.
-    rewrite H1. *)
-
-
+    (* (forall f fk fk1,
+      entails (bind (bind f fk1) fk)
+        (bind f (fun r => bind (fk1 r) fk))
+    ) *)
+    (* Search (bind (bind _ _) _). *)
 
 
     (* START TRYING TO REWRITE WITH THE LEMMA *)
 
-    assert 
+    (* assert 
     (forall f fk fk1,
       entails (bind (bind f fk1) fk)
         (bind f (fun r => bind (fk1 r) fk))
@@ -356,18 +369,14 @@ Proof.
       (unk "toss_n" (viop (fun x y : int => x - y) n 1))
       (* (ens (fun r0 => \[r0 = vbop (fun x y : bool => x && y) r r2]))
       (ens (fun r0 => \[If v = true then r0 = 1 else r0 = 0])) *)
-      .
+      . *)
 
     (* rewrite H2. *)
 
 
-    (* setoid_rewrite H. *)
 
-
-    (* rec case *)
-    (* fsimpl. *)
-    (* fstep. intros. *)
-    (* unfold toss. *)
+    admit.
+    admit.
     admit.
   }
 
