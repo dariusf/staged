@@ -511,6 +511,302 @@ Proof.
     + intros. apply H. apply H0. easy.
 Qed.
 
+(* Section ShiftFreedom. *)
+
+(** * Shift-freedom *)
+(** Semantic definition of shift-freedom. *)
+Definition shift_free (f:flow) : Prop :=
+  forall s1 s2 h1 h2 fb fk,
+  (* exists v, *)
+    (* satisfies s1 s2 h1 h2 (norm v) f /\ *)
+      not (satisfies s1 s2 h1 h2 (shft fb fk) f).
+
+(** [Sh#], the syntactic analogue of [shft], or a CPS version of [Sh], where the continuation is shift-free. *)
+(* Definition shs x fb vr c : flow :=
+  ens_ \[forall r, shift_free (c r)];; shc x fb vr c. *)
+
+(* Notation "'shs' '(' k '.' fb ')' '(' vr '.' '⟨' fk '⟩' ')'" := (shs k fb vr (fun r => rs fk r))
+  (at level 80, format "'shs'  '(' k '.'  fb ')'  '(' vr '.'  '⟨'  fk  '⟩' ')'", only printing) : flow_scope. *)
+
+Class ShiftFree (f:flow) : Prop :=
+  { shift_free_pf: shift_free f }.
+
+Lemma sf_ens : forall Q,
+  shift_free (ens Q).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H as H. destr H.
+  false.
+Qed.
+(* this works, but relies on typeclass internals *)
+(* #[local] Hint Resolve sf_ens : typeclass_instances. *)
+
+(* previous attempt at automation *)
+(* #[local] Hint Resolve sf_ens : core. *)
+
+Lemma sf_ens_ : forall H,
+  shift_free (ens_ H).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H0. destr H7.
+  false.
+Qed.
+
+Instance ShiftFreeEns : forall Q,
+  ShiftFree (ens Q).
+Proof.
+  intros. constructor. apply sf_ens.
+Qed.
+
+Instance ShiftFreeEnsVoid : forall H,
+  ShiftFree (ens_ H).
+Proof.
+  intros. constructor. apply sf_ens_.
+Qed.
+
+Lemma sf_defun : forall x uf,
+  shift_free (defun x uf).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H as H.
+Qed.
+
+Instance ShiftFreeDefun : forall x uf,
+  ShiftFree (defun x uf).
+Proof.
+  intros. constructor. apply sf_defun.
+Qed.
+
+Lemma sf_req : forall H f,
+  shift_free f ->
+  shift_free (req H f).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H1 as H1.
+  (* TODO we need to know that the req is provable *)
+Abort.
+
+Lemma sf_req_pure : forall P f,
+  P ->
+  shift_free f ->
+  shift_free (req \[P] f).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H1 as H2.
+  specializes H2 empty_heap h1 ___.
+  hintro.
+  assumption.
+Qed.
+
+Lemma sf_rs_val : forall f,
+  shift_free f ->
+  shift_free (rs f).
+Proof.
+  unfold shift_free, not; intros.
+  inverts H0 as H0. destr H0.
+  applys~ H H0.
+Qed.
+
+Lemma sf_rs : forall f,
+  shift_free (rs f).
+Proof.
+  unfold shift_free, not; intros.
+  (* TODO try this again without dependent induction? *)
+  (* remember (rs f r) as e eqn:He.
+  remember (shft x k r0 b) as r1 eqn:Hr.
+  induction H; try inversion He; try inversion Hr.
+  injects He. subst. clear TEMP TEMP0 H1. *)
+  dependent induction H.
+  eapply IHsatisfies2.
+  reflexivity.
+  reflexivity.
+Qed.
+
+Instance ShiftFreeRs : forall f,
+  ShiftFree (rs f).
+Proof.
+  intros.
+  constructor. apply* sf_rs.
+Qed.
+
+Lemma sf_seq : forall f1 f2,
+  shift_free f1 ->
+  shift_free f2 ->
+  shift_free (f1;; f2).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H1 as H1; destr H1.
+  { specializes~ H0 H9. }
+  { specializes~ H H1. }
+Qed.
+
+Instance ShiftFreeSeq : forall f1 f2,
+  ShiftFree f1 ->
+  ShiftFree f2 ->
+  ShiftFree (f1;; f2).
+Proof.
+  intros.
+  inverts H as H.
+  inverts H0 as H0.
+  constructor. apply* sf_seq.
+Qed.
+
+Lemma sf_bind : forall f fk,
+  shift_free f ->
+  (forall v, shift_free (fk v)) ->
+  shift_free (bind f fk).
+Proof.
+  unfold shift_free, not; intros.
+  inverts H1.
+  - false H0 H10.
+  - false H H7.
+Qed.
+
+Instance ShiftFreeBind : forall f fk,
+  ShiftFree f ->
+  (forall v, ShiftFree (fk v)) ->
+  ShiftFree (bind f fk).
+Proof.
+  intros.
+  inverts H.
+  constructor. apply* sf_bind.
+  intros. specializes H0 v. inverts* H0.
+Qed.
+
+(* Definition returns_value (f:flow) : Prop :=
+  forall s1 s2 h1 h2 v, satisfies s1 s2 h1 h2 (norm v) f.
+
+Lemma sf_seq_inv : forall f1 f2,
+  shift_free (f1;; f2) ->
+  shift_free f1 /\ (returns_value f1 -> shift_free f2).
+Proof.
+  unfold shift_free, not. intros.
+  split; intros.
+  { eapply H.
+    eapply s_seq_sh.
+    exact H0. }
+  { unfold returns_value in H0.
+  (* destr H0. *)
+    eapply H.
+    eapply s_seq.
+    2: eassumption.
+    apply H0.
+
+    }
+Qed. *)
+
+Lemma sf_fex : forall A (p:A->flow),
+  (forall b, shift_free (p b)) ->
+  shift_free (@fex A p).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H0 as H0. destr H0.
+  eapply H.
+  exact H1.
+Qed.
+
+Lemma sf_fall : forall A (p:A->flow) b,
+  shift_free (p b) ->
+  shift_free (@fall A p).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H0 as H0. destr H0.
+  specializes H0 b.
+  eapply H.
+  eassumption.
+Qed.
+
+Lemma sf_seq_inv : forall f1 f2,
+  shift_free (f1;; f2) ->
+  shift_free f1 /\ shift_free f2.
+Proof.
+  unfold shift_free, not. intros.
+  split; intros.
+  { eapply H.
+    apply s_bind_sh.
+    eassumption. }
+  { eapply H.
+    eapply s_seq.
+    2: eassumption.
+    (* TODO need to know that shift-free means
+      f1 goes to norm, possible to add *)
+    admit.
+  }
+Abort.
+
+Lemma sf_seq_inv1 : forall f1 f2,
+  shift_free (f1;; f2) ->
+  shift_free f1.
+Proof.
+  unfold shift_free, not. intros.
+  eapply H.
+  apply s_bind_sh.
+  eassumption.
+Qed.
+
+Ltac shiftfree :=
+  lazymatch goal with
+  | |- shift_free (rs _) => apply sf_rs
+  | |- shift_free (defun _ _) => apply sf_defun
+  | |- shift_free (ens _) => apply sf_ens
+  (* | |- shift_free (req _ _) => apply sf_req *)
+  | |- shift_free (ens_ _) => unfold ens_; apply sf_ens
+  | |- shift_free (_ ;; _) => apply sf_seq; shiftfree
+  | |- shift_free (bind _ _) => apply sf_bind; shiftfree
+  | |- shift_free (fex _) => apply sf_fex; intros; shiftfree
+  | _ => auto
+  end.
+
+(* Immediately dispatch goals where we have an assumption that
+  a shift-free thing produces a shift *)
+Ltac no_shift :=
+  lazymatch goal with
+  | H: satisfies _ _ _ _ (shft _ _) (ens _) |- _ =>
+    apply sf_ens in H; false
+  | H: satisfies _ _ _ _ (shft _ _) (ens_ _) |- _ =>
+    unfold ens_ in H; apply sf_ens in H; false
+  | H: satisfies _ _ _ _ (shft _ _) (rs _ _) |- _ =>
+    apply sf_rs in H; false
+  | H: satisfies _ _ _ _ (shft _ _) (defun _ _) |- _ =>
+    apply sf_defun in H; false
+  | _ => idtac
+  end.
+
+Ltac vacuity ::= false; no_shift.
+
+(* knowing that there is one norm execution does not mean
+  that there are no shift executions *)
+Lemma norm_sf_attempt : forall s1 s2 h1 h2 v f,
+  satisfies s1 s2 h1 h2 (norm v) f ->
+  shift_free f.
+Proof.
+  intros * Hf.
+  unfold shift_free. intros * H.
+Abort.
+
+Definition det f := forall s1 s2 h1 h2 R1 R2,
+  satisfies s1 s2 h1 h2 R1 f ->
+  satisfies s1 s2 h1 h2 R2 f ->
+  R1 = R2.
+
+(* if all executions end in norm and f is deterministic,
+  then f is shift-free. *)
+Lemma norm_sf : forall f,
+  det f ->
+  (forall s1 s2 h1 h2, exists v, satisfies s1 s2 h1 h2 (norm v) f) ->
+  shift_free f.
+Proof.
+  intros * Hd Hf.
+  unfold shift_free. intros * H.
+  specializes Hf s1 s2 h1 h2.
+  destr Hf.
+  specializes Hd H H0.
+  discriminate.
+Qed.
+
+
+(* End ShiftFreedom. *)
+
 Infix "====>" := Morphisms.respectful (at level 80, right associativity).
 Notation Proper := Morphisms.Proper.
 Notation respectful := Morphisms.respectful.
@@ -850,13 +1146,13 @@ Section Propriety.
       apply~ H. }
   Qed.
 
-Example rewrite :
-  bientails (rs (ens_ \[1 = 1])) (rs (ens_ \[2 = 2])) ->
-  entails (rs (bind (rs (ens_ \[1 = 1])) (fun v => empty))) empty.
-Proof.
-  intros H.
-  rewrite H.
-Abort.
+  Example rewrite :
+    bientails (rs (ens_ \[1 = 1])) (rs (ens_ \[2 = 2])) ->
+    entails (rs (bind (rs (ens_ \[1 = 1])) (fun v => empty))) empty.
+  Proof.
+    intros H.
+    rewrite H.
+  Abort.
 
   #[global]
   Instance Proper_req_entails : Proper (eq ====> entails ====> entails) req.
@@ -899,534 +1195,10 @@ Abort.
       apply H0. assumption. }
   Qed.
 
-End Propriety.
-
-(** * Lemmas about satisfies *)
-Lemma ens_void_pure_intro : forall P s h,
-  P -> satisfies s s h h (norm vunit) (ens_ \[P]).
-Proof.
-  intros.
-  unfold ens_.
-  constructor.
-  exists vunit.
-  exists empty_heap.
-  splits*.
-  { rewrite hstar_hpure_r.
-    intuition.
-    apply hpure_intro.
-    reflexivity. }
-Qed.
-
-Lemma ens_pure_intro : forall P s h r,
-  P r -> satisfies s s h h (norm r) (ens (fun v => \[P v])).
-Proof.
-  intros.
-  constructor.
-  exists r.
-  exists empty_heap.
-  hint hpure_intro.
-  splits*.
-Qed.
-
-Lemma ens_void_pure_inv : forall P s1 s2 h1 h2 R,
-  satisfies s1 s2 h1 h2 R (ens_ \[P]) ->
-  P /\ h1 = h2 /\ s1 = s2 /\ R = norm vunit.
-Proof.
-  intros.
-  inverts H as H. destr H.
-  rewrite hstar_hpure_l in H. destr H.
-  apply hpure_inv in H4. destr H4. subst.
-  intuition.
-Qed.
-
-Lemma empty_intro : forall s1 h1,
-  satisfies s1 s1 h1 h1 (norm vunit) empty.
-Proof.
-  intros.
-  unfold empty, ens_.
-  constructor.
-  exists vunit.
-  exists empty_heap.
-  splits*.
-  { rewrite hstar_hpure_l.
-    intuition.
-    apply hpure_intro.
-    constructor. }
-Qed.
-
-Lemma empty_inv : forall s1 s2 h1 h2 R,
-  satisfies s1 s2 h1 h2 R empty ->
-  s1 = s2 /\ h1 = h2 /\ R = norm vunit.
-Proof.
-  unfold empty.
-  intros.
-  apply ens_void_pure_inv in H.
-  intuition.
-Qed.
-
-Lemma ens_store_frame : forall s1 s2 h1 h2 R x uf Q,
-  satisfies s1 s2 h1 h2 R (ens Q) ->
-  satisfies (Fmap.update s1 x uf) (Fmap.update s2 x uf) h1 h2 R (ens Q).
-Proof.
-  intros.
-  inverts H as H. destr H.
-  subst.
-  apply s_ens. exs.
-  intuition eauto.
-Qed.
-
-(** * Examples for semantics *)
-Module Examples.
-
-Example e1_undelimited : exists R,
-  satisfies empty_env empty_env empty_heap empty_heap R
-    (sh (fun k => ens (fun r2 => \[r2 = vint 1]))).
-Proof.
-  intros.
-  eexists.
-  apply s_sh.
-  (* Show Proof. *)
-  (* result of continuation can be anything because it's never used *)
-Qed.
-
-Example e2_reset_value :
-  satisfies empty_env empty_env empty_heap empty_heap (norm (vint 1))
-    (rs (ens (fun r => \[r = vint 1]))).
-Proof.
-  intros.
-  apply s_rs_val.
-  apply ens_pure_intro.
-  reflexivity.
-Qed.
-
-Example e3_rs_sh_no_k : forall k1, exists s,
-  satisfies empty_env s empty_heap empty_heap (norm (vint 1))
-    (rs (sh (fun k => ens (fun r => \[r = vint 1])))).
-Proof.
-  intros.
-  eexists.
-  (* the ret of the shift can be anything because the cont is never taken *)
-  applys s_rs_sh k1.
-  { apply s_sh. }
-  { apply s_rs_val.
-    (* produced by eapply, never instantiated because continuation is never taken *)
-    apply ens_pure_intro.
-    reflexivity. }
-Qed.
-
-Definition vplus (a b:val) : val :=
-  match a, b with
-  | vint a, vint b => vint (a + b)
-  | _, _ => vunit
-  end.
-
-(** [reset (1 + shift k (k 2))]. *)
-Example e4_rs_sh_k : forall k1, exists s,
-satisfies empty_env s empty_heap empty_heap (norm (vint 3))
-  (rs (sh (fun k => unk k (vint 2));; ens (fun r => \[r = vint (1 + 2)]))).
-Proof.
-  intros.
-  eexists. (* this is okay because it's an output *)
-  applys s_rs_sh k1.
-  (* put the ens into the cont *)
-  {
-    (* show that the body produces a shift *)
-    apply s_bind_sh.
-    apply s_sh. }
-  { apply s_rs_val. (* handle reset *)
-
-    eapply s_unk. resolve_fn_in_env. (* reset body *)
-    simpl.
-    apply s_rs_val.
-    eapply s_bind.
-    { apply ens_pure_intro. jauto. }
-    { apply ens_pure_intro. jauto. }
-  }
-Qed.
-
-(** [(reset (shift k (fun a -> k a))) 4 ==> 4]
-- The whole thing returns what the application of f/k returns
-- The result of the shift is 4 due to the identity k
-- The result of the reset is a function; 4 is the result of an inner reset that appears in the course of reduction *)
-Example e5_shift_k : forall k1 xf, k1 <> xf -> exists s,
-  satisfies empty_env s empty_heap empty_heap (norm (vint 4))
-    (rs (sh (fun k => defun xf (unk k);;
-      ens (fun r => \[r = vfptr xf])));; unk xf (vint 4)).
-Proof.
-  intros.
-  eexists.
-  eapply s_bind.
-  { (* show that reset produces a function *)
-    applys s_rs_sh k1.
-    (* handle the shift *)
-    apply s_sh.
-    (* show how the shift body goes through the reset to produce the function *)
-    { apply s_rs_val.
-      eapply s_bind.
-      apply s_defun.
-      (* { apply not_indom_update.
-        apply not_indom_empty.
-        symmetry. assumption. } *)
-      reflexivity.
-      apply ens_pure_intro. reflexivity. }
-  }
-  { (* show that applying the function returns 4 *)
-    eapply s_unk. resolve_fn_in_env.
-    simpl.
-    (* applying the function amounts to applying the continuation *)
-    eapply s_unk.
-    (* TODO resolve_fn_in_env should solve this *)
-    { unfold Fmap.update.
-      rewrite Fmap.read_union_r.
-      rewrite Fmap.read_union_l.
-      apply Fmap.read_single.
-      apply Fmap.indom_single.
-      apply fmap_not_indom_of_neq.
-      easy. }
-    simpl.
-    
-    apply s_rs_val.
-    apply~ ens_pure_intro.
-  }
-Qed.
-
-(** [(reset 1 + (shift k (fun a -> k a))) 4 ==> 5]
-- res of shift = arg of k = 4
-- res of reset = res of shift body = fptr
-- final res is that of the inner reset, which doesn't occur syntacically in the code as it is produced by the "handling" of the shift. *)
-Example e6_shift_k : forall k1 xf, k1 <> xf -> exists s,
-  satisfies empty_env s empty_heap empty_heap (norm (vint 5))
-    (rs (bind (sh (fun k => defun xf (unk k);; ens (fun r => \[r = vfptr xf])))
-            (fun sr => ens (fun r => \[r = vplus (vint 1) sr])));;
-      unk xf (vint 4)).
-Proof.
-  intros.
-  eexists.
-  eapply s_bind.
-  { (* reset *)
-    (* the shift is still "handled", but produces a lambda without
-      applying the continuation *)
-    applys s_rs_sh k1.
-    { apply s_bind_sh. (* this moves the ens into the continuation *)
-      apply s_sh. }
-    { apply s_rs_val.
-      eapply s_seq.
-      apply* s_defun.
-      apply* ens_pure_intro. }
-  }
-  { (* app *)
-    eapply s_unk. resolve_fn_in_env. simpl.
-    eapply s_unk.
-    (* TODO resolve should solve this *)
-    { unfold Fmap.update.
-      rewrite Fmap.read_union_r.
-      rewrite Fmap.read_union_l.
-      apply Fmap.read_single.
-      apply Fmap.indom_single.
-      apply* fmap_not_indom_of_neq. }
-    simpl.
-    apply s_rs_val.
-    eapply s_bind. apply* ens_pure_intro.
-    simpl.
-    apply* ens_pure_intro.
-  }
-Qed.
-
-End Examples.
-
-
-
-(** * Shift-freedom *)
-(** Semantic definition of shift-freedom. *)
-Definition shift_free (f:flow) : Prop :=
-  forall s1 s2 h1 h2 fb fk,
-  (* exists v, *)
-    (* satisfies s1 s2 h1 h2 (norm v) f /\ *)
-      not (satisfies s1 s2 h1 h2 (shft fb fk) f).
-
-(** [Sh#], the syntactic analogue of [shft], or a CPS version of [Sh], where the continuation is shift-free. *)
-(* Definition shs x fb vr c : flow :=
-  ens_ \[forall r, shift_free (c r)];; shc x fb vr c. *)
-
-(* Notation "'shs' '(' k '.' fb ')' '(' vr '.' '⟨' fk '⟩' ')'" := (shs k fb vr (fun r => rs fk r))
-  (at level 80, format "'shs'  '(' k '.'  fb ')'  '(' vr '.'  '⟨'  fk  '⟩' ')'", only printing) : flow_scope. *)
-
-Class ShiftFree (f:flow) : Prop :=
-  { shift_free_pf: shift_free f }.
-
-Lemma sf_ens : forall Q,
-  shift_free (ens Q).
-Proof.
-  unfold shift_free, not. intros.
-  inverts H as H. destr H.
-  false.
-Qed.
-(* this works, but relies on typeclass internals *)
-(* #[local] Hint Resolve sf_ens : typeclass_instances. *)
-
-(* previous attempt at automation *)
-(* #[local] Hint Resolve sf_ens : core. *)
-
-Lemma sf_ens_ : forall H,
-  shift_free (ens_ H).
-Proof.
-  unfold shift_free, not. intros.
-  inverts H0. destr H7.
-  false.
-Qed.
-
-Instance ShiftFreeEns : forall Q,
-  ShiftFree (ens Q).
-Proof.
-  intros. constructor. apply sf_ens.
-Qed.
-
-Instance ShiftFreeEnsVoid : forall H,
-  ShiftFree (ens_ H).
-Proof.
-  intros. constructor. apply sf_ens_.
-Qed.
-
-Lemma sf_defun : forall x uf,
-  shift_free (defun x uf).
-Proof.
-  unfold shift_free, not. intros.
-  inverts H as H.
-Qed.
-
-Instance ShiftFreeDefun : forall x uf,
-  ShiftFree (defun x uf).
-Proof.
-  intros. constructor. apply sf_defun.
-Qed.
-
-Lemma sf_req : forall H f,
-  shift_free f ->
-  shift_free (req H f).
-Proof.
-  unfold shift_free, not. intros.
-  inverts H1 as H1.
-  (* TODO we need to know that the req is provable *)
-Abort.
-
-Lemma sf_req_pure : forall P f,
-  P ->
-  shift_free f ->
-  shift_free (req \[P] f).
-Proof.
-  unfold shift_free, not. intros.
-  inverts H1 as H2.
-  specializes H2 empty_heap h1 ___.
-  hintro.
-  assumption.
-Qed.
-
-Lemma sf_rs_val : forall f,
-  shift_free f ->
-  shift_free (rs f).
-Proof.
-  unfold shift_free, not; intros.
-  inverts H0 as H0. destr H0.
-  applys~ H H0.
-Qed.
-
-Lemma sf_rs : forall f,
-  shift_free (rs f).
-Proof.
-  unfold shift_free, not; intros.
-  (* TODO try this again without dependent induction? *)
-  (* remember (rs f r) as e eqn:He.
-  remember (shft x k r0 b) as r1 eqn:Hr.
-  induction H; try inversion He; try inversion Hr.
-  injects He. subst. clear TEMP TEMP0 H1. *)
-  dependent induction H.
-  eapply IHsatisfies2.
-  reflexivity.
-  reflexivity.
-Qed.
-
-Instance ShiftFreeRs : forall f,
-  ShiftFree (rs f).
-Proof.
-  intros.
-  constructor. apply* sf_rs.
-Qed.
-
-Lemma sf_seq : forall f1 f2,
-  shift_free f1 ->
-  shift_free f2 ->
-  shift_free (f1;; f2).
-Proof.
-  unfold shift_free, not. intros.
-  inverts H1 as H1; destr H1.
-  { specializes~ H0 H9. }
-  { specializes~ H H1. }
-Qed.
-
-Instance ShiftFreeSeq : forall f1 f2,
-  ShiftFree f1 ->
-  ShiftFree f2 ->
-  ShiftFree (f1;; f2).
-Proof.
-  intros.
-  inverts H as H.
-  inverts H0 as H0.
-  constructor. apply* sf_seq.
-Qed.
-
-Lemma sf_bind : forall f fk,
-  shift_free f ->
-  (forall v, shift_free (fk v)) ->
-  shift_free (bind f fk).
-Proof.
-  unfold shift_free, not; intros.
-  inverts H1.
-  - false H0 H10.
-  - false H H7.
-Qed.
-
-Instance ShiftFreeBind : forall f fk,
-  ShiftFree f ->
-  (forall v, ShiftFree (fk v)) ->
-  ShiftFree (bind f fk).
-Proof.
-  intros.
-  inverts H.
-  constructor. apply* sf_bind.
-  intros. specializes H0 v. inverts* H0.
-Qed.
-
-(* Definition returns_value (f:flow) : Prop :=
-  forall s1 s2 h1 h2 v, satisfies s1 s2 h1 h2 (norm v) f.
-
-Lemma sf_seq_inv : forall f1 f2,
-  shift_free (f1;; f2) ->
-  shift_free f1 /\ (returns_value f1 -> shift_free f2).
-Proof.
-  unfold shift_free, not. intros.
-  split; intros.
-  { eapply H.
-    eapply s_seq_sh.
-    exact H0. }
-  { unfold returns_value in H0.
-  (* destr H0. *)
-    eapply H.
-    eapply s_seq.
-    2: eassumption.
-    apply H0.
-
-    }
-Qed. *)
-
-Lemma sf_fex : forall A (p:A->flow),
-  (forall b, shift_free (p b)) ->
-  shift_free (@fex A p).
-Proof.
-  unfold shift_free, not. intros.
-  inverts H0 as H0. destr H0.
-  eapply H.
-  exact H1.
-Qed.
-
-Lemma sf_fall : forall A (p:A->flow) b,
-  shift_free (p b) ->
-  shift_free (@fall A p).
-Proof.
-  unfold shift_free, not. intros.
-  inverts H0 as H0. destr H0.
-  specializes H0 b.
-  eapply H.
-  eassumption.
-Qed.
-
-Lemma sf_seq_inv : forall f1 f2,
-  shift_free (f1;; f2) ->
-  shift_free f1 /\ shift_free f2.
-Proof.
-  unfold shift_free, not. intros.
-  split; intros.
-  { eapply H.
-    apply s_bind_sh.
-    eassumption. }
-  { eapply H.
-    eapply s_seq.
-    2: eassumption.
-    (* TODO need to know that shift-free means
-      f1 goes to norm, possible to add *)
-    admit.
-  }
-Abort.
-
-Lemma sf_seq_inv1 : forall f1 f2,
-  shift_free (f1;; f2) ->
-  shift_free f1.
-Proof.
-  unfold shift_free, not. intros.
-  eapply H.
-  apply s_bind_sh.
-  eassumption.
-Qed.
-
-Ltac shiftfree :=
-  lazymatch goal with
-  | |- shift_free (rs _) => apply sf_rs
-  | |- shift_free (defun _ _) => apply sf_defun
-  | |- shift_free (ens _) => apply sf_ens
-  (* | |- shift_free (req _ _) => apply sf_req *)
-  | |- shift_free (ens_ _) => unfold ens_; apply sf_ens
-  | |- shift_free (_ ;; _) => apply sf_seq; shiftfree
-  | |- shift_free (bind _ _) => apply sf_bind; shiftfree
-  | |- shift_free (fex _) => apply sf_fex; intros; shiftfree
-  | _ => auto
-  end.
-
-(* Immediately dispatch goals where we have an assumption that
-  a shift-free thing produces a shift *)
-Ltac no_shift :=
-  lazymatch goal with
-  | H: satisfies _ _ _ _ (shft _ _) (ens _) |- _ =>
-    apply sf_ens in H; false
-  | H: satisfies _ _ _ _ (shft _ _) (ens_ _) |- _ =>
-    unfold ens_ in H; apply sf_ens in H; false
-  | H: satisfies _ _ _ _ (shft _ _) (rs _ _) |- _ =>
-    apply sf_rs in H; false
-  | H: satisfies _ _ _ _ (shft _ _) (defun _ _) |- _ =>
-    apply sf_defun in H; false
-  | _ => idtac
-  end.
-
-Ltac vacuity ::= false; no_shift.
-
-(* Given a [satisfies ... (shs ... k)] hypothesis,
-  produces [satisfies ... (shc ... k)] and an assumption
-  that k is shift-free *)
-(* Ltac elim_shs H :=
-  lazymatch type of H with
-  | satisfies _ _ _ _ _ (shs _ _ _ _) =>
-    inverts H as H; no_shift; destr H;
-    apply ens_void_pure_inv in H; destr H;
-    lazymatch goal with
-    | H: norm _ = norm _ |- _ => injects H
-    end;
-    subst
-  | _ => fail
-  end. *)
-
-(* Given a [satisfies ... (shs ... k)] goal,
-  we have to prove [k] is shift-free before we can reduce
-  it into a [satisfies ... (shc ... k)] goal. *)
-(* Ltac intro_shs :=
-  lazymatch goal with
-  | |- satisfies _ _ _ _ _ (shs _ _ _ _) =>
-    eapply s_seq; [ apply ens_void_pure_intro | ]
-  | _ => fail
-  end. *)
-
   Definition cont_entails fk1 fk2 := forall v, entails (fk1 v) (fk2 v).
 
   #[global]
   Instance Proper_bind_sf : forall f1,
-    (* shift_free f1 -> *)
     ShiftFree f1 ->
     Proper (cont_entails ====> entails) (bind f1).
   Proof.
@@ -1436,11 +1208,6 @@ Ltac vacuity ::= false; no_shift.
     { apply* s_bind. }
     { apply H in H1. false. }
   Qed.
-
-  (* Notation cont_entails_under fk1 fk2 :=
-    (forall v env, entails_under env (fk1 v) (fk2 v)). *)
- 
- (* Print Relation_Definitions.relation. *)
 
   #[global]
   Instance Proper_bind_sf2 : forall f1,
@@ -1504,35 +1271,35 @@ Ltac vacuity ::= false; no_shift.
     applys* s_bind.
   Qed.
 
-Example rewrite :
-  entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
-  entails
-    (ens_ \[1 = 1])
-    empty.
-Proof.
-  intros H.
-  rewrite H.
-Abort.
+  Example rewrite :
+    entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    entails
+      (ens_ \[1 = 1])
+      empty.
+  Proof.
+    intros H.
+    rewrite H.
+  Abort.
 
-Example rewrite :
-  entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
-  entails
-    (bind (ens_ \[1 = 1]) (fun v => empty))
-    empty.
-Proof.
-  intros H.
-  rewrite H.
-Abort.
+  Example rewrite :
+    entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    entails
+      (bind (ens_ \[1 = 1]) (fun v => empty))
+      empty.
+  Proof.
+    intros H.
+    rewrite H.
+  Abort.
 
-Example rewrite :
-  entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
-  entails
-    (bind empty (fun v => ens_ \[1 = 1]))
-    empty.
-Proof.
-  intros H.
-  setoid_rewrite H.
-Abort.
+  Example rewrite :
+    entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    entails
+      (bind empty (fun v => ens_ \[1 = 1]))
+      empty.
+  Proof.
+    intros H.
+    setoid_rewrite H.
+  Abort.
 
   #[global]
   Instance Proper_seq_sf : forall f1,
@@ -1564,7 +1331,7 @@ Abort.
       rewrite* H0. }
   Qed.
 
-(* this is essentially the same as entails *)
+  (* this is essentially the same as entails *)
   #[global]
   Instance Proper_seq_sf2 :
   (* forall env f1, *)
@@ -1657,86 +1424,275 @@ Abort.
     apply* s_seq.
   Qed.
 
-Definition sf_entails f1 f2 :=
-  shift_free f1 -> shift_free f2 -> entails f1 f2.
-  (* shift_free f1 /\ entails f1 f2. *)
+  Example rewrite : forall l,
+    entails_under empty_env (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    entails_under empty_env
+      (rs (bind (req (l~~>vint 1) (ens_ (l~~>vint 1);; ens_ \[1 = 1]))
+        (fun _ => empty))) empty.
+  Proof.
+    intros.
+    rewrite H.
+  Abort.
 
-Instance sf_entails_refl : Reflexive sf_entails.
+End Propriety.
+
+(** * Lemmas about satisfies *)
+Lemma ens_void_pure_intro : forall P s h,
+  P -> satisfies s s h h (norm vunit) (ens_ \[P]).
 Proof.
-  unfold Reflexive, sf_entails.
   intros.
-  apply entails_refl.
+  unfold ens_.
+  constructor.
+  exists vunit.
+  exists empty_heap.
+  splits*.
+  { rewrite hstar_hpure_r.
+    intuition.
+    apply hpure_intro.
+    reflexivity. }
 Qed.
 
-(* Instance sf_entails_trans : Transitive sf_entails.
+Lemma ens_pure_intro : forall P s h r,
+  P r -> satisfies s s h h (norm r) (ens (fun v => \[P v])).
 Proof.
-  unfold Transitive, sf_entails.
   intros.
-  apply H in H1.
-
-  apply H in H1.
-  auto.
-Qed. *)
-
-(* #[global]
-Instance Proper_seq_sf :
-  Proper (sf_entails ====> sf_entails ====> sf_entails) seq.
-Proof.
-  unfold Proper, respectful, sf_entails, entails. intros.
-  destr H. destr H0.
-  splits.
-  shiftfree.
-  shiftfree.
-  intros.
-  inverts H0 as H0. 2: { apply H1 in H0. false. }
-  apply* s_seq.
-Qed. *)
-
-(* #[global]
-Instance Proper_seq_sf :
-  Proper (sf_entails ====> sf_entails ====> sf_entails) seq.
-Proof.
-  unfold Proper, respectful, sf_entails, entails. intros.
-  destr H. destr H0.
-  splits.
-  shiftfree.
-  shiftfree.
-  intros.
-  inverts H0 as H0. 2: { apply H1 in H0. false. }
-  apply* s_seq.
-Qed. *)
-
-
-(* knowing that there is one norm execution does not mean
-  that there are no shift executions *)
-Lemma norm_sf_attempt : forall s1 s2 h1 h2 v f,
-  satisfies s1 s2 h1 h2 (norm v) f ->
-  shift_free f.
-Proof.
-  intros * Hf.
-  unfold shift_free. intros * H.
-Abort.
-
-Definition det f := forall s1 s2 h1 h2 R1 R2,
-  satisfies s1 s2 h1 h2 R1 f ->
-  satisfies s1 s2 h1 h2 R2 f ->
-  R1 = R2.
-
-(* if all executions end in norm and f is deterministic,
-  then f is shift-free. *)
-Lemma norm_sf : forall f,
-  det f ->
-  (forall s1 s2 h1 h2, exists v, satisfies s1 s2 h1 h2 (norm v) f) ->
-  shift_free f.
-Proof.
-  intros * Hd Hf.
-  unfold shift_free. intros * H.
-  specializes Hf s1 s2 h1 h2.
-  destr Hf.
-  specializes Hd H H0.
-  discriminate.
+  constructor.
+  exists r.
+  exists empty_heap.
+  hint hpure_intro.
+  splits*.
 Qed.
 
+Lemma ens_void_pure_inv : forall P s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R (ens_ \[P]) ->
+  P /\ h1 = h2 /\ s1 = s2 /\ R = norm vunit.
+Proof.
+  intros.
+  inverts H as H. destr H.
+  rewrite hstar_hpure_l in H. destr H.
+  apply hpure_inv in H4. destr H4. subst.
+  intuition.
+Qed.
+
+Lemma empty_intro : forall s1 h1,
+  satisfies s1 s1 h1 h1 (norm vunit) empty.
+Proof.
+  intros.
+  unfold empty, ens_.
+  constructor.
+  exists vunit.
+  exists empty_heap.
+  splits*.
+  { rewrite hstar_hpure_l.
+    intuition.
+    apply hpure_intro.
+    constructor. }
+Qed.
+
+Lemma empty_inv : forall s1 s2 h1 h2 R,
+  satisfies s1 s2 h1 h2 R empty ->
+  s1 = s2 /\ h1 = h2 /\ R = norm vunit.
+Proof.
+  unfold empty.
+  intros.
+  apply ens_void_pure_inv in H.
+  intuition.
+Qed.
+
+Lemma ens_store_frame : forall s1 s2 h1 h2 R x uf Q,
+  satisfies s1 s2 h1 h2 R (ens Q) ->
+  satisfies (Fmap.update s1 x uf) (Fmap.update s2 x uf) h1 h2 R (ens Q).
+Proof.
+  intros.
+  inverts H as H. destr H.
+  subst.
+  apply s_ens. exs.
+  intuition eauto.
+Qed.
+
+(** * Examples for semantics *)
+Module Examples.
+
+  Example e1_undelimited : exists R,
+    satisfies empty_env empty_env empty_heap empty_heap R
+      (sh (fun k => ens (fun r2 => \[r2 = vint 1]))).
+  Proof.
+    intros.
+    eexists.
+    apply s_sh.
+    (* Show Proof. *)
+    (* result of continuation can be anything because it's never used *)
+  Qed.
+
+  Example e2_reset_value :
+    satisfies empty_env empty_env empty_heap empty_heap (norm (vint 1))
+      (rs (ens (fun r => \[r = vint 1]))).
+  Proof.
+    intros.
+    apply s_rs_val.
+    apply ens_pure_intro.
+    reflexivity.
+  Qed.
+
+  Example e3_rs_sh_no_k : forall k1, exists s,
+    satisfies empty_env s empty_heap empty_heap (norm (vint 1))
+      (rs (sh (fun k => ens (fun r => \[r = vint 1])))).
+  Proof.
+    intros.
+    eexists.
+    (* the ret of the shift can be anything because the cont is never taken *)
+    applys s_rs_sh k1.
+    { apply s_sh. }
+    { apply s_rs_val.
+      (* produced by eapply, never instantiated because continuation is never taken *)
+      apply ens_pure_intro.
+      reflexivity. }
+  Qed.
+
+  Definition vplus (a b:val) : val :=
+    match a, b with
+    | vint a, vint b => vint (a + b)
+    | _, _ => vunit
+    end.
+
+  (** [reset (1 + shift k (k 2))]. *)
+  Example e4_rs_sh_k : forall k1, exists s,
+  satisfies empty_env s empty_heap empty_heap (norm (vint 3))
+    (rs (sh (fun k => unk k (vint 2));; ens (fun r => \[r = vint (1 + 2)]))).
+  Proof.
+    intros.
+    eexists. (* this is okay because it's an output *)
+    applys s_rs_sh k1.
+    (* put the ens into the cont *)
+    {
+      (* show that the body produces a shift *)
+      apply s_bind_sh.
+      apply s_sh. }
+    { apply s_rs_val. (* handle reset *)
+
+      eapply s_unk. resolve_fn_in_env. (* reset body *)
+      simpl.
+      apply s_rs_val.
+      eapply s_bind.
+      { apply ens_pure_intro. jauto. }
+      { apply ens_pure_intro. jauto. }
+    }
+  Qed.
+
+  (** [(reset (shift k (fun a -> k a))) 4 ==> 4]
+  - The whole thing returns what the application of f/k returns
+  - The result of the shift is 4 due to the identity k
+  - The result of the reset is a function; 4 is the result of an inner reset that appears in the course of reduction *)
+  Example e5_shift_k : forall k1 xf, k1 <> xf -> exists s,
+    satisfies empty_env s empty_heap empty_heap (norm (vint 4))
+      (rs (sh (fun k => defun xf (unk k);;
+        ens (fun r => \[r = vfptr xf])));; unk xf (vint 4)).
+  Proof.
+    intros.
+    eexists.
+    eapply s_bind.
+    { (* show that reset produces a function *)
+      applys s_rs_sh k1.
+      (* handle the shift *)
+      apply s_sh.
+      (* show how the shift body goes through the reset to produce the function *)
+      { apply s_rs_val.
+        eapply s_bind.
+        apply s_defun.
+        (* { apply not_indom_update.
+          apply not_indom_empty.
+          symmetry. assumption. } *)
+        reflexivity.
+        apply ens_pure_intro. reflexivity. }
+    }
+    { (* show that applying the function returns 4 *)
+      eapply s_unk. resolve_fn_in_env.
+      simpl.
+      (* applying the function amounts to applying the continuation *)
+      eapply s_unk.
+      (* TODO resolve_fn_in_env should solve this *)
+      { unfold Fmap.update.
+        rewrite Fmap.read_union_r.
+        rewrite Fmap.read_union_l.
+        apply Fmap.read_single.
+        apply Fmap.indom_single.
+        apply fmap_not_indom_of_neq.
+        easy. }
+      simpl.
+      
+      apply s_rs_val.
+      apply~ ens_pure_intro.
+    }
+  Qed.
+
+  (** [(reset 1 + (shift k (fun a -> k a))) 4 ==> 5]
+  - res of shift = arg of k = 4
+  - res of reset = res of shift body = fptr
+  - final res is that of the inner reset, which doesn't occur syntacically in the code as it is produced by the "handling" of the shift. *)
+  Example e6_shift_k : forall k1 xf, k1 <> xf -> exists s,
+    satisfies empty_env s empty_heap empty_heap (norm (vint 5))
+      (rs (bind (sh (fun k => defun xf (unk k);; ens (fun r => \[r = vfptr xf])))
+              (fun sr => ens (fun r => \[r = vplus (vint 1) sr])));;
+        unk xf (vint 4)).
+  Proof.
+    intros.
+    eexists.
+    eapply s_bind.
+    { (* reset *)
+      (* the shift is still "handled", but produces a lambda without
+        applying the continuation *)
+      applys s_rs_sh k1.
+      { apply s_bind_sh. (* this moves the ens into the continuation *)
+        apply s_sh. }
+      { apply s_rs_val.
+        eapply s_seq.
+        apply* s_defun.
+        apply* ens_pure_intro. }
+    }
+    { (* app *)
+      eapply s_unk. resolve_fn_in_env. simpl.
+      eapply s_unk.
+      (* TODO resolve should solve this *)
+      { unfold Fmap.update.
+        rewrite Fmap.read_union_r.
+        rewrite Fmap.read_union_l.
+        apply Fmap.read_single.
+        apply Fmap.indom_single.
+        apply* fmap_not_indom_of_neq. }
+      simpl.
+      apply s_rs_val.
+      eapply s_bind. apply* ens_pure_intro.
+      simpl.
+      apply* ens_pure_intro.
+    }
+  Qed.
+
+End Examples.
+
+(* Given a [satisfies ... (shs ... k)] hypothesis,
+  produces [satisfies ... (shc ... k)] and an assumption
+  that k is shift-free *)
+(* Ltac elim_shs H :=
+  lazymatch type of H with
+  | satisfies _ _ _ _ _ (shs _ _ _ _) =>
+    inverts H as H; no_shift; destr H;
+    apply ens_void_pure_inv in H; destr H;
+    lazymatch goal with
+    | H: norm _ = norm _ |- _ => injects H
+    end;
+    subst
+  | _ => fail
+  end. *)
+
+(* Given a [satisfies ... (shs ... k)] goal,
+  we have to prove [k] is shift-free before we can reduce
+  it into a [satisfies ... (shc ... k)] goal. *)
+(* Ltac intro_shs :=
+  lazymatch goal with
+  | |- satisfies _ _ _ _ _ (shs _ _ _ _) =>
+    eapply s_seq; [ apply ens_void_pure_intro | ]
+  | _ => fail
+  end. *)
 
 (** * New reduction rules *)
 
@@ -3356,13 +3312,3 @@ Abort.
 - #<a href="&num;red_extend">red_extend</a>#
 - #<a href="&num;red_acc">red_acc</a>#
 - #<a href="&num;red_shift_elim">red_shift_elim</a># *)
-
-Example rewrite : forall l,
-  entails_under empty_env (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
-  entails_under empty_env
-    (rs (bind (req (l~~>vint 1) (ens_ (l~~>vint 1);; ens_ \[1 = 1]))
-      (fun _ => empty))) empty.
-Proof.
-  intros.
-  rewrite H.
-Abort.
