@@ -238,7 +238,7 @@ Definition toss_n : ufun := fun (n:val) =>
   (* req \[vgt n (vint 0)] *)
     (disj
       (ens (fun r => \[r = true /\ veq n 0]))
-      (ens_ \[vneq n 0];;
+      (ens_ \[vgt n 0];;
         bind (toss vunit) (fun r1 =>
         bind (unk "toss_n" (vsub n 1)) (fun r2 =>
         ens (fun r => \[r = vand r1 r2]))))).
@@ -324,15 +324,15 @@ Proof.
     (* rewrite H. *)
 
     (* TODO toss and n aren't shift free *)
-    (* fsimpl.
-    fstep. intros. *)
+    fsimpl.
+    fstep. unfold vgt. intros.
 
 
     unfold toss.
-    (* rewrite red_init. *)
-    (* rewrite red_extend. *)
-    (* rewrite red_extend. *)
-    (* rewrite red_rs_sh_elim. *)
+    rewrite red_init.
+    rewrite red_extend.
+    rewrite red_extend.
+    rewrite red_rs_sh_elim.
 
     (* TODO defun problem *)
     (* TODO reduce and unfold everything *)

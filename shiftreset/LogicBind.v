@@ -3059,7 +3059,7 @@ Abort.
 Lemma seq_assoc : forall s1 s2 h1 h2 R f1 f2 f3,
   shift_free f1 ->
   shift_free f2 ->
-  satisfies s1 s2 h1 h2 R (f1;; f2;; f3) <->
+  satisfies s1 s2 h1 h2 R (f1;; (f2;; f3)) <->
   satisfies s1 s2 h1 h2 R ((f1;; f2);; f3).
 Proof.
   intros.
@@ -4070,23 +4070,25 @@ Proof.
   applys* s_seq H7.
 Qed.
 
-(* similar to norm_seq_assoc *)
+(** Similar to [norm_seq_assoc].
+  We only need one [shift_free] premise here
+  because we're rewriting only in one direction. *)
 Lemma norm_bind_seq_assoc : forall fk f1 f2,
   shift_free f1 ->
-  shift_free f2 ->
   entails (bind (f1;; f2) fk) (f1;; bind f2 fk).
 Proof.
-  unfold entails. intros * Hsf1 Hsf2 * H.
+  unfold entails. intros * Hsf1 * H.
   inverts H.
   { inverts H7.
     applys s_seq H6.
     applys* s_bind. }
   { inverts H6.
-    - false Hsf2 H8.
+    - applys s_seq H7.
+      applys* s_bind_sh.
     - false Hsf1 H4. }
 Qed.
 
-(* TODO can this be generalised (to norm_bind_pure)? *)
+(* TODO can this be generalised (to [norm_bind_pure])? *)
 Lemma norm_bind_val : forall fk v,
   entails (bind (ens (fun r => \[r = v])) fk) (fk v).
 Proof.
