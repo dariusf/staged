@@ -243,7 +243,12 @@ Definition toss_n : ufun := fun (n:val) =>
         bind (unk "toss_n" (vsub n 1)) (fun r2 =>
         ens (fun r => \[r = vand r1 r2]))))).
 
-Definition toss_n_env := Fmap.update empty_env "toss_n" toss_n.
+Definition toss_n_env :=
+(* Fmap.update *)
+  (Fmap.update empty_env "toss_n" toss_n)
+  (* "k"
+(fun v => ∀ n, rs (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y => x - y) n 1)) (fun r2 => ens (fun r => \[r = vbop (fun x y => x && y) r1 r2])))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))) *)
+.
 
 Definition main n : flow :=
   rs (
@@ -298,11 +303,21 @@ Proof.
     pose proof (@ent_unk env "toss_n" n)
     (* [ | resolve_fn_in_env ]; simpl *)
   end.
-  specializes H. unfold toss_n_env. resolve_fn_in_env. simpl in H.
-  rewrite H.
-  unfold toss_n. *)
+  specializes H. unfold toss_n_env.
+  
+  (* TODO fix the unfolding tactic *)
+  (* resolve_fn_in_env. *)
+  unfold Fmap.update.
+  rewrite Fmap.read_union_r.
+  rewrite Fmap.read_union_l.
+  apply Fmap.read_single.
+  apply Fmap.indom_single.
+  solve_trivial_not_indom.
 
-  funfold1 "toss_n". unfold toss_n.
+  simpl in H. rewrite H. clear H. *)
+
+  funfold1 "toss_n".
+  unfold toss_n.
   fsimpl.
   applys ent_disj_l.
   {
@@ -333,6 +348,12 @@ Proof.
     rewrite red_extend.
     rewrite red_extend.
     rewrite red_rs_sh_elim.
+
+    (* finst "k". *)
+    (* unfold toss_n_env. *)
+    (* apply ent_seq_defun_idem. *)
+
+    Close Scope flow_scope.
 
     (* TODO defun problem *)
     (* TODO reduce and unfold everything *)
