@@ -424,12 +424,12 @@ Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 R s1 s2,
     satisfies s1 s2 h1 h2 R f1 <-> satisfies s1 s2 h1 h2 R f2.
 
-Definition entails_sequent s1 s3 f1 f2 :=
-  forall h1 h2 s2 R,
-    satisfies s1 s2 h1 h2 R f1 -> exists s4, satisfies s3 s4 h1 h2 R f2.
+Definition entails_sequent s1 s2 s3 s4 f1 f2 :=
+  forall h1 h2 R,
+    satisfies s1 s2 h1 h2 R f1 -> satisfies s3 s4 h1 h2 R f2.
 
 Notation "s1 '⊢' f1 '⊑' f2" :=
-  (entails_sequent s1 _ f1 f2) (at level 90, only printing) : flow_scope.
+  (entails_sequent s1 _ _ _ f1 f2) (at level 90, only printing) : flow_scope.
 
 Instance entails_refl : Reflexive entails.
 Proof.
@@ -473,23 +473,23 @@ Proof.
   apply entails_under_trans.
 Qed.
 
-Instance entails_sequent_refl : forall env, Reflexive (entails_sequent env env).
+Instance entails_sequent_refl : forall env, Reflexive (entails_sequent env env env env).
 Proof.
   unfold Reflexive, entails_sequent.
   intros.
   eauto.
 Qed.
 
-Instance entails_sequent_trans : forall env, Transitive (entails_sequent env env).
+Instance entails_sequent_trans : forall env, Transitive (entails_sequent env env env env).
 Proof.
   unfold Transitive, entails_sequent.
   intros.
   specializes H H1. destr H.
-  specializes H0 H2.
+  specializes H0 H.
   auto.
 Qed.
 
-Instance entails_sequent_preorder : forall env, PreOrder (entails_sequent env env).
+Instance entails_sequent_preorder : forall env, PreOrder (entails_sequent env env env env).
 Proof.
   constructor.
   apply entails_sequent_refl.
@@ -831,13 +831,13 @@ Section Propriety.
 
   #[global]
   Instance Proper_ent : forall env, Proper
-    (flip (entails_sequent env env) ====> entails_sequent env env ====> impl)
-    (entails_sequent env env).
+    (flip (entails_sequent env env env env) ====> entails_sequent env env env env ====> impl)
+    (entails_sequent env env env env).
   Proof.
     unfold entails_sequent, Proper, respectful, impl, flip. intros.
-    specializes H H2. destr H.
-    specializes H1 H3. destr H1.
-    specializes H0 H.
+    specializes H H2.
+    specializes H1 H.
+    specializes H0 H1.
     auto.
   Qed.
 
@@ -1050,7 +1050,7 @@ Section Propriety.
 
   #[global]
   Instance entails_ent : forall env,
-    Proper (flip entails ====> entails ====> impl) (entails_sequent env env).
+    Proper (flip entails ====> entails ====> impl) (entails_sequent env env env env).
   Proof.
     unfold Proper, respectful, entails_sequent, entails, flip, impl.
     intros.
@@ -1062,7 +1062,7 @@ Section Propriety.
 
   #[global]
   Instance entails_under_ent : forall env,
-    Proper (flip (entails_under env) ====> (entails_under env) ====> impl) (entails_sequent env env).
+    Proper (flip (entails_under env) ====> (entails_under env) ====> impl) (entails_sequent env env env env).
   Proof.
     unfold Proper, respectful, entails_sequent, entails_under, flip, impl.
     intros.
@@ -2029,8 +2029,8 @@ Proof.
 Qed.
 
 Lemma ent_seq_defun : forall s x uf f2 f1,
-  entails_sequent (Fmap.update s x uf) s f1 f2 ->
-  entails_sequent s s (defun x uf;; f1) f2.
+  entails_sequent (Fmap.update s x uf) s s s f1 f2 ->
+  entails_sequent s s s s (defun x uf;; f1) f2.
 Proof.
   unfold entails_sequent. intros.
   inverts H0. 2: { false sf_defun H7. }
@@ -2176,9 +2176,9 @@ Proof.
   rew_fmap *.
 Qed.
 
-Lemma ent_seq_ens_pure_l : forall s1 s2 f f1 (P:val->Prop),
-  (forall r, P r -> entails_sequent s1 s2 f1 f) ->
-  entails_sequent s1 s2 (ens (fun r => \[P r]);; f1) f.
+Lemma ent_seq_ens_pure_l : forall s1 s2 s3 s4 f f1 (P:val->Prop),
+  (forall r, P r -> entails_sequent s1 s2 s3 s4 f1 f) ->
+  entails_sequent s1 s2 s3 s4 (ens (fun r => \[P r]);; f1) f.
 Proof.
   unfold entails_sequent. intros.
   inverts H0 as H0; no_shift. destr H0.
@@ -2187,9 +2187,9 @@ Proof.
   subst. rew_fmap *.
 Qed.
 
-Lemma ent_seq_ens_void_pure_l : forall s1 s2 f f1 P,
-  (P -> entails_sequent s1 s2 f1 f) ->
-  entails_sequent s1 s2 (ens_ \[P];; f1) f.
+Lemma ent_seq_ens_void_pure_l : forall s1 s2 s3 s4 f f1 P,
+  (P -> entails_sequent s1 s2 s3 s4 f1 f) ->
+  entails_sequent s1 s2 s3 s4 (ens_ \[P];; f1) f.
 Proof.
   unfold entails_sequent. intros.
   inverts H0 as H0; no_shift. destr H0.
@@ -2743,17 +2743,13 @@ Proof.
   auto.
 Qed.
 
-Lemma ent_all_r1 : forall f A (fctx:A -> flow) s1 s2,
-  (forall b, entails_sequent s1 s2 f (fctx b)) ->
-  entails_sequent s1 s2 f (∀ b, fctx b).
+Lemma ent_all_r1 : forall f A (fctx:A -> flow) s1 s2 s3 s4,
+  (forall b, entails_sequent s1 s2 s3 s4 f (fctx b)) ->
+  entails_sequent s1 s2 s3 s4 f (∀ b, fctx b).
 Proof.
   unfold entails_sequent. intros.
-  exists s4.
   constructor. intros b.
-  specializes H b H0.
-  destr H.
-
-  (* applys H1. *)
+  auto.
 Qed.
 
 Lemma fall_intro : forall s1 s2 h1 h2 R A (fctx:A -> flow),
@@ -2811,9 +2807,9 @@ Proof.
   auto.
 Qed.
 
-Lemma ent_ex_l1 : forall f A (fctx:A -> flow) env env1,
-  (forall b, entails_sequent env env1 (fctx b) f) ->
-  entails_sequent env env1 (fex (fun b => fctx b)) f.
+Lemma ent_ex_l1 : forall f A (fctx:A -> flow) s1 s2 s3 s4,
+  (forall b, entails_sequent s1 s2 s3 s4 (fctx b) f) ->
+  entails_sequent s1 s2 s3 s4 (fex (fun b => fctx b)) f.
 Proof.
   unfold entails_sequent. intros.
   inverts H0 as H0. destr H0.

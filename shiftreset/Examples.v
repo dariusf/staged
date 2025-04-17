@@ -133,7 +133,7 @@ Proof.
 Qed.
 
 Lemma f_reduction1: forall v1,
-  entails_sequent empty_env empty_env (f v1) (ens (fun r => \[r = false])).
+  entails_sequent empty_env empty_env empty_env empty_env (f v1) (ens (fun r => \[r = false])).
 Proof.
   intros.
   (* exists (∃ k, defun k (fun v : val => rs (ens (fun r => \[r = v])))). *)
