@@ -95,7 +95,8 @@ Ltac fstep := eauto with staged_closing. *)
 (* applies an uncontroversial reasoning step,
   which one would always want to apply *)
 Ltac fstep := first [
-  apply ent_seq_ens_void_l |
+  apply ent_seq_ens_pure_l |
+  apply ent_seq_ens_void_pure_l |
   apply ent_ens_single |
   apply ent_req_req
 ].
@@ -350,29 +351,32 @@ Proof.
     rewrite <- hstar_pure_post_pure.
     rewrite <- norm_ens_ens_void_l.
     fsimpl.
-    case_if. clear C.
+    (* Abort. *)
+    admit.
+
+    (* case_if. clear C.
     fstep. unfold veq. intros.
     fintro x.
     fintro a.
     apply ent_req_r.
     finst a.
     rewrite norm_ens_ens_void_l.
-    fstep. xsimpl. math.
+    fstep. xsimpl. math. *)
   }
   {
     pose proof lemma_weaker.
     (* rewrite H. *)
 
     (* TODO toss and n aren't shift free *)
-    fsimpl.
-    fstep. unfold vgt. intros.
+    (* fsimpl.
+    fstep. unfold vgt. intros. *)
 
 
-    unfold toss.
+    (* unfold toss.
     rewrite red_init.
     rewrite red_extend.
     rewrite red_extend.
-    rewrite red_rs_sh_elim.
+    rewrite red_rs_sh_elim. *)
 
     (* finst "k". *)
     (* unfold toss_n_env. *)

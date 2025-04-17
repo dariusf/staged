@@ -41,9 +41,9 @@ Ltac fintro x :=
 
   (* SL exists *)
   | |- entails_under _ (ens_ (\exists _, _)) _ =>
-    rewrite ent_seq_ens_sl_ex; fintro x
+    rewrite norm_seq_ens_sl_ex; fintro x
   | |- entails_under _ (ens_ (\exists _, _);; _) _ =>
-    rewrite ent_seq_ens_sl_ex; fintro x
+    rewrite norm_seq_ens_sl_ex; fintro x
   end.
 
 
@@ -80,11 +80,11 @@ Ltac fassume_ H :=
   | |- entails_under _ (ens_ \[_]) _ =>
     apply ent_ens_void_l; intros H
   | |- entails_under _ (ens_ \[_];; _) _ =>
-    apply ent_seq_ens_void_l; intros H
+    apply ent_seq_ens_void_pure_l; intros H
   | |- entails_under _ (ens (fun _ => \[_]);; _) _ =>
-    apply ent_seq_ens_l; intros H
+    apply ent_seq_ens_pure_l; intros H
   | |- entails_under _ _ (req \[_] _) =>
-    apply ent_req_r; apply ent_seq_ens_l; intros H
+    apply ent_req_r; apply ent_seq_ens_void_pure_l; intros H
   end.
 
 Ltac fassume_req :=

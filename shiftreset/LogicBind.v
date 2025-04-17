@@ -2176,22 +2176,22 @@ Proof.
   rew_fmap *.
 Qed.
 
-Lemma ent_seq_ens_l : forall env f f1 (P:val->Prop),
-  (forall r, P r -> entails_under env f1 f) ->
-  entails_under env (ens (fun r => \[P r]);; f1) f.
+Lemma ent_seq_ens_pure_l : forall s1 s2 f f1 (P:val->Prop),
+  (forall r, P r -> entails_sequent s1 s2 f1 f) ->
+  entails_sequent s1 s2 (ens (fun r => \[P r]);; f1) f.
 Proof.
-  unfold entails_under. intros.
+  unfold entails_sequent. intros.
   inverts H0 as H0; no_shift. destr H0.
   inverts H0 as H0. destr H0.
   hinv H0. injects H1.
   subst. rew_fmap *.
 Qed.
 
-Lemma ent_seq_ens_void_l : forall env f f1 P,
-  (P -> entails_under env f1 f) ->
-  entails_under env (ens_ \[P];; f1) f.
+Lemma ent_seq_ens_void_pure_l : forall s1 s2 f f1 P,
+  (P -> entails_sequent s1 s2 f1 f) ->
+  entails_sequent s1 s2 (ens_ \[P];; f1) f.
 Proof.
-  unfold entails_under. intros.
+  unfold entails_sequent. intros.
   inverts H0 as H0; no_shift. destr H0.
   inverts H0 as H0. destr H0.
   hinv H0. hinv H3. hinv H0. subst. injects H1.
@@ -2212,7 +2212,7 @@ Proof.
   subst. assumption.
 Qed.
 
-Lemma ent_seq_ens_dep_l : forall env f f1 p,
+(* Lemma ent_seq_ens_dep_l : forall env f f1 p,
   (forall r1, p r1 -> entails_sequent env env f1 f) ->
   entails_sequent env env (ens (fun r => \[p r]);; f1) f.
 Proof.
@@ -2221,7 +2221,7 @@ Proof.
   inverts H0 as H0. destr H0.
   hinv H0. injects H1. subst.
   rew_fmap *.
-Qed.
+Qed. *)
 
 Lemma norm_ens_ens_void_l : forall H Q,
   bientails (ens_ H;; ens Q) (ens (Q \*+ H)).
@@ -2719,11 +2719,11 @@ Qed.
 
 (** * Entailment sequent *)
 
-Lemma ent_seq_ens_sl_ex: forall env A (c:A->hprop) f,
-  entails_under env (ens_ (\exists b, c b);; f)
-  (∃ b, ens_ (c b);; f).
+Lemma norm_seq_ens_sl_ex: forall A (c:A->hprop) f,
+  entails (ens_ (\exists b, c b);; f)
+    (∃ b, ens_ (c b);; f).
 Proof.
-  unfold entails_under. intros.
+  unfold entails. intros.
   inverts H as H. 2: vacuous.
   inverts H as H. destr H.
   hinv H. hinv H.
@@ -2741,6 +2741,19 @@ Proof.
   unfold entails_under. intros.
   constructor. intros b.
   auto.
+Qed.
+
+Lemma ent_all_r1 : forall f A (fctx:A -> flow) s1 s2,
+  (forall b, entails_sequent s1 s2 f (fctx b)) ->
+  entails_sequent s1 s2 f (∀ b, fctx b).
+Proof.
+  unfold entails_sequent. intros.
+  exists s4.
+  constructor. intros b.
+  specializes H b H0.
+  destr H.
+
+  (* applys H1. *)
 Qed.
 
 Lemma fall_intro : forall s1 s2 h1 h2 R A (fctx:A -> flow),
