@@ -310,17 +310,14 @@ Proof.
     rewrite <- hstar_pure_post_pure.
     rewrite <- norm_ens_ens_void_l.
     fsimpl.
-    fstep. intros.
     case_if. clear C.
-    unfold veq in H.
+    fstep. unfold veq. intros.
     fintro x.
     fintro a.
     apply ent_req_r.
     finst a.
     rewrite norm_ens_ens_void_l.
-    fstep. xsimpl.
-    simpl.
-    math.
+    fstep. xsimpl. math.
   }
   {
     pose proof lemma_weaker.
@@ -375,8 +372,6 @@ Proof.
 
 
 
-    admit.
-    admit.
     admit.
   }
 
