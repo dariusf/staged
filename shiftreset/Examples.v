@@ -132,7 +132,7 @@ Proof.
 Qed.
 
 Lemma f_reduction1: forall v1,
-  ent empty_env empty_env (f v1) (ens (fun r => \[r = false])).
+  entails_sequent empty_env empty_env (f v1) (ens (fun r => \[r = false])).
 Proof.
   intros.
   (* exists (∃ k, defun k (fun v : val => rs (ens (fun r => \[r = v])))). *)
@@ -142,7 +142,9 @@ Proof.
 
   apply ent_ex_l1. intros k.
 
-  (* fintro k. finst k. { intros. shiftfree. } *)
+Abort.
+
+  (* fintro k. finst k. { intros. shiftfree. }
   apply ent_seq_defun1.
   funfold1 k.
   fsimpl.
@@ -152,7 +154,7 @@ Proof.
   end.
   fsimpl.
   applys entails_under_refl.
-Qed.
+Qed. *)
 
 End Multi.
 
@@ -376,7 +378,7 @@ Proof.
     (* unfold toss_n_env. *)
     (* apply ent_seq_defun_idem. *)
 
-    Close Scope flow_scope.
+    (* Close Scope flow_scope. *)
 
     (* TODO defun problem *)
     (* TODO reduce and unfold everything *)
