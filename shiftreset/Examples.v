@@ -81,7 +81,7 @@ Global Hint Rewrite
 
   using shiftfree : staged_norm.
 
-Ltac fnorm := autorewrite with staged_norm.
+Ltac fsimpl := autorewrite with staged_norm.
 
 (* Create HintDb staged_closing.
 
@@ -90,11 +90,11 @@ Global Hint Resolve
 
   : staged_closing.
 
-Ltac feasy := eauto with staged_closing. *)
+Ltac fstep := eauto with staged_closing. *)
 
-(* applies an "easy" reasoning step,
+(* applies an uncontroversial reasoning step,
   which one would always want to apply *)
-Ltac feasy := first [
+Ltac fstep := first [
   apply ent_seq_ens_void_l |
   apply ent_ens_single |
   apply ent_req_req
@@ -122,12 +122,12 @@ Proof.
   fintro k. finst k. { intros. shiftfree. }
   apply ent_seq_defun.
   funfold1 k.
-  fnorm.
+  fsimpl.
   funfold1 k.
   lazymatch goal with
   | |- entails_under ?e _ _ => remember e as env
   end.
-  fnorm.
+  fsimpl.
   applys entails_under_refl.
 Qed.
 
@@ -181,7 +181,7 @@ Proof.
   fintro a. finst a.
   funfold1 k.
 
-  fnorm.
+  fsimpl.
   apply ent_req_req. xsimpl.
 
   (* fix printing due to overly-long env *)
@@ -190,7 +190,7 @@ Proof.
   end.
 
   case_if.
-  fnorm.
+  fsimpl.
   finst (a + 1).
 
   (* somehow automate this... *)
@@ -200,7 +200,7 @@ Proof.
   | |- entails_under ?e _ _ => remember e as env
   end.
 
-  fnorm.
+  fsimpl.
   case_if.
 
   (* lazymatch goal with
@@ -214,7 +214,7 @@ Proof.
   rewrite norm_req_pure_l. 2: { reflexivity. }
   rewrite norm_seq_ens_empty.
 
-  fnorm.
+  fsimpl.
 
   rewrite norm_ens_ens_void_l.
   apply ent_ens_single.
@@ -262,9 +262,12 @@ Lemma lemma_weaker : forall acc x n,
         \[If vand acc v = true then r1 = vint 1 else r1 = vint 0]))))
     (∀ a, req (x~~>vint a \* \[n > 0])
       (∃ b, ens (fun r => x~~>vint b \*
-        \[b > a+n /\ (acc = true /\ r = 1 \/ acc = false /\ r = 0)]))).
+        \[b > a+n /\ (If acc = true then r = 1 else r = 0)]))).
+        (* \[b > a+n /\ (acc = true /\ r = 1 \/ acc = false /\ r = 0)]))). *)
 Proof.
-Abort.
+  (* induction_wf IH: (downto 0) n. *)
+(* Abort. *)
+Admitted.
 
 
 Theorem main_summary : forall n,
@@ -272,8 +275,7 @@ Theorem main_summary : forall n,
   (* entails_under toss_n_env (main n) (f;; main_spec_weaker n). *)
   entails_under toss_n_env (main n) (main_spec_weaker n).
 Proof.
-  intros n.
-  induction_wf IH: (downto 0) n.
+  (* intros n. *)
   unfold main_spec_weaker, main. intros.
 
   (* unfold toss_n_env. *)
@@ -288,14 +290,14 @@ Proof.
   unfold toss_n. *)
 
   funfold1 "toss_n". unfold toss_n.
-  fnorm.
+  fsimpl.
   applys ent_disj_l.
   {
     (* base case *)
     rewrite <- hstar_pure_post_pure.
     rewrite <- norm_ens_ens_void_l.
-    fnorm.
-    feasy. intros.
+    fsimpl.
+    fstep. intros.
     case_if. clear C.
     unfold veq in H.
     fintro x.
@@ -303,12 +305,69 @@ Proof.
     apply ent_req_r.
     finst a.
     rewrite norm_ens_ens_void_l.
-    feasy. xsimpl.
+    fstep. xsimpl.
     simpl.
     math.
   }
   {
+    pose proof lemma_weaker.
+    (* rewrite H. *)
+
+    fsimpl.
+    fstep. intros.
+
+
+    unfold toss.
+    rewrite red_init.
+    rewrite red_extend.
+    rewrite red_extend.
+    rewrite red_rs_sh_elim.
+
+    (* TODO defun problem *)
+    (* TODO reduce and unfold everything *)
+    (* TODO rewrite after unfolding unk *)
+
+(* THIS IS NOT TRUE *)
+
+    (* assert (forall f fk, entails (rs (bind f fk)) (bind (rs f) (fun v => rs (fk v)))) as ?. admit.
+    rewrite H1.
+    rewrite H1. *)
+
+
+
+
+    (* START TRYING TO REWRITE WITH THE LEMMA *)
+
+    assert 
+    (forall f fk fk1,
+      entails (bind (bind f fk1) fk)
+        (bind f (fun r => bind (fk1 r) fk))
+    )
+     as ?. admit.
+    rewrite H1.
+
+    assert (forall f fk1 fk2,
+      entails
+        (bind (bind f fk1) fk2)
+        (bind f (fun v => bind (fk1 v) fk2))
+    ) as ?. admit.
+
+    specializes H2
+      (unk "toss_n" (viop (fun x y : int => x - y) n 1))
+      (* (ens (fun r0 => \[r0 = vbop (fun x y : bool => x && y) r r2]))
+      (ens (fun r0 => \[If v = true then r0 = 1 else r0 = 0])) *)
+      .
+
+    (* rewrite H2. *)
+
+
+    (* setoid_rewrite H. *)
+
+
     (* rec case *)
+    (* fsimpl. *)
+    (* fstep. intros. *)
+    (* unfold toss. *)
     admit.
   }
 
@@ -338,13 +397,13 @@ Proof.
   | |- entails_under ?e _ _ => remember e as env
   end.
 
-  fnorm; shiftfree.
+  fsimpl; shiftfree.
 
   (* rewrite norm_bind_req; shiftfree.
   rewrite norm_bind_val.
   rewrite red_rs_ens. *)
   case_if.
-  fnorm.
+  fsimpl.
   (* rewrite norm_bind_seq_assoc; shiftfree.
   rewrite norm_bind_val.
 
@@ -359,7 +418,7 @@ Proof.
   | |- entails_under ?e _ _ => remember e as env
   end.
 
-  fnorm.
+  fsimpl.
   rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
   rewrite norm_req_pure_l. 2: { reflexivity. }
   rewrite norm_seq_ens_empty.
@@ -370,7 +429,7 @@ Proof.
 
   case_if.
 
-  fnorm.
+  fsimpl.
   (* rewrite red_rs_elim. *)
   rewrite norm_req_req.
   apply ent_req_req. xsimpl.
