@@ -132,10 +132,18 @@ Proof.
   applys entails_under_refl.
 Qed.
 
+Notation sequent env f1 f2 :=
+  (exists s1 s2, entails_sequent env s1 env s2 f1 f2).
+
+Ltac fstart := do 2 eexists.
+
 Lemma f_reduction1: forall v1,
-  entails_sequent empty_env empty_env empty_env empty_env (f v1) (ens (fun r => \[r = false])).
+  (* entails_sequent empty_env empty_env empty_env empty_env *)
+  sequent empty_env
+  (f v1) (ens (fun r => \[r = false])).
 Proof.
   intros.
+  fstart.
   (* exists (∃ k, defun k (fun v : val => rs (ens (fun r => \[r = v])))). *)
   unfold f.
   rewrite red_init.
