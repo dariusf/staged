@@ -13,11 +13,11 @@ Tactic Notation "funfold" constr(env) constr(f) "in" constr(H) := funfold_hyp H 
 (* TODO maybe this should be the interface, for working with sequents especially *)
 Ltac funfold1 f :=
   lazymatch goal with
-  | |- entails_under (?env ?a ?b) _ _ =>
+  | |- entails_sequent (?env ?a ?b) _ _ _ _ _ =>
     rewrite (@entails_under_unk (env a b) f); [ | try unfold env; resolve_fn_in_env ]; simpl
-  | |- entails_under (?env ?a) _ _ =>
+  | |- entails_sequent (?env ?a) _ _ _ _ _ =>
     rewrite (@entails_under_unk (env a) f); [ | try unfold env; resolve_fn_in_env ]; simpl
-  | |- entails_under ?env _ _ =>
+  | |- entails_sequent ?env _ _ _ _ _ =>
     rewrite (@entails_under_unk env f); [ | try unfold env; resolve_fn_in_env ]; simpl
   end.
 
@@ -25,24 +25,24 @@ Ltac funfold1 f :=
 Ltac fintro x :=
   lazymatch goal with
   (* base cases *)
-  | |- entails_under _ (∃ _, _) _ =>
+  | |- entails_sequent _ _ _ _ (∃ _, _) _ =>
     (* let x := fresh y in *)
     simple apply ent_ex_l; intros x
-  | |- entails_under _ _ (∀ _, _) =>
+  | |- entails_sequent _ _ _ _ _ (∀ _, _) =>
     (* let x := fresh y in *)
     simple apply ent_all_r; intros x
 
   (* ex under an ens *)
   (* a problem with the automation is quantifiers going into the continuation *)
-  (* | |- entails_under _ (ens_ _;; ∃ _, _) _ =>
+  (* | |- entails_sequent _ _ _ _ (ens_ _;; ∃ _, _) _ =>
     rewrite norm_seq_ex; fintro x
-  | |- entails_under _ (ens_ _;; ∃ _, _;; _) _ =>
+  | |- entails_sequent _ _ _ _ (ens_ _;; ∃ _, _;; _) _ =>
     rewrite norm_seq_ex; fintro x *)
 
   (* SL exists *)
-  | |- entails_under _ (ens_ (\exists _, _)) _ =>
+  | |- entails_sequent _ _ _ _ (ens_ (\exists _, _)) _ =>
     rewrite norm_seq_ens_sl_ex; fintro x
-  | |- entails_under _ (ens_ (\exists _, _);; _) _ =>
+  | |- entails_sequent _ _ _ _ (ens_ (\exists _, _);; _) _ =>
     rewrite norm_seq_ens_sl_ex; fintro x
   end.
 
@@ -50,25 +50,25 @@ Ltac fintro x :=
 (* instantiate an existential or specialize a forall *)
 Ltac finst a :=
   lazymatch goal with
-  | |- entails_under _ (rs (∀ _, _)) _ =>
+  | |- entails_sequent _ _ _ _ (rs (∀ _, _)) _ =>
     rewrite norm_rs_all; finst a
-  | |- entails_under _ (req _ (∀ _, _)) _ =>
+  | |- entails_sequent _ _ _ _ (req _ (∀ _, _)) _ =>
     rewrite norm_req_all; finst a
-  | |- entails_under _ (_;; ∀ _, _) _ =>
+  | |- entails_sequent _ _ _ _ (_;; ∀ _, _) _ =>
     rewrite norm_seq_all_r; shiftfree; finst a
-  (* | |- entails_under _ ((∃ _, _);; _) _ =>
+  (* | |- entails_sequent _ _ _ _ ((∃ _, _);; _) _ =>
     rewrite norm_seq_ex_l; fintro a
-  | |- entails_under _ (_;; ∃ _, _) _ =>
+  | |- entails_sequent _ _ _ _ (_;; ∃ _, _) _ =>
     rewrite norm_seq_ex_r; fintro a *)
 
-  | |- entails_under _ ((∀ _, _);; _) _ =>
+  | |- entails_sequent _ _ _ _ ((∀ _, _);; _) _ =>
     apply ent_seq_all_l; exists a
 
-  | |- entails_under _ (∀ _, _) _ =>
+  | |- entails_sequent _ _ _ _ (∀ _, _) _ =>
     apply ent_all_l; exists a
-  | |- entails_under _ _ (∃ _, _) =>
+  | |- entails_sequent _ _ _ _ _ (∃ _, _) =>
     apply ent_ex_r; exists a
-  | |- entails_under _ _ ((∃ _, _);; _) =>
+  | |- entails_sequent _ _ _ _ _ ((∃ _, _);; _) =>
     apply ent_seq_ex_r; try exists a
   end.
 
@@ -95,3 +95,8 @@ Ltac fassume_req :=
 
 Tactic Notation "fassume" simple_intropattern(p) := fassume_ p.
 Tactic Notation "fassume" := fassume_req.
+
+Notation sequent s1 f1 f2 :=
+  (exists s2 s3, entails_sequent s1 s2 s1 s3 f1 f2).
+
+Ltac fstart := do 2 eexists.

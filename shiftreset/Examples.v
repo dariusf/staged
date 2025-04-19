@@ -113,29 +113,35 @@ Definition f : ufun := fun _ =>
       )))).
 
 Lemma f_reduction: forall v1, exists f1,
-  entails_under empty_env (f v1) (f1;; ens (fun r => \[r = false])).
+  sequent empty_env (f v1) (f1;; ens (fun r => \[r = false])).
 Proof.
   intros.
   exists (∃ k, defun k (fun v : val => rs (ens (fun r => \[r = v])))).
+  fstart.
   unfold f.
   rewrite red_init.
   rewrite red_rs_sh_elim.
   fintro k. finst k. { intros. shiftfree. }
-  apply entails_under_seq_defun_both.
-  funfold1 k.
+  (* apply entails_under_seq_defun_both. *)
+  apply ent_seq_defun.
+  (* Close Scope flow_scope.
+  Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+
+  lazymatch goal with
+  | |- entails_sequent ?env _ _ _ _ _ =>
+    rewrite (@entails_under_unk env k); [ | try unfold env; resolve_fn_in_env ]; simpl
+    end.
+
+  (* funfold1 k.
   fsimpl.
   funfold1 k.
   lazymatch goal with
-  | |- entails_under ?e _ _ => remember e as env
+  | |- sequent ?e _ _ _ _ _ => remember e as env
   end.
   fsimpl.
-  applys entails_under_refl.
-Qed.
-
-Notation sequent env f1 f2 :=
-  (exists s1 s2, entails_sequent env s1 env s2 f1 f2).
-
-Ltac fstart := do 2 eexists.
+  applys entails_under_refl. *)
+Abort.
+(* Qed. *)
 
 Lemma f_reduction1: forall v1,
   (* entails_sequent empty_env empty_env empty_env empty_env *)
@@ -149,7 +155,7 @@ Proof.
   rewrite red_init.
   rewrite red_rs_sh_elim.
 
-  apply ent_ex_l1. intros k.
+  apply ent_ex_l. intros k.
 
 Abort.
 
