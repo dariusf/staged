@@ -3,41 +3,6 @@
 From ShiftReset Require Import LogicBind AutomationBind.
 Local Open Scope string_scope.
 
-(* TODO move upstream *)
-Lemma norm_bind_disj: forall f1 f2 fk,
-  entails (bind (disj f1 f2) fk) (disj (bind f1 fk) (bind f2 fk)).
-Proof.
-  unfold entails. intros.
-  inverts H.
-  { inverts H7.
-    - applys s_disj_l. applys* s_bind.
-    - applys s_disj_r. applys* s_bind. }
-  {
-    inverts H6.
-    - applys s_disj_l. applys* s_bind_sh.
-    - applys s_disj_r. applys* s_bind_sh. }
-Qed.
-
-(* Lemma norm_rs_ens_void: forall f1 f2 fk,
-  entails (rs (ens_ H)) (disj (bind f1 fk) (bind f2 fk)).
-Proof.
-  unfold entails. intros.
-  inverts H.
-  { inverts H7.
-    - applys s_disj_l. applys* s_bind.
-    - applys s_disj_r. applys* s_bind. }
-  {
-    inverts H6.
-    - applys s_disj_l. applys* s_bind_sh.
-    - applys s_disj_r. applys* s_bind_sh. }
-Qed. *)
-
-Lemma norm_rs_disj: forall f1 f2,
-  entails (rs (disj f1 f2)) (disj (rs f1) (rs f2)).
-Proof.
-  applys red_rs_float2.
-Qed.
-
 Definition viop f a b :=
   match a, b with
   | vint a1, vint b1 => f a1 b1
@@ -78,7 +43,8 @@ Global Hint Rewrite
   norm_rs_req norm_rs_disj red_rs_float1
   (* eliminate trivial resets and binds *)
   red_rs_ens norm_bind_val
-
+  (* trivial rewrites *)
+  norm_seq_empty
   using shiftfree : staged_norm.
 
 Ltac fsimpl := autorewrite with staged_norm.
@@ -328,16 +294,12 @@ Proof.
   fsimpl.
   applys ent_disj_l.
   {
-    finst "k". { intros. shiftfree. }
-
-
-(* Ltac fleft := *)
-    (* apply ent_disj_r_l. *)
-    (* applys_eq ent_disj_r_l. *)
-
-(* Search (empty;; _). *)
-    fleft.
-    Search (entails (disj _ _) _).
+    (* the defun isn't used *)
+    finst "k". { intros. shiftfree. } fleft.
+    lazymatch goal with
+    | |- entails_under _ _ (empty;; ?f) =>
+      rewrite (norm_seq_empty f)
+    end.
 
     (* base case *)
     rewrite <- hstar_pure_post_pure.
@@ -364,7 +326,8 @@ Proof.
     rewrite red_extend.
     rewrite red_rs_sh_elim.
 
-    Close Scope flow_scope.
+    fintro k. finst k. { shiftfree. }
+    fright. applys ent_seq_defun_both.
 
     (* rewrite H. *)
 

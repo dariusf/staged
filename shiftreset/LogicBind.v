@@ -789,7 +789,7 @@ Global Hint Resolve
   (* sf_rs_val *)
   : staged_shiftfree.
 
-Ltac shiftfree := auto with staged_shiftfree.
+Ltac shiftfree := intros; auto with staged_shiftfree.
 
 (* Immediately dispatch goals where we have an assumption that
   a shift-free thing produces a shift *)
@@ -805,7 +805,7 @@ Ltac no_shift :=
     false sf_rs H
   | H: satisfies _ _ _ _ (shft _ _) (defun _ _) |- _ =>
     false sf_defun H
-  | _ => idtac "no match"
+  | _ => idtac
   end.
 
 Ltac vacuity ::= false; no_shift.
@@ -2148,13 +2148,14 @@ Proof.
   inverts H. heaps.
 Qed.
 
-Lemma norm_seq_empty : forall f (a:val),
-  entails (empty;; f) f.
+Lemma norm_seq_empty : forall f,
+  bientails (empty;; f) f.
 Proof.
-  unfold entails. intros.
-  inverts H as H.
-  { inverts* H. heaps. }
-  { no_shift. }
+  iff H.
+  { inverts H as H.
+    - inverts* H. heaps. 
+    - no_shift. }
+  { applys s_seq H. applys* empty_intro. }
 Qed.
 
 Lemma ent_seq_ens_pure_l : forall s1 f f1 (P:val->Prop),
@@ -3217,6 +3218,27 @@ Proof.
   { inverts H11. specializes H10 H1 H2 H3.
     applys* s_bind. }
 Qed.
+
+Lemma norm_bind_disj: forall f1 f2 fk,
+  entails (bind (disj f1 f2) fk) (disj (bind f1 fk) (bind f2 fk)).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  { inverts H7.
+    - applys s_disj_l. applys* s_bind.
+    - applys s_disj_r. applys* s_bind. }
+  {
+    inverts H6.
+    - applys s_disj_l. applys* s_bind_sh.
+    - applys s_disj_r. applys* s_bind_sh. }
+Qed.
+
+Lemma norm_rs_disj: forall f1 f2,
+  entails (rs (disj f1 f2)) (disj (rs f1) (rs f2)).
+Proof.
+  applys red_rs_float2.
+Qed.
+
 
 (** * Reduction example *)
 (**
