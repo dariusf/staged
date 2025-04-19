@@ -3196,6 +3196,16 @@ Proof.
   assumption.
 Qed.
 
+(* Lemma norm_bind_pure : forall fk (P:val->Prop) Q,
+  entails (bind (ens (fun r => \[P r])) (fun v => ens (Q)))
+    (ens (fun r => Q r * \[P r])).
+Proof.
+  unfold entails. intros * H.
+  inverts H. 2: { false sf_ens H6. }
+  inverts H7. destr H5. injects H. hinv H0. subst. rew_fmap.
+  assumption.
+Qed. *)
+
 Lemma norm_bind_ens_void : forall fk H,
   entails (bind (ens_ H) fk) (seq (ens_ H) (fk vunit)).
 Proof.

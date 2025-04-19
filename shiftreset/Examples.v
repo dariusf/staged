@@ -329,6 +329,23 @@ Proof.
     fintro k. finst k. { shiftfree. }
     fright. applys ent_seq_defun_both.
 
+
+    fintro x. finst x.
+    fintro a. finst a.
+
+    funfold1 k.
+    lazymatch goal with
+    | |- entails_under ?e _ _ => remember e as env
+    end.
+
+    fsimpl.
+    fstep. xsimpl.
+
+    (* need to compose the two expressions to rewrite. this is with bind assoc. need to revisit sf premise as it can't be satisfied for unk toss_n. either that or the lemma is wrong. *)
+    (* rewrite norm_bind_assoc. *)
+
+    (* fsimpl. *)
+
     (* rewrite H. *)
 
     (* finst "k". *)
