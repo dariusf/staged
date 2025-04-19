@@ -289,13 +289,19 @@ Proof.
   applys* s_bind H9.
 Qed.
 
+Ltac fleft := first [ apply ent_seq_disj_r_l | apply ent_disj_r_l ].
+Ltac fright := first [ apply ent_seq_disj_r_r | apply ent_disj_r_l ].
+
 Theorem main_summary : forall n,
-(* exists f, *)
-  (* entails_under toss_n_env (main n) (f;; main_spec_weaker n). *)
-  entails_under toss_n_env (main n) (main_spec_weaker n).
+exists f,
+  entails_under toss_n_env (main n) (f;; main_spec_weaker n).
+  (* entails_under toss_n_env (main n) (main_spec_weaker n). *)
 Proof.
   (* intros n. *)
   unfold main_spec_weaker, main. intros.
+
+  exists (∃ k, disj empty (defun k (fun v =>
+    rs (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y => x - y) n 1)) (fun r2 => ens (fun r => \[r = vbop (fun x y : bool => x && y) r1 r2])))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))))).
 
   (* unfold toss_n_env. *)
 
@@ -322,36 +328,45 @@ Proof.
   fsimpl.
   applys ent_disj_l.
   {
+    finst "k". { intros. shiftfree. }
+
+
+(* Ltac fleft := *)
+    (* apply ent_disj_r_l. *)
+    (* applys_eq ent_disj_r_l. *)
+
+(* Search (empty;; _). *)
+    fleft.
+    Search (entails (disj _ _) _).
+
     (* base case *)
     rewrite <- hstar_pure_post_pure.
     rewrite <- norm_ens_ens_void_l.
     fsimpl.
-    (* Abort. *)
-    admit.
-
-    (* case_if. clear C.
+    case_if. clear C.
     fstep. unfold veq. intros.
     fintro x.
     fintro a.
     apply ent_req_r.
     finst a.
     rewrite norm_ens_ens_void_l.
-    fstep. xsimpl. math. *)
+    fstep. xsimpl. math.
   }
   {
     pose proof lemma_weaker.
-    (* rewrite H. *)
 
-    (* TODO toss and n aren't shift free *)
-    (* fsimpl.
-    fstep. unfold vgt. intros. *)
+    fsimpl.
+    fstep. unfold vgt. intros.
 
-
-    (* unfold toss.
+    unfold toss.
     rewrite red_init.
     rewrite red_extend.
     rewrite red_extend.
-    rewrite red_rs_sh_elim. *)
+    rewrite red_rs_sh_elim.
+
+    Close Scope flow_scope.
+
+    (* rewrite H. *)
 
     (* finst "k". *)
     (* unfold toss_n_env. *)

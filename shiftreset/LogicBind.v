@@ -350,6 +350,24 @@ Proof.
   applys* s_shc.
 Qed.
 
+(* Dispatch goals involving the heaps that come out of ens once
+  we have to reason about semantics *)
+Ltac heaps :=
+  lazymatch goal with
+  | H: norm _ = norm _ |- _ => injects H; heaps
+  | H: exists _, _ |- _ => destr H; heaps
+  | H: _ /\ _ |- _ => destr H; heaps
+  | H: (_ ~~> _) _ |- _ => hinv H; heaps
+  | H: \[_] _ |- _ => hinv H; heaps
+  | H: (_ \* _) _ |- _ => hinv H; heaps
+  | |- _ /\ _ => splits; heaps
+  | |- (_ ~~> _) _ => hintro; heaps
+  | |- (_ \* _) _ => hintro; heaps
+  | |- \[_] _ => hintro; heaps
+  | |- exists _, _ => eexists; heaps
+  | _ => subst; rew_fmap *
+  end.
+
 Lemma s_seq : forall s3 h3 r1 s1 s2 f1 f2 h1 h2 R,
   satisfies s1 s3 h1 h3 (norm r1) f1 ->
   satisfies s3 s2 h3 h2 R f2 ->
@@ -358,6 +376,8 @@ Proof.
   unfold seq. intros.
   applys* s_bind.
 Qed.
+
+Notation s_seq_sh := s_bind_sh.
 
 Lemma s_ens_ : forall H h1 h2 s1,
   (exists h3,
@@ -368,7 +388,7 @@ Lemma s_ens_ : forall H h1 h2 s1,
 Proof.
   unfold ens_. intros.
   applys* s_ens.
-  destr H0. exs. intuition. hintro. jauto.
+  heaps.
 Qed.
 
 (** A specialization of [equal_f] for exposing the equalities in continuations after inversion. *)
@@ -550,6 +570,38 @@ Proof.
   intros. constructor. apply sf_defun.
 Qed.
 
+Lemma sf_disj : forall f1 f2,
+  shift_free f1 ->
+  shift_free f2 ->
+  shift_free (disj f1 f2).
+Proof.
+  unfold shift_free, not. intros.
+  inverts H1.
+  eauto.
+  eauto.
+Qed.
+
+Instance ShiftFreeDisj : forall f1 f2,
+  ShiftFree f1 ->
+  ShiftFree f2 ->
+  ShiftFree (disj f1 f2).
+Proof.
+  intros. inverts H. inverts H0. constructor. apply* sf_disj.
+Qed.
+
+Lemma sf_empty :
+  shift_free empty.
+Proof.
+  unfold shift_free, not. intros.
+  inverts H. destr H6. discriminate.
+Qed.
+
+Instance ShiftFreeEmpty :
+  ShiftFree empty.
+Proof.
+  intros. constructor. apply* sf_empty.
+Qed.
+
 Lemma sf_req : forall H f,
   shift_free f ->
   shift_free (req H f).
@@ -717,7 +769,7 @@ Proof.
   eassumption.
 Qed.
 
-Ltac shiftfree :=
+(* Ltac shiftfree :=
   lazymatch goal with
   | |- shift_free (rs _) => apply sf_rs
   | |- shift_free (defun _ _) => apply sf_defun
@@ -728,21 +780,32 @@ Ltac shiftfree :=
   | |- shift_free (bind _ _) => apply sf_bind; shiftfree
   | |- shift_free (fex _) => apply sf_fex; intros; shiftfree
   | _ => auto
-  end.
+  end. *)
+
+Create HintDb staged_shiftfree.
+Global Hint Resolve
+  sf_ens sf_ens_ sf_defun sf_seq sf_bind sf_disj sf_empty
+  sf_req_pure sf_fex sf_fall sf_rs
+  (* sf_rs_val *)
+  : staged_shiftfree.
+
+Ltac shiftfree := auto with staged_shiftfree.
 
 (* Immediately dispatch goals where we have an assumption that
   a shift-free thing produces a shift *)
 Ltac no_shift :=
   lazymatch goal with
+  | H: satisfies _ _ _ _ (shft _ _) empty |- _ =>
+    false sf_empty H
   | H: satisfies _ _ _ _ (shft _ _) (ens _) |- _ =>
-    apply sf_ens in H; false
+    false sf_ens H
   | H: satisfies _ _ _ _ (shft _ _) (ens_ _) |- _ =>
-    unfold ens_ in H; apply sf_ens in H; false
+    unfold ens_ in H; false sf_ens H
   | H: satisfies _ _ _ _ (shft _ _) (rs _ _) |- _ =>
-    apply sf_rs in H; false
+    false sf_rs H
   | H: satisfies _ _ _ _ (shft _ _) (defun _ _) |- _ =>
-    apply sf_defun in H; false
-  | _ => idtac
+    false sf_defun H
+  | _ => idtac "no match"
   end.
 
 Ltac vacuity ::= false; no_shift.
@@ -1938,17 +2001,6 @@ Proof.
   applys* s_seq h3.
 Qed.
 
-(* Lemma norm_discard : forall f1 f2 x,
-  entails f1 f2 ->
-  entails (discard f1 x) (discard f2 x).
-Proof.
-  unfold entails. intros.
-  inverts H0 as H0.
-  apply s_discard.
-  eauto.
-  reflexivity.
-Qed. *)
-
 Lemma norm_defun : forall x uf a,
   entails (defun x uf;; unk x a) (defun x uf;; uf a).
 Proof.
@@ -2077,8 +2129,7 @@ Lemma norm_seq_pure_l : forall p f,
 Proof.
   unfold entails. intros.
   inverts H as H. 2: { no_shift. }
-  inverts H as H. destr H. hinv H. injects H0. subst.
-  rew_fmap *.
+  inverts H. heaps.
 Qed.
 
 Lemma norm_ens_true : forall f,
@@ -2086,8 +2137,7 @@ Lemma norm_ens_true : forall f,
 Proof.
   unfold entails. intros.
   inverts H as H. 2: { no_shift. }
-  inverts H as H. destr H. hinv H. hinv H. hinv H2. injects H0. subst.
-  rew_fmap *.
+  inverts H. heaps.
 Qed.
 
 Lemma norm_ens_eq : forall f (a:val),
@@ -2095,8 +2145,16 @@ Lemma norm_ens_eq : forall f (a:val),
 Proof.
   unfold entails. intros.
   inverts H as H. 2: { no_shift. }
-  inverts H as H. destr H. hinv H. hinv H. hinv H2. injects H0. subst.
-  rew_fmap *.
+  inverts H. heaps.
+Qed.
+
+Lemma norm_seq_empty : forall f (a:val),
+  entails (empty;; f) f.
+Proof.
+  unfold entails. intros.
+  inverts H as H.
+  { inverts* H. heaps. }
+  { no_shift. }
 Qed.
 
 Lemma ent_seq_ens_pure_l : forall s1 f f1 (P:val->Prop),
@@ -2104,10 +2162,8 @@ Lemma ent_seq_ens_pure_l : forall s1 f f1 (P:val->Prop),
   entails_under s1 (ens (fun r => \[P r]);; f1) f.
 Proof.
   unfold entails_under. intros.
-  inverts H0 as H0; no_shift. destr H0.
-  inverts H0 as H0. destr H0.
-  hinv H0. injects H1.
-  subst. rew_fmap *.
+  inverts H0 as H0; no_shift.
+  inverts H0. heaps.
 Qed.
 
 Lemma ent_seq_ens_void_pure_l : forall s1 f f1 P,
@@ -2115,10 +2171,8 @@ Lemma ent_seq_ens_void_pure_l : forall s1 f f1 P,
   entails_under s1 (ens_ \[P];; f1) f.
 Proof.
   unfold entails_under. intros.
-  inverts H0 as H0; no_shift. destr H0.
-  inverts H0 as H0. destr H0.
-  hinv H0. hinv H3. hinv H0. subst. injects H1.
-  rew_fmap *.
+  inverts H0 as H0; no_shift.
+  inverts H0. heaps.
 Qed.
 
 Lemma norm_seq_ens_req : forall f f1 H,
@@ -2129,10 +2183,7 @@ Proof.
   apply s_req. intros.
   apply H0.
   eapply s_seq.
-  apply s_ens. exists vunit hp.
-  splits*.
-  hintro; jauto.
-  subst. assumption.
+  apply s_ens. exists vunit hp. heaps. subst*.
 Qed.
 
 (* Lemma ent_seq_ens_dep_l : forall env f f1 p,
@@ -2859,6 +2910,48 @@ Proof.
   applys s_ens.
   exs. splits*.
   applys* H.
+Qed.
+
+Lemma ent_seq_disj_r_l : forall s f1 f2 f3 f4,
+  entails_under s f3 (f1;; f4) ->
+  entails_under s f3 (disj f1 f2;; f4).
+Proof.
+  unfold entails_under. intros.
+  specializes H H0.
+  inverts H.
+  { applys s_seq H9.
+    applys* s_disj_l. }
+  { applys s_bind_sh.
+    applys* s_disj_l. }
+Qed.
+
+Lemma ent_seq_disj_r_r : forall s f1 f2 f3 f4,
+  entails_under s f3 (f2;; f4) ->
+  entails_under s f3 (disj f1 f2;; f4).
+Proof.
+  unfold entails_under. intros.
+  specializes H H0.
+  inverts H.
+  { applys s_seq H9.
+    applys* s_disj_r. }
+  { applys s_bind_sh.
+    applys* s_disj_r. }
+Qed.
+
+Lemma ent_disj_r_l : forall s f1 f2 f3,
+  entails_under s f3 f1 ->
+  entails_under s f3 (disj f1 f2).
+Proof.
+  unfold entails_under. intros.
+  applys* s_disj_l.
+Qed.
+
+Lemma ent_disj_r_r : forall s f1 f2 f3,
+  entails_under s f3 f2 ->
+  entails_under s f3 (disj f1 f2).
+Proof.
+  unfold entails_under. intros.
+  applys* s_disj_r.
 Qed.
 
 Lemma ent_disj_l : forall f1 f2 f3 env,
