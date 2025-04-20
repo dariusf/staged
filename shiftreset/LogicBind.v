@@ -602,14 +602,23 @@ Proof.
   intros. constructor. apply* sf_empty.
 Qed.
 
+(* This means: you can disjointly split off a heap satisfying H
+  from some arbitrary heap h1, thereby demonstrating that you can
+  write a req doing that by starting at h1. *)
+Definition req_provable H :=
+  forall h1, exists hp hr, H hp /\ h1 = hr \u hp /\ Fmap.disjoint hr hp.
+
 Lemma sf_req : forall H f,
+  req_provable H ->
   shift_free f ->
   shift_free (req H f).
 Proof.
-  unfold shift_free, not. intros.
-  inverts H1 as H1.
-  (* TODO we need to know that the req is provable *)
-Abort.
+  unfold not. introv Hreq Hsf. introv H1.
+  inverts H1.
+  unfolds in Hreq. specializes Hreq h1. destr Hreq.
+  specializes H8 H0 H1 H3.
+  false Hsf H8.
+Qed.
 
 Lemma sf_req_pure : forall P f,
   P ->
