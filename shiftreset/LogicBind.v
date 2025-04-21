@@ -2087,40 +2087,33 @@ Proof.
   assumption.
 Qed.
 
-Lemma seq_assoc_unrestricted : forall s1 s2 h1 h2 R f1 f2 f3,
-  satisfies s1 s2 h1 h2 R (f1;; f2;; f3) <->
-  satisfies s1 s2 h1 h2 R ((f1;; f2);; f3).
-Proof.
-  iff Hs.
-  { inverts Hs.
-    { inverts H7.
-      { applys s_seq H9. applys* s_seq. }
-      { applys s_bind_sh. applys* s_seq. } }
-    {
-      (* at this point we don't know which to pick *)
-Abort.
-
-Lemma seq_assoc : forall s1 s2 h1 h2 R f1 f2 f3,
+Lemma norm_seq_assoc1 : forall f1 f2 f3,
   shift_free f1 ->
   shift_free f2 ->
-  satisfies s1 s2 h1 h2 R (f1;; (f2;; f3)) <->
-  satisfies s1 s2 h1 h2 R ((f1;; f2);; f3).
+  entails (f1;; (f2;; f3)) ((f1;; f2);; f3).
 Proof.
-  intros.
-  split; intros.
-  { inverts H1 as H1. 2: { apply H in H1; false. } destr H1.
-    inverts H9 as H9. 2: { apply H0 in H9; false. } destr H9.
+  introv Hsf1 Hsf2 H.
+  inverts H as H. 2: { false Hsf1 H. }
+  inverts H7 as H7. 2: { false Hsf2 H7. }
+  applys* s_seq.
+  applys* s_seq.
+Qed.
+
+Lemma norm_seq_assoc2 : forall f1 f2 f3,
+  shift_free f1 ->
+  shift_free f2 ->
+  entails ((f1;; f2);; f3) (f1;; (f2;; f3)).
+Proof.
+  introv Hsf1 Hsf2 H.
+  inverts H as H.
+  { destr H.
+    inverts H as H.
+    destr H.
     applys* s_seq.
     applys* s_seq. }
-  { inverts H1 as H1.
-    { destr H1.
-      inverts H1 as H1.
-      destr H1.
-      applys* s_seq.
-      applys* s_seq. }
-    { inverts H1 as H1. destr H1.
-      apply H0 in H9. false.
-      apply H in H1. false. } }
+  { inverts H as H.
+    false Hsf2 H7.
+    false Hsf1 H. }
 Qed.
 
 Lemma norm_seq_assoc : forall f1 f2 f3,
@@ -2128,8 +2121,9 @@ Lemma norm_seq_assoc : forall f1 f2 f3,
   shift_free f2 ->
   bientails (f1;; f2;; f3) ((f1;; f2);; f3).
 Proof.
-  intros.
-  split; intros; now apply seq_assoc.
+  introv Hsf1 Hsf2. iff H.
+  - applys* norm_seq_assoc1 H.
+  - applys* norm_seq_assoc2 H.
 Qed.
 
 (* A pure fact about a result on the left of a seq doesn't contribute anything *)
