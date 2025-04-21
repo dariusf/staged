@@ -3,27 +3,6 @@
 From ShiftReset Require Import LogicBind AutomationBind.
 Local Open Scope string_scope.
 
-(* TODO *)
-Lemma norm_bind_all_l : forall (A:Type) fk1 fk,
-  entails (bind (∀ (x:A), fk1 x) fk) (∀ (x:A), bind (fk1 x) fk).
-Proof.
-Admitted.
-
-(* Lemma norm_bind_all_r : forall (A:Type) f fk,
-  entails (bind f (fun r => ∀ (x:A), fk r)) (∀ (x:A), bind f fk).
-Proof.
-Admitted. *)
-
-Lemma norm_bind_ex_l : forall (A:Type) fk1 fk,
-  entails (bind (∃ (x:A), fk1 x) fk) (∃ (x:A), bind (fk1 x) fk).
-Proof.
-Admitted.
-
-(* Lemma norm_bind_ex_r : forall (A:Type) f fk,
-  entails (bind f (fun r => ∃ (x:A), fk r)) (∃ (x:A), bind f fk).
-Proof.
-Admitted. *)
-
 Definition viop f a b :=
   match a, b with
   | vint a1, vint b1 => f a1 b1
@@ -290,6 +269,19 @@ Proof.
 (* Abort. *)
 Admitted.
 
+Lemma rearrange_ens : forall H P (P1:val->Prop),
+  entails (ens (fun r => H \* \[P /\ P1 r]))
+  (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r])).
+Proof.
+  unfold entails. intros.
+  inverts H0.
+  heaps.
+  applys s_seq.
+  { applys s_ens. heaps. }
+  applys s_seq.
+  { applys s_ens. heaps. }
+  { applys s_ens. heaps. }
+Qed.
 
 Lemma norm_bind_assoc: forall f fk fk1,
   shift_free f ->
@@ -307,36 +299,13 @@ Qed.
 Ltac fleft := first [ apply ent_seq_disj_r_l | apply ent_disj_r_l ].
 Ltac fright := first [ apply ent_seq_disj_r_r | apply ent_disj_r_l ].
 
-Theorem main_summary : forall n,
-exists f,
+Theorem main_summary : forall n, exists f,
   entails_under toss_n_env (main n) (f;; main_spec_weaker n).
-  (* entails_under toss_n_env (main n) (main_spec_weaker n). *)
 Proof.
-  (* intros n. *)
   unfold main_spec_weaker, main. intros.
 
   exists (∃ k, disj empty (defun k (fun v =>
     rs (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y => x - y) n 1)) (fun r2 => ens (fun r => \[r = vbop (fun x y : bool => x && y) r1 r2])))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))))).
-
-  (* unfold toss_n_env. *)
-
-  (* lazymatch goal with
-  | |- entails_under ?env _ _ =>
-    pose proof (@entails_under_unk env "toss_n" n)
-    (* [ | resolve_fn_in_env ]; simpl *)
-  end.
-  specializes H. unfold toss_n_env.
-  
-  (* TODO fix the unfolding tactic *)
-  (* resolve_fn_in_env. *)
-  unfold Fmap.update.
-  rewrite Fmap.read_union_r.
-  rewrite Fmap.read_union_l.
-  apply Fmap.read_single.
-  apply Fmap.indom_single.
-  solve_trivial_not_indom.
-
-  simpl in H. rewrite H. clear H. *)
 
   funfold1 "toss_n".
   unfold toss_n.
@@ -363,9 +332,7 @@ Proof.
     rewrite norm_ens_ens_void_l.
     fstep. xsimpl. math.
   }
-  {
-
-    fsimpl.
+  { fsimpl.
     fstep. unfold vgt. intros.
 
     unfold toss.
@@ -375,8 +342,8 @@ Proof.
     rewrite red_rs_sh_elim.
 
     fintro k. finst k. { shiftfree. }
+    (* recursive case; use the defun *)
     fright. applys ent_seq_defun_both.
-
 
     fintro x. finst x.
     fintro a. finst a.
@@ -388,76 +355,24 @@ Proof.
 
     fsimpl.
     fstep. xsimpl.
-
-    (* finst x. *)
-    (* fintro x1. *)
-    (* finst x. *)
     rewrite lemma_weaker2.
-
-    (* rewrite norm_bind_all_l.
-    rewrite norm_rs_all.
-    rewrite norm_seq_all_r. *)
     fsimpl. finst x.
     fsimpl. finst (a+1).
     fsimpl.
     rewrite norm_req_req.
 
-    (* rewrite norm_ens_req_transpose. 2: {
-      (* rewrite *)
-      (* Search (_ \* \[]). *)
-      (* rewrite <- (hstar_hempty_r (x~~>(a+1))) at 1.
-      apply b_pts_match.
-      apply b_base_empty. *)
-      } *)
-
     rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
 
-    (* fsimpl. *)
-    (* Search (entails_under _ (req \[_] _) _). *)
     fstep. math.
     fsimpl. fintro b.
-    (* fsimpl. *)
-    (* rewrite <- norm_ens_ens_void. *)
-    (* Search (ens). *)
+    rewrite rearrange_ens.
+    fsimpl.
 
-assert (forall H P (P1:val->Prop),
-  entails (ens (fun r => H \* \[P /\ P1 r]))
-  (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r]))).
-  admit.
-  rewrite H0.
-  clear H0.
+    apply ent_seq_ens_void_pure_l. intros.
 
-  fsimpl.
-  assert (forall H P, entails (ens_ H;; ens_ \[P]) (ens_ \[P];; ens_ H)) as ?. admit.
-  (* rewrite norm_seq_assoc; shiftfree.
-  rewrite H0.
-  rewrite <- norm_seq_assoc; shiftfree. *)
-  clear H0.
-
-  assert ( forall s P f1 f2,
-    (P -> entails_under s f1 f2) ->
-    entails_under s (ens_ \[P];; f1) f2
-  ) as ?. admit.
-
-  apply H0. intros.
-  clear H0.
-
-  case_if. 2: { false* C. }
-
-  (* fsimpl. *)
-  (* rewrite norm_bind_disj_val. *)
-  fsimpl.
-
-  assert (forall f1 f2 f3,
-    entails (f1;; disj f2 f3)
-    (disj (f1;; f2) (f1;; f3))
-  ) as ?. admit.
-  (* rewrite H0. *)
-  clear H0.
-
-  (* apply ent_seq_disj_l. *)
+    case_if. 2: { false* C. }
 
     fsimpl. finst b.
 
@@ -472,7 +387,6 @@ assert (forall H P (P1:val->Prop),
     rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
-
     
     rewrite lemma_weaker2.
     fsimpl. finst x.
@@ -487,31 +401,16 @@ assert (forall H P (P1:val->Prop),
     fstep. math.
     fintro b1.
 
-(* this occurs twice *)
-assert (forall H P (P1:val->Prop),
-  entails (ens (fun r => H \* \[P /\ P1 r]))
-  (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r]))).
-  admit.
-  rewrite H0.
-  clear H0.
+    rewrite rearrange_ens.
 
-  fsimpl.
-  fstep. intros.
-  case_if.
-  fsimpl.
+    fsimpl.
+    fstep. intros.
+    case_if.
+    fsimpl.
 
-  (* Search (ens_ _;; ens _). *)
-  rewrite norm_ens_ens_void_l.
-  finst b1.
-  fstep.
-  xsimpl.
-  intros.
-  split.
-  math.
-  rewrite H2; f_equal.
-
-  
-
+    rewrite norm_ens_ens_void_l.
+    finst b1.
+    fstep. { xsimpl. intros. split. math. rewrite H2; f_equal. }
   }
 Qed.
 
@@ -529,9 +428,9 @@ Lemma lemma : forall acc x n,
 Proof.
 Abort.
 
-Theorem main_summary : forall n,
+(* Theorem main_summary : forall n,
   entails_under toss_env (main n) main_spec.
 Proof.
-Abort.
+Abort. *)
 
 End Toss.

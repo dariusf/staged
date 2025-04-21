@@ -3272,6 +3272,70 @@ Proof.
   applys red_rs_float2.
 Qed.
 
+Lemma norm_seq_disj_r : forall f1 f2 f3,
+  shift_free f1 ->
+  entails (f1;; disj f2 f3)
+    (disj (f1;; f2) (f1;; f3)).
+Proof.
+  unfold entails. introv Hsf H.
+  inverts H. 2: { false Hsf H6. }
+  inverts H8.
+  - applys s_disj_l; applys* s_seq.
+  - applys s_disj_r; applys* s_seq.
+Qed.
+
+Lemma norm_seq_ens_ens_pure : forall H P,
+  entails (ens_ H;; ens_ \[P]) (ens_ \[P];; ens_ H).
+Proof.
+  unfold entails. intros.
+  inverts H0. 2: no_shift.
+  inverts H8.
+  inverts H9.
+  applys s_seq; applys s_ens; heaps.
+Qed.
+
+Lemma norm_bind_all_l : forall (A:Type) (fk1:A->flow) fk,
+  entails (bind (∀ (b:A), fk1 b) fk) (∀ (b:A), bind (fk1 b) fk).
+Proof.
+  unfold entails. introv H.
+  inverts H.
+  { inverts H7. applys s_fall. intros b. specializes H5 b.
+    applys* s_bind. }
+  { inverts H6. applys s_fall. intros b. specializes H5 b.
+    applys* s_bind_sh. }
+Qed.
+
+Lemma norm_bind_ex_l : forall (A:Type) (fk1:A->flow) fk,
+  entails (bind (∃ (b:A), fk1 b) fk) (∃ (b:A), bind (fk1 b) fk).
+Proof.
+  unfold entails. introv H.
+  inverts H.
+  { inverts H7. applys s_fex. destruct H5 as (b&?). exists b.
+    applys* s_bind. }
+  { inverts H6. applys s_fex. destruct H5 as (b&?). exists b.
+    applys* s_bind_sh. }
+Qed.
+
+(* unsure about 2-parameter statement *)
+Lemma norm_bind_all_r : forall (A:Type) f (fk:A->val->flow),
+  shift_free f ->
+  entails (bind f (fun r => ∀ (x:A), fk x r)) (∀ (x:A), bind f (fk x)).
+Proof.
+  unfold entails. introv Hsf H.
+  inverts H. 2: { false Hsf H6. }
+  inverts H8.
+  applys s_fall. intros b. specializes H5 b. apply* s_bind.
+Qed.
+
+Lemma norm_bind_ex_r : forall (A:Type) f (fk:A->val->flow),
+  shift_free f ->
+  entails (bind f (fun r => ∃ (x:A), fk x r)) (∃ (x:A), bind f (fk x)).
+Proof.
+  unfold entails. introv Hsf H.
+  inverts H. 2: { false Hsf H6. }
+  inverts H8.
+  applys s_fex. destruct H5 as (b&?). exists b. apply* s_bind.
+Qed.
 
 (** * Reduction example *)
 (**
