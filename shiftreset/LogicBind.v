@@ -2141,20 +2141,12 @@ Proof.
   inverts H. heaps.
 Qed.
 
-Lemma norm_ens_true : forall f,
-  entails (ens_ \[True];; f) f.
+Lemma norm_ens_pure : forall f P,
+  P -> entails (ens_ \[P];; f) f.
 Proof.
   unfold entails. intros.
-  inverts H as H. 2: { no_shift. }
-  inverts H. heaps.
-Qed.
-
-Lemma norm_ens_eq : forall f (a:val),
-  entails (ens_ \[a = a];; f) f.
-Proof.
-  unfold entails. intros.
-  inverts H as H. 2: { no_shift. }
-  inverts H. heaps.
+  inverts H0. 2: no_shift.
+  inverts H8; heaps.
 Qed.
 
 Lemma norm_seq_empty : forall f,
@@ -2922,6 +2914,15 @@ Proof.
   applys* H.
 Qed.
 
+Lemma ent_seq_disj_l : forall s f1 f2 f3,
+  entails_under s f1 f3 ->
+  entails_under s f2 f3 ->
+  entails_under s (disj f1 f2) f3.
+Proof.
+  unfold entails_under. intros.
+  inverts* H1.
+Qed.
+
 Lemma ent_seq_disj_r_l : forall s f1 f2 f3 f4,
   entails_under s f3 (f1;; f4) ->
   entails_under s f3 (disj f1 f2;; f4).
@@ -3203,6 +3204,19 @@ Proof.
   inverts H. 2: { false sf_ens H6. }
   inverts H7. destr H5. injects H. hinv H0. subst. rew_fmap.
   assumption.
+Qed.
+
+(* TODO something more general would be to push disjunction out *)
+Lemma norm_bind_disj_val : forall fk v1 v2,
+  entails (bind (ens (fun r => \[r = v1 \/ r = v2])) fk)
+    (disj (fk v1) (fk v2)).
+Proof.
+  unfold entails. intros * H.
+  inverts H. 2: { false sf_ens H6. }
+  inverts H7. heaps.
+  destruct H; subst.
+  - apply* s_disj_l.
+  - apply* s_disj_r.
 Qed.
 
 (* Lemma norm_bind_pure : forall fk (P:val->Prop) Q,

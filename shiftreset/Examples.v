@@ -3,6 +3,27 @@
 From ShiftReset Require Import LogicBind AutomationBind.
 Local Open Scope string_scope.
 
+(* TODO *)
+Lemma norm_bind_all_l : forall (A:Type) fk1 fk,
+  entails (bind (∀ (x:A), fk1 x) fk) (∀ (x:A), bind (fk1 x) fk).
+Proof.
+Admitted.
+
+(* Lemma norm_bind_all_r : forall (A:Type) f fk,
+  entails (bind f (fun r => ∀ (x:A), fk r)) (∀ (x:A), bind f fk).
+Proof.
+Admitted. *)
+
+Lemma norm_bind_ex_l : forall (A:Type) fk1 fk,
+  entails (bind (∃ (x:A), fk1 x) fk) (∃ (x:A), bind (fk1 x) fk).
+Proof.
+Admitted.
+
+(* Lemma norm_bind_ex_r : forall (A:Type) f fk,
+  entails (bind f (fun r => ∃ (x:A), fk r)) (∃ (x:A), bind f fk).
+Proof.
+Admitted. *)
+
 Definition viop f a b :=
   match a, b with
   | vint a1, vint b1 => f a1 b1
@@ -39,6 +60,13 @@ Global Hint Rewrite
   norm_rs_all norm_req_all norm_seq_all_r
   (* associate things out of binds *)
   norm_bind_req norm_bind_seq_assoc norm_bind_disj
+
+  (* move quantifiers out *)
+  norm_bind_all_l norm_bind_ex_l
+  (* norm_bind_all_r norm_bind_ex_r *)
+  norm_rs_all norm_seq_all_r
+  norm_rs_ex
+
   (* associate things out of resets *)
   norm_rs_req norm_rs_disj red_rs_float1
   (* eliminate trivial resets and binds *)
@@ -64,7 +92,8 @@ Ltac fstep := first [
   apply ent_seq_ens_pure_l |
   apply ent_seq_ens_void_pure_l |
   apply ent_ens_single |
-  apply ent_req_req
+  apply ent_req_req |
+  apply ent_req_l
 ].
 
 Module Multi.
@@ -242,6 +271,26 @@ Proof.
 Admitted.
 
 
+(* acc  *)
+Lemma lemma_weaker2 : forall (acc:bool) (n:int),
+  entails
+
+    (rs (bind
+      (bind (unk "toss_n" n) (fun r2 =>
+        ens (fun r => \[r = vbop (fun x y => x && y) acc r2])))
+      (fun v => ens (fun r => \[If v = true then r = 1 else r = 0]))))
+
+    (∀ x a, req (x~~>vint a \* \[n >= 0])
+      (∃ b, ens (fun r => x~~>vint b \*
+        (* \[b > a+n /\ (r=1 \/ r=0)]))). *)
+        \[b > a+n /\ (If acc = true then r = 1 else r = 0)]))).
+        (* \[b > a+n /\ (acc = true /\ r = 1 \/ acc = false /\ r = 0)]))). *)
+Proof.
+  (* induction_wf IH: (downto 0) n. *)
+(* Abort. *)
+Admitted.
+
+
 Lemma norm_bind_assoc: forall f fk fk1,
   shift_free f ->
   (forall v, shift_free (fk v)) ->
@@ -315,7 +364,6 @@ Proof.
     fstep. xsimpl. math.
   }
   {
-    pose proof lemma_weaker.
 
     fsimpl.
     fstep. unfold vgt. intros.
@@ -341,155 +389,131 @@ Proof.
     fsimpl.
     fstep. xsimpl.
 
-    (* need to compose the two expressions to rewrite. this is with bind assoc. need to revisit sf premise as it can't be satisfied for unk toss_n. either that or the lemma is wrong. *)
-    (* rewrite norm_bind_assoc. *)
+    (* finst x. *)
+    (* fintro x1. *)
+    (* finst x. *)
+    rewrite lemma_weaker2.
+
+    (* rewrite norm_bind_all_l.
+    rewrite norm_rs_all.
+    rewrite norm_seq_all_r. *)
+    fsimpl. finst x.
+    fsimpl. finst (a+1).
+    fsimpl.
+    rewrite norm_req_req.
+
+    (* rewrite norm_ens_req_transpose. 2: {
+      (* rewrite *)
+      (* Search (_ \* \[]). *)
+      (* rewrite <- (hstar_hempty_r (x~~>(a+1))) at 1.
+      apply b_pts_match.
+      apply b_base_empty. *)
+      } *)
+
+    rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
+    rewrite norm_req_pure_l. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty.
 
     (* fsimpl. *)
+    (* Search (entails_under _ (req \[_] _) _). *)
+    fstep. math.
+    fsimpl. fintro b.
+    (* fsimpl. *)
+    (* rewrite <- norm_ens_ens_void. *)
+    (* Search (ens). *)
 
-    (* rewrite H. *)
+assert (forall H P (P1:val->Prop),
+  entails (ens (fun r => H \* \[P /\ P1 r]))
+  (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r]))).
+  admit.
+  rewrite H0.
+  clear H0.
 
-    (* finst "k". *)
-    (* unfold toss_n_env. *)
-    (* apply ent_seq_defun_idem. *)
+  fsimpl.
+  assert (forall H P, entails (ens_ H;; ens_ \[P]) (ens_ \[P];; ens_ H)) as ?. admit.
+  (* rewrite norm_seq_assoc; shiftfree.
+  rewrite H0.
+  rewrite <- norm_seq_assoc; shiftfree. *)
+  clear H0.
 
-    (* Close Scope flow_scope. *)
+  assert ( forall s P f1 f2,
+    (P -> entails_under s f1 f2) ->
+    entails_under s (ens_ \[P];; f1) f2
+  ) as ?. admit.
 
-    (* TODO defun problem *)
-    (* TODO reduce and unfold everything *)
-    (* TODO rewrite after unfolding unk *)
+  apply H0. intros.
+  clear H0.
 
+  case_if. 2: { false* C. }
 
-    (* (forall f fk fk1,
-      entails (bind (bind f fk1) fk)
-        (bind f (fun r => bind (fk1 r) fk))
-    ) *)
-    (* Search (bind (bind _ _) _). *)
+  (* fsimpl. *)
+  (* rewrite norm_bind_disj_val. *)
+  fsimpl.
 
+  assert (forall f1 f2 f3,
+    entails (f1;; disj f2 f3)
+    (disj (f1;; f2) (f1;; f3))
+  ) as ?. admit.
+  (* rewrite H0. *)
+  clear H0.
 
-    (* START TRYING TO REWRITE WITH THE LEMMA *)
+  (* apply ent_seq_disj_l. *)
 
-    (* assert 
-    (forall f fk fk1,
-      entails (bind (bind f fk1) fk)
-        (bind f (fun r => bind (fk1 r) fk))
-    )
-     as ?. admit.
-    rewrite H1.
+    fsimpl. finst b.
 
-    assert (forall f fk1 fk2,
-      entails
-        (bind (bind f fk1) fk2)
-        (bind f (fun v => bind (fk1 v) fk2))
-    ) as ?. admit.
+    subst.
+    funfold1 k.
+    lazymatch goal with
+    | |- entails_under ?e _ _ => remember e as env
+    end.
 
-    specializes H2
-      (unk "toss_n" (viop (fun x y : int => x - y) n 1))
-      (* (ens (fun r0 => \[r0 = vbop (fun x y : bool => x && y) r r2]))
-      (ens (fun r0 => \[If v = true then r0 = 1 else r0 = 0])) *)
-      . *)
+    fsimpl.
 
-    (* rewrite H2. *)
+    rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
+    rewrite norm_req_pure_l. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty.
 
+    
+    rewrite lemma_weaker2.
+    fsimpl. finst x.
+    fsimpl. finst (b+1).
+    fsimpl.
+    rewrite norm_req_req.
 
+    rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
+    rewrite norm_req_pure_l. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty.
 
-    admit.
+    fstep. math.
+    fintro b1.
+
+(* this occurs twice *)
+assert (forall H P (P1:val->Prop),
+  entails (ens (fun r => H \* \[P /\ P1 r]))
+  (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r]))).
+  admit.
+  rewrite H0.
+  clear H0.
+
+  fsimpl.
+  fstep. intros.
+  case_if.
+  fsimpl.
+
+  (* Search (ens_ _;; ens _). *)
+  rewrite norm_ens_ens_void_l.
+  finst b1.
+  fstep.
+  xsimpl.
+  intros.
+  split.
+  math.
+  rewrite H2; f_equal.
+
+  
+
   }
-
-  (* exists (∃ k, (defun k (fun a =>
-    rs (bind (ens (fun r : val => \[r = a]))
-      (fun v => ens (fun r => \[If v = true then r = 1 else r = 0])))))). *)
-
-  (* fintro n. finst n. *)
-  (* funfold1 "toss". unfold toss.
-  rewrite red_init.
-  rewrite red_extend.
-  rewrite red_rs_sh_elim.
-  fintro k.
-  finst k. { intros. shiftfree. }
-  apply ent_seq_defun.
-  lazymatch goal with
-  | |- entails_under ?e _ _ => remember e as env
-  end.
-  fintro x.
-  fintro a.
-  finst x.
-  finst a.
-
-  subst.
-  funfold1 k.
-  lazymatch goal with
-  | |- entails_under ?e _ _ => remember e as env
-  end.
-
-  fsimpl; shiftfree.
-
-  (* rewrite norm_bind_req; shiftfree.
-  rewrite norm_bind_val.
-  rewrite red_rs_ens. *)
-  case_if.
-  fsimpl.
-  (* rewrite norm_bind_seq_assoc; shiftfree.
-  rewrite norm_bind_val.
-
-  (* finst does not work contextually *)
-  rewrite norm_seq_all_r; shiftfree. *)
-  (* rewrite norm_req_all. *)
-  finst (a+1).
-
-  subst.
-  funfold1 k.
-  lazymatch goal with
-  | |- entails_under ?e _ _ => remember e as env
-  end.
-
-  fsimpl.
-  rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
-  rewrite norm_req_pure_l. 2: { reflexivity. }
-  rewrite norm_seq_ens_empty.
-
-(* Search (req _ (∀ _, _)). *)
-  (* finst b. *)
-
-
-  case_if.
-
-  fsimpl.
-  (* rewrite red_rs_elim. *)
-  rewrite norm_req_req.
-  apply ent_req_req. xsimpl.
-  (* rewrite norm_req_pure_l.
-  2: {
-
-  } *)
-  Search (req \[_] _).
-  (* fassume. *)
-  (* applys entails_req.
-  2: { xsimpl. }
-  2: {
-
-  } *)
-  
-  Search (entails (ens_ _;; _) (ens_ _ ;; _)).
-  Search (entails_under _ (req _ _) (req _ _)). *)
-  (* rewrite norm_req_single. *)
-
-  (* 2: { . } shiftfree. *)
-
-
-  (* rewrite norm_bind_val. *)
-  (* rewrite norm_bind_ens. *)
-
-  (* Search (rs (∀ _, _)). *)
-  (* finst x. *)
-  
-
-(* Close Scope flow_scope. *)
-(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-  (* rewrite norm_seq_ex_l. *)
-  (* Search (entails_under _ _ ((∃ _, _);; _)). *)
-  (* rewrite norm_seq_assoc *)
-
-Abort.
+Qed.
 
 Definition main_spec : flow :=
   ∀ x a n,
