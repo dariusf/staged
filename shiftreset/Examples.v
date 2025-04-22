@@ -21,14 +21,14 @@ Definition virel f a b :=
   | _, _ => False
   end.
 
-Notation vgt a b := (virel (fun x y => x > y) a b).
-Notation vlt a b := (virel (fun x y => x < y) a b).
-Notation vge a b := (virel (fun x y => x >= y) a b).
-Notation vle a b := (virel (fun x y => x <= y) a b).
-Notation veq a b := (virel (fun x y => x = y) a b).
-Notation vneq a b := (virel (fun x y => x <> y) a b).
-Notation vsub a b := (viop (fun x y => x - y) a b).
-Notation vand a b := (vbop (fun x y => x && y) a b).
+Definition vgt a b := virel (fun x y => x > y) a b.
+Definition vlt a b := virel (fun x y => x < y) a b.
+Definition vge a b := virel (fun x y => x >= y) a b.
+Definition vle a b := virel (fun x y => x <= y) a b.
+Definition veq a b := virel (fun x y => x = y) a b.
+Definition vneq a b := virel (fun x y => x <> y) a b.
+Definition vsub a b := viop (fun x y => vint (x - y)) a b.
+Definition vand a b := vbop (fun x y => vbool (x && y)) a b.
 
 Coercion vint : Z >-> val.
 Coercion vbool : bool >-> val.
@@ -221,12 +221,7 @@ Definition toss_n : ufun := fun (n:val) =>
         bind (unk "toss_n" (vsub n 1)) (fun r2 =>
         ens (fun r => \[r = vand r1 r2]))))).
 
-Definition toss_n_env :=
-(* Fmap.update *)
-  (Fmap.update empty_env "toss_n" toss_n)
-  (* "k"
-(fun v => ∀ n, rs (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y => x - y) n 1)) (fun r2 => ens (fun r => \[r = vbop (fun x y => x && y) r1 r2])))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))) *)
-.
+Definition toss_n_env := Fmap.update empty_env "toss_n" toss_n.
 
 Definition main n : flow :=
   rs (
@@ -258,7 +253,7 @@ Lemma lemma_weaker2_under : forall (n:int) (acc:bool),
 
     (rs (bind
       (bind (unk "toss_n" n) (fun r2 =>
-        ens (fun r => \[r = vbop (fun x y => x && y) acc r2])))
+        ens (fun r => \[r = vand acc r2])))
       (fun v => ens (fun r => \[If v = true then r = 1 else r = 0]))))
 
     (∀ x a, req (x~~>vint a \* \[n >= 0])
@@ -274,7 +269,7 @@ Lemma lemma_weaker2_attempt : exists f, forall (n:int) (acc:bool),
 
     (rs (bind
       (bind (unk "toss_n" n) (fun r2 =>
-        ens (fun r => \[r = vbop (fun x y => x && y) acc r2])))
+        ens (fun r => \[r = vand acc r2])))
       (fun v => ens (fun r => \[If v = true then r = 1 else r = 0]))))
 
     (f;; ∀ x a, req (x~~>vint a \* \[n >= 0])
@@ -283,7 +278,7 @@ Lemma lemma_weaker2_attempt : exists f, forall (n:int) (acc:bool),
         \[b >= a+n /\ (If acc = true then r = 1 else r = 0)]))).
         (* \[b > a+n /\ (acc = true /\ r = 1 \/ acc = false /\ r = 0)]))). *)
 Proof.
-  exists (disj empty (∃ n acc, ∃ k, defun k (fun v => rs (bind (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y : int => x - y) n 1)) (fun r2 => ens (fun r => \[r = vbop (fun x y : bool => x && y) r1 r2])))) (fun r2 => ens (fun r => \[r = match r2 with | vbool b1 => acc && b1 | _ => vunit end]))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))))).
+  exists (disj empty (∃ n acc, ∃ k, defun k (fun v => rs (bind (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y : int => x - y) n 1)) (fun r2 => ens (fun r => \[r = vand r1 r2])))) (fun r2 => ens (fun r => \[r = match r2 with | vbool b1 => acc && b1 | _ => vunit end]))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))))).
 
   intros n. induction_wf IH: (downto 0) n. intros.
 
@@ -369,7 +364,14 @@ Proof.
     pose proof IH as IH1.
     specializes IH1 (n-1).
 
+    assert (forall a, vand true a = a) as ?. admit.
+    (* rewrite H1. *)
+    unfold vand.
+    (* destru *)
     (* rewrite norm_bind_assoc. *)
+    (* fsimpl. *)
+    (* rewrite norm_bind_val. *)
+    (* setoid_rewrite norm_bind_val. *)
     (* rewrite IH1. *)
 
     (* applys rs. *)
@@ -402,7 +404,7 @@ Definition lemma_weaker2 := forall (n:int) (acc:bool),
 
     (rs (bind
       (bind (unk "toss_n" n) (fun r2 =>
-        ens (fun r => \[r = vbop (fun x y => x && y) acc r2])))
+        ens (fun r => \[r = vand acc r2])))
       (fun v => ens (fun r => \[If v = true then r = 1 else r = 0]))))
 
     (∀ x a, req (x~~>vint a \* \[n >= 0])
@@ -430,7 +432,7 @@ Proof.
   unfold main_spec_weaker, main. intros n.
 
   exists (∃ k, disj empty (defun k (fun v =>
-    rs (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y => x - y) n 1)) (fun r2 => ens (fun r => \[r = vbop (fun x y : bool => x && y) r1 r2])))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))))).
+    rs (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y => x - y) n 1)) (fun r2 => ens (fun r => \[r = vand r1 r2])))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))))).
 
   intros lemma_weaker.
 
@@ -451,16 +453,16 @@ Proof.
     rewrite <- norm_ens_ens_void_l.
     fsimpl.
     case_if. clear C.
-    fstep. unfold veq. intros.
+    fstep. simpl. intros.
     fintro x.
     fintro a.
     apply ent_req_r.
     finst a.
     rewrite norm_ens_ens_void_l.
-    fstep. xsimpl. math.
+    fstep. xsimpl. simpl. math.
   }
   { fsimpl.
-    fstep. unfold vgt. intros.
+    fstep. simpl. intros.
 
     unfold toss.
     rewrite red_init.
@@ -554,7 +556,7 @@ Proof.
 
     rewrite norm_ens_ens_void_l.
     finst b1.
-    fstep. { xsimpl. intros. split. math. rewrite H2; f_equal. }
+    fstep. { xsimpl. intros. simpl. split. math. rewrite H2; f_equal. }
   }
 Qed.
 
