@@ -269,7 +269,7 @@ Lemma lemma_weaker2_under : forall (n:int) (acc:bool),
 Proof.
 Admitted.
 
-Lemma lemma_weaker2_attempt : forall (n:int) (acc:bool),
+Lemma lemma_weaker2_attempt : exists f, forall (n:int) (acc:bool),
   entails_under toss_n_env
 
     (rs (bind
@@ -277,18 +277,30 @@ Lemma lemma_weaker2_attempt : forall (n:int) (acc:bool),
         ens (fun r => \[r = vbop (fun x y => x && y) acc r2])))
       (fun v => ens (fun r => \[If v = true then r = 1 else r = 0]))))
 
-    (∀ x a, req (x~~>vint a \* \[n >= 0])
+    (f;; ∀ x a, req (x~~>vint a \* \[n >= 0])
       (∃ b, ens (fun r => x~~>vint b \*
         (* \[b > a+n /\ (r=1 \/ r=0)]))). *)
         \[b >= a+n /\ (If acc = true then r = 1 else r = 0)]))).
         (* \[b > a+n /\ (acc = true /\ r = 1 \/ acc = false /\ r = 0)]))). *)
 Proof.
+  exists (disj empty (∃ n acc, ∃ k, defun k (fun v => rs (bind (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y : int => x - y) n 1)) (fun r2 => ens (fun r => \[r = vbop (fun x y : bool => x && y) r1 r2])))) (fun r2 => ens (fun r => \[r = match r2 with | vbool b1 => acc && b1 | _ => vunit end]))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))))).
+
   intros n. induction_wf IH: (downto 0) n. intros.
+
+
   funfold1 "toss_n". unfold toss_n.
-  fintro x. fintro a.
   fsimpl.
   applys ent_disj_l.
   {
+
+    fleft.
+    lazymatch goal with
+    | |- entails_under _ _ (empty;; ?f) =>
+      rewrite (norm_seq_empty f)
+    end.
+
+    fintro x. fintro a.
+
     (* base case *)
     assert (forall (P:val->Prop) P1,
       entails (ens (fun r => \[P r /\ P1]))
@@ -319,6 +331,9 @@ Proof.
     case_if. assumption.
   }
   {
+
+    fright.
+
     (* recursive case *)
     fsimpl.
     fstep. unfold vgt. intro.
@@ -330,6 +345,55 @@ Proof.
     rewrite red_rs_sh_elim.
 
     fintro k.
+    finst n; shiftfree. finst acc; shiftfree.
+
+    finst k. { intros. shiftfree. }
+    applys ent_seq_defun_both.
+
+    lazymatch goal with
+    | |- entails_under ?e _ _ => remember e as env
+    end.
+
+(* clear IH. *)
+
+
+    fintro x. fintro a.
+    finst x. finst a.
+
+    subst.
+    funfold1 k.
+    lazymatch goal with
+    | |- entails_under ?e _ _ => remember e as env
+    end.
+
+    fsimpl.
+    (* fsimpl. *)
+
+    rewrite norm_req_req.
+    fstep. xsimpl.
+    applys ent_req_r. fstep. intros.
+
+    fsimpl.
+
+    (* rewrites (>> IH (n-1)). *)
+    pose proof IH as IH1.
+    specializes IH1 (n-1).
+
+    (* rewrite norm_bind_assoc. *)
+    (* simpl. *)
+    (* rewrite IH1. *)
+
+    (* applys rs. *)
+
+
+  (* lazymatch goal with
+  | |- entails_under ?env _ _ =>
+    pose proof (@entails_under_unk env k false)
+    (* [ | resolve_fn_in_env ]; simpl *)
+  end.
+  subst env.
+  specializes H0.
+  resolve_fn_in_env. simpl in H. *)
 
     admit.
   }

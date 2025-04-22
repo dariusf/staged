@@ -2087,6 +2087,27 @@ Proof.
   assumption.
 Qed.
 
+Lemma norm_bind_assoc: forall f fk fk1,
+  shift_free f ->
+  entails (bind (bind f fk) fk1)
+    (bind f (fun r => bind (fk r) fk1)).
+Proof.
+  unfold entails. intros * Hsf * H.
+  inverts H.
+  { inverts H7.
+    applys s_bind H6.
+    applys* s_bind H9. }
+  { inverts H6.
+    - applys s_bind H7. applys* s_bind_sh.
+    - (* TODO this should also be provable,
+        if we can apply assoc to the shft *)
+      Fail applys s_bind_sh.
+      (* applys_eq s_bind_sh. *)
+      (* Close Scope flow_scope. *)
+      false Hsf H4.
+  }
+Qed.
+
 Lemma norm_seq_assoc1 : forall f1 f2 f3,
   shift_free f1 ->
   shift_free f2 ->
@@ -3329,19 +3350,6 @@ Proof.
   inverts H. 2: { false Hsf H6. }
   inverts H8.
   applys s_fex. destruct H5 as (b&?). exists b. apply* s_bind.
-Qed.
-
-Lemma norm_bind_assoc: forall f fk fk1,
-  shift_free f ->
-  (forall v, shift_free (fk v)) ->
-  entails (bind (bind f fk) fk1)
-    (bind f (fun r => bind (fk r) fk1)).
-Proof.    
-  unfold entails. intros * Hsf Hsfk * H.
-  inverts H. 2: { inverts H6. false Hsfk H8. false Hsf H4. }
-  inverts H7.
-  applys s_bind H6.
-  applys* s_bind H9.
 Qed.
 
 Section EnvFraming.
