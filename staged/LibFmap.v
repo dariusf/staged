@@ -79,6 +79,14 @@ Proof using.
   { case_if~. }
 Qed.
 
+Lemma remove_update : forall (A B:Type) h (x:A) (v:B),
+  ~ indom h x ->
+  remove (update h x v) x = h.
+Proof using.
+  unfold update.
+  applys remove_union_single_l.
+Qed.
+
 Lemma remove_not_indom : forall (A B:Type) (h:Fmap.fmap A B) (x:A),
   ~ Fmap.indom h x ->
   Fmap.remove h x = h.
