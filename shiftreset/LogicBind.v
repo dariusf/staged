@@ -902,6 +902,30 @@ Section Propriety.
     { apply H0. apply H1. apply H. auto. }
   Qed.
 
+  Definition res_weaker R1 R2 :=
+    match R1, R2 with
+    | norm v1, norm v2 => v1 = v2
+    | shft fb1 fk1, shft fb2 fk2 =>
+      (forall x, entails (fb1 x) (fb2 x)) /\
+      (forall v, entails (fk1 v) (fk2 v))
+    | _, _ => False
+    end.
+
+  #[global]
+  Instance Proper_satisfies : Proper
+    (eq ====> eq ====> eq ====> eq ====> res_weaker ====> entails ====> impl)
+    satisfies.
+  Proof.
+    unfold entails, Proper, respectful, impl, res_weaker.
+    intros. subst.
+    destruct x3; destruct y3; subst.
+    - auto.
+    - false.
+    - false.
+    - destr H3.
+      specializes H4 H5.
+  Abort.
+
   (** entails is proper wrt satisfies *)
   #[global]
   Instance Proper_satisfies : Proper
