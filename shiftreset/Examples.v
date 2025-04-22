@@ -287,7 +287,6 @@ Proof.
 
   intros n. induction_wf IH: (downto 0) n. intros.
 
-
   funfold1 "toss_n". unfold toss_n.
   fsimpl.
   applys ent_disj_l.
@@ -317,22 +316,17 @@ Proof.
     rewrite <- norm_seq_assoc; shiftfree.
     fstep. intros.
     finst a.
-    (* rewrite  norm_ens_ens_void. *)
     rewrite norm_ens_ens_void_l.
     fstep. xsimpl. intros. split. rewrite H. math.
-    (* case_if. *)
     destruct acc.
-    - case_if. { case_if. assumption.
-    simpl in C0. false. }
-    { specializes C. constructor. false. }
-
     - case_if.
-    { specializes C. constructor. false. }
-    case_if. assumption.
+      { case_if. assumption. simpl in C0. false. }
+      { specializes C. constructor. false. }
+    - case_if.
+      { specializes C. constructor. false. }
+      { case_if. assumption. }
   }
-  {
-
-    fright.
+  { fright.
 
     (* recursive case *)
     fsimpl.
@@ -354,9 +348,6 @@ Proof.
     | |- entails_under ?e _ _ => remember e as env
     end.
 
-(* clear IH. *)
-
-
     fintro x. fintro a.
     finst x. finst a.
 
@@ -367,7 +358,6 @@ Proof.
     end.
 
     fsimpl.
-    (* fsimpl. *)
 
     rewrite norm_req_req.
     fstep. xsimpl.
@@ -380,7 +370,6 @@ Proof.
     specializes IH1 (n-1).
 
     (* rewrite norm_bind_assoc. *)
-    (* simpl. *)
     (* rewrite IH1. *)
 
     (* applys rs. *)

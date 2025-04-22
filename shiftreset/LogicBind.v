@@ -2132,41 +2132,42 @@ Proof.
   }
 Qed.
 
+Lemma norm_bind_assoc_conv: forall f fk fk1,
+  shift_free f ->
+  entails (bind f (fun r => bind (fk r) fk1))
+    (bind (bind f fk) fk1).
+Proof.
+  unfold entails. intros * Hsf Hsf2 * H.
+  inverts H.
+  { inverts H8.
+    { applys s_bind H9.
+      applys s_bind H7 H6. }
+    { applys s_bind_sh. applys* s_bind. } }
+  { (* need to predict *)
+    false Hsf H6. }
+Qed.
+
 Lemma norm_seq_assoc1 : forall f1 f2 f3,
   shift_free f1 ->
-  shift_free f2 ->
   entails (f1;; (f2;; f3)) ((f1;; f2);; f3).
 Proof.
-  introv Hsf1 Hsf2 H.
-  inverts H as H. 2: { false Hsf1 H. }
-  inverts H7 as H7. 2: { false Hsf2 H7. }
-  applys* s_seq.
-  applys* s_seq.
+  introv Hsf1 H.
+  applys* norm_bind_assoc_conv.
 Qed.
 
 Lemma norm_seq_assoc2 : forall f1 f2 f3,
   shift_free f1 ->
-  shift_free f2 ->
   entails ((f1;; f2);; f3) (f1;; (f2;; f3)).
 Proof.
-  introv Hsf1 Hsf2 H.
-  inverts H as H.
-  { destr H.
-    inverts H as H.
-    destr H.
-    applys* s_seq.
-    applys* s_seq. }
-  { inverts H as H.
-    false Hsf2 H7.
-    false Hsf1 H. }
+  introv Hsf1 H.
+  applys* norm_bind_assoc.
 Qed.
 
 Lemma norm_seq_assoc : forall f1 f2 f3,
   shift_free f1 ->
-  shift_free f2 ->
   bientails (f1;; f2;; f3) ((f1;; f2);; f3).
 Proof.
-  introv Hsf1 Hsf2. iff H.
+  introv Hsf1. iff H.
   - applys* norm_seq_assoc1 H.
   - applys* norm_seq_assoc2 H.
 Qed.
