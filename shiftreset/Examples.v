@@ -75,6 +75,9 @@ Ltac fstep := first [
   apply ent_req_l
 ].
 
+Ltac fleft := first [ apply ent_seq_disj_r_l | apply ent_disj_r_l ].
+Ltac fright := first [ apply ent_seq_disj_r_r | apply ent_disj_r_l ].
+
 Module Multi.
 
 (* < sh k. let a = k true in let b = k false in a + b > *)
@@ -246,13 +249,12 @@ Lemma lemma_weaker : forall acc x n,
         (* \[b > a+n /\ (acc = true /\ r = 1 \/ acc = false /\ r = 0)]))). *)
 Proof.
   (* induction_wf IH: (downto 0) n. *)
-(* Abort. *)
-Admitted.
+(* Admitted. *)
+Abort.
 
 
-(* acc  *)
-Lemma lemma_weaker2 : forall (acc:bool) (n:int),
-  entails
+Lemma lemma_weaker2 : forall (n:int) (acc:bool),
+  entails_under toss_n_env
 
     (rs (bind
       (bind (unk "toss_n" n) (fun r2 =>
@@ -262,10 +264,48 @@ Lemma lemma_weaker2 : forall (acc:bool) (n:int),
     (∀ x a, req (x~~>vint a \* \[n >= 0])
       (∃ b, ens (fun r => x~~>vint b \*
         (* \[b > a+n /\ (r=1 \/ r=0)]))). *)
-        \[b > a+n /\ (If acc = true then r = 1 else r = 0)]))).
+        \[b >= a+n /\ (If acc = true then r = 1 else r = 0)]))).
         (* \[b > a+n /\ (acc = true /\ r = 1 \/ acc = false /\ r = 0)]))). *)
 Proof.
-  (* induction_wf IH: (downto 0) n. *)
+  intros n. induction_wf IH: (downto 0) n. intros.
+  funfold1 "toss_n". unfold toss_n.
+  fintro x. fintro a.
+  fsimpl.
+  applys ent_disj_l.
+  {
+    (* base case *)
+    assert (forall (P:val->Prop) P1,
+      entails (ens (fun r => \[P r /\ P1]))
+        (ens_ \[P1];; ens (fun r => \[P r]))).
+    { introv H. inverts H. applys s_seq; applys s_ens; heaps. }
+    rewrite H.
+    clear H.
+
+    fsimpl.
+    fstep. unfold veq. intros.
+    applys ent_req_r.
+    rewrite norm_ens_ens_void.
+    rewrite norm_seq_ens_ens_pure.
+    rewrite <- norm_seq_assoc; shiftfree.
+    fstep. intros.
+    finst a.
+    (* rewrite  norm_ens_ens_void. *)
+    rewrite norm_ens_ens_void_l.
+    fstep. xsimpl. intros. split. rewrite H. math.
+    (* case_if. *)
+    destruct acc.
+    - case_if. { case_if. assumption.
+    simpl in C0. false. }
+    { specializes C. constructor. false. }
+
+    - case_if.
+    { specializes C. constructor. false. }
+    case_if. assumption.
+  }
+  {
+    (* recursive case *)
+    admit.
+  }
 (* Abort. *)
 Admitted.
 
@@ -295,9 +335,6 @@ Proof.
   applys s_bind H6.
   applys* s_bind H9.
 Qed.
-
-Ltac fleft := first [ apply ent_seq_disj_r_l | apply ent_disj_r_l ].
-Ltac fright := first [ apply ent_seq_disj_r_r | apply ent_disj_r_l ].
 
 Theorem main_summary : forall n, exists f,
   entails_under toss_n_env (main n) (f;; main_spec_weaker n).
