@@ -253,23 +253,6 @@ Proof.
 Abort.
 
 
-Lemma lemma_weaker2 : forall (n:int) (acc:bool),
-  entails
-
-    (rs (bind
-      (bind (unk "toss_n" n) (fun r2 =>
-        ens (fun r => \[r = vbop (fun x y => x && y) acc r2])))
-      (fun v => ens (fun r => \[If v = true then r = 1 else r = 0]))))
-
-    (∀ x a, req (x~~>vint a \* \[n >= 0])
-      (∃ b, ens (fun r => x~~>vint b \*
-        (* \[b > a+n /\ (r=1 \/ r=0)]))). *)
-        \[b > a+n /\ (If acc = true then r = 1 else r = 0)]))).
-        (* \[b > a+n /\ (acc = true /\ r = 1 \/ acc = false /\ r = 0)]))). *)
-Proof.
-Admitted.
-
-
 Lemma lemma_weaker2_under : forall (n:int) (acc:bool),
   entails_under toss_n_env
 
@@ -353,61 +336,25 @@ Proof.
 (* Abort. *)
 Admitted.
 
-(* Informally, this is true because the environment only grows,
-  and k is fresh *)
-Lemma satisfies_env_frame : forall s1 s2 h1 h2 R f k v,
-  ~ Fmap.indom s1 k ->
-  satisfies (Fmap.update s1 k v) s2 h1 h2 R f <->
-  satisfies s1 (Fmap.remove s2 k) h1 h2 R f.
-Proof.
-  introv Hfresh.
-  iff H.
-  { remember (Fmap.update s1 k v) as s0.
-    induction H; subst s0.
-    { applys s_req.
-      intros. specializes H1 H2 H3 H4. }
-    { rewrites (>> remove_update Hfresh).
-      applys s_ens. heaps. }
-    { applys s_bind.
-      specializes* IHsatisfies1.
-      admit.
-    }
-    {
-      destruct H as (b&?).
-      applys s_fex. exists b.
-      (* another broken induction principle *)
-      admit.
-    }
-    {
-      admit.
-    }
-    {
-      specializes IHsatisfies. constructor.
-      destruct (classic (k = xf)).
-      applys s_unk.
-      rewrite H1 in H. rewrite fmap_read_update in H.
-      admit.
-      admit.
-      admit.
-    }
-    Admitted.
-  (* }
-  {
-    admit.
-  }
-Admitted. *)
 
-Lemma ent_env_frame : forall s1 k v f1 f2,
-  ~ Fmap.indom s1 k ->
-  entails_under s1 f1 f2 ->
-  entails_under (Fmap.update s1 k v) f1 f2.
-Proof.
-  unfold entails_under. introv Hfresh H H1.
-  rewrite~ satisfies_env_frame in H1.
-  specializes H H1.
-  rewrite~ <- satisfies_env_frame in H.
-  eassumption.
-Qed.
+(*
+  This statement differs from the proved lemma above in two ways:
+
+  1. using entails instead of entails_under, which is justified because the proof of main also uses toss_n_env. This sidesteps the need for framing away the additions to the environment in main proof due to dynamic functions.
+
+  2. not including extra existential f due to defun, which is not observable if the name is fresh.
+*)
+Definition lemma_weaker2 := forall (n:int) (acc:bool),
+  entails
+
+    (rs (bind
+      (bind (unk "toss_n" n) (fun r2 =>
+        ens (fun r => \[r = vbop (fun x y => x && y) acc r2])))
+      (fun v => ens (fun r => \[If v = true then r = 1 else r = 0]))))
+
+    (∀ x a, req (x~~>vint a \* \[n >= 0])
+      (∃ b, ens (fun r => x~~>vint b \*
+        \[b > a+n /\ (If acc = true then r = 1 else r = 0)]))).
 
 Lemma rearrange_ens : forall H P (P1:val->Prop),
   entails (ens (fun r => H \* \[P /\ P1 r]))
@@ -423,26 +370,16 @@ Proof.
   { applys s_ens. heaps. }
 Qed.
 
-Lemma norm_bind_assoc: forall f fk fk1,
-  shift_free f ->
-  (forall v, shift_free (fk v)) ->
-  entails (bind (bind f fk) fk1)
-    (bind f (fun r => bind (fk r) fk1)).
-Proof.    
-  unfold entails. intros * Hsf Hsfk * H.
-  inverts H. 2: { inverts H6. false Hsfk H8. false Hsf H4. }
-  inverts H7.
-  applys s_bind H6.
-  applys* s_bind H9.
-Qed.
-
 Theorem main_summary : forall n, exists f,
+  lemma_weaker2 ->
   entails_under toss_n_env (main n) (f;; main_spec_weaker n).
 Proof.
-  unfold main_spec_weaker, main. intros.
+  unfold main_spec_weaker, main. intros n.
 
   exists (∃ k, disj empty (defun k (fun v =>
     rs (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y => x - y) n 1)) (fun r2 => ens (fun r => \[r = vbop (fun x y : bool => x && y) r1 r2])))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))))).
+
+  intros lemma_weaker.
 
   funfold1 "toss_n".
   unfold toss_n.
@@ -493,17 +430,19 @@ Proof.
     fsimpl.
     fstep. xsimpl.
 
-    (* rewrite lemma_weaker2. *)
-    subst.
+    unfolds in lemma_weaker.
+    rewrite lemma_weaker.
+    fold lemma_weaker2 in lemma_weaker.
+
+    (* framing lemma *)
+    (* subst.
     lets: ent_env_frame lemma_weaker2_under.
     admit.
     rewrite H0.
     lazymatch goal with
     | |- entails_under ?e _ _ => remember e as env
     end.
-    clear H0.
-
-    (* rewrite lemma_weaker2. *)
+    clear H0. *)
 
     fsimpl. finst x.
     fsimpl. finst (a+1).
@@ -537,7 +476,10 @@ Proof.
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
     
-    rewrite lemma_weaker2.
+    unfolds in lemma_weaker.
+    rewrite lemma_weaker.
+    fold lemma_weaker2 in lemma_weaker.
+
     fsimpl. finst x.
     fsimpl. finst (b+1).
     fsimpl.
@@ -561,8 +503,7 @@ Proof.
     finst b1.
     fstep. { xsimpl. intros. split. math. rewrite H2; f_equal. }
   }
-(* Qed. *)
-Abort.
+Qed.
 
 Definition main_spec : flow :=
   ∀ x a n,
