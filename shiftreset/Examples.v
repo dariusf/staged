@@ -80,7 +80,7 @@ Ltac fright := first [ apply ent_seq_disj_r_r | apply ent_disj_r_l ].
 
 Module Multi.
 
-(* < sh k. let a = k true in let b = k false in a + b > *)
+(* < sh k. let a = k true in let b = k false in a && b > *)
 Definition f : ufun := fun _ =>
   rs (
     sh (fun k =>
@@ -113,7 +113,7 @@ End Multi.
 
 Module Toss.
 
-(* let s() =
+(* let toss () =
   shift k.
     x := !x+1;
     let r1 = k true in
@@ -129,7 +129,7 @@ Definition toss : ufun := fun _ =>
 
 Definition toss_env := Fmap.update empty_env "toss" toss.
 
-(* let foo () = < let v = s () in if v then 1 else 0 > *)
+(* let foo () = < let v = toss () in if v then 1 else 0 > *)
 Definition foo : flow :=
   rs (
     bind (unk "toss" vunit) (fun v =>
@@ -204,8 +204,8 @@ Qed.
 (*
 
 let toss_n n =
-  if n = 1 then
-    toss ()
+  if n = 0 then
+    true
   else
     let r1 = toss () in
     let r2 = toss_n (n - 1) in
