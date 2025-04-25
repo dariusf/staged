@@ -83,25 +83,34 @@ Module Multi.
 (* < sh k. let a = k true in let b = k false in a && b > *)
 Definition f : ufun := fun _ =>
   rs (
-    sh (fun k =>
-      bind (unk k true) (fun r1 =>
-      bind (unk k false) (fun r2 =>
+    sh "k" (
+      bind (unk "k" true) (fun r1 =>
+      bind (unk "k" false) (fun r2 =>
         ens (fun r => \[r = vand r1 r2])
       )))).
 
-Lemma f_reduction: forall v1, exists f1,
-  entails_under empty_env (f v1) (f1;; ens (fun r => \[r = false])).
+Definition f_env :=
+  Fmap.single "k" (fun v : val => rs (ens (fun r => \[r = v]))).
+
+Lemma f_reduction: forall v1,
+  entails_under f_env (f v1) (ens (fun r => \[r = false])).
 Proof.
   intros.
-  exists (∃ k, defun k (fun v : val => rs (ens (fun r => \[r = v])))).
   unfold f.
   rewrite red_init.
   rewrite red_rs_sh_elim.
-  fintro k. finst k. { intros. shiftfree. }
-  apply ent_seq_defun_both.
-  funfold1 k.
+
+  (* rewrite entails_under_seq_defun_idem.
+  2: { unfold f_env. apply Fmap.indom_single. }
+  2: { unfold f_env. resolve_fn_in_env. } *)
+
+  apply ent_seq_defun_idem.
+  { unfold f_env. apply Fmap.indom_single. }
+  { unfold f_env. resolve_fn_in_env. }
+
+  funfold1 "k".
   fsimpl.
-  funfold1 k.
+  funfold1 "k".
   lazymatch goal with
   | |- entails_under ?e _ _ => remember e as env
   end.
@@ -122,14 +131,18 @@ Module Toss.
     r1 + r2
 *)
 Definition toss : ufun := fun _ =>
-  sh (fun k => ∀ x a,
-    bind (req (x~~>vint a) (ens_ (x~~>(a+1));; unk k true)) (fun r1 =>
-      ∀ b, bind (req (x~~>vint b) (ens_ (x~~>(b+1));; unk k false)) (fun r2 =>
+  sh "k" (∀ x a,
+    bind (req (x~~>vint a) (ens_ (x~~>(a+1));; unk "k" true)) (fun r1 =>
+      ∀ b, bind (req (x~~>vint b) (ens_ (x~~>(b+1));; unk "k" false)) (fun r2 =>
         ens (fun r3 => \[r3 = vadd r1 r2])))).
 
-Definition toss_env := Fmap.update empty_env "toss" toss.
+Definition toss_env :=
+  Fmap.update
+    (Fmap.single "toss" toss)
+    "k" (fun v : val => rs (bind (ens (fun r => \[r = v]))
+    (fun v => ens (fun r1 => \[If v = true then r1 = 1 else r1 = 0])))).
 
-(* let foo () = < let v = toss () in if v then 1 else 0 > *)
+(* let foo () = < let v = toss () in if v then 0 else 0 > *)
 Definition foo : flow :=
   rs (
     bind (unk "toss" vunit) (fun v =>
@@ -139,25 +152,24 @@ Definition foo : flow :=
 Definition foo_spec : flow :=
   ∀ x a, req (x~~>vint a) (ens (fun r => x~~>(a+2) \* \[r=1])).
 
-Theorem foo_summary : exists f,
-  entails_under toss_env foo (f;; foo_spec).
+Theorem foo_summary :
+  entails_under toss_env foo foo_spec.
 Proof.
   intros.
-  exists (∃ k,
-    defun k (fun v : val => rs (bind (ens (fun r => \[r = v]))
-    (fun v => ens (fun r1 => \[If v = true then r1 = 1 else r1 = 0]))))).
   unfold foo, foo_spec.
 
   funfold1 "toss". unfold toss.
   rewrite red_init.
   rewrite red_extend.
   rewrite red_rs_sh_elim.
-  fintro k. finst k. { intros. shiftfree. }
 
-  apply ent_seq_defun_both.
+  apply ent_seq_defun_idem.
+  { unfold toss_env. apply Fmap.indom_union_l. apply Fmap.indom_single. }
+  { unfold toss_env. resolve_fn_in_env. }
+
   fintro x. finst x.
   fintro a. finst a.
-  funfold1 k.
+  funfold1 "k".
 
   fsimpl.
   apply ent_req_req. xsimpl.
@@ -173,7 +185,7 @@ Proof.
 
   (* somehow automate this... *)
   subst.
-  funfold1 k.
+  funfold1 "k".
   lazymatch goal with
   | |- entails_under ?e _ _ => remember e as env
   end.
