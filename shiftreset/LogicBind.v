@@ -2058,6 +2058,7 @@ Proof.
   applys* s_seq.
 Qed.
 
+(* For rewriting *)
 Lemma entails_under_seq_defun_idem : forall s x uf f1,
   Fmap.indom s x ->
   Fmap.read s x = uf ->
@@ -2071,32 +2072,15 @@ Proof.
   assumption.
 Qed.
 
-Lemma entails_under_seq_defun_idem_weaker : forall s x uf f1,
-  Fmap.indom s x ->
-  (forall v, entails ((Fmap.read s x) v) (uf v)) ->
-  entails_under s (defun x uf;; f1) f1.
-Proof.
-  unfold entails_under. intros.
-  inverts H1. 2: { vacuous. }
-  inverts H9.
-
-  (* lets: update_idem H H0.
-  rewrite H1 in H10.
-  assumption. *)
-Admitted.
-
+(* For applying *)
 Lemma ent_seq_defun_idem : forall s x uf f1 f2,
   Fmap.indom s x ->
   Fmap.read s x = uf ->
   entails_under s f1 f2 ->
   entails_under s (defun x uf;; f1) f2.
 Proof.
-  unfold entails_under. intros.
-  inverts H2. 2: { vacuous. }
-  inverts H10.
-  lets: update_idem H H0.
-  rewrite H2 in H11.
-  eauto.
+  intros.
+  rewrite* entails_under_seq_defun_idem.
 Qed.
 
 Lemma ens_inv : forall s1 s2 h1 h2 R Q,
@@ -3294,14 +3278,13 @@ Proof.
   { false sf_ens_ H7. }
 Qed.
 
-Lemma norm_bind_req : forall f fk H,
-  shift_free f ->
+Lemma norm_bind_req : forall H f fk,
   entails (bind (req H f) fk) (req H (bind f fk)).
 Proof.
-  unfold entails. intros * Hsf * H.
+  unfold entails. intros * H.
   applys s_req. intros.
   inverts H.
-  2: { inverts H10. specializes H11 H1 H2 H3. false Hsf H11. }
+  2: { inverts H10. specializes H11 H1 H2 H3. applys* s_bind_sh. }
   { inverts H11. specializes H10 H1 H2 H3.
     applys* s_bind. }
 Qed.

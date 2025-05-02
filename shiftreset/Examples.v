@@ -97,8 +97,9 @@ Definition vsub a b := viop (fun x y => vint (x - y)) a b.
 Definition vand (a b:val) :=
   match a, b with
   | vbool true, _ => b
+  | vbool false, _ => vbool false
+  | _, vbool false => vbool false
   | _, vbool true => a
-  | vbool a1, vbool b1 => vbool (a1 && b1)
   | _, _ => vunit
   end.
 
@@ -315,7 +316,7 @@ Definition toss_n : ufun := fun (n:val) =>
 
 Definition toss_n_env :=
   let d :=
-(fun v : val => ∀ n acc, rs (bind (bind (bind (ens (fun r : val => \[r = v])) (fun r1 : val => bind (unk "toss_n" (vsub n 1)) (fun r2 : val => ens (fun r : val => \[r = vand r1 r2])))) (fun r2 : val => ens (fun r : val => \[exists r2b : bool, r2 = r2b /\ r = acc && r2b]))) (fun v0 : val => ens (fun r : val => \[If v0 = true then r = 1 else r = 0]))))
+(fun v : val => ∀ n acc, rs (bind (bind (bind (ens (fun r : val => \[r = v])) (fun r1 : val => bind (unk "toss_n" (vsub n 1)) (fun r2 : val => ens (fun r : val => \[r = vand r1 r2])))) (fun r2 : val => ens (fun r : val => \[r = vand acc r2]))) (fun v0 : val => ens (fun r : val => \[If v0 = true then r = 1 else r = 0]))))
   in
   Fmap.update (Fmap.single "toss_n" toss_n) "k" d.
 
@@ -360,40 +361,68 @@ Abort.
 Proof.
 Admitted. *)
 
+Lemma ent_env_weaken: forall x u u1 s1 s2 f1 f2,
+  Fmap.indom s1 x ->
+  Fmap.indom s2 x ->
+  Fmap.read s1 x = u ->
+  Fmap.read s2 x = u1 ->
+  (forall v, entails (u v) (u1 v)) ->
+  entails_under s1 f1 f2 ->
+  entails_under s2 f1 f2.
+Proof.
+  unfold entails_under. intros.
+  forwards: H2. applys_eq H3. f_equal.
+(* Abort. *)
+Admitted.
+
+(* Lemma entails_under_seq_defun_idem_weaker : forall s x uf f1,
+  Fmap.indom s x ->
+  (forall v, entails ((Fmap.read s x) v) (uf v)) ->
+  entails_under s (defun x uf;; f1) f1.
+Proof.
+  unfold entails_under. intros.
+  applys ent_env_weaken.
+
+  inverts H1. 2: { vacuous. }
+  inverts H9.
+
+  (* lets: update_idem H H0.
+  rewrite H1 in H10.
+  assumption. *)
+Abort. *)
+
+
+(* For applying *)
+Lemma ent_seq_defun_idem_weaker : forall s x uf f1 f2,
+  Fmap.indom s x ->
+  (forall v, entails (Fmap.read s x v) (uf v)) ->
+  entails_under s f1 f2 ->
+  entails_under s (defun x uf;; f1) f2.
+Proof.
+  intros.
+  rewrite* entails_under_seq_defun_idem.
+Admitted.
+
+
+
 Lemma lemma_weaker2_attempt : forall (n:int) (acc:bool),
-(* exists f, *)
-(* exists n1 acc1, *)
   entails_under toss_n_env
 
     (rs (bind
       (bind (unk "toss_n" n) (fun r2 =>
-        ens (fun r => \[
-          exists r2b, r2 = vbool r2b /\ r = acc && r2b
-          ])))
+        ens (fun r => \[r = vand acc r2])))
       (fun v => ens (fun r => \[If v = true then r = 1 else r = 0]))))
 
-(* f;;  *)
     (∀ x a, req (x~~>vint a \* \[n >= 0])
       (∃ b, ens (fun r => x~~>vint b \*
-        (* \[b > a+n /\ (r=1 \/ r=0)]))). *)
         \[b >= a+n /\ (If acc = true then r = 1 else r = 0)]))).
-        (* \[b > a+n /\ (acc = true /\ r = 1 \/ acc = false /\ r = 0)]))). *)
 Proof.
-  (* exists (disj empty (∃ n acc, ∃ k, defun k (fun v => rs (bind (bind (bind (ens (fun r => \[r = v])) (fun r1 => bind (unk "toss_n" (viop (fun x y : int => x - y) n 1)) (fun r2 => ens (fun r => \[r = vand r1 r2])))) (fun r2 => ens (fun r => \[r = match r2 with | vbool b1 => acc && b1 | _ => vunit end]))) (fun v0 => ens (fun r => \[If v0 = true then r = 1 else r = 0])))))). *)
-
   intros n. induction_wf IH: (downto 0) n. intros.
 
   funfold1 "toss_n". unfold toss_n.
   fsimpl.
   applys ent_disj_l.
   {
-
-    (* fleft.
-    lazymatch goal with
-    | |- entails_under _ _ (empty;; ?f) =>
-      rewrite (norm_seq_empty f)
-    end. *)
-
     fintro x. fintro a.
 
     (* base case *)
@@ -405,149 +434,297 @@ Proof.
     clear H.
 
     fsimpl.
-    fintro b.
     fsimpl.
     fstep. unfold veq, virel. intros.
-    fstep. intros.
-    (* rew_logic. *)
-    (* subst. *)
-    (* subst. simpl. *)
-    injects H0.
-
-    (* simpl. *)
-    (* Close Scope flow_scope.
-    Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses.
-    rewrite H0. *)
-    (* rew_logic. *)
-
-    (* assert (forall (P:val->Prop) (P1:Prop),
-      entails (ens (fun r => \[P1 /\ P r]))
-      (ens_ \[P1];; ens (fun r => \[P r]))) as ?. admit.
-    rewrite H. *)
-
-    (* fstep. unfold veq. intros.
-    finst a. *)
-
-    (* assert (forall (A:Type) (P:A->val->Prop),
-    entails
-    (ens (fun r => \[exists b, P b r]))
-    (∃ b, ens (fun r => \[P b r]))
-    ).
-    admit.
-    rewrite H1.
-    fsimpl.
-    (* rewrite norm_seq_ex_widen. *)
-    fintro b.
-
-    Search (_ ;; ∃ _, _).
-
-
-    rewrite norm_ens_ens_void_l.
- *)
 
     applys ent_req_r.
     fsimpl.
-
-    (* rewrite norm_seq_ens_ens_pure. *)
     rewrite <- norm_seq_assoc; shiftfree.
-
     fstep. intros.
     finst a.
-    (* fstep. *)
-    (* rewrite norm_ens_ens. *)
-    (* Search (ens_ _;; ens _). *)
-rewrite norm_ens_ens_void_l.
-
+    rewrite norm_ens_ens_void_l.
     fstep. xsimpl. intros. split. rewrite H. math.
     destruct acc.
     - case_if.
-      { case_if. assumption. simpl in C0. false. }
+      { case_if. assumption. }
       { specializes C. constructor. false. }
     - case_if.
       { specializes C. constructor. false. }
       { case_if. assumption. }
   }
   {
-    (* fright. *)
-
     (* recursive case *)
     fsimpl.
-    fstep. unfold vgt. intro.
+    fstep. unfold vgt. simpl. intro.
     unfold toss.
     rewrite red_init.
     rewrite red_extend.
     rewrite red_extend.
     rewrite red_extend.
     rewrite red_rs_sh_elim.
-    (* gen n. *)
 
-(* Close Scope flow_scope. *)
-
-    (* fintro k.
-    finst n; shiftfree. finst acc; shiftfree.
-
-    finst k. { intros. shiftfree. } *)
-    (* Close Scope flow_scope. *)
-    applys ent_seq_defun_idem.
+    (* applys ent_seq_defun_idem. *)
+    applys ent_seq_defun_idem_weaker.
     {
       unfold toss_n_env. unfold update.
       applys Fmap.indom_union_l.
       applys Fmap.indom_single.
     }
     {
+      intros.
       unfold toss_n_env. unfold update.
       rewrite Fmap.read_union_l.
       2: { applys Fmap.indom_single. }
-      applys Fmap.read_single.
-      (* applys Fmap.indom_union_l. *)
+      rewrite Fmap.read_single.
+      unfold entails.
+      intros.
+      inverts H0. specializes H7 n.
+      inverts H7. specializes H6 acc.
+      assumption.
     }
-
-    (* lazymatch goal with
-    | |- entails_under ?e _ _ => remember e as env
-    end. *)
 
     fintro x. fintro a.
     finst x. finst a.
 
-    (* lazymatch goal with
-    | |- entails_under ?env _ _ =>
-      pose proof (@entails_under_unk env "k" (vbool false))
-      (* [ | resolve_fn_in_env ]; simpl *)
-    end.
-    specializes H. resolve_fn_in_env. simpl in H. *)
-
-    (* subst. *)
     funfold1 "k".
-    (* lazymatch goal with
-    | |- entails_under ?e _ _ => remember e as env
-    end. *)
 
     fsimpl.
+    finst n.
+    fsimpl. finst acc.
 
     rewrite norm_req_req.
     fstep. xsimpl.
     applys ent_req_r. fstep. intros.
     simpl.
 
-    rewrite norm_bind_trivial.
-    2: admit. (* generalised entailment *)
-
+    pose proof IH as IH1.
     specializes IH (n-1).
     forward IH. unfold virel in H. unfold downto. math.
     specializes IH acc.
+    fsimpl.
+    simpl.
+    rewrite norm_bind_trivial.
+    2: admit.
+    (* generalised entailment *)
+    rewrite IH.
+    clear IH.
+    (* clear IH. *)
+
+    fsimpl. finst x.
+    fsimpl. finst (a+1).
+    fsimpl.
 
 
+    rewrite norm_req_req.
 
-    (* rewrites IH. *)
+    rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
+    rewrite norm_req_pure_l. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty.
 
-    (* rewrite IH. *)
+    applys ent_req_l. math.
+    fintro a1.
+    assert (forall H (P:val->Prop),
+      entails (ens (fun r => H \* \[P r])) (ens_ H;; ens (fun r => \[P r]))) as ?. admit.
+    rewrite H1.
+    clear H1.
+    fsimpl.
 
+    assert (forall H P f,
+      entails (ens_ H;; ens_ \[P];; f)
+        (ens_ \[P];; ens_ H;; f)) as ?. admit.
 
+    rewrite H1.
+    clear H1.
+    fstep. intros.
+    fsimpl.
 
-(* HERE *)
+    assert (forall (A:Type) f1 (f2:A->val->flow),
+      entails
+        (bind f1 (fun r => ∀ x, f2 x r))
+        (∀ x, bind f1 (fun r => f2 x r))) as ?. admit.
 
+    rewrite H2.
+    clear H2.
+    fsimpl. finst a1.
 
-  (* } *)
+    lets: norm_bind_req (x~~>a1).
+    setoid_rewrite H2.
+    clear H2.
+
+    assert (forall f f2 H,
+      shift_free f ->
+      entails (bind f (fun r => req H (f2 r)))
+      (req H (bind f f2))) as ?. admit.
+    rewrite H2. 2: { shiftfree. }
+    clear H2.
+    fsimpl.
+
+    rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
+    rewrite norm_req_pure_l. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty.
+
+    setoid_rewrite norm_bind_seq_assoc. 2: { shiftfree. }
+
+    assert (forall f1 f2 H,
+      (* shift_free f -> *)
+      entails (bind (ens H) (fun r => f1;; f2 r))
+      (f1;; (bind (ens H) f2))) as ?. admit.
+    rewrite H2.
+    clear H2.
+    fsimpl.
+
+    lazymatch goal with
+    | |- entails_under ?env _ _ =>
+      pose proof (@entails_under_unk env "k" (vbool false))
+      (* [ | resolve_fn_in_env ]; simpl *)
+    end.
+    specializes H2. unfold toss_n_env. resolve_fn_in_env. simpl in H2.
+    Fail rewrite H2.
+    Fail setoid_rewrite H2.
+    clear H2.
+
+    (* we have to do this because setoid rewrite doesn't work for some reason *)
+    destruct acc.
+    {
+      case_if. 2: { false C. constructor. }
+      fsimpl.
+      funfold1 "k".
+      fsimpl. finst n.
+      fsimpl. finst false.
+
+      specializes IH1 (n-1).
+      forward IH1. unfold virel in H. unfold downto. math.
+      specializes IH1 false.
+      rewrite norm_bind_val.
+      simpl in IH1.
+
+      unfold vsub. simpl.
+      fsimpl.
+
+      assert (forall f1 f2, entails (bind f1 (fun _ => f2)) (f1;; f2)) as ?. admit.
+      rewrite H2.
+      rewrite H2.
+
+      rewrite <- norm_seq_assoc. 2: admit.
+      assert (forall f, entails
+        (ens (fun r => \[r = false]);; f)
+        f
+      ) as ?. admit.
+
+      specializes H3 (ens (fun r => \[r = false])).
+
+      assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit.
+      rewrite H3.
+
+      rewrite IH1.
+
+      fsimpl. finst x.
+      fsimpl. finst (a1 + 1).
+      fsimpl.
+      rewrite norm_req_req.
+
+      rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
+      rewrite norm_req_pure_l. 2: { reflexivity. }
+      rewrite norm_seq_ens_empty.
+
+      fstep. math.
+      fintro a2.
+      case_if.
+
+      (* rewrite norm_ens_void_hstar_pure_r. *)
+      assert (forall H P P1, entails
+        (ens (fun r => H \* \[P /\ P1 r]))
+        (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r]))
+      ) as ?. admit.
+
+      rewrite H5.
+      fsimpl.
+      fstep. intros.
+      finst a2.
+      rewrite norm_ens_ens_void_l.
+      fstep.
+      xsimpl.
+      intros.
+      split. math.
+      Fail math.
+      rewrite H7.
+      Fail math. (* ????? *)
+      rewrite Z.add_0_r.
+      reflexivity.
+    }
+    {
+
+      (* TODO this branch is entirely copy-pasted from the previous one, figure out a way to not do this... *)
+
+      case_if. { false C. constructor. }
+      fsimpl.
+      funfold1 "k".
+
+      fsimpl. finst n.
+      fsimpl. finst false.
+
+      specializes IH1 (n-1).
+      forward IH1. unfold virel in H. unfold downto. math.
+      specializes IH1 false.
+      rewrite norm_bind_val.
+      simpl in IH1.
+
+      unfold vsub. simpl.
+      fsimpl.
+
+      assert (forall f1 f2, entails (bind f1 (fun _ => f2)) (f1;; f2)) as ?. admit.
+      rewrite H2.
+      rewrite H2.
+
+      rewrite <- norm_seq_assoc. 2: admit.
+      assert (forall f, entails
+        (ens (fun r => \[r = false]);; f)
+        f
+      ) as ?. admit.
+
+      specializes H3 (ens (fun r => \[r = false])).
+
+      assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit.
+      rewrite H3.
+
+      rewrite IH1.
+
+      fsimpl. finst x.
+      fsimpl. finst (a1 + 1).
+      fsimpl.
+      rewrite norm_req_req.
+
+      rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
+      rewrite norm_req_pure_l. 2: { reflexivity. }
+      rewrite norm_seq_ens_empty.
+
+      fstep. math.
+      fintro a2.
+      case_if.
+
+      (* rewrite norm_ens_void_hstar_pure_r. *)
+      assert (forall H P P1, entails
+        (ens (fun r => H \* \[P /\ P1 r]))
+        (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r]))
+      ) as ?. admit.
+
+      rewrite H5.
+      fsimpl.
+      fstep. intros.
+      finst a2.
+      rewrite norm_ens_ens_void_l.
+      fstep.
+      xsimpl.
+      intros.
+      split. math.
+      Fail math.
+      rewrite H7.
+      Fail math. (* ????? *)
+      rewrite Z.add_0_r.
+      reflexivity.
+
+    }
+
 (* Abort. *)
 Admitted.
 
