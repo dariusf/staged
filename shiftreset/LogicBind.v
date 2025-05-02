@@ -1229,7 +1229,7 @@ Section Propriety.
       apply H0. assumption. }
   Qed.
 
-  Definition cont_entails fk1 fk2 := forall v, entails (fk1 v) (fk2 v).
+  (* Definition cont_entails fk1 fk2 := forall v, entails (fk1 v) (fk2 v).
 
   #[global]
   Instance Proper_bind_sf : forall f1,
@@ -1254,7 +1254,27 @@ Section Propriety.
     intros.
     inverts H1. 2: { apply H in H8. false. }
     applys* s_bind.
-  Qed.
+  Qed. *)
+
+  Example rewrite :
+    entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    entails
+      (ens_ \[1 = 1])
+      empty.
+  Proof.
+    intros H.
+    rewrite H.
+  Abort.
+
+  Example rewrite :
+    entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    entails
+      (bind (ens_ \[1 = 1]) (fun v => empty))
+      empty.
+  Proof.
+    intros H.
+    rewrite H.
+  Abort.
 
   #[global]
   Instance bind_entails_under_morphism1 f1 :
@@ -1305,24 +1325,63 @@ Section Propriety.
     applys* s_bind.
   Qed.
 
-  Example rewrite :
-    entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
-    entails
-      (ens_ \[1 = 1])
-      empty.
+  #[global]
+  Instance bind_entails_under_morphism_sf1 f1 :
+    ShiftFree f1 ->
+    Proper (Morphisms.pointwise_relation val (fun f1 f2 => forall env, entails_under env f1 f2) ====> (fun f1 f2 => forall env, entails_under env f1 f2))
+      (@bind f1).
   Proof.
-    intros H.
-    rewrite H.
+    unfold Proper, respectful, Morphisms.pointwise_relation, entails_under.
+    intros * Hsf **.
+    inverts H0.
+    2: { destruct Hsf as (Hsf). false Hsf H7. }
+    applys* s_bind.
+  Qed.
+
+  #[global]
+  Instance bind_entails_under_morphism_sf2 f1 : forall env,
+    ShiftFree f1 ->
+    Proper (Morphisms.pointwise_relation val (entails) ====> (entails_under env))
+      (@bind f1).
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation, entails_under.
+    intros * Hsf **.
+    inverts H0.
+    2: { destruct Hsf as (Hsf). false Hsf H7. }
+    applys* s_bind.
+    unfold entails in H.
+    eauto.
+  Qed.
+
+  #[global]
+  Instance bind_entails_under_morphism_sf4 f1 : forall env,
+    ShiftFree f1 ->
+    Proper (Morphisms.pointwise_relation val (entails_under env) ====> (entails_under env))
+      (@bind f1).
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation, entails_under.
+    intros * Hsf **.
+    inverts H0.
+    2: { destruct Hsf as (Hsf). false Hsf H7. }
+    applys* s_bind.
   Abort.
 
+(* #[global]
+Instance aaa:
+  Proper (respectful eq (respectful (Morphisms.pointwise_relation val (entails_under empty_env)) eq)) bind.
+Proof.
+Admitted. *)
+
   Example rewrite :
-    entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
-    entails
-      (bind (ens_ \[1 = 1]) (fun v => empty))
+    entails_under empty_env (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    entails_under empty_env
+      (bind empty (fun v => ens_ \[1 = 1]))
       empty.
   Proof.
     intros H.
-    rewrite H.
+    (* TODO this should work for unfolding on the right of a bind, but currently doesn't *)
+    (* Set Typeclasses Debug. *)
+    Fail setoid_rewrite H.
   Abort.
 
   Example rewrite :

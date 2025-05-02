@@ -565,10 +565,9 @@ Proof.
 
     setoid_rewrite norm_bind_seq_assoc. 2: { shiftfree. }
 
-    assert (forall f1 f2 H,
-      (* shift_free f -> *)
-      entails (bind (ens H) (fun r => f1;; f2 r))
-      (f1;; (bind (ens H) f2))) as ?. admit.
+    assert (forall f1 f2 P,
+      entails (bind (ens (fun r => \[P r])) (fun r => f1;; f2 r))
+      (f1;; (bind (ens (fun r => \[P r])) f2))) as ?. admit.
     rewrite H2.
     clear H2.
     fsimpl.
@@ -582,6 +581,13 @@ Proof.
     Fail rewrite H2.
     Fail setoid_rewrite H2.
     clear H2.
+
+    (* assert (forall H, entails (ens H) empty) as ?. admit. *)
+    (* assert ("k" = "a") as ?. admit. *)
+    (* rewrite H2. *)
+
+    (* assert (forall k v s, entails_under s (unk k v) empty) as ?. admit. *)
+    (* setoid_rewrite H2. *)
 
     (* we have to do this because setoid rewrite doesn't work for some reason *)
     destruct acc.
