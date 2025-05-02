@@ -3124,6 +3124,18 @@ Proof.
   applys* s_seq.
 Qed.
 
+Lemma norm_rs_seq_ex_r : forall f1 A (fctx:A -> flow),
+  shift_free f1 ->
+  entails (rs (f1;; (∃ b, fctx b)))
+    (∃ b, rs (f1;; (fctx b))).
+Proof.
+  intros.
+  rewrite norm_seq_ex_r.
+  2: { assumption. }
+  lets H1: norm_rs_ex.
+  specializes H1 A (fun b => f1;; fctx b).
+Qed.
+
 Lemma norm_rs_seq_distr : forall f1 f2,
   shift_free f1 ->
   entails (rs (f1;; f2)) (rs f1;; rs f2).
@@ -3171,31 +3183,6 @@ Proof.
     { exists vunit x0. splits*. hintro. splits*. } }
 Qed.
 
-
-Lemma norm_seq_ex_widen : forall f1 A (fctx:A -> flow),
-  shift_free f1 ->
-  entails (f1;; (∃ b, fctx b))
-    (∃ b, f1;; (fctx b)).
-Proof.
-  unfold entails. intros * Hsf * H.
-  inverts H as H1 H2.
-  { inverts H2 as (b&H2).
-    apply s_fex. exists b.
-    applys s_seq H1 H2. }
-  { false Hsf H1. }
-Qed.
-
-Lemma norm_rs_seq_ex_l : forall f1 A (fctx:A -> flow),
-  shift_free f1 ->
-  entails (rs (f1;; (∃ b, fctx b)))
-    (∃ b, rs (f1;; (fctx b))).
-Proof.
-  intros.
-  rewrite norm_seq_ex_widen.
-  2: { assumption. }
-  lets H1: norm_rs_ex.
-  specializes H1 A (fun b => f1;; fctx b).
-Qed.
 
 
 Definition flow_res (f:flow) (v:val) : Prop :=
