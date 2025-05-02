@@ -2071,6 +2071,20 @@ Proof.
   assumption.
 Qed.
 
+Lemma entails_under_seq_defun_idem_weaker : forall s x uf f1,
+  Fmap.indom s x ->
+  (forall v, entails ((Fmap.read s x) v) (uf v)) ->
+  entails_under s (defun x uf;; f1) f1.
+Proof.
+  unfold entails_under. intros.
+  inverts H1. 2: { vacuous. }
+  inverts H9.
+
+  (* lets: update_idem H H0.
+  rewrite H1 in H10.
+  assumption. *)
+Admitted.
+
 Lemma ent_seq_defun_idem : forall s x uf f1 f2,
   Fmap.indom s x ->
   Fmap.read s x = uf ->

@@ -313,9 +313,9 @@ Definition toss_n : ufun := fun (n:val) =>
         bind (unk "toss_n" (vsub n 1)) (fun r2 =>
         ens (fun r => \[r = vand r1 r2]))))).
 
-Definition toss_n_env n acc :=
+Definition toss_n_env :=
   let d :=
-(fun v : val => rs (bind (bind (bind (ens (fun r : val => \[r = v])) (fun r1 : val => bind (unk "toss_n" (vsub n 1)) (fun r2 : val => ens (fun r : val => \[r = vand r1 r2])))) (fun r2 : val => ens (fun r : val => \[exists r2b : bool, r2 = r2b /\ r = acc && r2b]))) (fun v0 : val => ens (fun r : val => \[If v0 = true then r = 1 else r = 0]))))
+(fun v : val => ∀ n acc, rs (bind (bind (bind (ens (fun r : val => \[r = v])) (fun r1 : val => bind (unk "toss_n" (vsub n 1)) (fun r2 : val => ens (fun r : val => \[r = vand r1 r2])))) (fun r2 : val => ens (fun r : val => \[exists r2b : bool, r2 = r2b /\ r = acc && r2b]))) (fun v0 : val => ens (fun r : val => \[If v0 = true then r = 1 else r = 0]))))
   in
   Fmap.update (Fmap.single "toss_n" toss_n) "k" d.
 
@@ -363,7 +363,7 @@ Admitted. *)
 Lemma lemma_weaker2_attempt : forall (n:int) (acc:bool),
 (* exists f, *)
 (* exists n1 acc1, *)
-  entails_under (toss_n_env n acc)
+  entails_under toss_n_env
 
     (rs (bind
       (bind (unk "toss_n" n) (fun r2 =>
@@ -536,7 +536,7 @@ rewrite norm_ens_ens_void_l.
     forward IH. unfold virel in H. unfold downto. math.
     specializes IH acc.
 
-    
+
 
     (* rewrites IH. *)
 
