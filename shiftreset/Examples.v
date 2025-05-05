@@ -3,6 +3,14 @@
 From ShiftReset Require Import LogicBind AutomationBind.
 Local Open Scope string_scope.
 
+Lemma norm_bind_seq_def: forall f1 f2,
+  entails (bind f1 (fun _ => f2)) (f1;; f2).
+Proof.
+  intros.
+  fold (f1;; f2).
+  reflexivity.
+Qed.
+
 Lemma norm_ens_pure_conj: forall (P:val->Prop) (P1:Prop),
   entails
     (ens (fun r => \[P1 /\ P r]))
@@ -607,9 +615,8 @@ Proof.
       unfold vsub. simpl.
       fsimpl.
 
-      assert (forall f1 f2, entails (bind f1 (fun _ => f2)) (f1;; f2)) as ?. admit.
-      rewrite H2.
-      rewrite H2.
+      rewrite norm_bind_seq_def.
+      rewrite norm_bind_seq_def.
 
       rewrite <- norm_seq_assoc. 2: admit.
       assert (forall f, entails
@@ -617,10 +624,10 @@ Proof.
         f
       ) as ?. admit.
 
-      specializes H3 (ens (fun r => \[r = false])).
+      specializes H2 (ens (fun r => \[r = false])).
 
       assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit.
-      rewrite H3.
+      rewrite H2.
 
       rewrite IH1.
 
@@ -643,7 +650,7 @@ Proof.
         (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r]))
       ) as ?. admit.
 
-      rewrite H5.
+      rewrite H4.
       fsimpl.
       fstep. intros.
       finst a2.
@@ -653,7 +660,7 @@ Proof.
       intros.
       split. math.
       Fail math.
-      rewrite H7.
+      rewrite H6.
       Fail math. (* ????? *)
       rewrite Z.add_0_r.
       reflexivity.
@@ -873,7 +880,7 @@ Proof.
     rewrite norm_ens_req_transpose. 2: { apply b_pts_single. }
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
-    
+
     unfolds in lemma_weaker.
     rewrite lemma_weaker.
     fold lemma_weaker2 in lemma_weaker.

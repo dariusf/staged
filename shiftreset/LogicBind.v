@@ -433,6 +433,58 @@ Definition entails (f1 f2:flow) : Prop :=
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
+
+(* Inductive gentails (f1 f2:flow) : Prop := *)
+Inductive gentails : flow -> flow -> Prop :=
+
+  | ge_base : forall f1 f2,
+    entails f1 f2 ->
+    gentails f1 f2
+
+  | ge_shift : forall f1 f2,
+    (forall s1 s2 h1 h2 k fb fk,
+      satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
+      exists fb1 fk1,
+        satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
+        gentails fb fb1 /\
+        forall v, gentails (fk v) (fk1 v)) ->
+
+    gentails f1 f2.
+
+Lemma gentails_ind1 :
+  forall P,
+    (forall f1 f2,
+      entails f1 f2 ->
+      P f1 f2) ->
+    (forall f1 f2,
+      (forall s1 s2 h1 h2 k fb fk,
+        satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
+        exists fb1 fk1,
+          satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
+          (gentails fb fb1) /\
+          (P fb fb1) /\
+          (forall v, gentails (fk v) (fk1 v)) /\
+          (forall v, P (fk v) (fk1 v))) ->
+      P f1 f2) ->
+    forall f1 f2,
+      gentails f1 f2 -> P f1 f2.
+Proof.
+  intros * Hbase Hrec.
+  fix ind 3.
+  intros.
+  destruct H.
+  - eauto.
+  - apply* Hrec.
+    intros.
+    specializes H H0.
+    destr H.
+    exists fb1 fk1.
+    splits*.
+Qed.
+
+(* Infix "⊑'" := gentails (at level 90, right associativity) : flow_scope. *)
+Infix "⊆" := gentails (at level 90, right associativity) : flow_scope.
+
 Definition entails_under s1 f1 f2 :=
   forall h1 h2 s2 R,
     satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
@@ -1712,7 +1764,7 @@ Module Examples.
         apply fmap_not_indom_of_neq.
         easy. }
       simpl.
-      
+
       apply s_rs_val.
       apply~ ens_pure_intro.
     }
@@ -1940,7 +1992,7 @@ Proof.
 
   inverts H as H. 2: { apply Hsf in H. false. }
   inverts H7 as H7.
-  
+
   { eapply s_rs_sh.
     apply* s_seq.
     eassumption. }
@@ -1958,7 +2010,7 @@ Proof.
 
   inverts H as H. 2: { apply Hsf in H. false. }
   inverts H7 as H7.
-  
+
   { eapply s_rs_sh.
     apply* s_seq.
     eassumption. }
@@ -1976,7 +2028,7 @@ Proof.
     to the precise terms appearing in the equality... *)
     (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
   intro_shs. intros. shiftfree.
-  apply s_shc. 
+  apply s_shc.
 Qed. *)
 
 (* Lemma red_extend : forall f2 x b fk v,
@@ -2264,7 +2316,7 @@ Lemma norm_seq_empty : forall f,
 Proof.
   iff H.
   { inverts H as H.
-    - inverts* H. heaps. 
+    - inverts* H. heaps.
     - no_shift. }
   { applys s_seq H. applys* empty_intro. }
 Qed.
@@ -3591,6 +3643,36 @@ Proof.
   rew_fmap.
 
 Abort.
+
+Example ex_gentails_non_shift_free:
+  gentails
+    ((sh "k" empty;; empty);; empty)
+    (sh "k" empty;; empty;; empty).
+Proof.
+  applys ge_shift.
+  intros.
+  inverts H.
+  { inverts H7. false_invert H6. }
+  inverts H5.
+  { false_invert H7. }
+  inverts H4.
+  exists empty.
+  exs.
+  splits.
+  - applys s_bind_sh.
+    applys s_sh.
+  - applys ge_base. reflexivity.
+  - intros.
+    applys ge_base.
+    (* prove assoc *)
+    unfold entails. intros.
+    inverts H.
+    (* TODO extend noshift with bind *)
+    2: { inverts H6; no_shift. }
+    inverts H7.
+    applys* s_seq.
+    applys* s_seq.
+Qed.
 
 
 
