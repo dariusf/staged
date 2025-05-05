@@ -517,6 +517,49 @@ Proof.
   apply entails_trans.
 Qed.
 
+Instance gentails_refl : Reflexive gentails.
+Proof.
+  unfold Reflexive.
+  intros.
+  applys ge_base.
+  reflexivity.
+Qed.
+
+Instance gentails_trans : Transitive gentails.
+Proof.
+  unfold Transitive.
+  introv Hxy Hyz.
+  destruct Hxy; destruct Hyz.
+  - applys ge_base. applys* entails_trans.
+  - applys ge_shift. intros.
+    specializes H H1.
+    specializes H0 H. destr H0.
+    exs. splits*.
+  - applys ge_shift. intros.
+    specializes H H1. destr H.
+    exs. splits*.
+  - applys ge_shift. intros.
+    specializes H H1. destr H.
+    specializes H0 H2. destr H0.
+    exs. splits*.
+    + applys ge_base.
+      (* applys entails_trans. *)
+      admit.
+    + intros.
+      applys ge_base.
+      (* applys entails_trans. *)
+      admit.
+Abort.
+(* Qed. *)
+
+(* Instance gentails_preorder : PreOrder gentails.
+Proof.
+  constructor.
+  apply gentails_refl.
+  apply gentails_trans.
+Qed. *)
+
+
 Instance entails_under_refl : forall env, Reflexive (entails_under env).
 Proof.
   unfold Reflexive, entails_under.
