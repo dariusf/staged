@@ -485,6 +485,56 @@ Qed.
 (* Infix "⊑'" := gentails (at level 90, right associativity) : flow_scope. *)
 Infix "⊆" := gentails (at level 90, right associativity) : flow_scope.
 
+Inductive gentails_n : nat -> flow -> flow -> Prop :=
+
+  | gen_base : forall f1 f2,
+    entails f1 f2 ->
+    gentails_n O f1 f2
+
+  | gen_shift : forall n f1 f2,
+    (forall s1 s2 h1 h2 k fb fk,
+      satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
+      exists fb1 fk1,
+        satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
+        gentails_n n fb fb1 /\
+        forall v, gentails_n n (fk v) (fk1 v)) ->
+
+    gentails_n (S n) f1 f2.
+
+Lemma gentails_n_ind1 :
+  forall P,
+    (forall f1 f2,
+      entails f1 f2 ->
+      P O f1 f2) ->
+    (forall n f1 f2,
+      (forall s1 s2 h1 h2 k fb fk,
+        satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
+        exists fb1 fk1,
+          satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
+          (gentails_n n fb fb1) /\
+          (P n fb fb1) /\
+          (forall v, gentails_n n (fk v) (fk1 v)) /\
+          (forall v, P n (fk v) (fk1 v))) ->
+      P (S n) f1 f2) ->
+    forall n f1 f2,
+      gentails_n n f1 f2 -> P n f1 f2.
+Proof.
+  intros * Hbase Hrec.
+  fix ind 4.
+  intros.
+  destruct H.
+  - eauto.
+  - apply* Hrec.
+    intros.
+    specializes H H0.
+    destr H.
+    exists fb1 fk1.
+    splits*.
+Qed.
+
+Notation "f1 '⊆' n f2" :=
+  (gentails_n n f1 f2) (at level 90, only printing) : flow_scope.
+
 Definition entails_under s1 f1 f2 :=
   forall h1 h2 s2 R,
     satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
@@ -517,6 +567,36 @@ Proof.
   apply entails_trans.
 Qed.
 
+Instance gentails_n_refl : forall n, Reflexive (gentails_n n).
+Proof.
+  unfold Reflexive.
+  intros n. induction n; intros.
+  - applys gen_base.
+    reflexivity.
+  - intros.
+    applys gen_shift. intros.
+    exs. splits*.
+Qed.
+
+Instance gentails_n_trans : forall n, Transitive (gentails_n n).
+Proof.
+  unfold Transitive.
+  intros n. induction n; intros.
+  - inverts H. inverts H0. applys gen_base.
+    applys* entails_trans.
+  - applys gen_shift. intros.
+    inverts H as H. specializes H H1. destr H.
+    inverts H0 as H0. specializes H0 H2. destr H0.
+    exs. splits*.
+Qed.
+
+Instance gentails_n_preorder : forall n, PreOrder (gentails_n n).
+Proof.
+  constructor.
+  apply gentails_n_refl.
+  apply gentails_n_trans.
+Qed.
+
 Instance gentails_refl : Reflexive gentails.
 Proof.
   unfold Reflexive.
@@ -528,8 +608,9 @@ Qed.
 Instance gentails_trans : Transitive gentails.
 Proof.
   unfold Transitive.
-  introv Hxy Hyz.
-  destruct Hxy; destruct Hyz.
+  introv Hxy.
+  induction Hxy using gentails_ind1;
+  intros Hyz; destruct Hyz.
   - applys ge_base. applys* entails_trans.
   - applys ge_shift. intros.
     specializes H H1.
@@ -542,23 +623,10 @@ Proof.
     specializes H H1. destr H.
     specializes H0 H2. destr H0.
     exs. splits*.
-    + applys ge_base.
-      (* applys entails_trans. *)
-      admit.
-    + intros.
-      applys ge_base.
-      (* applys entails_trans. *)
-      admit.
+    (* we don't have the right IH *)
+    admit.
+    admit.
 Abort.
-(* Qed. *)
-
-(* Instance gentails_preorder : PreOrder gentails.
-Proof.
-  constructor.
-  apply gentails_refl.
-  apply gentails_trans.
-Qed. *)
-
 
 Instance entails_under_refl : forall env, Reflexive (entails_under env).
 Proof.
