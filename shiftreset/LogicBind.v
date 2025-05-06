@@ -1058,6 +1058,16 @@ Section Propriety.
   #[global]
   Instance Proper_gentails_gentails : forall n, Proper
     (flip (gentails_n n) ====> (gentails_n n) ====> impl)
+    entails.
+  Proof.
+    unfold Proper, respectful, impl, flip.
+    intros n. induction n; intros.
+    (* this should not be provable *)
+  Abort.
+
+  #[global]
+  Instance Proper_gentails_gentails : forall n, Proper
+    (flip (gentails_n n) ====> (gentails_n n) ====> impl)
     (gentails_n n).
   Proof.
     unfold Proper, respectful, impl, flip.

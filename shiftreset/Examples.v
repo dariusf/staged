@@ -369,47 +369,39 @@ Abort.
 Proof.
 Admitted. *)
 
-Lemma ent_env_weaken: forall x u u1 s1 s2 f1 f2,
-  Fmap.indom s1 x ->
-  Fmap.indom s2 x ->
-  Fmap.read s1 x = u ->
-  Fmap.read s2 x = u1 ->
-  (forall v, entails (u v) (u1 v)) ->
-  entails_under s1 f1 f2 ->
-  entails_under s2 f1 f2.
-Proof.
-  unfold entails_under. intros.
-  forwards: H2. applys_eq H3. f_equal.
-(* Abort. *)
-Admitted.
-
-(* Lemma entails_under_seq_defun_idem_weaker : forall s x uf f1,
+Lemma ent_seq_defun_idem_weaker : forall s x u1 u2 f1 f2,
   Fmap.indom s x ->
-  (forall v, entails ((Fmap.read s x) v) (uf v)) ->
-  entails_under s (defun x uf;; f1) f1.
-Proof.
-  unfold entails_under. intros.
-  applys ent_env_weaken.
-
-  inverts H1. 2: { vacuous. }
-  inverts H9.
-
-  (* lets: update_idem H H0.
-  rewrite H1 in H10.
-  assumption. *)
-Abort. *)
-
-
-(* For applying *)
-Lemma ent_seq_defun_idem_weaker : forall s x uf f1 f2,
-  Fmap.indom s x ->
-  (forall v, entails (Fmap.read s x v) (uf v)) ->
+  Fmap.read s x = u1 ->
+  (forall v, entails (u1 v) (u2 v)) ->
   entails_under s f1 f2 ->
-  entails_under s (defun x uf;; f1) f2.
+  entails_under s (defun x u2;; f1) f2.
 Proof.
-  intros.
-  rewrite* entails_under_seq_defun_idem.
+  unfold entails_under. intros.
+  inverts H3. 2: { no_shift. }
+  inverts H11.
+  applys H2.
+
 Admitted.
+
+
+Example ex_weaken_env : forall s x u1 u2 f1 f2,
+  s = Fmap.single "x" u1 ->
+  x = "x" ->
+  u1 = (fun _ => ens (fun r => \[r = 1])) ->
+  u2 = (fun _ => ens (fun r => \[r = 1 \/ r = 2])) ->
+  f1 = unk "x" vunit ->
+  f2 = ens (fun r => \[r = 1]) ->
+
+  Fmap.indom s x ->
+  Fmap.read s x = u1 ->
+  (forall v, entails (u1 v) (u2 v)) ->
+  entails_under s f1 f2 ->
+  entails_under s (defun x u2;; f1) f2.
+Proof.
+  introv H5 H6 H7 H8 H9 H10.
+  introv H1 H2 H3 H4.
+  applys ent_seq_defun_idem_weaker H1 H2 H3 H4.
+Qed.
 
 
 
@@ -478,6 +470,7 @@ Proof.
       applys Fmap.indom_union_l.
       applys Fmap.indom_single.
     }
+    { reflexivity. }
     {
       intros.
       unfold toss_n_env. unfold update.
