@@ -174,9 +174,10 @@ Open Scope flow_scope.
 
 Infix ";;" := seq (at level 38, right associativity) : flow_scope.
 
-Notation "'let' x '=' f1 'in' f2" :=
+(* Notation "'let' x '=' f1 'in' f2" :=
   (bind f1 (fun x => f2))
-  (at level 38, x binder, right associativity, only printing) : flow_scope.
+  (at level 38, x binder, right associativity, only printing) : flow_scope. *)
+
     (* format "'[' 'let'  x  '='  f1  'in' ']' '/' '[' f2 ']'") : flow_scope. *)
     (* format "'[v' '[' 'let'  x  '='  f1  'in' ']' '/' '[' f2 ']' ']'") : flow_scope. *)
 
@@ -516,7 +517,9 @@ Qed.
 (* Lemma gentails_n_ind1 :
   forall P,
     (forall f1 f2,
-      entails f1 f2 ->
+      (forall s1 s2 h1 h2 v,
+        satisfies s1 s2 h1 h2 (norm v) f1 ->
+        satisfies s1 s2 h1 h2 (norm v) f2) ->
       P O f1 f2) ->
     (forall n f1 f2,
       (forall s1 s2 h1 h2 k fb fk,
@@ -541,7 +544,7 @@ Proof.
     specializes H H0.
     destr H.
     exists fb1 fk1.
-    splits*.
+    jauto.
 Qed. *)
 
 Notation "f1 '⊆' n f2" :=
@@ -2381,56 +2384,34 @@ Lemma norm_bind_assoc1: forall n f fk fk1,
   gentails_n n (bind (bind f fk) fk1)
     (bind f (fun r => bind (fk r) fk1)).
 Proof.
-  (* intros n. *)
-  (* induction n; intros. *)
-  (* intros. *)
-  intros n. induction_wf IH: wf_lt n. intros.
-  (* induction n using gentails_n_ind1; intros. *)
-  destruct n.
-  {
-    applys gen_base.
-    unfold entails. intros.
+  intros n. induction n; intros.
+  { applys gen_base. intros.
     inverts H.
-    {
-      inverts H7.
-      applys* s_bind.
-      applys* s_bind.
-    }
-    {
-      inverts H6.
-      {
+    inverts H7.
+    applys* s_bind.
+    applys* s_bind. }
+  { applys gen_shift. intros.
+    inverts H.
+    { inverts H7.
+      exists fb fk0.
+      splits.
+      - applys* s_bind.
         applys* s_bind.
-        applys* s_bind_sh.
-      }
-      {
-        Close Scope flow_scope.
-        (* applys IH. *)
-        applys_eq s_bind_sh.
-
-        applys s_bind_sh.
-
-        applys* s_bind.
-
-      }
-    }
-  }
-
-  unfold entails. intros * Hsf * H.
-  inverts H.
-  { inverts H7.
-    applys s_bind H6.
-    applys* s_bind H9. }
-  { inverts H6.
-    - applys s_bind H7. applys* s_bind_sh.
-    - (* TODO this should also be provable,
-        if we can apply assoc to the shft *)
-      Fail applys s_bind_sh.
-      (* applys_eq s_bind_sh. *)
-      (* Close Scope flow_scope. *)
-      false Hsf H4.
-  }
+      - reflexivity.
+      - reflexivity. }
+    { inverts H5.
+      { exists fb. exs.
+        splits.
+        - applys* s_bind.
+          applys* s_bind_sh.
+        - reflexivity.
+        - reflexivity. }
+      { exists fb. exs.
+        splits.
+        - applys* s_bind_sh.
+        - reflexivity.
+        - intros. applys IHn. } } }
 Qed.
-
 
 Lemma norm_bind_assoc_conv: forall f fk fk1,
   shift_free f ->
