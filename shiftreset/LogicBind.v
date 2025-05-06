@@ -479,7 +479,7 @@ Proof.
     specializes H H0.
     destr H.
     exists fb1 fk1.
-    splits*.
+    jauto.
 Qed.
 
 (* Infix "⊑'" := gentails (at level 90, right associativity) : flow_scope. *)
@@ -488,7 +488,9 @@ Infix "⊆" := gentails (at level 90, right associativity) : flow_scope.
 Inductive gentails_n : nat -> flow -> flow -> Prop :=
 
   | gen_base : forall f1 f2,
-    entails f1 f2 ->
+    (forall s1 s2 h1 h2 v,
+      satisfies s1 s2 h1 h2 (norm v) f1 ->
+      satisfies s1 s2 h1 h2 (norm v) f2) ->
     gentails_n O f1 f2
 
   | gen_shift : forall n f1 f2,
@@ -501,7 +503,17 @@ Inductive gentails_n : nat -> flow -> flow -> Prop :=
 
     gentails_n (S n) f1 f2.
 
-Lemma gentails_n_ind1 :
+Lemma entails_gentails_n: forall n f1 f2,
+  entails f1 f2 -> gentails_n n f1 f2.
+Proof.
+  unfold entails.
+  intros n. induction n; intros.
+  { applys* gen_base. }
+  { applys gen_shift. intros.
+    jauto. }
+Qed.
+
+(* Lemma gentails_n_ind1 :
   forall P,
     (forall f1 f2,
       entails f1 f2 ->
@@ -530,7 +542,7 @@ Proof.
     destr H.
     exists fb1 fk1.
     splits*.
-Qed.
+Qed. *)
 
 Notation "f1 '⊆' n f2" :=
   (gentails_n n f1 f2) (at level 90, only printing) : flow_scope.
@@ -571,8 +583,8 @@ Instance gentails_n_refl : forall n, Reflexive (gentails_n n).
 Proof.
   unfold Reflexive.
   intros n. induction n; intros.
-  - applys gen_base.
-    reflexivity.
+  - applys gen_base. intros.
+    assumption.
   - intros.
     applys gen_shift. intros.
     exs. splits*.
@@ -582,8 +594,8 @@ Instance gentails_n_trans : forall n, Transitive (gentails_n n).
 Proof.
   unfold Transitive.
   intros n. induction n; intros.
-  - inverts H. inverts H0. applys gen_base.
-    applys* entails_trans.
+  - inverts H. inverts H0. applys gen_base. intros.
+    eauto.
   - applys gen_shift. intros.
     inverts H as H. specializes H H1. destr H.
     inverts H0 as H0. specializes H0 H2. destr H0.
