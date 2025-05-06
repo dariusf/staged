@@ -2365,6 +2365,61 @@ Proof.
   }
 Qed.
 
+Lemma norm_bind_assoc1: forall n f fk fk1,
+  gentails_n n (bind (bind f fk) fk1)
+    (bind f (fun r => bind (fk r) fk1)).
+Proof.
+  (* intros n. *)
+  (* induction n; intros. *)
+  (* intros. *)
+  intros n. induction_wf IH: wf_lt n. intros.
+  (* induction n using gentails_n_ind1; intros. *)
+  destruct n.
+  {
+    applys gen_base.
+    unfold entails. intros.
+    inverts H.
+    {
+      inverts H7.
+      applys* s_bind.
+      applys* s_bind.
+    }
+    {
+      inverts H6.
+      {
+        applys* s_bind.
+        applys* s_bind_sh.
+      }
+      {
+        Close Scope flow_scope.
+        (* applys IH. *)
+        applys_eq s_bind_sh.
+
+        applys s_bind_sh.
+
+        applys* s_bind.
+
+      }
+    }
+  }
+
+  unfold entails. intros * Hsf * H.
+  inverts H.
+  { inverts H7.
+    applys s_bind H6.
+    applys* s_bind H9. }
+  { inverts H6.
+    - applys s_bind H7. applys* s_bind_sh.
+    - (* TODO this should also be provable,
+        if we can apply assoc to the shft *)
+      Fail applys s_bind_sh.
+      (* applys_eq s_bind_sh. *)
+      (* Close Scope flow_scope. *)
+      false Hsf H4.
+  }
+Qed.
+
+
 Lemma norm_bind_assoc_conv: forall f fk fk1,
   shift_free f ->
   entails (bind f (fun r => bind (fk r) fk1))
