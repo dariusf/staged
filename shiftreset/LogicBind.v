@@ -1040,6 +1040,38 @@ Notation flip := Basics.flip.
 Section Propriety.
 
   #[global]
+  Instance Proper_entails_gentails : forall n, Proper
+    (flip entails ====> entails ====> impl)
+    (gentails_n n).
+  Proof.
+    unfold entails, Proper, respectful, impl, flip.
+    intros n. induction n; intros.
+    { inverts H1.
+      applys* gen_base. }
+    { inverts H1.
+      applys gen_shift. intros.
+      specializes H H1.
+      specializes H3 H.
+      jauto. }
+  Qed.
+
+  #[global]
+  Instance Proper_gentails_gentails : forall n, Proper
+    (flip (gentails_n n) ====> (gentails_n n) ====> impl)
+    (gentails_n n).
+  Proof.
+    unfold Proper, respectful, impl, flip.
+    intros n. induction n; intros.
+    { inverts H. inverts H1. inverts H0.
+      applys* gen_base. }
+    { applys gen_shift. intros.
+      inverts H as H. specializes H H2. destr H.
+      inverts H1 as H1. specializes H1 H3. destr H1.
+      inverts H0 as H0. specializes H0 H4. destr H0.
+      jauto. }
+  Qed.
+
+  #[global]
   Instance Proper_entails : Proper
     (flip entails ====> entails ====> impl)
     entails.
