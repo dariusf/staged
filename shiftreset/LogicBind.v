@@ -434,121 +434,59 @@ Definition entails (f1 f2:flow) : Prop :=
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
+Inductive gentails_under : senv -> nat -> flow -> flow -> Prop :=
 
-(* Inductive gentails (f1 f2:flow) : Prop := *)
-Inductive gentails : flow -> flow -> Prop :=
+  | geu_base : forall s1 f1 f2,
+    (forall s2 h1 h2 v,
+      satisfies s1 s2 h1 h2 (norm v) f1 ->
+      satisfies s1 s2 h1 h2 (norm v) f2) ->
+    gentails_under s1 O f1 f2
 
-  | ge_base : forall f1 f2,
-    entails f1 f2 ->
-    gentails f1 f2
-
-  | ge_shift : forall f1 f2,
-    (forall s1 s2 h1 h2 k fb fk,
+  | geu_shift : forall s1 n f1 f2,
+    (forall s2 h1 h2 k fb fk,
       satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
       exists fb1 fk1,
         satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
-        gentails fb fb1 /\
-        forall v, gentails (fk v) (fk1 v)) ->
+        gentails_under s1 n fb fb1 /\
+        forall v, gentails_under s1 n (fk v) (fk1 v)) ->
 
-    gentails f1 f2.
+    gentails_under s1 (S n) f1 f2.
 
-Lemma gentails_ind1 :
-  forall P,
-    (forall f1 f2,
-      entails f1 f2 ->
-      P f1 f2) ->
-    (forall f1 f2,
-      (forall s1 s2 h1 h2 k fb fk,
-        satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
-        exists fb1 fk1,
-          satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
-          (gentails fb fb1) /\
-          (P fb fb1) /\
-          (forall v, gentails (fk v) (fk1 v)) /\
-          (forall v, P (fk v) (fk1 v))) ->
-      P f1 f2) ->
-    forall f1 f2,
-      gentails f1 f2 -> P f1 f2.
-Proof.
-  intros * Hbase Hrec.
-  fix ind 3.
-  intros.
-  destruct H.
-  - eauto.
-  - apply* Hrec.
-    intros.
-    specializes H H0.
-    destr H.
-    exists fb1 fk1.
-    jauto.
-Qed.
+Notation "env '⊢' f1 '⊆' n f2" :=
+  (gentails_under env n f1 f2) (at level 90, only printing) : flow_scope.
 
-(* Infix "⊑'" := gentails (at level 90, right associativity) : flow_scope. *)
-Infix "⊆" := gentails (at level 90, right associativity) : flow_scope.
+(* Definition gentails n f1 f2 :=
+  forall s1, gentails_under s1 n f1 f2. *)
 
-Inductive gentails_n : nat -> flow -> flow -> Prop :=
+Inductive gentails : nat -> flow -> flow -> Prop :=
 
-  | gen_base : forall f1 f2,
+  | ge_base : forall f1 f2,
     (forall s1 s2 h1 h2 v,
       satisfies s1 s2 h1 h2 (norm v) f1 ->
       satisfies s1 s2 h1 h2 (norm v) f2) ->
-    gentails_n O f1 f2
+    gentails O f1 f2
 
-  | gen_shift : forall n f1 f2,
+  | ge_shift : forall n f1 f2,
     (forall s1 s2 h1 h2 k fb fk,
       satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
       exists fb1 fk1,
         satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
-        gentails_n n fb fb1 /\
-        forall v, gentails_n n (fk v) (fk1 v)) ->
+        gentails n fb fb1 /\
+        forall v, gentails n (fk v) (fk1 v)) ->
 
-    gentails_n (S n) f1 f2.
+    gentails (S n) f1 f2.
+
+Notation "f1 '⊆' n f2" :=
+  (gentails n f1 f2) (at level 90, only printing) : flow_scope.
 
 Lemma entails_gentails_n: forall n f1 f2,
-  entails f1 f2 -> gentails_n n f1 f2.
+  entails f1 f2 -> gentails n f1 f2.
 Proof.
   unfold entails.
   intros n. induction n; intros.
-  { applys* gen_base. }
-  { applys gen_shift. intros.
-    jauto. }
+  { applys* ge_base. }
+  { applys ge_shift. jauto. }
 Qed.
-
-(* Lemma gentails_n_ind1 :
-  forall P,
-    (forall f1 f2,
-      (forall s1 s2 h1 h2 v,
-        satisfies s1 s2 h1 h2 (norm v) f1 ->
-        satisfies s1 s2 h1 h2 (norm v) f2) ->
-      P O f1 f2) ->
-    (forall n f1 f2,
-      (forall s1 s2 h1 h2 k fb fk,
-        satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
-        exists fb1 fk1,
-          satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
-          (gentails_n n fb fb1) /\
-          (P n fb fb1) /\
-          (forall v, gentails_n n (fk v) (fk1 v)) /\
-          (forall v, P n (fk v) (fk1 v))) ->
-      P (S n) f1 f2) ->
-    forall n f1 f2,
-      gentails_n n f1 f2 -> P n f1 f2.
-Proof.
-  intros * Hbase Hrec.
-  fix ind 4.
-  intros.
-  destruct H.
-  - eauto.
-  - apply* Hrec.
-    intros.
-    specializes H H0.
-    destr H.
-    exists fb1 fk1.
-    jauto.
-Qed. *)
-
-Notation "f1 '⊆' n f2" :=
-  (gentails_n n f1 f2) (at level 90, only printing) : flow_scope.
 
 Definition entails_under s1 f1 f2 :=
   forall h1 h2 s2 R,
@@ -556,6 +494,15 @@ Definition entails_under s1 f1 f2 :=
 
 Notation "env '⊢' f1 '⊑' f2" :=
   (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
+
+Lemma entails_under_gentails_under: forall n s1 f1 f2,
+  entails_under s1 f1 f2 -> gentails_under s1 n f1 f2.
+Proof.
+  unfold entails_under.
+  intros n. induction n; intros.
+  { applys* geu_base. }
+  { applys geu_shift. jauto. }
+Qed.
 
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 R s1 s2,
@@ -582,66 +529,36 @@ Proof.
   apply entails_trans.
 Qed.
 
-Instance gentails_n_refl : forall n, Reflexive (gentails_n n).
+Instance gentails_n_refl : forall n, Reflexive (gentails n).
 Proof.
   unfold Reflexive.
   intros n. induction n; intros.
-  - applys gen_base. intros.
+  - applys ge_base. intros.
     assumption.
   - intros.
-    applys gen_shift. intros.
+    applys ge_shift. intros.
     exs. splits*.
 Qed.
 
-Instance gentails_n_trans : forall n, Transitive (gentails_n n).
+(* This is the first lemma we need the index to prove. *)
+Instance gentails_n_trans : forall n, Transitive (gentails n).
 Proof.
   unfold Transitive.
   intros n. induction n; intros.
-  - inverts H. inverts H0. applys gen_base. intros.
+  - inverts H. inverts H0. applys ge_base. intros.
     eauto.
-  - applys gen_shift. intros.
+  - applys ge_shift. intros.
     inverts H as H. specializes H H1. destr H.
     inverts H0 as H0. specializes H0 H2. destr H0.
     exs. splits*.
 Qed.
 
-Instance gentails_n_preorder : forall n, PreOrder (gentails_n n).
+Instance gentails_n_preorder : forall n, PreOrder (gentails n).
 Proof.
   constructor.
   apply gentails_n_refl.
   apply gentails_n_trans.
 Qed.
-
-Instance gentails_refl : Reflexive gentails.
-Proof.
-  unfold Reflexive.
-  intros.
-  applys ge_base.
-  reflexivity.
-Qed.
-
-Instance gentails_trans : Transitive gentails.
-Proof.
-  unfold Transitive.
-  introv Hxy.
-  induction Hxy using gentails_ind1;
-  intros Hyz; destruct Hyz.
-  - applys ge_base. applys* entails_trans.
-  - applys ge_shift. intros.
-    specializes H H1.
-    specializes H0 H. destr H0.
-    exs. splits*.
-  - applys ge_shift. intros.
-    specializes H H1. destr H.
-    exs. splits*.
-  - applys ge_shift. intros.
-    specializes H H1. destr H.
-    specializes H0 H2. destr H0.
-    exs. splits*.
-    (* we don't have the right IH *)
-    admit.
-    admit.
-Abort.
 
 Instance entails_under_refl : forall env, Reflexive (entails_under env).
 Proof.
@@ -1142,14 +1059,14 @@ Section Propriety.
   #[global]
   Instance Proper_entails_gentails : forall n, Proper
     (flip entails ====> entails ====> impl)
-    (gentails_n n).
+    (gentails n).
   Proof.
     unfold entails, Proper, respectful, impl, flip.
     intros n. induction n; intros.
     { inverts H1.
-      applys* gen_base. }
+      applys* ge_base. }
     { inverts H1.
-      applys gen_shift. intros.
+      applys ge_shift. intros.
       specializes H H1.
       specializes H3 H.
       jauto. }
@@ -1157,7 +1074,7 @@ Section Propriety.
 
   #[global]
   Instance Proper_gentails_gentails : forall n, Proper
-    (flip (gentails_n n) ====> (gentails_n n) ====> impl)
+    (flip (gentails n) ====> (gentails n) ====> impl)
     entails.
   Proof.
     unfold Proper, respectful, impl, flip.
@@ -1167,14 +1084,14 @@ Section Propriety.
 
   #[global]
   Instance Proper_gentails_gentails : forall n, Proper
-    (flip (gentails_n n) ====> (gentails_n n) ====> impl)
-    (gentails_n n).
+    (flip (gentails n) ====> (gentails n) ====> impl)
+    (gentails n).
   Proof.
     unfold Proper, respectful, impl, flip.
     intros n. induction n; intros.
     { inverts H. inverts H1. inverts H0.
-      applys* gen_base. }
-    { applys gen_shift. intros.
+      applys* ge_base. }
+    { applys ge_shift. intros.
       inverts H as H. specializes H H2. destr H.
       inverts H1 as H1. specializes H1 H3. destr H1.
       inverts H0 as H0. specializes H0 H4. destr H0.
@@ -2391,7 +2308,7 @@ Proof.
   assumption.
 Qed.
 
-Lemma norm_bind_assoc: forall f fk fk1,
+Lemma norm_bind_assoc_sf: forall f fk fk1,
   shift_free f ->
   entails (bind (bind f fk) fk1)
     (bind f (fun r => bind (fk r) fk1)).
@@ -2403,26 +2320,75 @@ Proof.
     applys* s_bind H9. }
   { inverts H6.
     - applys s_bind H7. applys* s_bind_sh.
-    - (* TODO this should also be provable,
-        if we can apply assoc to the shft *)
-      Fail applys s_bind_sh.
-      (* applys_eq s_bind_sh. *)
-      (* Close Scope flow_scope. *)
-      false Hsf H4.
-  }
+    - (* we are stuck as entails does not let us
+      reassociate the continuation *)
+      false Hsf H4. }
 Qed.
 
-Lemma norm_bind_assoc1: forall n f fk fk1,
-  gentails_n n (bind (bind f fk) fk1)
+Lemma norm_bind_assoc_sf_conv: forall f fk fk1,
+  shift_free f ->
+  entails (bind f (fun r => bind (fk r) fk1))
+    (bind (bind f fk) fk1).
+Proof.
+  unfold entails. intros * Hsf Hsf2 * H.
+  inverts H.
+  { inverts H8.
+    { applys s_bind H9.
+      applys s_bind H7 H6. }
+    { applys s_bind_sh. applys* s_bind. } }
+  { (* need to predict *)
+    false Hsf H6. }
+Qed.
+
+Lemma norm_seq_assoc1 : forall f1 f2 f3,
+  shift_free f1 ->
+  entails (f1;; (f2;; f3)) ((f1;; f2);; f3).
+Proof.
+  introv Hsf1 H.
+  applys* norm_bind_assoc_sf_conv.
+Qed.
+
+Lemma norm_seq_assoc2 : forall f1 f2 f3,
+  shift_free f1 ->
+  entails ((f1;; f2);; f3) (f1;; (f2;; f3)).
+Proof.
+  introv Hsf1 H.
+  applys* norm_bind_assoc_sf.
+Qed.
+
+Lemma norm_seq_assoc : forall f1 f2 f3,
+  shift_free f1 ->
+  bientails (f1;; f2;; f3) ((f1;; f2);; f3).
+Proof.
+  introv Hsf1. iff H.
+  - applys* norm_seq_assoc1 H.
+  - applys* norm_seq_assoc2 H.
+Qed.
+
+(** Compare with [norm_bind_assoc_sf].
+
+  Where we apply the IH shows where we need to reassociate
+  the continuation. When the other arguments have shifts, we don't
+  actually need to reassociate.
+
+  Consider how these evaluate:
+
+  Sh(...); f2; f3 ⊑ (Sh(...); f2); f3
+
+  L: shft(..., λ x. id; f2; f3)
+  R: shft(..., λ x. (id; f2); f3)
+*)
+Lemma norm_bind_assoc: forall n f fk fk1,
+  gentails n (bind (bind f fk) fk1)
     (bind f (fun r => bind (fk r) fk1)).
 Proof.
   intros n. induction n; intros.
-  { applys gen_base. intros.
+  { applys ge_base. intros.
     inverts H.
     inverts H7.
     applys* s_bind.
     applys* s_bind. }
-  { applys gen_shift. intros.
+  { applys ge_shift. intros.
     inverts H.
     { inverts H7.
       exists fb fk0.
@@ -2443,46 +2409,6 @@ Proof.
         - applys* s_bind_sh.
         - reflexivity.
         - intros. applys IHn. } } }
-Qed.
-
-Lemma norm_bind_assoc_conv: forall f fk fk1,
-  shift_free f ->
-  entails (bind f (fun r => bind (fk r) fk1))
-    (bind (bind f fk) fk1).
-Proof.
-  unfold entails. intros * Hsf Hsf2 * H.
-  inverts H.
-  { inverts H8.
-    { applys s_bind H9.
-      applys s_bind H7 H6. }
-    { applys s_bind_sh. applys* s_bind. } }
-  { (* need to predict *)
-    false Hsf H6. }
-Qed.
-
-Lemma norm_seq_assoc1 : forall f1 f2 f3,
-  shift_free f1 ->
-  entails (f1;; (f2;; f3)) ((f1;; f2);; f3).
-Proof.
-  introv Hsf1 H.
-  applys* norm_bind_assoc_conv.
-Qed.
-
-Lemma norm_seq_assoc2 : forall f1 f2 f3,
-  shift_free f1 ->
-  entails ((f1;; f2);; f3) (f1;; (f2;; f3)).
-Proof.
-  introv Hsf1 H.
-  applys* norm_bind_assoc.
-Qed.
-
-Lemma norm_seq_assoc : forall f1 f2 f3,
-  shift_free f1 ->
-  bientails (f1;; f2;; f3) ((f1;; f2);; f3).
-Proof.
-  introv Hsf1. iff H.
-  - applys* norm_seq_assoc1 H.
-  - applys* norm_seq_assoc2 H.
 Qed.
 
 (* A pure fact about a result on the left of a seq doesn't contribute anything *)
@@ -3836,35 +3762,26 @@ Proof.
 Abort.
 
 Example ex_gentails_non_shift_free:
-  gentails
+  gentails 1%nat
     ((sh "k" empty;; empty);; empty)
     (sh "k" empty;; empty;; empty).
 Proof.
+  intros.
   applys ge_shift.
   intros.
-  inverts H.
-  { inverts H7. false_invert H6. }
-  inverts H5.
-  { false_invert H7. }
+  inverts H. { inverts H7. false_invert H6. }
+  inverts H5. { false_invert H7. }
   inverts H4.
   exists empty.
   exs.
   splits.
   - applys s_bind_sh.
     applys s_sh.
-  - applys ge_base. reflexivity.
+  - reflexivity.
   - intros.
-    applys ge_base.
-    (* prove assoc *)
-    unfold entails. intros.
-    inverts H.
-    (* TODO extend noshift with bind *)
-    2: { inverts H6; no_shift. }
-    inverts H7.
-    applys* s_seq.
-    applys* s_seq.
+    rewrite norm_bind_assoc.
+    reflexivity.
 Qed.
-
 
 
 (** * Correspondence with the paper *)

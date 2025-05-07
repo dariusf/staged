@@ -37,6 +37,20 @@ Proof.
   { false Hsf H6. }
 Qed.
 
+Lemma norm_bind_trivial1: forall n f1,
+  gentails n
+    (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2])))
+    f1.
+Proof.
+  intros n. induction n; intros.
+  { applys ge_base. intros.
+    inverts H.
+    inverts H8. heaps. }
+  { applys ge_shift. intros.
+    inverts H. { no_shift. }
+    exists fb fk0. splits*. reflexivity. }
+Qed.
+
 Lemma norm_ens_void_hstar_pure_l: forall P H,
   entails
     (ens_ (\[P] \* H))
