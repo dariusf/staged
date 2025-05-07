@@ -351,20 +351,32 @@ Proof.
   applys* s_shc.
 Qed.
 
+(* For when the goal can be dispatched by brute force.
+  jauto handles these but will not leave unsolved goals. *)
+Ltac zap :=
+  lazymatch goal with
+  | H: exists _, _ |- _ => destr H; zap
+  | H: _ /\ _ |- _ => destr H; zap
+  | |- _ /\ _ => splits; zap
+  | |- exists _, _ => eexists; zap
+  | _ => jauto
+  end.
+
 (* Dispatch goals involving the heaps that come out of ens once
   we have to reason about semantics *)
 Ltac heaps :=
   lazymatch goal with
-  | H: norm _ = norm _ |- _ => injects H; heaps
   | H: exists _, _ |- _ => destr H; heaps
   | H: _ /\ _ |- _ => destr H; heaps
+  | H: norm _ = norm _ |- _ => injects H; heaps
   | H: (_ ~~> _) _ |- _ => hinv H; heaps
   | H: \[_] _ |- _ => hinv H; heaps
   | H: (_ \* _) _ |- _ => hinv H; heaps
-  | |- _ /\ _ => splits; heaps
   | |- (_ ~~> _) _ => hintro; heaps
   | |- (_ \* _) _ => hintro; heaps
   | |- \[_] _ => hintro; heaps
+  (* as late as we can *)
+  | |- _ /\ _ => splits; heaps
   | |- exists _, _ => eexists; heaps
   | _ => subst; rew_fmap *
   end.
@@ -452,8 +464,9 @@ Inductive gentails_under : senv -> nat -> flow -> flow -> Prop :=
 
     gentails_under s1 (S n) f1 f2.
 
-Notation "env '⊢' f1 '⊆' n f2" :=
-  (gentails_under env n f1 f2) (at level 90, only printing) : flow_scope.
+(* hide the index *)
+Notation "env '⊢' f1 '⊆' f2" :=
+  (gentails_under env _ f1 f2) (at level 90, only printing) : flow_scope.
 
 (* Definition gentails n f1 f2 :=
   forall s1, gentails_under s1 n f1 f2. *)
@@ -479,7 +492,7 @@ Inductive gentails : nat -> flow -> flow -> Prop :=
 Notation "f1 '⊆' n f2" :=
   (gentails n f1 f2) (at level 90, only printing) : flow_scope.
 
-Lemma entails_gentails_n: forall n f1 f2,
+Lemma entails_gentails: forall n f1 f2,
   entails f1 f2 -> gentails n f1 f2.
 Proof.
   unfold entails.
@@ -1000,6 +1013,15 @@ Section Propriety.
     { apply H0. apply H1. apply H. auto. }
   Qed.
 
+  #[global]
+  Instance Proper_entails_gentails : forall n, Proper
+    (flip (gentails n) ====> (gentails n) ====> impl)
+    entails.
+  Proof.
+    unfold Proper, respectful, impl, flip.
+    intros n. induction n; intros.
+    (* this should not be provable *)
+  Abort.
 
   #[global]
   Instance Proper_entails_under_bientails : forall env,
@@ -1055,9 +1077,8 @@ Section Propriety.
     auto.
   Qed.
 
-
   #[global]
-  Instance Proper_entails_gentails : forall n, Proper
+  Instance Proper_gentails_entails : forall n, Proper
     (flip entails ====> entails ====> impl)
     (gentails n).
   Proof.
@@ -1075,16 +1096,6 @@ Section Propriety.
   #[global]
   Instance Proper_gentails_gentails : forall n, Proper
     (flip (gentails n) ====> (gentails n) ====> impl)
-    entails.
-  Proof.
-    unfold Proper, respectful, impl, flip.
-    intros n. induction n; intros.
-    (* this should not be provable *)
-  Abort.
-
-  #[global]
-  Instance Proper_gentails_gentails : forall n, Proper
-    (flip (gentails n) ====> (gentails n) ====> impl)
     (gentails n).
   Proof.
     unfold Proper, respectful, impl, flip.
@@ -1095,6 +1106,56 @@ Section Propriety.
       inverts H as H. specializes H H2. destr H.
       inverts H1 as H1. specializes H1 H3. destr H1.
       inverts H0 as H0. specializes H0 H4. destr H0.
+      jauto. }
+  Qed.
+
+  #[global]
+  Instance Proper_gentails_under_bientails : forall n env,
+    Proper (bientails ====> bientails ====> iff)
+      (gentails_under env n).
+  Proof.
+    unfold Proper, respectful, entails_under, bientails, impl.
+    intros n. destruct n; intros.
+    { iff H1.
+      { inverts H1. applys geu_base. intros.
+        applys H0. applys H2. applys* H. }
+      { inverts H1. applys geu_base. intros.
+        applys H0. applys H2. applys* H. } }
+    { iff H1.
+      { inverts H1. applys geu_shift. intros.
+        lets H2: H.
+        specializes H2 h1 h2 (shft k fb fk) env s2.
+        destruct H2.
+        specializes H3 H1.
+        specializes H4 H3.
+        zap.
+        applys* H0. }
+      { inverts H1. applys geu_shift. intros.
+        lets H2: H.
+        specializes H2 h1 h2 (shft k fb fk) env s2.
+        destruct H2.
+        specializes H2 H1.
+        specializes H4 H2.
+        zap.
+        applys* H0. } }
+  Qed.
+
+  #[global]
+  Instance Proper_gentails_under_entails : forall n env,
+    Proper (flip entails ====> entails ====> impl)
+      (gentails_under env n).
+  Proof.
+    unfold Proper, respectful, entails_under, entails, flip, impl.
+    intros n. destruct n; intros.
+    { inverts H1.
+      applys geu_base. intros.
+      applys H0.
+      applys H2.
+      applys* H. }
+    { inverts H1.
+      applys geu_shift. intros.
+      specializes H H1.
+      specializes H4 H.
       jauto. }
   Qed.
 

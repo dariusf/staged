@@ -766,7 +766,7 @@ Proof.
 Qed.
 
 Ltac hinv H :=
-  match type of H with
+  lazymatch type of H with
   | \[] _ => apply hempty_inv in H
   | \[_] _ => apply hpure_inv in H as (?&?)
   | (_~~>_) _ => apply hsingle_inv in H
@@ -776,7 +776,7 @@ Ltac hinv H :=
   end.
 
 Ltac hintro :=
-  match goal with
+  lazymatch goal with
   | |- \[] _ => apply hempty_intro
   | |- \[_] _ => apply hpure_intro
   | |- (_ \* _) (_ \u _) => apply hstar_intro

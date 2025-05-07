@@ -195,8 +195,8 @@ Definition f : ufun := fun _ =>
 Definition f_env :=
   Fmap.single "k" (fun v : val => rs (ens (fun r => \[r = v]))).
 
-Lemma f_reduction: forall v1,
-  entails_under f_env (f v1) (ens (fun r => \[r = false])).
+Lemma f_reduction: forall n v1,
+  gentails_under f_env n (f v1) (ens (fun r => \[r = false])).
 Proof.
   intros.
   unfold f.
@@ -207,7 +207,7 @@ Proof.
   2: { unfold f_env. apply Fmap.indom_single. }
   2: { unfold f_env. resolve_fn_in_env. } *)
 
-  apply ent_seq_defun_idem.
+  applys entails_under_gentails_under ent_seq_defun_idem.
   { unfold f_env. apply Fmap.indom_single. }
   { unfold f_env. resolve_fn_in_env. }
 

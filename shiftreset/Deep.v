@@ -252,7 +252,7 @@ Inductive flow : Type :=
     input is assumed to be a value most of the time. *)
   | unk : var -> val -> var -> flow
 
-  (* 
+  (*
   | fall : forall (A:Type), (A -> flow) -> flow
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
@@ -498,7 +498,7 @@ Inductive spec_assert_valid_under penv env : expr -> var -> flow -> Prop :=
         spec_assert_valid_under penv env ek r fk /\
           satisfies env s1 s2 h1 h2 (shft k rb fb r1 r fk) r f) ->
     spec_assert_valid_under penv env e r f.
-    
+
 
 
 (* Notation "penv ',' env '|-' e ':::' r '.' f" :=
@@ -560,7 +560,7 @@ Proof.
   applys eval_pshift.
   Unshelve.
   exact "r".
-  Show Proof.
+  (* Show Proof. *)
 Qed.
 
 Example ex1 : exists Re,
@@ -576,7 +576,7 @@ Proof.
   Unshelve.
   exact "y".
   exact "r1".
-  Show Proof.
+  (* Show Proof. *)
 Qed.
 
 Example ex2 : exists R,
@@ -589,7 +589,7 @@ Proof.
   (* applys_eq s_sh. *)
   applys s_sh.
   simpl. reflexivity.
-  Show Proof.
+  (* Show Proof. *)
 Qed.
 
 End Examples.
@@ -1048,7 +1048,7 @@ Proof.
   split.
   unfold store_read. rewrite fmap_read_update.
   reflexivity.
-  
+
   admit.
   fmap_eq.
   fmap_disjoint.
@@ -1154,7 +1154,7 @@ Proof.
     (* consider the ways in which the let produces a shift *)
     inverts H as. { intros * Hb1 Hb2. false Hne1 Hb1. }
     rename ek0 into ek.
-  
+
     (* finally, the let-shift case *)
     intros * Hb.
     specializes He1 Hb. clear Hb.
@@ -1180,7 +1180,7 @@ Proof.
         introv Hb.
         (* the body of a continuation is a let. the e1 can have shifts or not *)
         inverts Hb as H12 H13.
-        
+
         {
           (* the e1 has no shift *)
           clear Heksf.
@@ -1192,7 +1192,7 @@ Proof.
 
           (* false Heksf. *)
           (* applys_eq H11. *)
-          
+
 
           admit. }
 
@@ -1216,7 +1216,7 @@ Proof.
       { admit. }
       admit.
     }
-    
+
   }
 Abort.
 
