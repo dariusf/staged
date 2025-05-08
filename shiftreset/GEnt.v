@@ -153,7 +153,14 @@ Lemma gent_disj_r_l : forall n s f1 f2 f3,
   gentails_under s n f3 f1 ->
   gentails_under s n f3 (disj f1 f2).
 Proof.
-Admitted.
+  intros.
+  inverts H.
+  { applys geu_base. intros.
+    applys* s_disj_l. }
+  { applys geu_shift. intros.
+    specializes H0 H.
+    zap. applys* s_disj_l. }
+Qed.
 
 Lemma gent_disj_r_r : forall n s f1 f2 f3,
   gentails_under s n f3 f2 ->
