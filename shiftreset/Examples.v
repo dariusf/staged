@@ -3,33 +3,46 @@
 From ShiftReset Require Import LogicBind AutomationBind.
 Local Open Scope string_scope.
 
-Lemma norm_bind_seq_def: forall f1 f2,
-  entails (bind f1 (fun _ => f2)) (f1;; f2).
+Lemma norm_seq_ignore_res_l: forall v f,
+  entails (ens (fun r => \[r = v]);; f) f.
 Proof.
-  intros.
-  fold (f1;; f2).
-  reflexivity.
-Qed.
+Admitted.
 
-Lemma norm_ens_pure_conj: forall (P:val->Prop) (P1:Prop),
-  entails
-    (ens (fun r => \[P1 /\ P r]))
-    (ens_ \[P1];; ens (fun r => \[P r])).
+Lemma norm_bind_seq_past_pure: forall f1 f2 P,
+  entails (bind (ens (fun r => \[P r])) (fun r => f1;; f2 r))
+  (f1;; (bind (ens (fun r => \[P r])) f2)).
 Proof.
-  unfold entails. intros.
-  inverts H.
-  heaps.
-  applys s_seq.
-  applys s_ens_. heaps.
-  applys s_ens. heaps.
-Qed.
+Admitted.
+
+Lemma norm_bind_req_r: forall f f2 H,
+  shift_free f ->
+  entails (bind f (fun r => req H (f2 r)))
+  (req H (bind f f2)).
+Proof.
+Admitted.
+
+Lemma norm_bind_all_r: forall (A:Type) f1 (f2:A->val->flow),
+  entails
+    (bind f1 (fun r => ∀ x, f2 x r))
+    (∀ x, bind f1 (fun r => f2 x r)).
+Proof.
+Admitted.
+
+Lemma norm_ens_void_pure_swap: forall H P f,
+  entails (ens_ H;; ens_ \[P];; f)
+    (ens_ \[P];; ens_ H;; f).
+Proof.
+Admitted.
+
+Lemma norm_ens_hstar_pure_r: forall H (P:val->Prop),
+  entails (ens (fun r => H \* \[P r])) (ens_ H;; ens (fun r => \[P r])).
+Proof.
+Admitted.
 
 (* TODO this also would benefit from generalised entailment *)
 Lemma norm_bind_trivial: forall f1,
   shift_free f1 ->
-  entails
-    (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2])))
-    f1.
+  entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
   unfold entails. introv Hsf H.
   inverts H.
@@ -38,9 +51,7 @@ Proof.
 Qed.
 
 Lemma norm_bind_trivial1: forall n f1,
-  gentails n
-    (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2])))
-    f1.
+  gentails n (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
   intros n. induction n; intros.
   { applys ge_base. intros.
@@ -49,43 +60,6 @@ Proof.
   { applys ge_shift. intros.
     inverts H. { no_shift. }
     exists fb fk0. splits*. reflexivity. }
-Qed.
-
-Lemma norm_ens_void_hstar_pure_l: forall P H,
-  entails
-    (ens_ (\[P] \* H))
-    (ens_ \[P];; ens_ H).
-Proof.
-  unfold entails. intros.
-  inverts H0.
-  applys s_seq.
-  - applys s_ens_. heaps.
-  - applys s_ens. heaps.
-Qed.
-
-Lemma norm_ens_void_hstar_pure_r: forall P H,
-  entails
-    (ens_ (H \* \[P]))
-    (ens_ \[P];; ens_ H).
-Proof.
-  unfold entails. intros.
-  inverts H0.
-  applys s_seq.
-  - applys s_ens_. heaps.
-  - applys s_ens. heaps.
-Qed.
-
-Lemma norm_ens_pure_ex: forall (A:Type) (P:A->val->Prop),
-  entails
-    (ens (fun r => \[exists b, P b r]))
-    (∃ b, ens (fun r => \[P b r])).
-Proof.
-  unfold entails. intros.
-  inverts H.
-  heaps.
-  applys s_fex. exists b.
-  applys s_ens.
-  heaps.
 Qed.
 
 Definition viop f a b :=
@@ -538,40 +512,21 @@ Proof.
 
     applys ent_req_l. math.
     fintro a1.
-    assert (forall H (P:val->Prop),
-      entails (ens (fun r => H \* \[P r])) (ens_ H;; ens (fun r => \[P r]))) as ?. admit.
-    rewrite H1.
-    clear H1.
+    rewrite norm_ens_hstar_pure_r.
     fsimpl.
 
-    assert (forall H P f,
-      entails (ens_ H;; ens_ \[P];; f)
-        (ens_ \[P];; ens_ H;; f)) as ?. admit.
-
-    rewrite H1.
-    clear H1.
+    rewrite norm_ens_void_pure_swap.
     fstep. intros.
     fsimpl.
 
-    assert (forall (A:Type) f1 (f2:A->val->flow),
-      entails
-        (bind f1 (fun r => ∀ x, f2 x r))
-        (∀ x, bind f1 (fun r => f2 x r))) as ?. admit.
-
-    rewrite H2.
-    clear H2.
+    rewrite norm_bind_all_r.
     fsimpl. finst a1.
 
     lets: norm_bind_req (x~~>a1).
     setoid_rewrite H2.
     clear H2.
 
-    assert (forall f f2 H,
-      shift_free f ->
-      entails (bind f (fun r => req H (f2 r)))
-      (req H (bind f f2))) as ?. admit.
-    rewrite H2. 2: { shiftfree. }
-    clear H2.
+    rewrite norm_bind_req_r. 2: { shiftfree. }
     fsimpl.
 
     rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
@@ -580,11 +535,7 @@ Proof.
 
     setoid_rewrite norm_bind_seq_assoc. 2: { shiftfree. }
 
-    assert (forall f1 f2 P,
-      entails (bind (ens (fun r => \[P r])) (fun r => f1;; f2 r))
-      (f1;; (bind (ens (fun r => \[P r])) f2))) as ?. admit.
-    rewrite H2.
-    clear H2.
+    rewrite norm_bind_seq_past_pure.
     fsimpl.
 
     lazymatch goal with
@@ -596,10 +547,6 @@ Proof.
     Fail rewrite H2.
     Fail setoid_rewrite H2.
     clear H2.
-
-    (* assert (forall H, entails (ens H) empty) as ?. admit. *)
-    (* assert ("k" = "a") as ?. admit. *)
-    (* rewrite H2. *)
 
     (* assert (forall k v s, entails_under s (unk k v) empty) as ?. admit. *)
     (* setoid_rewrite H2. *)
@@ -626,12 +573,7 @@ Proof.
       rewrite norm_bind_seq_def.
 
       rewrite <- norm_seq_assoc. 2: admit.
-      assert (forall f, entails
-        (ens (fun r => \[r = false]);; f)
-        f
-      ) as ?. admit.
-
-      specializes H2 (ens (fun r => \[r = false])).
+      lets H2: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
 
       assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit.
       rewrite H2.
@@ -651,13 +593,7 @@ Proof.
       fintro a2.
       case_if.
 
-      (* rewrite norm_ens_void_hstar_pure_r. *)
-      assert (forall H P P1, entails
-        (ens (fun r => H \* \[P /\ P1 r]))
-        (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r]))
-      ) as ?. admit.
-
-      rewrite H4.
+      rewrite norm_rearrange_ens.
       fsimpl.
       fstep. intros.
       finst a2.
@@ -667,7 +603,7 @@ Proof.
       intros.
       split. math.
       Fail math.
-      rewrite H6.
+      rewrite H5.
       Fail math. (* ????? *)
       rewrite Z.add_0_r.
       reflexivity.
@@ -692,17 +628,12 @@ Proof.
       unfold vsub. simpl.
       fsimpl.
 
-      assert (forall f1 f2, entails (bind f1 (fun _ => f2)) (f1;; f2)) as ?. admit.
-      rewrite H2.
-      rewrite H2.
+      rewrite norm_bind_seq_def.
+      rewrite norm_bind_seq_def.
 
       rewrite <- norm_seq_assoc. 2: admit.
-      assert (forall f, entails
-        (ens (fun r => \[r = false]);; f)
-        f
-      ) as ?. admit.
 
-      specializes H3 (ens (fun r => \[r = false])).
+      lets H3: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
 
       assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit.
       rewrite H3.
@@ -722,13 +653,7 @@ Proof.
       fintro a2.
       case_if.
 
-      (* rewrite norm_ens_void_hstar_pure_r. *)
-      assert (forall H P P1, entails
-        (ens (fun r => H \* \[P /\ P1 r]))
-        (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r]))
-      ) as ?. admit.
-
-      rewrite H5.
+      rewrite norm_rearrange_ens.
       fsimpl.
       fstep. intros.
       finst a2.
@@ -738,7 +663,7 @@ Proof.
       intros.
       split. math.
       Fail math.
-      rewrite H7.
+      rewrite H5.
       Fail math. (* ????? *)
       rewrite Z.add_0_r.
       reflexivity.
@@ -767,20 +692,6 @@ Definition lemma_weaker2 := forall (n:int) (acc:bool),
     (∀ x a, req (x~~>vint a \* \[n >= 0])
       (∃ b, ens (fun r => x~~>vint b \*
         \[b > a+n /\ (If acc = true then r = 1 else r = 0)]))).
-
-Lemma rearrange_ens : forall H P (P1:val->Prop),
-  entails (ens (fun r => H \* \[P /\ P1 r]))
-  (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r])).
-Proof.
-  unfold entails. intros.
-  inverts H0.
-  heaps.
-  applys s_seq.
-  { applys s_ens. heaps. }
-  applys s_seq.
-  { applys s_ens. heaps. }
-  { applys s_ens. heaps. }
-Qed.
 
 Theorem main_summary : forall n, exists f,
   lemma_weaker2 ->
@@ -867,7 +778,7 @@ Proof.
 
     fstep. math.
     fsimpl. fintro b.
-    rewrite rearrange_ens.
+    rewrite norm_rearrange_ens.
     fsimpl.
 
     apply ent_seq_ens_void_pure_l. intros.
@@ -904,7 +815,7 @@ Proof.
     fstep. math.
     fintro b1.
 
-    rewrite rearrange_ens.
+    rewrite norm_rearrange_ens.
 
     fsimpl.
     fstep. intros.

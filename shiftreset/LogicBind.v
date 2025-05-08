@@ -3663,6 +3663,78 @@ Proof.
   applys s_fex. destruct H5 as (b&?). exists b. apply* s_bind.
 Qed.
 
+Lemma norm_rearrange_ens : forall H P (P1:val->Prop),
+  entails (ens (fun r => H \* \[P /\ P1 r]))
+  (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r])).
+Proof.
+  unfold entails. intros.
+  inverts H0.
+  heaps.
+  applys s_seq.
+  { applys s_ens. heaps. }
+  applys s_seq.
+  { applys s_ens. heaps. }
+  { applys s_ens. heaps. }
+Qed.
+
+Lemma norm_bind_seq_def: forall f1 f2,
+  entails (bind f1 (fun _ => f2)) (f1;; f2).
+Proof.
+  intros.
+  fold (f1;; f2).
+  reflexivity.
+Qed.
+
+Lemma norm_ens_pure_conj: forall (P:val->Prop) (P1:Prop),
+  entails
+    (ens (fun r => \[P1 /\ P r]))
+    (ens_ \[P1];; ens (fun r => \[P r])).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  heaps.
+  applys s_seq.
+  applys s_ens_. heaps.
+  applys s_ens. heaps.
+Qed.
+
+Lemma norm_ens_void_hstar_pure_l: forall P H,
+  entails
+    (ens_ (\[P] \* H))
+    (ens_ \[P];; ens_ H).
+Proof.
+  unfold entails. intros.
+  inverts H0.
+  applys s_seq.
+  - applys s_ens_. heaps.
+  - applys s_ens. heaps.
+Qed.
+
+Lemma norm_ens_void_hstar_pure_r: forall P H,
+  entails
+    (ens_ (H \* \[P]))
+    (ens_ \[P];; ens_ H).
+Proof.
+  unfold entails. intros.
+  inverts H0.
+  applys s_seq.
+  - applys s_ens_. heaps.
+  - applys s_ens. heaps.
+Qed.
+
+Lemma norm_ens_pure_ex: forall (A:Type) (P:A->val->Prop),
+  entails
+    (ens (fun r => \[exists b, P b r]))
+    (∃ b, ens (fun r => \[P b r])).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  heaps.
+  applys s_fex. exists b.
+  applys s_ens.
+  heaps.
+Qed.
+
 Section EnvFraming.
 
 (* Informally, this is true because the environment only grows,
