@@ -1,5 +1,5 @@
 
-From ShiftReset Require Import LogicBind.
+From ShiftReset Require Import Logic.
 
 Ltac funfold_hyp H env f :=
   rewrites (>> entails_under_unk env f) in H; [ unfold env; resolve_fn_in_env | ].

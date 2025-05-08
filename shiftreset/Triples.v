@@ -1,5 +1,5 @@
 
-From ShiftReset Require Import LogicBind.
+From ShiftReset Require Import Logic.
 Local Open Scope string_scope.
 
 Inductive eresult : Type :=
@@ -453,10 +453,10 @@ Proof.
 
   - applys s_bind_sh.
     applys H.
-  
+
   - applys H0.
 
-  - 
+  -
     pose proof plet_sound_aux.
     intros.
     specializes H1 penv0 env v H2.
@@ -475,7 +475,7 @@ Proof.
     specializes He2 v penv0 env.
     simpl in He2.
     specializes H2 v.
-    
+
     (* see whether ek has shift *)
     inverts H2.
     {
@@ -510,7 +510,7 @@ Proof.
       intros.
       inverts H2.
       { simpl in H13. inverts H13. }
-      
+
       specializes H3 H11.
       destr H3.
       exs.

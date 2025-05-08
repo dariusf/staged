@@ -1,6 +1,6 @@
 
 (* From ShiftReset Require Import Logic Automation. *)
-From ShiftReset Require Import LogicBind AutomationBind.
+From ShiftReset Require Import Logic Automation.
 Local Open Scope string_scope.
 
 Lemma norm_seq_ignore_res_l: forall v f,
