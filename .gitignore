@@ -13,3 +13,5 @@ html
 mlihtml
 
 .vscode
+*.dot
+*.png
