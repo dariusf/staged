@@ -181,7 +181,7 @@ Proof.
   2: { unfold f_env. apply Fmap.indom_single. }
   2: { unfold f_env. resolve_fn_in_env. } *)
 
-  applys entails_under_gentails_under ent_seq_defun_idem.
+  applys gent_seq_defun_idem.
   { unfold f_env. apply Fmap.indom_single. }
   { unfold f_env. resolve_fn_in_env. }
 
@@ -189,10 +189,10 @@ Proof.
   fsimpl.
   funfold1 "k".
   lazymatch goal with
-  | |- entails_under ?e _ _ => remember e as env
+  | |- gentails_under ?e _ _ _ => remember e as env
   end.
   fsimpl.
-  applys entails_under_refl.
+  reflexivity.
 Qed.
 
 End Multi.

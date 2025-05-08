@@ -542,7 +542,7 @@ Proof.
   apply entails_trans.
 Qed.
 
-Instance gentails_n_refl : forall n, Reflexive (gentails n).
+Instance gentails_refl : forall n, Reflexive (gentails n).
 Proof.
   unfold Reflexive.
   intros n. induction n; intros.
@@ -554,7 +554,7 @@ Proof.
 Qed.
 
 (* This is the first lemma we need the index to prove. *)
-Instance gentails_n_trans : forall n, Transitive (gentails n).
+Instance gentails_trans : forall n, Transitive (gentails n).
 Proof.
   unfold Transitive.
   intros n. induction n; intros.
@@ -566,11 +566,41 @@ Proof.
     exs. splits*.
 Qed.
 
-Instance gentails_n_preorder : forall n, PreOrder (gentails n).
+Instance gentails_preorder : forall n, PreOrder (gentails n).
 Proof.
   constructor.
-  apply gentails_n_refl.
-  apply gentails_n_trans.
+  apply gentails_refl.
+  apply gentails_trans.
+Qed.
+
+Instance gentails_under_refl : forall n env, Reflexive (gentails_under env n).
+Proof.
+  unfold Reflexive.
+  intros n. induction n; intros.
+  - applys geu_base. intros.
+    assumption.
+  - intros.
+    applys geu_shift. intros.
+    exs. splits*.
+Qed.
+
+Instance gentails_under_trans : forall n env, Transitive (gentails_under env n).
+Proof.
+  unfold Transitive.
+  intros n. induction n; intros.
+  - inverts H. inverts H0. applys geu_base. intros.
+    eauto.
+  - applys geu_shift. intros.
+    inverts H as H. specializes H H1. destr H.
+    inverts H0 as H0. specializes H0 H2. destr H0.
+    exs. splits*.
+Qed.
+
+Instance gentails_under_preorder : forall n env, PreOrder (gentails_under env n).
+Proof.
+  constructor.
+  apply gentails_under_refl.
+  apply gentails_under_trans.
 Qed.
 
 Instance entails_under_refl : forall env, Reflexive (entails_under env).
@@ -1143,6 +1173,25 @@ Section Propriety.
   #[global]
   Instance Proper_gentails_under_entails : forall n env,
     Proper (flip entails ====> entails ====> impl)
+      (gentails_under env n).
+  Proof.
+    unfold Proper, respectful, entails_under, entails, flip, impl.
+    intros n. destruct n; intros.
+    { inverts H1.
+      applys geu_base. intros.
+      applys H0.
+      applys H2.
+      applys* H. }
+    { inverts H1.
+      applys geu_shift. intros.
+      specializes H H1.
+      specializes H4 H.
+      jauto. }
+  Qed.
+
+  #[global]
+  Instance Proper_gentails_under_entails_under : forall n env,
+    Proper (flip (entails_under env) ====> (entails_under env) ====> impl)
       (gentails_under env n).
   Proof.
     unfold Proper, respectful, entails_under, entails, flip, impl.
@@ -2328,6 +2377,30 @@ Lemma ent_seq_defun_idem : forall s x uf f1 f2,
 Proof.
   intros.
   rewrite* entails_under_seq_defun_idem.
+Qed.
+
+(* sadly this has to be proven from scratch *)
+Lemma gent_seq_defun_idem : forall n s x uf f1 f2,
+  Fmap.indom s x ->
+  Fmap.read s x = uf ->
+  gentails_under s n f1 f2 ->
+  gentails_under s n (defun x uf;; f1) f2.
+Proof.
+  intros.
+  inverts H1.
+  { apply geu_base. intros.
+    inverts H1.
+    inverts H10.
+    lets: update_idem H H0.
+    rewrite H1 in H11.
+    jauto. }
+  { apply geu_shift. intros.
+    inverts H1. 2: { no_shift. }
+    inverts H10.
+    lets: update_idem H H0.
+    rewrite H1 in H11.
+    specializes H2 H11.
+    zap. }
 Qed.
 
 Lemma ens_inv : forall s1 s2 h1 h2 R Q,
