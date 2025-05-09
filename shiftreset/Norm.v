@@ -33,19 +33,6 @@ Proof.
   applys* s_seq h3.
 Qed.
 
-Lemma norm_defun : forall x uf a,
-  entails (defun x uf;; unk x a) (defun x uf;; uf a).
-Proof.
-  unfold entails. intros.
-  inverts H as H. 2: { no_shift. } destr H.
-  pose proof H.
-  inverts H as H.
-  inverts H7 as H7. destr H7.
-  rewrite fmap_read_update in H7.
-  (* injects H7. *)
-  applys* s_seq.
-Qed.
-
 Lemma ent_seq_defun_both : forall s x uf f2 f1,
   entails_under (Fmap.update s x uf) f1 f2 ->
   entails_under s (defun x uf;; f1) (defun x uf;; f2).
