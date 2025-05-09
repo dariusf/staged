@@ -648,13 +648,30 @@ Section Propriety.
     inverts H0.
     2: { destruct Hsf as (Hsf). false Hsf H7. }
     applys* s_bind.
+    (* cannot use H *)
   Abort.
 
-(* #[global]
-Instance aaa:
-  Proper (respectful eq (respectful (Morphisms.pointwise_relation val (entails_under empty_env)) eq)) bind.
-Proof.
-Admitted. *)
+  Example rewrite :
+    entails_under empty_env (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    entails_under empty_env
+      (bind empty (fun v => ens_ \[1 = 1]))
+      empty.
+  Proof.
+    intros H.
+    (* TODO this should work for unfolding on the right of a bind, but currently doesn't *)
+    (* Set Typeclasses Debug. *)
+    Fail setoid_rewrite H.
+  Abort.
+
+  Example rewrite :
+    entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    entails
+      (bind empty (fun v => ens_ \[1 = 1]))
+      empty.
+  Proof.
+    intros H.
+    setoid_rewrite H.
+  Abort.
 
   #[global]
   Instance Proper_bind_gentails : forall n,
@@ -768,35 +785,56 @@ Admitted. *)
           applys* IHn.
           intros.
           specializes H a.
-          (* we are stuck. we need to know that x and y
-            (the continuations) are related after one shift,
-            but we don't have that *)
+          (* we are stuck. we need to know that x and y (the right sides,
+            after the continuations) are related after one shift, but
+            we don't have that *)
           admit.
         }
       }
     }
   Abort.
+  (* Admitted. *)
 
-  Example rewrite :
-    entails_under empty_env (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
-    entails_under empty_env
-      (bind empty (fun v => ens_ \[1 = 1]))
+  (* #[global]
+  Instance Proper_bind_gentails : forall n,
+    (* 3 = 1 + 2 -> *)
+    Proper (gentails n ====> Morphisms.pointwise_relation val (gentails n) ====> (gentails n)) bind.
+  Proof.
+  Admitted. *)
+
+  (* #[global]
+  Instance Proper_bind_gentails_l : forall n,
+    Proper (gentails n ====> eq ====> (gentails n)) bind.
+  Proof.
+  Admitted.
+
+  #[global]
+  Instance Proper_bind_gentails_r : forall n f,
+    Proper (Morphisms.pointwise_relation val (gentails n) ====> (gentails n)) (@bind f).
+  Proof.
+  Admitted. *)
+
+  Example rewrite : forall n,
+    gentails n (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    gentails n
+      (bind (ens_ \[1 = 1]) (fun _ => empty))
       empty.
   Proof.
-    intros H.
+    intros n H.
     (* TODO this should work for unfolding on the right of a bind, but currently doesn't *)
     (* Set Typeclasses Debug. *)
-    Fail setoid_rewrite H.
+    Fail rewrite H.
   Abort.
 
-  Example rewrite :
-    entails (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
-    entails
+  Example rewrite : forall n,
+    gentails n (ens_ \[1 = 1]) (ens_ \[2 = 2]) ->
+    gentails n
       (bind empty (fun v => ens_ \[1 = 1]))
       empty.
   Proof.
-    intros H.
-    setoid_rewrite H.
+    intros n H.
+    (* Set Typeclasses Debug. *)
+    Fail setoid_rewrite H.
   Abort.
 
   #[global]
