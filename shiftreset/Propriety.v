@@ -723,6 +723,118 @@ Section Propriety.
     }
   Abort.
 
+  (* this statement also isn't easy to use *)
+  #[global]
+  Instance Proper_bind_gentails : forall n n1 n2,
+    n = (n1 + n2)%nat ->
+    Proper (gentails n1 ====> Morphisms.pointwise_relation val (gentails n2) ====> (gentails n)) bind.
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation.
+    intros n. induction n; intros.
+    { symmetry in H. apply Nat.eq_add_0 in H. destr H. subst.
+      applys ge_base. intros.
+      inverts H as H2 H3.
+      inverts H0.
+      specializes H1 v0. inverts H1.
+      applys* s_bind. }
+    {
+      (* already we see the capacities are wrong, as we don't have shifts in both sides *)
+      applys ge_shift. intros.
+      inverts H2.
+      {
+        (* the shift is on the right *)
+        specializes H1 v.
+        (* n1 must be 0 *)
+        inverts H0.
+        2: {
+          (* we can't dismiss this case *)
+          admit.
+        }
+        rewrite Nat.add_0_l in H. subst n2.
+        inverts H1 as H1.
+        specializes H1 H11.
+        zap.
+        applys* s_bind.
+      }
+      {
+        (* the shift is on the left *)
+        (* n1 must be nonzero *)
+        inverts H0.
+        {
+          (* can't dismiss this case *)
+          admit.
+        }
+        specializes H2 H8.
+        zap.
+        applys* s_bind_sh.
+        Fail applys H2.
+        admit.
+        intros.
+        applys IHn.
+        admit.
+        admit.
+        admit.
+      }
+    }
+  Abort.
+
+  Definition gentails1 f1 f2 :=
+    forall n, gentails n f1 f2.
+
+  #[global]
+  Instance Proper_bind_gentails :
+    Proper (gentails1 ====> Morphisms.pointwise_relation val (gentails1) ====> (gentails1)) bind.
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation, gentails1.
+    intros. induction n; intros.
+    { applys ge_base. intros.
+      inverts H1.
+      specializes H O. inverts H. specializes H1 H9.
+      specializes H0 v0 O. inverts H0. specializes H H10.
+      applys* s_bind. }
+    {
+      (* the IH doesn't let us progress *)
+      admit.
+    }
+  Abort.
+
+  #[global]
+  Instance Proper_bind_gentails : forall n,
+    Proper (gentails1 ====> Morphisms.pointwise_relation val (gentails1) ====> (gentails n)) bind.
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation, gentails1.
+    intros n. induction n; intros.
+    { applys ge_base. intros.
+      inverts H1.
+      specializes H O. inverts H. specializes H1 H9.
+      specializes H0 v0 O. inverts H0. specializes H H10.
+      applys* s_bind. }
+    {
+      (* now we have a better IH *)
+      applys ge_shift. intros.
+      inverts H1.
+      {
+        (* shift on the right *)
+        specializes H O. inverts H as H. specializes H H9.
+        specializes H0 v (S n). inverts H0 as H0. specializes H0 H10.
+        zap.
+        applys* s_bind.
+      }
+      {
+        (* shift on the left *)
+        specializes H (S n). inverts H as H. specializes H H7.
+        (* specializes H0 v (S n). inverts H0 as H0. specializes H0 H10. *)
+        zap.
+        applys* s_bind_sh.
+        intros.
+        applys IHn.
+        (* we have this for n only, not all n... *)
+        admit.
+        intros. auto.
+      }
+    }
+  Abort.
+
   #[global]
   Instance Proper_bind_gentails_l : forall n f,
     Proper (Morphisms.pointwise_relation val (gentails n) ====> (gentails n)) (@bind f).
