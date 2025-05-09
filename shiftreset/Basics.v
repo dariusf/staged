@@ -135,6 +135,7 @@ Inductive flow : Type :=
   | rs : flow -> flow
 (** [rs f vr] is a reset with body [f] and return value [vr]. *)
   | defun : var -> (val -> flow) -> flow
+  | discard : var -> flow
 (** [defun x uf] is equivalent to [ens_ (x=(λ x r. uf x r))], where [x] can reside in the environment (which regular [ens_] cannot access).
   Should defun be scoped? We don't think so, because the resulting continuation is first-class and does not have a well-defined lifetime. *)
   (* | discard : flow -> var -> flow *)
@@ -333,10 +334,9 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     s2 = Fmap.update s1 x uf ->
     satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
 
-  (* | s_discard s1 s2 h x R f :
-    satisfies s1 s2 h h R f ->
-    s2 = Fmap.remove s1 x ->
-    satisfies s1 s2 h h R (discard f x) *)
+  | s_discard s1 s2 h (f:var) :
+    s2 = Fmap.remove s1 f ->
+    satisfies s1 s2 h h (norm vunit) (discard f)
 
   .
 

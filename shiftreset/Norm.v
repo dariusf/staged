@@ -840,3 +840,69 @@ Proof.
   applys s_ens.
   heaps.
 Qed.
+
+Lemma norm_defun_discard_id: forall s f u,
+  ~ Fmap.indom s f ->
+  entails_under s (defun f u;; discard f) empty.
+Proof.
+  unfold entails_under. intros.
+  inverts H0. 2: no_shift.
+  inverts H8.
+  inverts H9.
+  rewrites* remove_update.
+  applys empty_intro.
+Qed.
+
+Lemma norm_seq_defun_ens: forall f u Q,
+  entails (defun f u;; ens_ Q) (ens_ Q;; defun f u).
+Proof.
+  unfold entails. intros.
+  inverts H. 2: no_shift.
+  inverts H7.
+  inverts H8. destr H5. hinv H0. hinv H0.
+  applys s_seq.
+  - applys s_ens. heaps.
+  - heaps. applys* s_defun.
+Qed.
+
+Lemma norm_seq_defun_req: forall f u f1 H,
+  entails (defun f u;; req H f1) (req H (defun f u;; f1)).
+Proof.
+  unfold entails. intros.
+  inverts H0. 2: no_shift.
+  inverts H8.
+  applys s_req. intros.
+  inverts H9. specializes H11 H0 H1 H2.
+  applys* s_seq.
+  applys* s_defun.
+Qed.
+
+Lemma norm_disj_defun_l: forall f1 f2 f u,
+  entails
+    (defun f u;; disj f1 f2)
+    (disj (defun f u;; f1) (defun f u;; f2)).
+Proof.
+  unfold entails. intros.
+  inverts H. 2: no_shift.
+  inverts H7.
+  inverts H8.
+  - applys s_disj_l.
+    applys* s_seq.
+    applys* s_defun.
+  - applys s_disj_r.
+    applys* s_seq.
+    applys* s_defun.
+Qed.
+
+Lemma norm_seq_defun_unk: forall f u v,
+  entails (defun f u;; unk f v) (defun f u;; u v).
+Proof.
+  unfold entails. intros.
+  inverts H. 2: no_shift.
+  inverts H7.
+  inverts H8.
+  applys s_seq.
+  - applys* s_defun.
+  - rewrite fmap_read_update in H7.
+    assumption.
+Qed.
