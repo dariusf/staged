@@ -688,11 +688,11 @@ Section Propriety.
       inverts H0 as H.
       applys H H3. }
     {
-      (* inverts H as H. *)
+      (* already we see the capacities are wrong, as we don't have shifts in both sides *)
       applys ge_shift. intros.
-      (* specializes H H1. *)
       inverts H1.
       {
+        (* the shift is on the right *)
         specializes H0 v.
         inverts H0 as H0.
         specializes H0 H10.
@@ -705,6 +705,7 @@ Section Propriety.
         admit.
       }
       {
+        (* the shift is on the left *)
         inverts H as H.
         specializes H H7.
         zap.
@@ -716,42 +717,6 @@ Section Propriety.
           specializes H0 a.
           (* we need x0 gentails y0 at n, but have it at S n *)
           inverts H0.
-          admit.
-        }
-      }
-    }
-  Abort.
-
-  #[global]
-  Instance Proper_bind_gentails_l : forall n,
-    Proper (eq ====> Morphisms.pointwise_relation val (gentails n) ====> (gentails n)) bind.
-  Proof.
-    unfold Proper, respectful, Morphisms.pointwise_relation.
-    intros n. induction n; intros.
-    { subst.
-      applys ge_base. intros.
-      inverts H as H2 H3.
-      applys* s_bind.
-      specializes H0 v0.
-      inverts* H0. }
-    {
-      subst.
-      applys ge_shift. intros.
-      inverts H.
-      { specializes H0 v.
-        inverts H0 as H0.
-        specializes H0 H9.
-        zap.
-        applys* s_bind. }
-      { exists fb. exs.
-        splits.
-        { applys* s_bind_sh. }
-        { reflexivity. }
-        { intros.
-          applys* IHn.
-          intros.
-          specializes H0 a.
-          (* inverts H0. *)
           admit.
         }
       }
@@ -787,7 +752,7 @@ Section Propriety.
           specializes H a.
           (* we are stuck. we need to know that x and y (the right sides,
             after the continuations) are related after one shift, but
-            we don't have that *)
+            we instead have that they are related before *)
           admit.
         }
       }
