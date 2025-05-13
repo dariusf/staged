@@ -36,12 +36,31 @@ Lemma gent_seq_ens_void_pure_l : forall n s1 f f1 P,
 Proof.
 Admitted.
 
+Definition precise (H:hprop) :=
+  forall h1 h2, H h1 -> H h2 -> h1 = h2.
+
 Lemma gent_req_req : forall n f1 f2 H1 H2 env,
+  precise H1 ->
+  req_provable H1 ->
   H2 ==> H1 ->
   gentails_under env n f1 f2 ->
   gentails_under env n (req H1 f1) (req H2 f2).
 Proof.
-Admitted.
+  intros n. induction n; introv Hprecise Hreq He H.
+  { applys geu_base. introv Hf1.
+    applys s_req. intros * HH2 **.
+    apply He in HH2.
+    inverts Hf1 as Hf1. specializes* Hf1.
+    inverts* H. }
+  { applys geu_shift. intros.
+    specializes Hreq h1. destr Hreq. inverts H0. specializes* H13.
+    inverts H. specializes H7 H13.
+    zap.
+    applys s_req. intros.
+    apply He in H5.
+    specializes Hprecise H3 H5.
+    subst. lets*: Fmap.union_eq_inv_of_disjoint H8. subst*. }
+Qed.
 
 Lemma gent_all_r : forall n f A (fctx:A -> flow) env,
   (forall b, gentails_under env n f (fctx b)) ->
