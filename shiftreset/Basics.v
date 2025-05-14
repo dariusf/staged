@@ -239,10 +239,42 @@ Implicit Types a v r : val.
 Implicit Types R : result.
 Implicit Types e : expr.
 
+
+(* For when the goal can be dispatched by brute force.
+  jauto handles these but will not leave unsolved goals. *)
+Ltac zap :=
+  lazymatch goal with
+  | H: exists _, _ |- _ => destr H; zap
+  | H: _ /\ _ |- _ => destr H; zap
+  | |- _ /\ _ => splits; zap
+  | |- exists _, _ => eexists; zap
+  | _ => jauto
+  end.
+
+(* Dispatch goals involving the heaps that come out of ens once
+  we have to reason about semantics *)
+Ltac heaps :=
+  lazymatch goal with
+  | H: exists _, _ |- _ => destr H; heaps
+  | H: _ /\ _ |- _ => destr H; heaps
+  | H: norm _ = norm _ |- _ => injects H; heaps
+  | H: (_ ~~> _) _ |- _ => hinv H; heaps
+  | H: \[_] _ |- _ => hinv H; heaps
+  | H: (_ \* _) _ |- _ => hinv H; heaps
+  | |- (_ ~~> _) _ => hintro; heaps
+  | |- (_ \* _) _ => hintro; heaps
+  | |- \[_] _ => hintro; heaps
+  (* as late as we can *)
+  | |- _ /\ _ => splits; heaps
+  | |- exists _, _ => eexists; heaps
+  | _ => subst; rew_fmap *
+  end.
+
+
 Inductive satisfies : senv -> senv -> heap -> heap -> val ->
   flow -> Prop :=
 
-  | s_req : forall (s1 s2:senv) H (h1 h2:heap) v f fk,
+  | s_req : forall (s1 s2:senv) H (h1 h2:heap) v f,
     (forall (hp hr:heap),
       H hp ->
       h1 = Fmap.union hr hp ->
@@ -302,17 +334,63 @@ with satisfies_k : senv -> senv -> heap -> heap -> val ->
     satisfies_k
       (Fmap.update s1 k (fun r => bind (fk r) fk1))
       s2 h1 h1 v fb ident ->
-    satisfies_k s1 s2 h1 h1 v (shc k fb fk1) fk
+    satisfies_k s1 s2 h1 h1 v (shc k fb fk) fk1
 
   | sk_unk : forall s1 s2 h1 h2 v xf uf a fk,
     Fmap.read s1 xf = uf ->
     satisfies_k s1 s2 h1 h2 v (uf a) fk ->
     satisfies_k s1 s2 h1 h2 v (unk xf a) fk
 
-  | sk_ident : forall s1 s2 h1 h2 v f,
-    satisfies s1 s2 h1 h2 v f ->
-    satisfies_k s1 s2 h1 h2 v f ident
+  (* this rule is not syntax-directed, but seems essential *)
+  (* TODO is this admissible? *)
+  | sk_k_as_bind : forall s1 s2 h1 h2 v f fk,
+    satisfies s1 s2 h1 h2 v (bind f fk) ->
+    satisfies_k s1 s2 h1 h2 v f fk
+
   .
+
+(* Some derived rules *)
+Lemma sk_ident : forall s1 s2 h1 h2 v f,
+  satisfies s1 s2 h1 h2 v f ->
+  satisfies_k s1 s2 h1 h2 v f ident.
+Proof.
+  intros.
+  applys sk_k_as_bind.
+  applys* s_bind.
+  applys s_ens. heaps.
+Qed.
+
+Lemma sk_empty : forall s1 s2 h1 h2 v fk,
+  satisfies s1 s2 h1 h2 v (fk vunit) ->
+  satisfies_k s1 s2 h1 h2 v empty fk.
+Proof.
+  intros.
+  applys sk_k_as_bind.
+  applys* s_bind.
+  applys s_ens. heaps.
+Qed.
+
+(* this rule unfortunately cannot be proved by induction? *)
+Lemma continuation_conv : forall s1 s2 h1 h2 v f fk,
+  satisfies_k s1 s2 h1 h2 v f fk ->
+  satisfies s1 s2 h1 h2 v (bind f fk).
+Proof.
+  introv H. induction H.
+  {
+    applys s_bind.
+    applys s_req. intros.
+    specializes H1 H2 H3 H4.
+    (* cycle *)
+    inverts H1.
+    Fail exact H12.
+    (* applys* H0. *)
+    (* specializes H1 H H2 H3. *)
+    admit.
+    admit.
+  }
+Abort.
+
+
 
 Example e1: exists v s1,
   satisfies empty_env s1 empty_heap empty_heap v
@@ -326,12 +404,12 @@ Proof.
     applys sk_sh.
     applys sk_unk. reflexivity.
     rewrite fmap_read_update.
-    applys sk_ident.
-    applys s_bind.
-    + applys s_ens.
-      exists empty_heap. splits*. hintro. simpl. reflexivity.
-    + applys s_ens.
-      exists empty_heap. splits*. hintro. simpl. reflexivity.
+    applys sk_k_as_bind.
+    { applys s_bind.
+      - applys s_bind.
+        applys s_ens. heaps.
+        applys s_ens. heaps.
+      - applys s_ens. heaps. }
   - reflexivity.
 Qed.
 
@@ -344,9 +422,9 @@ Proof.
   exs.
   split.
   - applys s_bind.
-    applys s_ens. exists empty_heap. splits*. hintro. reflexivity.
+    applys s_ens. heaps.
     simpl.
-    applys s_ens. exists empty_heap. splits*. hintro. reflexivity.
+    applys s_ens. heaps.
   - f_equal.
 Qed.
 
@@ -365,6 +443,116 @@ Proof.
   applys* s_bind.
   applys* s_bind.
 Qed.
+
+Lemma no_standalone_shift: forall k fb,
+  entails (sh k fb) (ens_ \[False]).
+Proof.
+  unfold entails. intros.
+  inverts H.
+Qed.
+
+Lemma no_standalone_shift1: forall k fb,
+  entails (sh k fb) (ens_ \[False]).
+Proof.
+  unfold entails. intros.
+  (* note that we don't have to invert if
+    we treat the continuation as identity... *)
+  lets: sk_ident H. clear H.
+  inverts H0.
+  admit.
+  admit.
+  admit.
+Abort.
+
+Definition entails_k f1 fk1 f2 fk2 :=
+  forall s1 s2 h1 h2 v,
+    satisfies_k s1 s2 h1 h2 v f1 fk1 ->
+    satisfies_k s1 s2 h1 h2 v f2 fk2.
+
+Lemma red_init: forall k fb fk,
+  entails_k (sh k fb) fk (sh k fb) fk.
+Proof.
+  unfold entails_k, sh. intros.
+  inverts H.
+  { applys* sk_sh. }
+  { applys* sk_shc. }
+  { applys* sk_k_as_bind. }
+Qed.
+
+Example test:
+  entails_k empty (fun v => ens_ \[v = vunit])
+    empty (fun v => ens_ \[v = vunit \/ v = vint 1]).
+Proof.
+  unfold entails_k. intros.
+  inverts H.
+  {
+    inverts H7.
+    heaps.
+    applys sk_empty.
+    applys s_ens.
+    heaps.
+  }
+  {
+    applys sk_empty.
+    inverts H0.
+    inverts H7.
+    inverts H8.
+    applys s_ens.
+    heaps.
+  }
+Qed.
+
+(* Lemma lem: forall s1 s2 h1 h2 v f fk,
+  satisfies_k s1 s2 h1 h2 v f fk ->
+  exists s3 h3 v1,
+  satisfies s1 s3 h1 h3 v1 f /\
+  satisfies s3 s2 h3 h2 v (fk v1).
+Proof. *)
+
+(* Lemma lem: forall s1 s2 h1 h2 v f fk, *)
+  (* satisfies_k s1 s2 h1 h2 v f fk ->
+  satisfies s1 s2 h1 h2 v (bind f fk). *)
+(* Proof.
+  intros.
+  inverts H.
+  applys s_bind.
+  applys s_req.
+  intros.
+  specializes H1 H H2 H3.
+
+  assumption.
+  inverts H.
+
+  applys . *)
+
+Lemma norm_bind_assoc_k: forall f fk fk1 fk2,
+  entails_k (bind (bind f fk) fk1) fk2
+    (bind f (fun r => bind (fk r) fk1)) fk2.
+Proof.
+  unfold entails_k. intros.
+  inverts H.
+  2: { applys* sk_k_as_bind.
+    inverts H0. applys* s_bind.
+    applys* norm_bind_assoc. }
+  inverts H8.
+  2: {
+    inverts H.
+    inverts H7.
+    inverts H8.
+    applys* sk_k_as_bind.
+    applys* s_bind.
+    applys* s_bind.
+    applys* s_bind.
+  }
+  applys sk_bind.
+
+  applys sk_k_as_bind.
+  (* applys s_bind_k. *)
+
+
+Abort.
+
+
 
 (** * Interpretation of a staged formula *)
 Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
@@ -481,36 +669,6 @@ Proof.
   unfold sh. intros.
   applys* s_shc.
 Qed.
-
-(* For when the goal can be dispatched by brute force.
-  jauto handles these but will not leave unsolved goals. *)
-Ltac zap :=
-  lazymatch goal with
-  | H: exists _, _ |- _ => destr H; zap
-  | H: _ /\ _ |- _ => destr H; zap
-  | |- _ /\ _ => splits; zap
-  | |- exists _, _ => eexists; zap
-  | _ => jauto
-  end.
-
-(* Dispatch goals involving the heaps that come out of ens once
-  we have to reason about semantics *)
-Ltac heaps :=
-  lazymatch goal with
-  | H: exists _, _ |- _ => destr H; heaps
-  | H: _ /\ _ |- _ => destr H; heaps
-  | H: norm _ = norm _ |- _ => injects H; heaps
-  | H: (_ ~~> _) _ |- _ => hinv H; heaps
-  | H: \[_] _ |- _ => hinv H; heaps
-  | H: (_ \* _) _ |- _ => hinv H; heaps
-  | |- (_ ~~> _) _ => hintro; heaps
-  | |- (_ \* _) _ => hintro; heaps
-  | |- \[_] _ => hintro; heaps
-  (* as late as we can *)
-  | |- _ /\ _ => splits; heaps
-  | |- exists _, _ => eexists; heaps
-  | _ => subst; rew_fmap *
-  end.
 
 Lemma s_seq : forall s3 h3 r1 s1 s2 f1 f2 h1 h2 R,
   satisfies s1 s3 h1 h3 (norm r1) f1 ->
