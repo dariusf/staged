@@ -143,7 +143,9 @@ Inductive flow : Type :=
 
 Definition seq (f1 f2:flow) := bind f1 (fun _ => f2).
 
-Definition sh k fb := shc k fb (fun v => ens (fun r => \[r = v])).
+Definition ident v := ens (fun r => \[r = v]).
+
+Definition sh k fb := shc k fb ident.
 
 Definition ens_ H := ens (fun r => \[r = vunit] \* H).
 
@@ -168,7 +170,8 @@ Definition empty_env : senv := Fmap.empty.
 (* shft's continuation could have a more general [A -> flow] type, but it can't be used in the semantics as long as it has to pass through ufun *)
 Inductive result : Type :=
   | norm : val -> result
-  | shft : var -> flow -> (val -> flow) -> result.
+  (* | shft : var -> flow -> (val -> flow) -> result *)
+  .
   (** See [shc] for what the arguments mean. *)
 
 Declare Scope flow_scope.
@@ -213,8 +216,8 @@ Notation "f '$' '(' x ',' r ')'" := (unk f x r)
 (* Check (rs (∃ x, empty) vunit;; empty). *)
 (* Check (∃ x, rs empty vunit;; empty). *)
 
-Notation "'sh' '(' k '.' fb '),' vr" := (sh k fb vr)
-  (at level 80, format "'sh'  '(' k '.'  fb '),'  vr", only printing) : flow_scope.
+(* Notation "'sh' '(' k '.' fb '),' vr" := (sh k fb vr)
+  (at level 80, format "'sh'  '(' k '.'  fb '),'  vr", only printing) : flow_scope. *)
 
 (* Notation "'shc' '(' k '.' fb ')' '(' vr '.' '⟨' fk '⟩' ')'" := (shc k fb vr (fun r => rs fk r))
   (at level 80, format "'shc'  '(' k '.'  fb ')'  '(' vr '.'  '⟨' fk '⟩' ')'", only printing) : flow_scope. *)
@@ -235,6 +238,133 @@ Implicit Types x y z k : var.
 Implicit Types a v r : val.
 Implicit Types R : result.
 Implicit Types e : expr.
+
+Inductive satisfies : senv -> senv -> heap -> heap -> val ->
+  flow -> Prop :=
+
+  | s_req : forall (s1 s2:senv) H (h1 h2:heap) v f fk,
+    (forall (hp hr:heap),
+      H hp ->
+      h1 = Fmap.union hr hp ->
+      Fmap.disjoint hr hp ->
+      satisfies s1 s2 hr h2 v f) ->
+    satisfies s1 s2 h1 h2 v (req H f)
+
+  | s_ens : forall s1 Q h1 h2 v,
+    (exists h3,
+      Q v h3 /\
+      h2 = Fmap.union h1 h3 /\
+      Fmap.disjoint h1 h3) ->
+    satisfies s1 s1 h1 h2 v (ens Q)
+
+  | s_bind : forall s1 s2 s3 h1 h2 h3 v v1 f fk,
+    satisfies s1 s3 h1 h3 v f ->
+    satisfies s3 s2 h3 h2 v1 (fk v) ->
+    satisfies s1 s2 h1 h2 v1 (bind f fk)
+
+  | s_rs : forall s1 s2 fr h1 h2 v,
+    satisfies_k s1 s2 h1 h2 v fr ident ->
+    satisfies s1 s2 h1 h2 v (rs fr)
+
+  | s_unk : forall s1 s2 h1 h2 v xf uf a,
+    Fmap.read s1 xf = uf ->
+    satisfies s1 s2 h1 h2 v (uf a) ->
+    satisfies s1 s2 h1 h2 v (unk xf a)
+
+with satisfies_k : senv -> senv -> heap -> heap -> val ->
+  flow -> (val->flow) -> Prop :=
+
+  | sk_req : forall (s1 s2:senv) H (h1 h2:heap) v f fk,
+    (forall (hp hr:heap),
+      H hp ->
+      h1 = Fmap.union hr hp ->
+      Fmap.disjoint hr hp ->
+      satisfies_k s1 s2 hr h2 v f fk) ->
+    satisfies_k s1 s2 h1 h2 v (req H f) fk
+
+  | sk_ens : forall s1 Q h1 h2 v v1 fk,
+    (exists h3,
+      Q v h3 /\
+      h2 = Fmap.union h1 h3 /\
+      Fmap.disjoint h1 h3) ->
+    satisfies s1 s1 h1 h2 v1 (fk v) ->
+    satisfies_k s1 s1 h1 h2 v1 (ens Q) fk
+
+  | sk_bind : forall s1 s2 h1 h2 v f fk1 fk,
+    satisfies_k s1 s2 h1 h2 v f (fun v1 => bind (fk1 v1) fk) ->
+    satisfies_k s1 s2 h1 h2 v (bind f fk1) fk
+
+  | sk_sh : forall s1 s2 h1 v k fb fk,
+    satisfies_k (Fmap.update s1 k fk) s2 h1 h1 v fb ident ->
+    satisfies_k s1 s2 h1 h1 v (sh k fb) fk
+
+  | sk_shc : forall s1 s2 h1 v k fb fk fk1,
+    satisfies_k
+      (Fmap.update s1 k (fun r => bind (fk r) fk1))
+      s2 h1 h1 v fb ident ->
+    satisfies_k s1 s2 h1 h1 v (shc k fb fk1) fk
+
+  | sk_unk : forall s1 s2 h1 h2 v xf uf a fk,
+    Fmap.read s1 xf = uf ->
+    satisfies_k s1 s2 h1 h2 v (uf a) fk ->
+    satisfies_k s1 s2 h1 h2 v (unk xf a) fk
+
+  | sk_ident : forall s1 s2 h1 h2 v f,
+    satisfies s1 s2 h1 h2 v f ->
+    satisfies_k s1 s2 h1 h2 v f ident
+  .
+
+Example e1: exists v s1,
+  satisfies empty_env s1 empty_heap empty_heap v
+  (rs (bind (sh "k" (unk "k" (vint 2))) (fun v => ens (fun r => \[r = vadd v (vint 1)]))))
+  /\ v = vint 3.
+Proof.
+  exs.
+  split.
+  - applys s_rs.
+    applys sk_bind.
+    applys sk_sh.
+    applys sk_unk. reflexivity.
+    rewrite fmap_read_update.
+    applys sk_ident.
+    applys s_bind.
+    + applys s_ens.
+      exists empty_heap. splits*. hintro. simpl. reflexivity.
+    + applys s_ens.
+      exists empty_heap. splits*. hintro. simpl. reflexivity.
+  - reflexivity.
+Qed.
+
+Example e2: exists v1 s1,
+  satisfies empty_env s1 empty_heap empty_heap v1
+  (bind (ens (fun r => \[r = vint 1]))
+    (fun v => ens (fun r => \[r = vadd v (vint 2)])))
+  /\ v1 = vint 3.
+Proof.
+  exs.
+  split.
+  - applys s_bind.
+    applys s_ens. exists empty_heap. splits*. hintro. reflexivity.
+    simpl.
+    applys s_ens. exists empty_heap. splits*. hintro. reflexivity.
+  - f_equal.
+Qed.
+
+Definition entails f1 f2 :=
+  forall s1 s2 h1 h2 v,
+    satisfies s1 s2 h1 h2 v f1 ->
+    satisfies s1 s2 h1 h2 v f2.
+
+Lemma norm_bind_assoc: forall f fk fk1,
+  entails (bind (bind f fk) fk1)
+    (bind f (fun r => bind (fk r) fk1)).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  inverts H7.
+  applys* s_bind.
+  applys* s_bind.
+Qed.
 
 (** * Interpretation of a staged formula *)
 Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
