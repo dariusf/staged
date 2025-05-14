@@ -198,7 +198,7 @@ Proof.
         splits.
         - applys* s_bind_sh.
         - reflexivity.
-        - intros. applys IHn. } } }
+        - intros. simpl. applys IHn. } } }
 Qed.
 
 (* A pure fact about a result on the left of a seq doesn't contribute anything *)

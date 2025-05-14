@@ -802,19 +802,22 @@ Section Propriety.
   Instance Proper_bind_gentails_l : forall n,
     Proper (gentails n ====> eq ====> gentails n) bind.
   Proof.
-    unfold Proper, respectful, Morphisms.pointwise_relation.
+    unfold Proper, respectful.
     intros n. induction n; intros.
     { applys ge_base. intros.
       inverts H1.
       inverts H. specializes H1 H9.
       subst.
       applys* s_bind. }
-    { applys ge_shift. intros.
+    {
+      (* H is wrong already. x may not necc have shift. *)
+      applys ge_shift. intros.
       inverts H1.
       {
-        (* inverts H. *)
+        (* x returns norm but we have x <= y at S n.
+          this points to needing to quantify over the first use of n. *)
+        inverts H.
         admit.
-        (* neg? *)
       }
       { inverts H.
         specializes H2 H7.
@@ -822,6 +825,80 @@ Section Propriety.
         applys* s_bind_sh.
         intros. simpl.
         applys* IHn. }
+    }
+  Abort.
+
+  #[global]
+  Instance Proper_bind_gentails_l : forall n,
+    Proper (gentails1 ====> eq ====> gentails n) bind.
+  Proof.
+    unfold Proper, respectful, gentails1.
+    intros n. induction n; intros.
+    { applys ge_base. intros.
+      inverts H1.
+      specializes H O. inverts H. specializes H1 H9.
+      subst.
+      applys* s_bind. }
+    {
+      applys ge_shift. intros.
+      inverts H1.
+      {
+        specializes H O. inverts H. specializes H1 H9.
+        subst.
+        exists fb fk.
+        splits.
+        applys* s_bind.
+        reflexivity.
+        intros. reflexivity.
+      }
+      {
+        subst.
+        specializes H (S n). inverts H. specializes H1 H7.
+        zap.
+        applys* s_bind_sh.
+        intros. simpl.
+        applys* IHn.
+        intros. specializes H2 v.
+        Fail assumption.
+        applys_eq H2.
+        (* IH is too strong *)
+        admit.
+      }
+    }
+  Abort.
+
+  #[global]
+  Instance Proper_bind_gentails_l :
+    Proper (gentails1 ====> eq ====> gentails1) bind.
+  Proof.
+    unfold Proper, respectful, gentails1.
+    intros. induction n; intros.
+    { applys ge_base. intros.
+      inverts H1.
+      specializes H O. inverts H. specializes H1 H9.
+      subst.
+      applys* s_bind. }
+    {
+      applys ge_shift. intros.
+      inverts H1.
+      {
+        specializes H O. inverts H. specializes H1 H9.
+        subst.
+        exists fb fk.
+        splits.
+        applys* s_bind.
+        reflexivity.
+        intros. reflexivity.
+      }
+      {
+        subst.
+        specializes H (S n). inverts H. specializes H1 H7.
+        zap.
+        applys* s_bind_sh.
+        intros. simpl.
+        (* IH is too strong, Proper fixes x and y already *)
+        admit.
+      }
     }
   Abort.
 
