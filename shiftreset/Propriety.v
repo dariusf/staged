@@ -799,6 +799,62 @@ Section Propriety.
   Abort.
 
   #[global]
+  Instance Proper_bind_gentails_l : forall n,
+    Proper (gentails n ====> eq ====> gentails n) bind.
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation.
+    intros n. induction n; intros.
+    { applys ge_base. intros.
+      inverts H1.
+      inverts H. specializes H1 H9.
+      subst.
+      applys* s_bind. }
+    { applys ge_shift. intros.
+      inverts H1.
+      {
+        (* inverts H. *)
+        admit.
+        (* neg? *)
+      }
+      { inverts H.
+        specializes H2 H7.
+        zap.
+        applys* s_bind_sh.
+        intros. simpl.
+        applys* IHn. }
+    }
+  Abort.
+
+  #[global]
+  Instance Proper_bind_gentails_r_sf : forall n f,
+    ShiftFree f ->
+    Proper (Morphisms.pointwise_relation val (gentails n) ====> (gentails n)) (bind f).
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation.
+    intros n. induction n; intros.
+    { applys ge_base. intros.
+      inverts H1.
+      specializes H0 v0. inverts H0. specializes H1 H10.
+      applys* s_bind. }
+    { applys ge_shift. intros.
+      (* there are two ways in which a bind can produce a shift *)
+      inverts H1.
+      {
+        (* shift on the right *)
+        specializes H0 v.
+        inverts H0.
+        specializes H2 H10.
+        zap.
+        applys* s_bind.
+      }
+      {
+        destruct H.
+        false shift_free_pf H7.
+      }
+    }
+  Qed.
+
+  #[global]
   Instance Proper_bind_gentails : forall n,
     Proper (gentails1 ====> Morphisms.pointwise_relation val (gentails1) ====> (gentails n)) bind.
   Proof.
