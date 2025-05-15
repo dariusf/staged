@@ -481,7 +481,7 @@ Qed.
 *)
 
 
-Example e1: exists s1,
+(* Example e1: exists s1,
   satisfies_k empty_env s1 empty_heap empty_heap (vint 3)
     (rs (bind
          (sh "k" (ens (fun r => \[r = vfptr "k"])))
@@ -496,14 +496,14 @@ Proof.
   rewrite fmap_read_update.
   applys sk_ens_id.
   { heaps. }
-Qed.
+Qed. *)
 
-Definition entails f1 f2 :=
+(* Definition entails f1 f2 :=
   forall s1 s2 h1 h2 v,
     satisfies s1 s2 h1 h2 v f1 ->
-    satisfies s1 s2 h1 h2 v f2.
+    satisfies s1 s2 h1 h2 v f2. *)
 
-Lemma norm_bind_assoc: forall f fk fk1,
+(* Lemma norm_bind_assoc: forall f fk fk1,
   entails (bind (bind f fk) fk1)
     (bind f (fun r => bind (fk r) fk1)).
 Proof.
@@ -512,16 +512,16 @@ Proof.
   inverts H7.
   applys* s_bind.
   applys* s_bind.
-Qed.
+Qed. *)
 
-Lemma no_standalone_shift: forall k fb,
+(* Lemma no_standalone_shift: forall k fb,
   entails (sh k fb) (ens_ \[False]).
 Proof.
   unfold entails. intros.
   inverts H.
-Qed.
+Qed. *)
 
-Lemma no_standalone_shift1: forall k fb,
+(* Lemma no_standalone_shift1: forall k fb,
   entails (sh k fb) (ens_ \[False]).
 Proof.
   unfold entails. intros.
@@ -532,44 +532,32 @@ Proof.
   admit.
   admit.
   admit.
-Abort.
+Abort. *)
 
-Definition entails_k f1 fk1 f2 fk2 :=
+Definition entails_k f1 c1 f2 c2 :=
   forall s1 s2 h1 h2 v,
-    satisfies_k s1 s2 h1 h2 v f1 fk1 ->
-    satisfies_k s1 s2 h1 h2 v f2 fk2.
+    satisfies_k s1 s2 h1 h2 v f1 c1 ->
+    satisfies_k s1 s2 h1 h2 v f2 c2.
 
-Lemma red_init: forall k fb fk,
-  entails_k (sh k fb) fk (sh k fb) fk.
+Lemma red_init: forall k fb c,
+  entails_k (sh k fb) c (sh k fb) c.
 Proof.
   unfold entails_k, sh. intros.
   inverts H.
-  { applys* sk_sh. }
-  { applys* sk_shc. }
-  { applys* sk_k_as_bind. }
+  applys* sk_sh_id.
+  applys* sk_sh.
 Qed.
 
-Example test:
-  entails_k empty (fun v => ens_ \[v = vunit])
-    empty (fun v => ens_ \[v = vunit \/ v = vint 1]).
+Example e3:
+  entails_k empty (cont_flow (fun v => ens_ \[v = vunit]))
+    empty (cont_flow (fun v => ens_ \[v = vunit \/ v = vint 1])).
 Proof.
   unfold entails_k. intros.
   inverts H.
-  {
-    inverts H7.
-    heaps.
-    applys sk_empty.
-    applys s_ens.
-    heaps.
-  }
-  {
-    applys sk_empty.
-    inverts H0.
-    inverts H7.
-    inverts H8.
-    applys s_ens.
-    heaps.
-  }
+  inverts H8.
+  heaps.
+  applys sk_ens. heaps.
+  applys sk_ens_id. heaps.
 Qed.
 
 (* Lemma lem: forall s1 s2 h1 h2 v f fk,
@@ -595,31 +583,21 @@ Proof. *)
 
   applys . *)
 
-Lemma norm_bind_assoc_k: forall f fk fk1 fk2,
-  entails_k (bind (bind f fk) fk1) fk2
-    (bind f (fun r => bind (fk r) fk1)) fk2.
+Lemma norm_bind_assoc_k: forall f fk fk1 c,
+  entails_k (bind (bind f fk) fk1) c
+    (bind f (fun r => bind (fk r) fk1)) c.
 Proof.
   unfold entails_k. intros.
   inverts H.
-  2: { applys* sk_k_as_bind.
-    inverts H0. applys* s_bind.
-    applys* norm_bind_assoc. }
-  inverts H8.
-  2: {
-    inverts H.
-    inverts H7.
+  {
     inverts H8.
-    applys* sk_k_as_bind.
-    applys* s_bind.
-    applys* s_bind.
-    applys* s_bind.
+    applys* sk_bind_id.
   }
-  applys sk_bind.
-
-  applys sk_k_as_bind.
-  (* applys s_bind_k. *)
-
-
+  {
+    inverts H8.
+    applys* sk_bind.
+    admit.
+  }
 Abort.
 
 
