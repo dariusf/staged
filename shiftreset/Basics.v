@@ -114,11 +114,15 @@ Inductive flow : Type :=
   | ens : postcond -> flow
   (* | seq : flow -> flow -> flow *)
   | bind : flow -> (val -> flow) -> flow
+(*
   | fex : forall (A:Type), (A -> flow) -> flow
   | fall : forall (A:Type), (A -> flow) -> flow
+*)
   | unk : var -> val -> flow
+  (*
   | intersect : flow -> flow -> flow
   | disj : flow -> flow -> flow
+  *)
 (** The following are new: *)
   (* | sh : (var -> flow) -> flow *)
   | shc : var -> flow -> (val -> flow) -> flow
@@ -133,9 +137,11 @@ Inductive flow : Type :=
 - the continuation [(λ vr. < fc >)] is represented as
   a tuple [(vr, fun r => rs fc r)]. *)
   | rs : flow -> flow
+(*
 (** [rs f vr] is a reset with body [f] and return value [vr]. *)
   | defun : var -> (val -> flow) -> flow
   | discard : var -> flow
+*)
 (** [defun x uf] is equivalent to [ens_ (x=(λ x r. uf x r))], where [x] can reside in the environment (which regular [ens_] cannot access).
   Should defun be scoped? We don't think so, because the resulting continuation is first-class and does not have a well-defined lifetime. *)
   (* | discard : flow -> var -> flow *)
@@ -196,7 +202,7 @@ Proof.
   pose ex_bind1.
   unfold ex_bind1 in f.
   unfold ex_bind in f. *)
-
+(*
 Notation "'∃' x1 .. xn , H" :=
   (fex (fun x1 => .. (fex (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
@@ -206,7 +212,7 @@ Notation "'∀' x1 .. xn , H" :=
   (fall (fun x1 => .. (fall (fun xn => H)) ..))
   (at level 39, x1 binder, H at level 50, right associativity,
    format "'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'") : flow_scope.
-
+*)
 Notation "f '$' '(' x ',' r ')'" := (unk f x r)
   (at level 80, format "f '$' '(' x ','  r ')'", only printing) : flow_scope.
 
@@ -583,23 +589,67 @@ Proof. *)
 
   applys . *)
 
+(*
 Lemma norm_bind_assoc_k: forall f fk fk1 c,
-  entails_k (bind (bind f fk) fk1) c
+  entails_k
+    (bind (bind f fk) fk1) c
+    (bind f (fun r => bind (fk r) fk1)) c.
+Proof.
+  unfold entails_k. intros.
+  dependent induction H.
+  {
+    inverts H.
+    applys* sk_bind_id.
+  }
+  {
+    inverts H.
+    applys* sk_bind.
+    admit.
+  }
+Abort.
+*)
+
+Lemma norm_bind_assoc_k: forall f fk fk1 c,
+  entails_k
+    (bind (bind f fk) fk1) c
     (bind f (fun r => bind (fk r) fk1)) c.
 Proof.
   unfold entails_k. intros.
   inverts H.
   {
     inverts H8.
+    constructor*.
+  }
+  {
+    induction f.
+    - inverts H8.
+      inverts H5.
+    - constructor.
+      inverts H8.
+      inverts H5.
+      inverts H8.
+      econstructor; eauto.
+      econstructor.
+      econstructor.
+      assumption.
+    - 
+  (*
+  remember (bind (bind f fk) fk1) as f0 eqn:H_eqf0.
+  revert f fk fk1 H_eqf0.
+  induction H; intros.
+  { discriminate. }
+  { discriminate. }
+  { sort.
+    injection H_eqf0. intros. subst.
+    specialize (IHsatisfies_k 
+  {
     applys* sk_bind_id.
   }
   {
-    inverts H8.
+    inverts H.
     applys* sk_bind.
     admit.
-  }
-Abort.
-
+  }*)
 
 
 (** * Interpretation of a staged formula *)
