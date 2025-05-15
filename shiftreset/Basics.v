@@ -566,6 +566,25 @@ Proof.
   applys sk_ens_id. heaps.
 Qed.
 
+Example e4:
+  entails_k
+    (sh "k" (ens (fun r => \[r = vint 2])))
+      (cont_flow (fun v => ens_ \[v = vunit]))
+    (sh "k" (ens (fun r => \[r = vint 2])))
+      (cont_flow (fun v => ens_ \[v = vunit \/ v = vint 1])).
+Proof.
+  unfold entails_k. intros.
+  inverts H.
+  inverts H6.
+  heaps.
+  applys sk_sh.
+  applys_eq sk_ens_id.
+  (* we can't always weaken the continuation,
+    because it may end up in the env and not be used *)
+  admit.
+  heaps.
+Abort.
+
 (* Lemma lem: forall s1 s2 h1 h2 v f fk,
   satisfies_k s1 s2 h1 h2 v f fk ->
   exists s3 h3 v1,
