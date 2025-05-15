@@ -270,7 +270,7 @@ Ltac heaps :=
   | _ => subst; rew_fmap *
   end.
 
-
+(*
 Inductive satisfies : senv -> senv -> heap -> heap -> val ->
   flow -> Prop :=
 
@@ -302,10 +302,15 @@ Inductive satisfies : senv -> senv -> heap -> heap -> val ->
     Fmap.read s1 xf = uf ->
     satisfies s1 s2 h1 h2 v (uf a) ->
     satisfies s1 s2 h1 h2 v (unk xf a)
+*)
 
-with satisfies_k : senv -> senv -> heap -> heap -> val ->
-  flow -> (val->flow) -> Prop :=
+Inductive cont :=
+| cont_id : cont
+| cont_flow : (val -> flow) -> cont.
 
+Inductive satisfies_k : senv -> senv -> heap -> heap -> val ->
+  flow -> cont -> Prop :=
+(*
   | sk_req : forall (s1 s2:senv) H (h1 h2:heap) v f fk,
     (forall (hp hr:heap),
       H hp ->
@@ -313,43 +318,96 @@ with satisfies_k : senv -> senv -> heap -> heap -> val ->
       Fmap.disjoint hr hp ->
       satisfies_k s1 s2 hr h2 v f fk) ->
     satisfies_k s1 s2 h1 h2 v (req H f) fk
-
-  | sk_ens : forall s1 Q h1 h2 v v1 fk,
+*)
+  | sk_ens_id : forall s1 Q h1 h2 v,
     (exists h3,
       Q v h3 /\
       h2 = Fmap.union h1 h3 /\
       Fmap.disjoint h1 h3) ->
-    satisfies s1 s1 h1 h2 v1 (fk v) ->
-    satisfies_k s1 s1 h1 h2 v1 (ens Q) fk
+    satisfies_k s1 s1 h1 h2 v (ens Q) cont_id
+  | sk_ens : forall s1 s2 Q h1 h2 v v1 fk,
+    (exists h3,
+      Q v h3 /\
+      h2 = Fmap.union h1 h3 /\
+      Fmap.disjoint h1 h3) ->
+    satisfies_k s1 s2 h1 h2 v1 (fk v) cont_id ->
+    satisfies_k s1 s2 h1 h2 v1 (ens Q) (cont_flow fk)
+
+  | sk_bind_id : forall s1 s2 h1 h2 v f fk1,
+    satisfies_k s1 s2 h1 h2 v f (cont_flow fk1) ->
+    satisfies_k s1 s2 h1 h2 v (bind f fk1) cont_id
 
   | sk_bind : forall s1 s2 h1 h2 v f fk1 fk,
-    satisfies_k s1 s2 h1 h2 v f (fun v1 => bind (fk1 v1) fk) ->
-    satisfies_k s1 s2 h1 h2 v (bind f fk1) fk
+    satisfies_k s1 s2 h1 h2 v f (cont_flow (fun v1 => bind (fk1 v1) fk)) ->
+    satisfies_k s1 s2 h1 h2 v (bind f fk1) (cont_flow fk)
 
-  | sk_sh : forall s1 s2 h1 v k fb fk,
-    satisfies_k (Fmap.update s1 k fk) s2 h1 h1 v fb ident ->
-    satisfies_k s1 s2 h1 h1 v (sh k fb) fk
+  | sk_sh_id : forall s1 s2 h1 h2 v k fb,
+    satisfies_k (Fmap.update s1 k ident) s2 h1 h2 v fb cont_id ->
+    satisfies_k s1 s2 h1 h2 v (sh k fb) cont_id
 
+  | sk_sh : forall s1 s2 h1 h2 v k fb fk,
+    satisfies_k (Fmap.update s1 k fk) s2 h1 h2 v fb cont_id  ->
+    satisfies_k s1 s2 h1 h2 v (sh k fb) (cont_flow fk)
+(*
   | sk_shc : forall s1 s2 h1 v k fb fk fk1,
     satisfies_k
       (Fmap.update s1 k (fun r => bind (fk r) fk1))
       s2 h1 h1 v fb ident ->
     satisfies_k s1 s2 h1 h1 v (shc k fb fk) fk1
+*)
 
-  | sk_unk : forall s1 s2 h1 h2 v xf uf a fk,
+  | sk_rs_id : forall s1 s2 fr h1 h2 v,
+    satisfies_k s1 s2 h1 h2 v fr cont_id ->
+    satisfies_k s1 s2 h1 h2 v (rs fr) cont_id
+
+  | sk_rs : forall s1 s2 s3 fr h1 h2 h3 v v1 fk,
+    satisfies_k s1 s2 h1 h2 v fr cont_id ->
+    satisfies_k s2 s3 h2 h3 v1 (fk v) cont_id ->
+    satisfies_k s1 s3 h1 h3 v1 (rs fr) (cont_flow fk)
+
+  | sk_unk : forall s1 s2 h1 h2 v xf uf a c,
     Fmap.read s1 xf = uf ->
-    satisfies_k s1 s2 h1 h2 v (uf a) fk ->
-    satisfies_k s1 s2 h1 h2 v (unk xf a) fk
-
+    satisfies_k s1 s2 h1 h2 v (uf a) c ->
+    satisfies_k s1 s2 h1 h2 v (unk xf a) c.
+(*
   (* this rule is not syntax-directed, but seems essential *)
   (* TODO is this admissible? *)
   | sk_k_as_bind : forall s1 s2 h1 h2 v f fk,
     satisfies s1 s2 h1 h2 v (bind f fk) ->
-    satisfies_k s1 s2 h1 h2 v f fk
+    satisfies_k s1 s2 h1 h2 v f fk.
+*)
+Definition problematic_sk_bind :=
+  rs (bind
+        (ens (fun r => \[r = vint 1]))
+        (fun v => sh "k" (ens (fun r => \[r = vint 2])))).
 
-  .
+Example sk_bind_is_the_problem :
+  exists s2 v,
+    satisfies_k Fmap.empty s2 empty_heap empty_heap v problematic_sk_bind cont_id.
+Proof.
+  eexists.
+  eexists.
+  unfold problematic_sk_bind.
+  apply sk_rs_id.
+  apply sk_bind_id.
+  (*
+  apply sk_k_as_bind.
+  eapply s_bind.
+  eapply s_ens.
+  admit. (* provable *)
+  eapply s_bind.
+  (* dead *) *)
+  eapply sk_ens.
+  { heaps. }
+  apply sk_sh_id.
+  eapply sk_ens_id.
+  { heaps. }
+Qed.
+
+(* Conclusion, we need something that can carry the continuation around *)
 
 (* Some derived rules *)
+(*
 Lemma sk_ident : forall s1 s2 h1 h2 v f,
   satisfies s1 s2 h1 h2 v f ->
   satisfies_k s1 s2 h1 h2 v f ident.
@@ -389,30 +447,23 @@ Proof.
     admit.
   }
 Abort.
+*)
 
-
-
-Example e1: exists v s1,
-  satisfies empty_env s1 empty_heap empty_heap v
-  (rs (bind (sh "k" (unk "k" (vint 2))) (fun v => ens (fun r => \[r = vadd v (vint 1)]))))
-  /\ v = vint 3.
+Example e1: exists s1,
+  satisfies_k empty_env s1 empty_heap empty_heap (vint 3)
+  (rs (bind (sh "k" (unk "k" (vint 2))) (fun v => ens (fun r => \[r = vadd v (vint 1)])))) cont_id.
 Proof.
   exs.
-  split.
-  - applys s_rs.
-    applys sk_bind.
-    applys sk_sh.
-    applys sk_unk. reflexivity.
-    rewrite fmap_read_update.
-    applys sk_k_as_bind.
-    { applys s_bind.
-      - applys s_bind.
-        applys s_ens. heaps.
-        applys s_ens. heaps.
-      - applys s_ens. heaps. }
-  - reflexivity.
+  applys sk_rs_id.
+  applys sk_bind_id.
+  applys sk_sh.
+  applys sk_unk. reflexivity.
+  rewrite fmap_read_update.
+  applys sk_ens_id.
+  { heaps. }
 Qed.
 
+(*
 Example e2: exists v1 s1,
   satisfies empty_env s1 empty_heap empty_heap v1
   (bind (ens (fun r => \[r = vint 1]))
@@ -426,6 +477,25 @@ Proof.
     simpl.
     applys s_ens. heaps.
   - f_equal.
+Qed.
+*)
+
+
+Example e1: exists s1,
+  satisfies_k empty_env s1 empty_heap empty_heap (vint 3)
+    (rs (bind
+         (sh "k" (ens (fun r => \[r = vfptr "k"])))
+         (fun v => ens (fun r => \[r = vadd v (vint 1)]))))
+  cont_id.
+Proof.
+  exs.
+  applys sk_rs_id.
+  applys sk_bind_id.
+  applys sk_sh.
+  applys sk_unk. reflexivity.
+  rewrite fmap_read_update.
+  applys sk_ens_id.
+  { heaps. }
 Qed.
 
 Definition entails f1 f2 :=
