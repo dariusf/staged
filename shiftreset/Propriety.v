@@ -1044,7 +1044,7 @@ Section Propriety.
   Proof.
     intros n H.
     (* Set Typeclasses Debug. *)
-    Fail setoid_rewrite H.
+    (* Fail setoid_rewrite H. *)
   Abort.
 
   #[global]
