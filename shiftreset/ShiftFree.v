@@ -324,8 +324,6 @@ Ltac no_shift :=
   | _ => idtac
   end.
 
-(* Ltac vacuity ::= false; no_shift. *)
-
 (* knowing that there is one norm execution does not mean
   that there are no shift executions *)
 Lemma norm_sf_attempt : forall s1 s2 h1 h2 v f,

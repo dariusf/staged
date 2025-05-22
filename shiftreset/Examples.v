@@ -7,7 +7,7 @@ Lemma norm_seq_ignore_res_l: forall v f,
   entails (ens (fun r => \[r = v]);; f) f.
 Proof.
   unfold entails. intros.
-  inverts H. 2: no_shift.
+  inverts* H.
   inverts H7. heaps.
 Qed.
 
@@ -35,9 +35,9 @@ Lemma norm_bind_seq_past_pure_sf: forall f1 f2 P,
   (f1;; (bind (ens (fun r => \[P r])) f2)).
 Proof.
   unfold entails. introv Hsf H.
-  inverts H. 2: no_shift.
+  inverts* H.
   inverts H7.
-  inverts H8. 2: no_shift.
+  inverts* H8.
   applys* s_seq.
   heaps.
   applys* s_bind.
@@ -49,8 +49,8 @@ Lemma norm_bind_ens_req: forall P f2 H,
   (req H (bind (ens (fun r => \[P r])) f2)).
 Proof.
   unfold entails. intros.
-  inverts H0.
-  inverts H8. 2: no_shift.
+  inverts* H0.
+  inverts H8.
   heaps.
   applys s_req. intros.
   inverts H9. specializes H13 H1 H2 H3.
@@ -67,10 +67,9 @@ Lemma norm_bind_all_r: forall (A:Type) f1 (f2:A->val->flow),
 Proof.
   unfold entails. introv Hsf H.
   applys s_fall. intros.
-  inverts H.
-  - inverts H8. specializes H5 b.
-    applys* s_bind.
-  - no_shift.
+  inverts* H.
+  inverts H8. specializes H5 b.
+  applys* s_bind.
 Qed.
 
 Lemma norm_ens_void_pure_swap: forall H P f,
@@ -78,8 +77,8 @@ Lemma norm_ens_void_pure_swap: forall H P f,
     (ens_ \[P];; ens_ H;; f).
 Proof.
   unfold entails. intros.
-  inverts H0; no_shift.
-  inverts H9; no_shift.
+  inverts* H0.
+  inverts* H9.
   inverts H7.
   applys s_seq.
   applys s_ens. heaps.
@@ -103,7 +102,7 @@ Lemma norm_bind_trivial_sf: forall f1,
   entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
   unfold entails. introv Hsf H.
-  inverts H; no_shift.
+  inverts* H.
   inverts H8. heaps.
 Qed.
 
@@ -112,7 +111,7 @@ Lemma ent_bind_ens_pure_l: forall s P fk fk1,
   entails_under s (bind (ens (fun r => \[P r])) fk) fk1.
 Proof.
   unfold entails_under. intros.
-  inverts H0; no_shift.
+  inverts* H0.
   inverts H8.
   heaps.
 Qed.
@@ -122,9 +121,9 @@ Lemma ent_seq_ens_rs_bind_ens_pure_l: forall s P fk fk1 H,
   entails_under s (ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) fk1.
 Proof.
   unfold entails_under. intros.
-  inverts H1. 2: no_shift.
+  inverts* H1.
   inverts H10.
-  - inverts H2. 2: no_shift.
+  - inverts* H2.
     inverts H11.
     heaps.
     applys H0 H1.
@@ -154,7 +153,7 @@ Proof.
     inverts H.
     inverts H8. heaps. }
   { applys ge_shift. intros.
-    inverts H. { no_shift. }
+    inverts* H.
     exists fb fk0. splits*. reflexivity. }
 Qed.
 
@@ -461,7 +460,7 @@ Lemma ent_seq_defun_idem_weaker : forall s x u1 u2 f1 f2,
   entails_under s (defun x u2;; f1) f2.
 Proof.
   unfold entails_under. intros.
-  inverts H3. 2: { no_shift. }
+  inverts* H3.
   inverts H11.
   applys H2.
 
