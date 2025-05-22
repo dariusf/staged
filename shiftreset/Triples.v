@@ -157,9 +157,9 @@ Inductive spec_assert_valid_under penv (env:senv) : expr -> flow -> Prop :=
     (forall h1 h2 v, not (bigstep penv h1 e h2 (enorm v))) ->
     (forall h1 h2 (eb:var->expr) (ek:val->expr),
         bigstep penv h1 e h2 (eshft eb ek) ->
-        exists (fb:var->flow) (fk:val->flow),
-          satisfies env env h1 h2 (shft fb fk) f /\
-            (forall x, spec_assert_valid_under penv env (eb x) (fb x)) /\
+        exists k (fb:flow) (fk:val->flow),
+          satisfies env env h1 h2 (shft k fb fk) f /\
+            spec_assert_valid_under penv env (eb k) fb /\
             (forall v, spec_assert_valid_under penv env (ek v) (fk v))) ->
     spec_assert_valid_under penv env e f.
 
@@ -175,9 +175,9 @@ Lemma spec_assert_valid_under_ind1 :
       (forall h1 h2 v, ~ bigstep penv h1 e h2 (enorm v)) ->
       (forall h1 h2 eb ek,
         bigstep penv h1 e h2 (eshft eb ek) ->
-        exists fb fk, satisfies env env h1 h2 (shft fb fk) f /\
-        (forall x, spec_assert_valid_under penv env (eb x) (fb x)) /\
-        (forall x, P (eb x) (fb x)) /\
+        exists k fb fk, satisfies env env h1 h2 (shft k fb fk) f /\
+        (spec_assert_valid_under penv env (eb k) fb) /\
+        (P (eb k) fb) /\
         (forall v, spec_assert_valid_under penv env (ek v) (fk v)) /\
         (forall v, P (ek v) (fk v))) ->
       P e f) ->
@@ -193,7 +193,7 @@ Proof.
     intros.
     specializes H0 H1.
     destr H0.
-    exists fb fk.
+    exists k fb fk.
     splits*.
 Qed.
 
@@ -214,9 +214,9 @@ Proof.
   fmap_eq.
 Qed.
 
-Lemma pshift_sound: forall eb fb,
-  (forall k, spec_assert_valid (eb k) (fb k)) ->
-  spec_assert_valid (pshift eb) (sh fb).
+Lemma pshift_sound: forall eb k fb,
+  spec_assert_valid (eb k) (fb) ->
+  spec_assert_valid (pshift eb) (sh k fb).
 Proof.
   unfold spec_assert_valid. intros * Heb **.
   applys sav_shift. { introv H. false_invert H. } intros.
@@ -224,7 +224,7 @@ Proof.
   exs.
   splits.
   { applys s_sh. }
-  { intros x. specializes Heb x penv0 env. }
+  { specializes Heb penv0 env. }
   { intros v. simpl. applys pval_sound. }
 Qed.
 
@@ -360,7 +360,7 @@ Proof.
       {
         (* e1 has a shift *)
         specializes Hb1 H6.
-        destruct Hb1 as (fb&fk&?&?&?).
+        destruct Hb1 as (fb&fk&?&?&?&?).
         exs. splits.
         applys s_bind_sh H.
         assumption.
@@ -420,7 +420,7 @@ Proof.
     destr H0.
     exs.
     splits.
-    applys s_bind_sh H.
+    applys s_bind_sh H0.
     { assumption. }
     { eauto. } }
 Qed.
@@ -433,7 +433,7 @@ Proof.
   unfold spec_assert_valid. introv He1 He2. intros. specializes He1 penv0 env.
   assert (x = "x") as ?. admit.
   assert (e1 = pshift (fun k => papp (pvar k) 1)) as ?. admit.
-  assert (f1 = sh (fun k => unk k 1)) as ?. admit.
+  assert (f1 = sh "k" (unk "k" 1)) as ?. admit.
   assert (e2 = padd (pvar "x") 1) as ?. admit.
   assert (f2 = (fun x => ens (fun r => \[exists i, x = vint i /\ r = i + 1]))) as ?. admit.
   subst.
@@ -452,9 +452,9 @@ Proof.
   exs. splits.
 
   - applys s_bind_sh.
-    applys H.
+    eassumption.
 
-  - applys H0.
+  - assumption.
 
   -
     pose proof plet_sound_aux.

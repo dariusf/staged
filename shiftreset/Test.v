@@ -1,6 +1,8 @@
 
 From ShiftReset Require Export Logic.
 
+Local Open Scope string_scope.
+
 Example ex_rewrite_right1:
   entails_under (Fmap.update empty_env "k" (fun a => ens (fun r => \[a = r])))
    (ens_ \[True];; unk "k" (vint 1)) (ens_ \[True]).
@@ -47,6 +49,6 @@ Proof.
     applys s_sh.
   - reflexivity.
   - intros.
-    rewrite norm_bind_assoc.
+    rewrite norm_bind_assoc_sf; shiftfree.
     reflexivity.
 Qed.

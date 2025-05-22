@@ -843,14 +843,15 @@ Proof.
     rewrite red_extend.
     rewrite red_rs_sh_elim.
 
-    fintro k. finst k. { shiftfree. }
+    (* fintro k. *)
+    finst "k". { shiftfree. }
     (* recursive case; use the defun *)
     fright. applys ent_seq_defun_both.
 
     fintro x. finst x.
     fintro a. finst a.
 
-    funfold1 k.
+    funfold1 "k".
     lazymatch goal with
     | |- entails_under ?e _ _ => remember e as env
     end.
@@ -893,7 +894,7 @@ Proof.
     fsimpl. finst b.
 
     subst.
-    funfold1 k.
+    funfold1 "k".
     lazymatch goal with
     | |- entails_under ?e _ _ => remember e as env
     end.
