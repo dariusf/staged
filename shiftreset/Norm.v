@@ -770,6 +770,8 @@ Proof.
   { applys s_ens. heaps. }
 Qed.
 
+(* This is like folding, but we can use unification to avoid specifying
+  the pattern to fold against *)
 Lemma norm_bind_seq_def: forall f1 f2,
   entails (bind f1 (fun _ => f2)) (f1;; f2).
 Proof.

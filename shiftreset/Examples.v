@@ -107,6 +107,37 @@ Proof.
   inverts H8. heaps.
 Qed.
 
+Lemma ent_bind_ens_pure_l: forall s P fk fk1,
+  (forall r, P r -> entails_under s (fk r) fk1) ->
+  entails_under s (bind (ens (fun r => \[P r])) fk) fk1.
+Proof.
+  unfold entails_under. intros.
+  inverts H0; no_shift.
+  inverts H8.
+  heaps.
+Qed.
+
+Lemma ent_seq_ens_rs_bind_ens_pure_l: forall s P fk fk1 H,
+  (forall r, P r -> entails_under s (ens_ H;; rs (fk r)) fk1) ->
+  entails_under s (ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) fk1.
+Proof.
+  unfold entails_under. intros.
+  inverts H1. 2: no_shift.
+  inverts H10.
+  - inverts H2. 2: no_shift.
+    inverts H11.
+    heaps.
+    applys H0 H1.
+    applys* s_seq.
+    applys* s_rs_sh.
+  - inverts H7.
+    inverts H10.
+    heaps.
+    applys H0 H1.
+    applys* s_seq.
+    applys* s_rs_val.
+Qed.
+
 Lemma norm_bind_trivial: forall f1,
   entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
@@ -456,7 +487,6 @@ Proof.
   applys ent_seq_defun_idem_weaker H1 H2 H3 H4.
 Qed.
 
-
 #[global]
 Instance Proper_bind_entails_r f1 :
   Proper (Morphisms.pointwise_relation val entails ====> entails)
@@ -617,20 +647,23 @@ Proof.
     rewrite norm_bind_seq_past_pure_sf. 2: { shiftfree. }
     fsimpl.
 
+    (* we are missing a proper instance for unfolding on the right side of a bind *)
     lazymatch goal with
     | |- entails_under ?env _ _ =>
       pose proof (@entails_under_unk env "k" (vbool false))
-      (* [ | resolve_fn_in_env ]; simpl *)
     end.
     specializes H2. unfold toss_n_env. resolve_fn_in_env. simpl in H2.
     Fail rewrite H2.
     Fail setoid_rewrite H2.
     clear H2.
 
-    (* assert (forall k v s, entails_under s (unk k v) empty) as ?. admit. *)
-    (* setoid_rewrite H2. *)
+    (* applys ent_seq_ens_rs_bind_ens_pure_l.
+    intros.
+    case_if. *)
 
-    (* we have to do this because setoid rewrite doesn't work for some reason *)
+    (* workaround: eliminate the bind before we unfold, but this
+      unfortunately results in the remaining part of the proof
+      being duplicated. *)
     destruct acc.
     {
       case_if. 2: { false C. constructor. }
@@ -646,14 +679,12 @@ Proof.
       simpl in IH1.
 
       unfold vsub. simpl.
-      fsimpl.
 
       rewrite norm_bind_seq_def.
       rewrite norm_bind_seq_def.
 
       rewrite <- norm_seq_assoc.
       lets H2: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
-      (* assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit. *)
       rewrite H2.
       clear H2.
 
@@ -681,17 +712,16 @@ Proof.
       xsimpl.
       intros.
       split. math.
-      Fail math.
+      Fail math. (* ? *)
       rewrite H3.
       Fail math. (* ????? *)
       rewrite Z.add_0_r.
       reflexivity.
     }
     {
-
-      (* TODO this branch is entirely copy-pasted from the previous one, figure out a way to not do this... *)
-
       case_if. { false C. constructor. }
+      (* this part onwards is duplicated *)
+
       fsimpl.
       funfold1 "k".
 
@@ -713,11 +743,6 @@ Proof.
       rewrite <- norm_seq_assoc.
 
       lets H3: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
-
-      (* We have to rewrite on the right side of a seq here.
-        This is not true, but we are limited in how we can rewrite by
-        the syntactic model. *)
-      (* assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit. *)
       rewrite H3.
       clear H3.
 
@@ -745,19 +770,14 @@ Proof.
       xsimpl.
       intros.
       split. math.
-      Fail math.
+      Fail math. (* ? *)
       rewrite H3.
       Fail math. (* ????? *)
       rewrite Z.add_0_r.
       reflexivity.
-
     }
   }
-
-(* Abort. *)
-(* Admitted. *)
 Qed.
-
 
 (*
   This statement differs from the proved lemma above in two ways:

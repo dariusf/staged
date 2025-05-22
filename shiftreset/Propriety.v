@@ -617,23 +617,10 @@ Section Propriety.
     applys* s_bind.
   Qed.
 
-  (* #[global]
-  Instance bind_entails_under_morphism_sf1 f1 :
-    ShiftFree f1 ->
-    Proper (Morphisms.pointwise_relation val (fun f1 f2 => forall env, entails_under env f1 f2) ====> (fun f1 f2 => forall env, entails_under env f1 f2))
-      (@bind f1).
-  Proof.
-    unfold Proper, respectful, Morphisms.pointwise_relation, entails_under.
-    intros * Hsf **.
-    inverts H0.
-    2: { destruct Hsf as (Hsf). false Hsf H7. }
-    applys* s_bind.
-  Qed. *)
-
   #[global]
   Instance Proper_bind_entails_entails_under_sf f1 : forall env,
     ShiftFree f1 ->
-    Proper (Morphisms.pointwise_relation val (entails) ====> (entails_under env))
+    Proper (Morphisms.pointwise_relation val entails ====> (entails_under env))
       (@bind f1).
   Proof.
     unfold Proper, respectful, Morphisms.pointwise_relation, entails_under.
