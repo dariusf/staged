@@ -612,7 +612,6 @@ Proof.
     fsimpl. finst (a+1).
     fsimpl.
 
-
     rewrite norm_req_req.
 
     rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
@@ -657,125 +656,65 @@ Proof.
     Fail setoid_rewrite H2.
     clear H2.
 
-    (* applys ent_seq_ens_rs_bind_ens_pure_l.
+    (* workaround: eliminate the bind before we unfold *)
+    applys ent_seq_ens_rs_bind_ens_pure_l. intros.
+
+    funfold1 "k".
+    fsimpl. finst n.
+    fsimpl. finst false.
+
+    rewrite norm_bind_val.
+
+    specializes IH1 (n-1).
+    forward IH1. unfold virel in H. unfold downto. math.
+    specializes IH1 false.
+    simpl in IH1.
+
+    (* try to get the goal to match the IH *)
+    simpl.
+    rewrite norm_bind_seq_def.
+    rewrite norm_bind_seq_def.
+    rewrite <- norm_seq_assoc.
+
+    lets H3: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
+    rewrite H3.
+    clear H3.
+
+    rewrite IH1. clear IH1.
+
+    fsimpl. finst x.
+    fsimpl. finst (a1 + 1).
+    fsimpl.
+    rewrite norm_req_req.
+
+    rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
+    rewrite norm_req_pure_l. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty.
+
+    fstep. math.
+    fintro a2.
+
+    rewrite norm_rearrange_ens.
+    fsimpl.
+    fstep. intros.
+    finst a2.
+
+    case_if. { false C. constructor. }
+    fsimpl.
+    rewrite norm_ens_ens_void_l.
+    fstep.
+    xsimpl.
     intros.
-    case_if. *)
+    split.
+    math.
+    case_if; subst; simpl.
 
-    (* workaround: eliminate the bind before we unfold, but this
-      unfortunately results in the remaining part of the proof
-      being duplicated. *)
-    destruct acc.
-    {
-      case_if. 2: { false C. constructor. }
-      fsimpl.
-      funfold1 "k".
-      fsimpl. finst n.
-      fsimpl. finst false.
-
-      specializes IH1 (n-1).
-      forward IH1. unfold virel in H. unfold downto. math.
-      specializes IH1 false.
-      rewrite norm_bind_val.
-      simpl in IH1.
-
-      unfold vsub. simpl.
-
-      rewrite norm_bind_seq_def.
-      rewrite norm_bind_seq_def.
-
-      rewrite <- norm_seq_assoc.
-      lets H2: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
-      rewrite H2.
-      clear H2.
-
-      rewrite IH1.
-
-      fsimpl. finst x.
-      fsimpl. finst (a1 + 1).
-      fsimpl.
-      rewrite norm_req_req.
-
-      rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
-      rewrite norm_req_pure_l. 2: { reflexivity. }
-      rewrite norm_seq_ens_empty.
-
-      fstep. math.
-      fintro a2.
-      case_if.
-
-      rewrite norm_rearrange_ens.
-      fsimpl.
-      fstep. intros.
-      finst a2.
-      rewrite norm_ens_ens_void_l.
-      fstep.
-      xsimpl.
-      intros.
-      split. math.
-      Fail math. (* ? *)
-      rewrite H3.
-      Fail math. (* ????? *)
+    - Fail math. (* ????? *)
       rewrite Z.add_0_r.
       reflexivity.
-    }
-    {
-      case_if. { false C. constructor. }
-      (* this part onwards is duplicated *)
 
-      fsimpl.
-      funfold1 "k".
-
-      fsimpl. finst n.
-      fsimpl. finst false.
-
-      specializes IH1 (n-1).
-      forward IH1. unfold virel in H. unfold downto. math.
-      specializes IH1 false.
-      rewrite norm_bind_val.
-      simpl in IH1.
-
-      unfold vsub. simpl.
-      fsimpl.
-
-      rewrite norm_bind_seq_def.
-      rewrite norm_bind_seq_def.
-
-      rewrite <- norm_seq_assoc.
-
-      lets H3: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
-      rewrite H3.
-      clear H3.
-
-      rewrite IH1.
-
-      fsimpl. finst x.
-      fsimpl. finst (a1 + 1).
-      fsimpl.
-      rewrite norm_req_req.
-
-      rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
-      rewrite norm_req_pure_l. 2: { reflexivity. }
-      rewrite norm_seq_ens_empty.
-
-      fstep. math.
-      fintro a2.
-      case_if.
-
-      rewrite norm_rearrange_ens.
-      fsimpl.
-      fstep. intros.
-      finst a2.
-      rewrite norm_ens_ens_void_l.
-      fstep.
-      xsimpl.
-      intros.
-      split. math.
-      Fail math. (* ? *)
-      rewrite H3.
-      Fail math. (* ????? *)
-      rewrite Z.add_0_r.
+    - rewrite Z.add_0_r.
       reflexivity.
-    }
   }
 Qed.
 
