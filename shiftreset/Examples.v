@@ -282,6 +282,38 @@ Proof.
   - intros. subst. f_equal.
 Qed.
 
+
+Definition toss1 : ufun := fun _ =>
+  sh "k" (∀ x a,
+    bind (req (x~~>vint a) (ens_ (x~~>(a+1));; unk "k" true)) (fun r1 =>
+      ∀ b, bind (req (x~~>vint b) (ens_ (x~~>(b+1));; unk "k" false)) (fun r2 =>
+        discard "k";;
+        ens (fun r3 => \[r3 = vadd r1 r2])))).
+
+Definition toss_env1 := Fmap.single "toss" toss1.
+
+(* let foo () = < let v = toss () in if v then 0 else 0 > *)
+Definition foo1 : flow :=
+  rs (
+    bind (unk "toss" vunit) (fun v =>
+    ens (fun r1 => \[If v = true then r1 = 1 else r1 = 0]))
+  ).
+
+Theorem foo_summary1 :
+  entails_under toss_env1 foo1 foo_spec.
+Proof.
+  unfold foo1, foo_spec.
+  funfold1 "toss". unfold toss1.
+  freduction.
+  fsimpl*.
+  fintro x. finst x.
+  fsimpl*.
+  fintro a. finst a.
+  fsimpl*.
+
+
+Abort.
+
 (*
 
 let toss_n n =
