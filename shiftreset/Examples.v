@@ -3,16 +3,13 @@
 From ShiftReset Require Import Logic Automation.
 Local Open Scope string_scope.
 
-Lemma norm_bind_trivial: forall f1,
-  entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
-Proof.
-  intros.
-  applys norm_bind_trivial_sf.
-  admit.
-Admitted.
-
 Coercion vint : Z >-> val.
 Coercion vbool : bool >-> val.
+
+Ltac biabduction :=
+  rewrite norm_ens_req_transpose; [ | applys b_pts_single ];
+  rewrite norm_req_pure_l; [ | reflexivity ];
+  rewrite norm_seq_ens_empty.
 
 Ltac freduction :=
   rewrite red_init;
@@ -269,9 +266,7 @@ Proof.
   end.
   specializes H. resolve_fn_in_env. simpl in H. *)
 
-  rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
-  rewrite norm_req_pure_l. 2: { reflexivity. }
-  rewrite norm_seq_ens_empty.
+  biabduction.
 
   fsimpl.
 
@@ -414,6 +409,14 @@ Proof.
   introv H1 H2 H3 H4.
   applys ent_seq_defun_idem_weaker H1 H2 H3 H4.
 Qed.
+
+Lemma norm_bind_trivial: forall f1,
+  entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
+Proof.
+  intros.
+  applys norm_bind_trivial_sf.
+  admit.
+Admitted.
 
 #[global]
 Instance Proper_bind_entails_r f1 :
