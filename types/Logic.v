@@ -736,7 +736,7 @@ Notation req_ H := (req H empty).
   case v of
   | p1 => s1
   | p2 => s2
-    
+
   is written as
 
   intersect
