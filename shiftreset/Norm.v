@@ -3,6 +3,10 @@ From ShiftReset Require Import Basics ShiftFree Satisfies Propriety Reduction Re
 (* From Staged Require Import ExtraTactics. *)
 
 Implicit Types a v r : val.
+Implicit Types f : flow.
+Implicit Types fk : val -> flow.
+Implicit Types s : senv.
+Implicit Types u : ufun.
 
 (** * Entailment, entailment sequent, normalization *)
 Lemma norm_reassoc : forall H f1 f2,
@@ -218,7 +222,7 @@ Proof.
   inverts H8; heaps.
 Qed.
 
-Lemma norm_seq_empty : forall f,
+Lemma norm_seq_empty_l : forall f,
   bientails (empty;; f) f.
 Proof.
   iff H.
@@ -843,7 +847,7 @@ Proof.
   heaps.
 Qed.
 
-Lemma norm_defun_discard_id: forall s f u,
+Lemma norm_defun_discard_id: forall s (f:var) u,
   ~ Fmap.indom s f ->
   entails_under s (defun f u;; discard f) empty.
 Proof.
@@ -855,19 +859,98 @@ Proof.
   applys empty_intro.
 Qed.
 
-Lemma norm_seq_defun_ens: forall f u Q,
-  entails (defun f u;; ens_ Q) (ens_ Q;; defun f u).
+Lemma norm_seq_defun_discard: forall s (f:var) u f1,
+  ~ Fmap.indom s f ->
+  entails_under s (defun f u;; discard f;; f1) f1.
 Proof.
-  unfold entails. intros.
-  inverts H. 2: no_shift.
-  inverts H7.
-  inverts H8. destr H5. hinv H0. hinv H0.
-  applys s_seq.
-  - applys s_ens. heaps.
-  - heaps. applys* s_defun.
+  intros.
+  rewrite* norm_seq_assoc_sf.
+  rewrite* norm_defun_discard_id.
+  rewrite norm_seq_empty_l.
+  reflexivity.
 Qed.
 
-Lemma norm_seq_defun_req: forall f u f1 H,
+Lemma norm_seq_defun_ens_void: forall (f:var) u H,
+  entails (defun f u;; ens_ H) (ens_ H;; defun f u).
+Proof.
+  unfold entails. intros.
+  inverts* H0.
+  inverts H8.
+  inverts H9.
+  heaps.
+  applys* s_seq.
+  applys* s_ens. heaps.
+  applys* s_defun.
+Qed.
+
+Lemma norm_seq_defun_rs: forall (f:var) f1 u,
+  entails (defun f u;; rs f1) (rs (defun f u;; f1)).
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  inverts H7.
+  inverts H8.
+  { applys s_rs_sh.
+    applys* s_seq.
+    applys* s_defun.
+    assumption. }
+  { applys s_rs_val.
+    applys* s_seq.
+    applys* s_defun. }
+Qed.
+
+Lemma norm_seq_defun_bind_l: forall (f:var) f1 fk u,
+  entails (defun f u;; bind f1 fk) (bind (defun f u;; f1) fk).
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  inverts H7.
+  inverts H8.
+  { applys* s_bind.
+    applys* s_seq.
+    applys* s_defun. }
+  { applys* s_bind_sh.
+    applys* s_seq.
+    applys* s_defun. }
+Qed.
+
+Lemma norm_bind_seq_defun_ens: forall (f:var) Q fk u,
+  entails (bind (defun f u;; ens Q) fk)
+    (bind (ens Q) (fun r => defun f u;; fk r)).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  { inverts* H7.
+    inverts H6.
+    inverts H9. heaps.
+    applys s_bind.
+    applys s_ens. heaps.
+    applys s_seq.
+    applys* s_defun.
+    assumption. }
+  { inverts* H6. }
+Qed.
+
+Lemma norm_bind_rs_seq_defun_ens: forall (f:var) Q fk u,
+  entails (bind (rs (defun f u;; ens Q)) fk)
+    (bind (rs (ens Q)) (fun r => defun f u;; fk r)).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  { inverts* H7. { inverts* H0. }
+    inverts H5.
+    inverts H7.
+    inverts H9. heaps.
+    applys s_bind.
+    applys s_rs_val.
+    applys s_ens. heaps.
+    applys s_seq.
+    applys* s_defun.
+    assumption. }
+  { inverts* H6. { inverts* H0. } }
+Qed.
+
+Lemma norm_seq_defun_req: forall (f:var) u f1 H,
   entails (defun f u;; req H f1) (req H (defun f u;; f1)).
 Proof.
   unfold entails. intros.
@@ -879,7 +962,7 @@ Proof.
   applys* s_defun.
 Qed.
 
-Lemma norm_disj_defun_l: forall f1 f2 f u,
+Lemma norm_disj_defun_l: forall f1 f2 (f:var) u,
   entails
     (defun f u;; disj f1 f2)
     (disj (defun f u;; f1) (defun f u;; f2)).
@@ -896,7 +979,7 @@ Proof.
     applys* s_defun.
 Qed.
 
-Lemma norm_seq_defun_unk: forall f u v,
+Lemma norm_seq_defun_unk: forall (f:var) u v,
   entails (defun f u;; unk f v) (defun f u;; u v).
 Proof.
   unfold entails. intros.
@@ -917,10 +1000,10 @@ Proof.
   inverts H7. heaps.
 Qed.
 
-Lemma norm_bind_seq_past_pure_sf: forall f1 f2 P,
+Lemma norm_bind_seq_past_pure_sf: forall f1 fk P,
   shift_free f1 ->
-  entails (bind (ens (fun r => \[P r])) (fun r => f1;; f2 r))
-  (f1;; (bind (ens (fun r => \[P r])) f2)).
+  entails (bind (ens (fun r => \[P r])) (fun r => f1;; fk r))
+  (f1;; (bind (ens (fun r => \[P r])) fk)).
 Proof.
   unfold entails. introv Hsf H.
   inverts* H.
@@ -932,9 +1015,9 @@ Proof.
   applys s_ens. heaps.
 Qed.
 
-Lemma norm_bind_ens_req: forall P f2 H,
-  entails (bind (ens (fun r => \[P r])) (fun r => req H (f2 r)))
-  (req H (bind (ens (fun r => \[P r])) f2)).
+Lemma norm_bind_ens_req: forall P fk H,
+  entails (bind (ens (fun r => \[P r])) (fun r => req H (fk r)))
+  (req H (bind (ens (fun r => \[P r])) fk)).
 Proof.
   unfold entails. intros.
   inverts* H0.
@@ -981,9 +1064,9 @@ Proof.
   inverts H8. heaps.
 Qed.
 
-Lemma ent_bind_ens_pure_l: forall s P fk fk1,
-  (forall r, P r -> entails_under s (fk r) fk1) ->
-  entails_under s (bind (ens (fun r => \[P r])) fk) fk1.
+Lemma ent_bind_ens_pure_l: forall s P fk f,
+  (forall r, P r -> entails_under s (fk r) f) ->
+  entails_under s (bind (ens (fun r => \[P r])) fk) f.
 Proof.
   unfold entails_under. intros.
   inverts* H0.
@@ -991,9 +1074,9 @@ Proof.
   heaps.
 Qed.
 
-Lemma ent_seq_ens_rs_bind_ens_pure_l: forall s P fk fk1 H,
-  (forall r, P r -> entails_under s (ens_ H;; rs (fk r)) fk1) ->
-  entails_under s (ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) fk1.
+Lemma ent_seq_ens_rs_bind_ens_pure_l: forall s P fk f H,
+  (forall r, P r -> entails_under s (ens_ H;; rs (fk r)) f) ->
+  entails_under s (ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) f.
 Proof.
   unfold entails_under. intros.
   inverts* H1.

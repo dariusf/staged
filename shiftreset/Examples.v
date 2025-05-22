@@ -14,10 +14,17 @@ Admitted.
 Coercion vint : Z >-> val.
 Coercion vbool : bool >-> val.
 
+Ltac freduction :=
+  rewrite red_init;
+  repeat rewrite red_extend;
+  rewrite red_rs_sh_elim.
+
 Create HintDb staged_norm.
 Global Hint Rewrite
+
   (* move universal quantifiers on the left outwards *)
   norm_rs_all norm_req_all norm_seq_all_r
+
   (* associate things out of binds *)
   norm_bind_req norm_bind_seq_assoc norm_bind_disj
 
@@ -37,13 +44,40 @@ Global Hint Rewrite
 
   (* associate things out of resets *)
   norm_rs_req norm_rs_disj red_rs_float1
+
   (* eliminate trivial resets and binds *)
   red_rs_ens norm_bind_val
+
   (* trivial rewrites *)
-  norm_seq_empty
+  norm_seq_empty_l
+
   using shiftfree : staged_norm.
 
 Ltac fsimpl := autorewrite with staged_norm.
+
+Create HintDb staged_norm_defun.
+Global Hint Rewrite
+  (* push defun towards a discard *)
+  norm_seq_defun_rs
+  norm_seq_defun_bind_l
+  norm_seq_defun_ens_void
+
+  (* move out of bind/rs *)
+  norm_bind_seq_defun_ens
+  norm_bind_rs_seq_defun_ens
+
+  (* unfold defun when possible *)
+  norm_seq_defun_unk
+
+  (* cancel defun and discard *)
+  norm_seq_defun_discard
+  norm_defun_discard_id
+  using shiftfree : staged_norm_defun.
+
+Ltac fdefun := autorewrite with staged_norm_defun.
+
+Tactic Notation "fsimpl" "*" :=
+  repeat (fdefun; fsimpl).
 
 (* Create HintDb staged_closing.
 
@@ -103,6 +137,53 @@ Proof.
   | |- gentails_under ?e _ _ _ => remember e as env
   end.
   fsimpl.
+  reflexivity.
+Qed.
+
+Definition f1 : ufun := fun _ =>
+  rs (
+    sh "k" (
+      bind (unk "k" true) (fun r1 =>
+      bind (unk "k" false) (fun r2 =>
+        discard "k";; ens (fun r => \[r = vand r1 r2])
+      )))).
+
+Lemma f_reduction1: forall v1,
+  entails_under empty_env (f1 v1) (ens (fun r => \[r = false])).
+Proof.
+  intros. unfold f1.
+  freduction.
+  fsimpl*.
+  simpl.
+  reflexivity.
+Qed.
+
+(* this shows how [f_reduction1] works *)
+Lemma f_reduction2: forall v1,
+  entails_under empty_env (f1 v1) (ens (fun r => \[r = false])).
+Proof.
+  intros. unfold f1.
+  freduction.
+  rewrite norm_seq_defun_rs.
+  rewrite norm_seq_defun_bind_l.
+  rewrite norm_seq_defun_unk.
+  rewrite norm_seq_defun_rs.
+  rewrite norm_bind_rs_seq_defun_ens.
+
+  (* cannot rewrite on the right side, so restart *)
+  fsimpl.
+
+  rewrite norm_seq_defun_rs.
+  rewrite norm_seq_defun_bind_l.
+  rewrite norm_seq_defun_unk.
+  rewrite norm_seq_defun_rs.
+  rewrite norm_bind_rs_seq_defun_ens.
+
+  fsimpl.
+
+  rewrite* norm_seq_defun_discard.
+
+  simpl.
   reflexivity.
 Qed.
 
@@ -589,7 +670,7 @@ Proof.
     finst "k". { intros. shiftfree. } fleft.
     lazymatch goal with
     | |- entails_under _ _ (empty;; ?f) =>
-      rewrite (norm_seq_empty f)
+      rewrite (norm_seq_empty_l f)
     end.
 
     (* base case *)

@@ -73,11 +73,8 @@ Lemma red_rs_elim : forall f,
   bientails (rs f) f.
 Proof.
   introv Hsf. iff H.
-  { inverts H.
-    { false Hsf H1. }
-    { assumption. } }
-  { destruct R.
-    2: { false Hsf H. }
+  { inverts* H. }
+  { destruct* R.
     applys* s_rs_val. }
 Qed.
 

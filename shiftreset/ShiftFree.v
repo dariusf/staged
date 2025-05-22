@@ -62,13 +62,26 @@ Lemma sf_defun : forall x uf,
   shift_free (defun x uf).
 Proof.
   unfold shift_free, not. intros.
-  inverts H as H.
+  false_invert H.
 Qed.
 
 Instance ShiftFreeDefun : forall x uf,
   ShiftFree (defun x uf).
 Proof.
   intros. constructor. apply sf_defun.
+Qed.
+
+Lemma sf_discard : forall x,
+  shift_free (discard x).
+Proof.
+  unfold shift_free, not. intros.
+  false_invert H.
+Qed.
+
+Instance ShiftFreeDiscard : forall x,
+  ShiftFree (discard x).
+Proof.
+  intros. constructor. apply sf_discard.
 Qed.
 
 Lemma sf_disj : forall f1 f2,
@@ -294,7 +307,8 @@ Qed.
 
 Create HintDb staged_shiftfree.
 Global Hint Resolve
-  sf_ens sf_ens_ sf_defun sf_seq sf_bind sf_disj sf_empty
+  sf_ens sf_ens_ sf_defun sf_discard
+  sf_seq sf_bind sf_disj sf_empty
   sf_req_pure sf_fex sf_fall sf_rs
   (* sf_rs_val *)
   : staged_shiftfree.
@@ -316,6 +330,8 @@ Ltac no_shift :=
     false sf_rs H
   | H: satisfies _ _ _ _ (shft _ _ _) (defun _ _) |- _ =>
     false sf_defun H
+  | H: satisfies _ _ _ _ (shft _ _ _) (discard _) |- _ =>
+    false sf_discard H
   | H: satisfies _ _ _ _ (shft _ _ _) ?f, Hsf: shift_free ?f |- _ =>
     false Hsf H
   | H: satisfies _ _ _ _ (shft _ _ _) ?f, Hsf: ShiftFree ?f |- _ =>
