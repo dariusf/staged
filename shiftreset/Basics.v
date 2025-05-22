@@ -61,9 +61,46 @@ Definition vadd (v1 v2 : val) : val :=
   | _, _ => vunit
   end.
 
-Definition vand (v1 v2 : val) : val :=
+Definition viop f a b :=
+  match a, b with
+  | vint a1, vint b1 => f a1 b1
+  | _, _ => vunit
+  end.
+
+Definition vbop f a b :=
+  match a, b with
+  | vbool a1, vbool b1 => f a1 b1
+  | _, _ => vunit
+  end.
+
+Definition virel f a b :=
+  match a, b with
+  | vint a1, vint b1 => f a1 b1
+  | _, _ => False
+  end.
+
+Definition vgt a b := virel (fun x y => x > y) a b.
+Definition vlt a b := virel (fun x y => x < y) a b.
+Definition vge a b := virel (fun x y => x >= y) a b.
+Definition vle a b := virel (fun x y => x <= y) a b.
+Definition veq a b := virel (fun x y => x = y) a b.
+Definition vneq a b := virel (fun x y => x <> y) a b.
+Definition vsub a b := viop (fun x y => vint (x - y)) a b.
+
+(* Definition vand a b := vbop (fun x y => vbool (x && y)) a b. *)
+
+(* Definition vand (v1 v2 : val) : val :=
   match v1, v2 with
   | vbool b1, vbool b2 => vbool (andb b1 b2)
+  | _, _ => vunit
+  end. *)
+
+Definition vand (a b:val) :=
+  match a, b with
+  | vbool true, _ => b
+  | vbool false, _ => vbool false
+  | _, vbool false => vbool false
+  | _, vbool true => a
   | _, _ => vunit
   end.
 

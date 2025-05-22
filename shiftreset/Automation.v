@@ -102,5 +102,3 @@ Ltac fassume_req :=
 
 Tactic Notation "fassume" simple_intropattern(p) := fassume_ p.
 Tactic Notation "fassume" := fassume_req.
-
-Ltac auto_star ::= try solve [ shiftfree | no_shift | auto_star_default ].

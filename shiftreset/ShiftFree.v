@@ -324,6 +324,8 @@ Ltac no_shift :=
   | _ => idtac
   end.
 
+Ltac auto_star ::= try solve [ shiftfree | no_shift | auto_star_default ].
+
 (* knowing that there is one norm execution does not mean
   that there are no shift executions *)
 Lemma norm_sf_attempt : forall s1 s2 h1 h2 v f,

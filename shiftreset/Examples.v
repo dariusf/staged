@@ -3,140 +3,6 @@
 From ShiftReset Require Import Logic Automation.
 Local Open Scope string_scope.
 
-Lemma norm_seq_ignore_res_l: forall v f,
-  entails (ens (fun r => \[r = v]);; f) f.
-Proof.
-  unfold entails. intros.
-  inverts* H.
-  inverts H7. heaps.
-Qed.
-
-
-Lemma norm_bind_assoc: forall f fk fk1,
-  entails (bind (bind f fk) fk1)
-    (bind f (fun r => bind (fk r) fk1)).
-Proof.
-  intros.
-  applys norm_bind_assoc_sf.
-  admit.
-Admitted.
-
-Lemma norm_seq_assoc: forall f1 f2 f3,
-  bientails (f1;; f2;; f3) ((f1;; f2);; f3).
-Proof.
-  intros.
-  applys norm_seq_assoc_sf.
-  admit.
-Admitted.
-
-Lemma norm_bind_seq_past_pure_sf: forall f1 f2 P,
-  shift_free f1 ->
-  entails (bind (ens (fun r => \[P r])) (fun r => f1;; f2 r))
-  (f1;; (bind (ens (fun r => \[P r])) f2)).
-Proof.
-  unfold entails. introv Hsf H.
-  inverts* H.
-  inverts H7.
-  inverts* H8.
-  applys* s_seq.
-  heaps.
-  applys* s_bind.
-  applys s_ens. heaps.
-Qed.
-
-Lemma norm_bind_ens_req: forall P f2 H,
-  entails (bind (ens (fun r => \[P r])) (fun r => req H (f2 r)))
-  (req H (bind (ens (fun r => \[P r])) f2)).
-Proof.
-  unfold entails. intros.
-  inverts* H0.
-  inverts H8.
-  heaps.
-  applys s_req. intros.
-  inverts H9. specializes H13 H1 H2 H3.
-  applys* s_bind.
-  applys s_ens.
-  heaps.
-Qed.
-
-Lemma norm_bind_all_r: forall (A:Type) f1 (f2:A->val->flow),
-  shift_free f1 ->
-  entails
-    (bind f1 (fun r => ∀ x, f2 x r))
-    (∀ x, bind f1 (fun r => f2 x r)).
-Proof.
-  unfold entails. introv Hsf H.
-  applys s_fall. intros.
-  inverts* H.
-  inverts H8. specializes H5 b.
-  applys* s_bind.
-Qed.
-
-Lemma norm_ens_void_pure_swap: forall H P f,
-  entails (ens_ H;; ens_ \[P];; f)
-    (ens_ \[P];; ens_ H;; f).
-Proof.
-  unfold entails. intros.
-  inverts* H0.
-  inverts* H9.
-  inverts H7.
-  applys s_seq.
-  applys s_ens. heaps.
-  applys* s_seq.
-  heaps.
-Qed.
-
-Lemma norm_ens_hstar_pure_r: forall H (P:val->Prop),
-  entails (ens (fun r => H \* \[P r])) (ens_ H;; ens (fun r => \[P r])).
-Proof.
-  unfold entails. intros.
-  inverts H0.
-  heaps.
-  applys* s_seq.
-  applys* s_ens. heaps.
-  applys* s_ens. heaps.
-Qed.
-
-Lemma norm_bind_trivial_sf: forall f1,
-  shift_free f1 ->
-  entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
-Proof.
-  unfold entails. introv Hsf H.
-  inverts* H.
-  inverts H8. heaps.
-Qed.
-
-Lemma ent_bind_ens_pure_l: forall s P fk fk1,
-  (forall r, P r -> entails_under s (fk r) fk1) ->
-  entails_under s (bind (ens (fun r => \[P r])) fk) fk1.
-Proof.
-  unfold entails_under. intros.
-  inverts* H0.
-  inverts H8.
-  heaps.
-Qed.
-
-Lemma ent_seq_ens_rs_bind_ens_pure_l: forall s P fk fk1 H,
-  (forall r, P r -> entails_under s (ens_ H;; rs (fk r)) fk1) ->
-  entails_under s (ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) fk1.
-Proof.
-  unfold entails_under. intros.
-  inverts* H1.
-  inverts H10.
-  - inverts* H2.
-    inverts H11.
-    heaps.
-    applys H0 H1.
-    applys* s_seq.
-    applys* s_rs_sh.
-  - inverts H7.
-    inverts H10.
-    heaps.
-    applys H0 H1.
-    applys* s_seq.
-    applys* s_rs_val.
-Qed.
-
 Lemma norm_bind_trivial: forall f1,
   entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
@@ -144,55 +10,6 @@ Proof.
   applys norm_bind_trivial_sf.
   admit.
 Admitted.
-
-Lemma gnorm_bind_trivial: forall n f1,
-  gentails n (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
-Proof.
-  intros n. induction n; intros.
-  { applys ge_base. intros.
-    inverts H.
-    inverts H8. heaps. }
-  { applys ge_shift. intros.
-    inverts* H.
-    exists fb fk0. splits*. reflexivity. }
-Qed.
-
-Definition viop f a b :=
-  match a, b with
-  | vint a1, vint b1 => f a1 b1
-  | _, _ => vunit
-  end.
-
-Definition vbop f a b :=
-  match a, b with
-  | vbool a1, vbool b1 => f a1 b1
-  | _, _ => vunit
-  end.
-
-Definition virel f a b :=
-  match a, b with
-  | vint a1, vint b1 => f a1 b1
-  | _, _ => False
-  end.
-
-Definition vgt a b := virel (fun x y => x > y) a b.
-Definition vlt a b := virel (fun x y => x < y) a b.
-Definition vge a b := virel (fun x y => x >= y) a b.
-Definition vle a b := virel (fun x y => x <= y) a b.
-Definition veq a b := virel (fun x y => x = y) a b.
-Definition vneq a b := virel (fun x y => x <> y) a b.
-Definition vsub a b := viop (fun x y => vint (x - y)) a b.
-
-(* Definition vand a b := vbop (fun x y => vbool (x && y)) a b. *)
-
-Definition vand (a b:val) :=
-  match a, b with
-  | vbool true, _ => b
-  | vbool false, _ => vbool false
-  | _, vbool false => vbool false
-  | _, vbool true => a
-  | _, _ => vunit
-  end.
 
 Coercion vint : Z >-> val.
 Coercion vbool : bool >-> val.
@@ -267,8 +84,7 @@ Definition f_env :=
 Lemma f_reduction: forall n v1,
   gentails_under f_env n (f v1) (ens (fun r => \[r = false])).
 Proof.
-  intros.
-  unfold f.
+  intros. unfold f.
   rewrite red_init.
   rewrite red_rs_sh_elim.
 
@@ -504,6 +320,23 @@ Proof.
   admit.
 Admitted.
 
+Lemma norm_bind_assoc: forall f fk fk1,
+  entails (bind (bind f fk) fk1)
+    (bind f (fun r => bind (fk r) fk1)).
+Proof.
+  intros.
+  applys norm_bind_assoc_sf.
+  admit.
+Admitted.
+
+Lemma norm_seq_assoc: forall f1 f2 f3,
+  bientails (f1;; f2;; f3) ((f1;; f2);; f3).
+Proof.
+  intros.
+  applys norm_seq_assoc_sf.
+  admit.
+Admitted.
+
 Lemma lemma_weaker2_attempt : forall (n:int) (acc:bool),
   entails_under toss_n_env
 
@@ -524,7 +357,7 @@ Proof.
   {
     fintro x. fintro a.
 
-    (* base case *)
+    (* base case. no shifts here *)
     assert (forall (P:val->Prop) P1,
       entails (ens (fun r => \[P r /\ P1]))
         (ens_ \[P1];; ens (fun r => \[P r]))).
