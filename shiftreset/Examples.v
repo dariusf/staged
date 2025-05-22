@@ -12,11 +12,22 @@ Proof.
 Qed.
 
 
-(* Lemma norm_bind_assoc: forall f fk fk1,
+Lemma norm_bind_assoc: forall f fk fk1,
   entails (bind (bind f fk) fk1)
     (bind f (fun r => bind (fk r) fk1)).
 Proof.
-Admitted. *)
+  intros.
+  applys norm_bind_assoc_sf.
+  admit.
+Admitted.
+
+Lemma norm_seq_assoc: forall f1 f2 f3,
+  bientails (f1;; f2;; f3) ((f1;; f2);; f3).
+Proof.
+  intros.
+  applys norm_seq_assoc_sf.
+  admit.
+Admitted.
 
 Lemma norm_bind_seq_past_pure_sf: forall f1 f2 P,
   shift_free f1 ->
@@ -33,16 +44,20 @@ Proof.
   applys s_ens. heaps.
 Qed.
 
-(* Lemma norm_bind_req_r: forall f f2 H,
-  shift_free f ->
-  entails (bind f (fun r => req H (f2 r)))
-  (req H (bind f f2)).
+Lemma norm_bind_ens_req: forall P f2 H,
+  entails (bind (ens (fun r => \[P r])) (fun r => req H (f2 r)))
+  (req H (bind (ens (fun r => \[P r])) f2)).
 Proof.
-  unfold entails. introv Hsf H1.
-  inverts H1. 2: { false Hsf H7. }
+  unfold entails. intros.
+  inverts H0.
+  inverts H8. 2: no_shift.
+  heaps.
   applys s_req. intros.
-  inverts H9. specializes H12.
-Admitted. *)
+  inverts H9. specializes H13 H1 H2 H3.
+  applys* s_bind.
+  applys s_ens.
+  heaps.
+Qed.
 
 Lemma norm_bind_all_r: forall (A:Type) f1 (f2:A->val->flow),
   shift_free f1 ->
@@ -83,8 +98,7 @@ Proof.
   applys* s_ens. heaps.
 Qed.
 
-(* TODO this also would benefit from generalised entailment *)
-Lemma norm_bind_trivial: forall f1,
+Lemma norm_bind_trivial_sf: forall f1,
   shift_free f1 ->
   entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
@@ -93,7 +107,15 @@ Proof.
   inverts H8. heaps.
 Qed.
 
-Lemma norm_bind_trivial1: forall n f1,
+Lemma norm_bind_trivial: forall f1,
+  entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
+Proof.
+  intros.
+  applys norm_bind_trivial_sf.
+  admit.
+Admitted.
+
+Lemma gnorm_bind_trivial: forall n f1,
   gentails n (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
   intros n. induction n; intros.
@@ -435,6 +457,23 @@ Proof.
 Qed.
 
 
+#[global]
+Instance Proper_bind_entails_r f1 :
+  Proper (Morphisms.pointwise_relation val entails ====> entails)
+    (@bind f1).
+Proof.
+  intros. applys Proper_bind_entails_sf.
+  admit.
+Admitted.
+
+#[global]
+Instance Proper_seq_entails_r f1 :
+  Proper (entails ====> entails)
+    (@seq f1).
+Proof.
+  intros. applys Proper_seq_entails_sf.
+  admit.
+Admitted.
 
 Lemma lemma_weaker2_attempt : forall (n:int) (acc:bool),
   entails_under toss_n_env
@@ -536,11 +575,8 @@ Proof.
     fsimpl.
     simpl.
     rewrite norm_bind_trivial.
-    2: admit.
-    (* generalised entailment *)
     rewrite IH.
     clear IH.
-    (* clear IH. *)
 
     fsimpl. finst x.
     fsimpl. finst (a+1).
@@ -569,7 +605,7 @@ Proof.
     setoid_rewrite H2.
     clear H2.
 
-    rewrite norm_bind_req_r. 2: { shiftfree. }
+    rewrite norm_bind_ens_req. 2: { shiftfree. }
     fsimpl.
 
     rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
@@ -578,7 +614,7 @@ Proof.
 
     setoid_rewrite norm_bind_seq_assoc. 2: { shiftfree. }
 
-    rewrite norm_bind_seq_past_pure.
+    rewrite norm_bind_seq_past_pure_sf. 2: { shiftfree. }
     fsimpl.
 
     lazymatch goal with
@@ -615,11 +651,11 @@ Proof.
       rewrite norm_bind_seq_def.
       rewrite norm_bind_seq_def.
 
-      rewrite <- norm_seq_assoc. 2: admit.
+      rewrite <- norm_seq_assoc.
       lets H2: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
-
-      assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit.
+      (* assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit. *)
       rewrite H2.
+      clear H2.
 
       rewrite IH1.
 
@@ -646,7 +682,7 @@ Proof.
       intros.
       split. math.
       Fail math.
-      rewrite H5.
+      rewrite H3.
       Fail math. (* ????? *)
       rewrite Z.add_0_r.
       reflexivity.
@@ -674,12 +710,16 @@ Proof.
       rewrite norm_bind_seq_def.
       rewrite norm_bind_seq_def.
 
-      rewrite <- norm_seq_assoc. 2: admit.
+      rewrite <- norm_seq_assoc.
 
       lets H3: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
 
-      assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit.
+      (* We have to rewrite on the right side of a seq here.
+        This is not true, but we are limited in how we can rewrite by
+        the syntactic model. *)
+      (* assert (ShiftFree (unk "toss_n" (n - 1))) as ?. admit. *)
       rewrite H3.
+      clear H3.
 
       rewrite IH1.
 
@@ -706,15 +746,17 @@ Proof.
       intros.
       split. math.
       Fail math.
-      rewrite H5.
+      rewrite H3.
       Fail math. (* ????? *)
       rewrite Z.add_0_r.
       reflexivity.
 
     }
+  }
 
 (* Abort. *)
-Admitted.
+(* Admitted. *)
+Qed.
 
 
 (*

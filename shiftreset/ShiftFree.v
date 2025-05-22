@@ -318,6 +318,9 @@ Ltac no_shift :=
     false sf_defun H
   | H: satisfies _ _ _ _ (shft _ _ _) ?f, Hsf: shift_free ?f |- _ =>
     false Hsf H
+  | H: satisfies _ _ _ _ (shft _ _ _) ?f, Hsf: ShiftFree ?f |- _ =>
+    destruct Hsf as (Hsf);
+    false Hsf H
   | _ => idtac
   end.
 

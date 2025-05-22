@@ -89,7 +89,7 @@ Proof.
 
   (* now, start supplying stuff. x->a is easy *)
   rewrite norm_ens_ens_void.
-  rewrite <- norm_seq_assoc; shiftfree.
+  rewrite <- norm_seq_assoc_sf; shiftfree.
   applys s_seq (hr0 \u x1) vunit.
   apply s_ens. exists vunit x1. splits*. hintro. jauto.
 

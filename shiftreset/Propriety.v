@@ -323,11 +323,20 @@ Section Propriety.
   Abort.
 
   #[global]
+  Instance Proper_seq_entails_sf f :
+    ShiftFree f ->
+    Proper (entails ====> entails) (@seq f).
+  Proof.
+    unfold Proper, entails, respectful. intros.
+    inverts H1. 2: { no_shift. }
+    applys* s_seq.
+  Qed.
+
+  #[global]
   Instance Proper_seq_entails_under_l : forall env,
     Proper (entails_under env ====> eq ====> entails_under env) seq.
   Proof.
-    unfold Proper, entails_under, respectful.
-    intros.
+    unfold Proper, entails_under, respectful. intros.
     subst.
     inverts H1 as H1; destr H1.
     { applys* s_bind. }
@@ -337,8 +346,7 @@ Section Propriety.
   #[global]
   Instance Proper_seq_bientails_l : Proper (bientails ====> eq ====> bientails) seq.
   Proof.
-    unfold Proper, bientails, respectful.
-    intros.
+    unfold Proper, bientails, respectful. intros.
     split; intros.
 
     { pose proof Proper_seq_entails_l.

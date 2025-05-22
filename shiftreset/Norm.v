@@ -146,7 +146,7 @@ Proof.
   applys* norm_bind_assoc_sf.
 Qed.
 
-Lemma norm_seq_assoc : forall f1 f2 f3,
+Lemma norm_seq_assoc_sf : forall f1 f2 f3,
   shift_free f1 ->
   bientails (f1;; f2;; f3) ((f1;; f2);; f3).
 Proof.
@@ -168,7 +168,7 @@ Qed.
   L: shft(..., λ x. id; f2; f3)
   R: shft(..., λ x. (id; f2); f3)
 *)
-Lemma norm_bind_assoc: forall n f fk fk1,
+Lemma gnorm_bind_assoc: forall n f fk fk1,
   gentails n (bind (bind f fk) fk1)
     (bind f (fun r => bind (fk r) fk1)).
 Proof.
