@@ -6,38 +6,82 @@ Local Open Scope string_scope.
 Lemma norm_seq_ignore_res_l: forall v f,
   entails (ens (fun r => \[r = v]);; f) f.
 Proof.
-Admitted.
+  unfold entails. intros.
+  inverts H. 2: no_shift.
+  inverts H7. heaps.
+Qed.
 
-Lemma norm_bind_seq_past_pure: forall f1 f2 P,
+
+(* Lemma norm_bind_assoc: forall f fk fk1,
+  entails (bind (bind f fk) fk1)
+    (bind f (fun r => bind (fk r) fk1)).
+Proof.
+Admitted. *)
+
+Lemma norm_bind_seq_past_pure_sf: forall f1 f2 P,
+  shift_free f1 ->
   entails (bind (ens (fun r => \[P r])) (fun r => f1;; f2 r))
   (f1;; (bind (ens (fun r => \[P r])) f2)).
 Proof.
-Admitted.
+  unfold entails. introv Hsf H.
+  inverts H. 2: no_shift.
+  inverts H7.
+  inverts H8. 2: no_shift.
+  applys* s_seq.
+  heaps.
+  applys* s_bind.
+  applys s_ens. heaps.
+Qed.
 
-Lemma norm_bind_req_r: forall f f2 H,
+(* Lemma norm_bind_req_r: forall f f2 H,
   shift_free f ->
   entails (bind f (fun r => req H (f2 r)))
   (req H (bind f f2)).
 Proof.
-Admitted.
+  unfold entails. introv Hsf H1.
+  inverts H1. 2: { false Hsf H7. }
+  applys s_req. intros.
+  inverts H9. specializes H12.
+Admitted. *)
 
 Lemma norm_bind_all_r: forall (A:Type) f1 (f2:A->val->flow),
+  shift_free f1 ->
   entails
     (bind f1 (fun r => ∀ x, f2 x r))
     (∀ x, bind f1 (fun r => f2 x r)).
 Proof.
-Admitted.
+  unfold entails. introv Hsf H.
+  applys s_fall. intros.
+  inverts H.
+  - inverts H8. specializes H5 b.
+    applys* s_bind.
+  - no_shift.
+Qed.
 
 Lemma norm_ens_void_pure_swap: forall H P f,
   entails (ens_ H;; ens_ \[P];; f)
     (ens_ \[P];; ens_ H;; f).
 Proof.
-Admitted.
+  unfold entails. intros.
+  inverts H0; no_shift.
+  inverts H9; no_shift.
+  inverts H7.
+  applys s_seq.
+  applys s_ens. heaps.
+  applys* s_seq.
+  heaps.
+Qed.
 
 Lemma norm_ens_hstar_pure_r: forall H (P:val->Prop),
   entails (ens (fun r => H \* \[P r])) (ens_ H;; ens (fun r => \[P r])).
 Proof.
-Admitted.
+  unfold entails. intros.
+  inverts H0.
+  heaps.
+  applys* s_seq.
+  applys* s_ens. heaps.
+  applys* s_ens. heaps.
+Qed.
 
 (* TODO this also would benefit from generalised entailment *)
 Lemma norm_bind_trivial: forall f1,
@@ -45,9 +89,8 @@ Lemma norm_bind_trivial: forall f1,
   entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
   unfold entails. introv Hsf H.
-  inverts H.
-  { inverts H8. heaps. }
-  { false Hsf H6. }
+  inverts H; no_shift.
+  inverts H8. heaps.
 Qed.
 
 Lemma norm_bind_trivial1: forall n f1,

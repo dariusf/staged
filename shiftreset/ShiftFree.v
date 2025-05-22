@@ -302,7 +302,8 @@ Global Hint Resolve
 Ltac shiftfree := intros; auto with staged_shiftfree.
 
 (* Immediately dispatch goals where we have an assumption that
-  a shift-free thing produces a shift *)
+  a shift-free thing produces a shift,
+  or a shift_free assumption that can be used *)
 Ltac no_shift :=
   lazymatch goal with
   | H: satisfies _ _ _ _ (shft _ _ _) empty |- _ =>
@@ -315,6 +316,8 @@ Ltac no_shift :=
     false sf_rs H
   | H: satisfies _ _ _ _ (shft _ _ _) (defun _ _) |- _ =>
     false sf_defun H
+  | H: satisfies _ _ _ _ (shft _ _ _) ?f, Hsf: shift_free ?f |- _ =>
+    false Hsf H
   | _ => idtac
   end.
 
