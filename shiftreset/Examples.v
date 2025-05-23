@@ -6,12 +6,32 @@ Local Open Scope string_scope.
 Lemma norm_seq_defun_skip_ens_void: forall (f:var) u H f1,
   entails (defun f u;; ens_ H;; f1) (ens_ H;; defun f u;; f1).
 Proof.
-Admitted.
+  unfold entails. intros.
+  inverts* H0.
+  inverts H8.
+  inverts* H9.
+  inverts H7.
+  heaps.
+  applys* s_seq. applys* s_ens. heaps.
+  applys* s_seq. applys* s_defun.
+Qed.
+
+Lemma norm_ens_pure_conj1: forall P P1,
+  entails (ens (fun r : val => \[P r /\ P1]))
+    (seq (ens_ \[P1]) (ens (fun r : val => \[P r]))).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  heaps.
+  applys s_seq.
+  applys s_ens. heaps.
+  applys s_ens. heaps.
+Qed.
 
 Coercion vint : Z >-> val.
 Coercion vbool : bool >-> val.
 
-Ltac biabduction :=
+Ltac fbiabduction :=
   rewrite norm_ens_req_transpose; [ | applys b_pts_single ];
   rewrite norm_req_pure_l; [ | reflexivity ];
   rewrite norm_seq_ens_empty.
@@ -278,7 +298,7 @@ Proof.
   end.
   specializes H. resolve_fn_in_env. simpl in H. *)
 
-  biabduction.
+  fbiabduction.
 
   fsimpl.
 
@@ -317,7 +337,7 @@ Proof.
   fsimpl. fstep. xsimpl.
   case_if.
   fsimpl. finst (a+1).
-  fsimpl. biabduction.
+  fsimpl. fbiabduction.
   case_if.
   fsimpl. 2: { unfold toss_env1. solve_trivial_not_indom. }
   rewrite norm_ens_ens_void_l.
@@ -363,7 +383,7 @@ Definition main_spec_weaker n : flow :=
     req (x~~>vint a \* \[vgt (vint n) 0])
       (∃ b, ens (fun r => x~~>b \* \[vge b (vadd a n) /\ r = 1])).
 
-Lemma lemma_weaker : forall acc x n,
+(* Lemma lemma_weaker : forall acc x n,
   entails
     (rs (bind (unk "toss_n" (vint n)) (fun v =>
       ens (fun r1 =>
@@ -375,7 +395,7 @@ Lemma lemma_weaker : forall acc x n,
 Proof.
   (* induction_wf IH: (downto 0) n. *)
 (* Admitted. *)
-Abort.
+Abort. *)
 
 
 (* Lemma lemma_weaker2_under : forall (n:int) (acc:bool),
@@ -836,6 +856,103 @@ Proof.
     fstep. { xsimpl. intros. simpl. split. math. rewrite H2; f_equal. }
   }
 Qed.
+
+(* proof attempt with tactics *)
+
+Definition toss_n_env1 :=
+  Fmap.single "toss_n" toss_n.
+
+(* norm_ens_pure_conj  *)
+(* Lemma *)
+(* Close Scope flow_scope. *)
+(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+(* Check norm_ens_pure_conj. *)
+
+Theorem main_summary1 : forall n,
+  lemma_weaker2 ->
+  entails_under toss_n_env1 (main n) (main_spec_weaker n).
+Proof.
+  intros n lemma. unfold main, main_spec_weaker.
+  funfold1 "toss_n". unfold toss_n.
+  fsimpl.
+  applys ent_disj_l.
+  {
+    rewrite norm_ens_pure_conj1.
+    fsimpl. fstep. simpl. intros.
+    case_if.
+    fintro x.
+    fintro a.
+    apply ent_req_r.
+    finst a.
+    rewrite norm_ens_ens_void_l.
+    fstep. xsimpl. intros. splits*. math.
+  }
+  {
+    fsimpl.
+    fstep. simpl. intros.
+    unfold toss.
+    freduction.
+    fsimpl.
+
+
+
+    fintro x. finst x.
+    fsimpl.
+    fintro a. finst a.
+
+    fsimpl.
+
+    rewrite norm_req_req.
+    fstep. xsimpl.
+
+    (* Search (entails_under _ _ (req \[_] _)). *)
+
+    fassume.
+    fstep. intros.
+    finst (a+1).
+
+    fsimpl_rew.
+
+    unfolds in lemma.
+    rewrite lemma.
+    fold lemma_weaker2 in lemma.
+
+    fsimpl. finst x.
+    fsimpl. finst (a+1).
+    fsimpl.
+    rewrite norm_req_req.
+
+    fbiabduction.
+    fstep. math.
+    fintro x0.
+    fsimpl.
+    rewrite norm_rearrange_ens.
+    fsimpl.
+    fstep. intros.
+    case_if. 2: { false C. constructor. }
+    fsimpl.
+    finst (a+1).
+    fsimpl.
+
+    fsimpl_rew.
+
+    unfolds in lemma.
+    rewrite lemma.
+    fold lemma_weaker2 in lemma.
+
+
+    fsimpl.
+
+    (* fintro x0. *)
+
+    admit.
+  }
+
+
+(* Qed. *)
+Abort.
+
+(* undone proof for stronger lemma *)
 
 Definition main_spec : flow :=
   ∀ x a n,
