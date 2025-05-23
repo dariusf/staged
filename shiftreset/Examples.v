@@ -3,6 +3,11 @@
 From ShiftReset Require Import Logic Automation.
 Local Open Scope string_scope.
 
+Lemma norm_seq_defun_skip_ens_void: forall (f:var) u H f1,
+  entails (defun f u;; ens_ H;; f1) (ens_ H;; defun f u;; f1).
+Proof.
+Admitted.
+
 Coercion vint : Z >-> val.
 Coercion vbool : bool >-> val.
 
@@ -50,7 +55,7 @@ Global Hint Rewrite
 
   using shiftfree : staged_norm.
 
-Ltac fsimpl := autorewrite with staged_norm.
+Ltac fsimpl_rew := autorewrite with staged_norm.
 
 Create HintDb staged_norm_defun.
 Global Hint Rewrite
@@ -58,6 +63,8 @@ Global Hint Rewrite
   norm_seq_defun_rs
   norm_seq_defun_bind_l
   norm_seq_defun_ens_void
+  norm_seq_defun_req
+  norm_seq_defun_skip_ens_void
 
   (* move out of bind/rs *)
   norm_bind_seq_defun_ens
@@ -73,8 +80,13 @@ Global Hint Rewrite
 
 Ltac fdefun := autorewrite with staged_norm_defun.
 
-Tactic Notation "fsimpl" "*" :=
-  repeat (fdefun; fsimpl).
+(* this is split into two tactics because we want to
+  pull things out of resets in general, but move defuns
+  in, towards discards. so we pull everything out, then
+  move defuns in, so that's the state the user sees.
+  as defuns swap over things, this makes progress. *)
+Ltac fsimpl :=
+  repeat (fsimpl_rew; fdefun).
 
 (* Create HintDb staged_closing.
 
@@ -109,23 +121,23 @@ Definition f : ufun := fun _ =>
         ens (fun r => \[r = vand r1 r2])
       )))).
 
-Definition f_env :=
+Definition flip_env :=
   Fmap.single "k" (fun v : val => rs (ens (fun r => \[r = v]))).
 
-Lemma f_reduction: forall n v1,
-  gentails_under f_env n (f v1) (ens (fun r => \[r = false])).
+Theorem flip_reduction: forall n v1,
+  gentails_under flip_env n (f v1) (ens (fun r => \[r = false])).
 Proof.
   intros. unfold f.
   rewrite red_init.
   rewrite red_rs_sh_elim.
 
   (* rewrite entails_under_seq_defun_idem.
-  2: { unfold f_env. apply Fmap.indom_single. }
-  2: { unfold f_env. resolve_fn_in_env. } *)
+  2: { unfold flip_env. apply Fmap.indom_single. }
+  2: { unfold flip_env. resolve_fn_in_env. } *)
 
   applys gent_seq_defun_idem.
-  { unfold f_env. apply Fmap.indom_single. }
-  { unfold f_env. resolve_fn_in_env. }
+  { unfold flip_env. apply Fmap.indom_single. }
+  { unfold flip_env. resolve_fn_in_env. }
 
   funfold1 "k".
   fsimpl.
@@ -137,7 +149,7 @@ Proof.
   reflexivity.
 Qed.
 
-Definition f1 : ufun := fun _ =>
+Definition flip1 : ufun := fun _ =>
   rs (
     sh "k" (
       bind (unk "k" true) (fun r1 =>
@@ -145,21 +157,21 @@ Definition f1 : ufun := fun _ =>
         discard "k";; ens (fun r => \[r = vand r1 r2])
       )))).
 
-Lemma f_reduction1: forall v1,
-  entails_under empty_env (f1 v1) (ens (fun r => \[r = false])).
+Theorem flip_reduction1: forall v1,
+  entails_under empty_env (flip1 v1) (ens (fun r => \[r = false])).
 Proof.
-  intros. unfold f1.
+  intros. unfold flip1.
   freduction.
-  fsimpl*.
+  fsimpl.
   simpl.
   reflexivity.
 Qed.
 
-(* this shows how [f_reduction1] works *)
-Lemma f_reduction2: forall v1,
-  entails_under empty_env (f1 v1) (ens (fun r => \[r = false])).
+(* this shows how [flip_reduction1] works *)
+Theorem flip_reduction2: forall v1,
+  entails_under empty_env (flip1 v1) (ens (fun r => \[r = false])).
 Proof.
-  intros. unfold f1.
+  intros. unfold flip1.
   freduction.
   rewrite norm_seq_defun_rs.
   rewrite norm_seq_defun_bind_l.
@@ -168,7 +180,7 @@ Proof.
   rewrite norm_bind_rs_seq_defun_ens.
 
   (* cannot rewrite on the right side, so restart *)
-  fsimpl.
+  fsimpl_rew.
 
   rewrite norm_seq_defun_rs.
   rewrite norm_seq_defun_bind_l.
@@ -176,7 +188,7 @@ Proof.
   rewrite norm_seq_defun_rs.
   rewrite norm_bind_rs_seq_defun_ens.
 
-  fsimpl.
+  fsimpl_rew.
 
   rewrite* norm_seq_defun_discard.
 
@@ -208,21 +220,21 @@ Definition toss_env :=
     "k" (fun v : val => rs (bind (ens (fun r => \[r = v]))
     (fun v => ens (fun r1 => \[If v = true then r1 = 1 else r1 = 0])))).
 
-(* let foo () = < let v = toss () in if v then 0 else 0 > *)
-Definition foo : flow :=
+(* let flipi () = < let v = toss () in if v then 1 else 0 > *)
+Definition flipi : flow :=
   rs (
     bind (unk "toss" vunit) (fun v =>
     ens (fun r1 => \[If v = true then r1 = 1 else r1 = 0]))
   ).
 
-Definition foo_spec : flow :=
+Definition flipi_spec : flow :=
   ∀ x a, req (x~~>vint a) (ens (fun r => x~~>(a+2) \* \[r=1])).
 
 Theorem foo_summary :
-  entails_under toss_env foo foo_spec.
+  entails_under toss_env flipi flipi_spec.
 Proof.
   intros.
-  unfold foo, foo_spec.
+  unfold flipi, flipi_spec.
 
   funfold1 "toss". unfold toss.
   rewrite red_init.
@@ -287,27 +299,33 @@ Definition toss1 : ufun := fun _ =>
 
 Definition toss_env1 := Fmap.single "toss" toss1.
 
-(* let foo () = < let v = toss () in if v then 0 else 0 > *)
-Definition foo1 : flow :=
+(* let flipi () = < let v = toss () in if v then 0 else 0 > *)
+Definition flipi1 : flow :=
   rs (
     bind (unk "toss" vunit) (fun v =>
     ens (fun r1 => \[If v = true then r1 = 1 else r1 = 0]))
   ).
 
-Theorem foo_summary1 :
-  entails_under toss_env1 foo1 foo_spec.
+Theorem flipi_summary1 :
+  entails_under toss_env1 flipi1 flipi_spec.
 Proof.
-  unfold foo1, foo_spec.
+  unfold flipi1, flipi_spec.
   funfold1 "toss". unfold toss1.
   freduction.
-  fsimpl*.
-  fintro x. finst x.
-  fsimpl*.
-  fintro a. finst a.
-  fsimpl*.
-
-
-Abort.
+  fsimpl. fintro x. finst x.
+  fsimpl. fintro a. finst a.
+  fsimpl. fstep. xsimpl.
+  case_if.
+  fsimpl. finst (a+1).
+  fsimpl. biabduction.
+  case_if.
+  fsimpl. 2: { unfold toss_env1. solve_trivial_not_indom. }
+  rewrite norm_ens_ens_void_l.
+  fstep.
+  xsimpl.
+  - intros. f_equal. math.
+  - intros. simpl in H. rewrite H. f_equal.
+Qed.
 
 (*
 
@@ -657,9 +675,7 @@ Proof.
     math.
     case_if; subst; simpl.
 
-    - Fail math. (* ????? *)
-      rewrite Z.add_0_r.
-      reflexivity.
+    - f_equal.
 
     - rewrite Z.add_0_r.
       reflexivity.
