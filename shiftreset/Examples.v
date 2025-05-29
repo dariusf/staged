@@ -16,6 +16,30 @@ Proof.
   applys* s_seq. applys* s_defun.
 Qed.
 
+Lemma norm_seq_defun_all: forall (f:var) u (A:Type) (P:A->flow),
+  entails (defun f u;; ∀ x, P x) (∀ x, defun f u;; P x).
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  inverts H7.
+  inverts H8 as H8.
+  applys s_fall. intros b.
+  specializes H8 b.
+  applys* s_seq. applys* s_defun.
+Qed.
+
+Lemma norm_seq_defun_ex: forall (f:var) u (A:Type) (P:A->flow),
+  entails (defun f u;; ∃ x, P x) (∃ x, defun f u;; P x).
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  inverts H7.
+  inverts H8 as H8.
+  applys s_fex. destruct H8 as (b&H8).
+  exists b.
+  applys* s_seq. applys* s_defun.
+Qed.
+
 Lemma norm_ens_pure_conj1: forall P P1,
   entails (ens (fun r : val => \[P r /\ P1]))
     (seq (ens_ \[P1]) (ens (fun r : val => \[P r]))).
@@ -26,6 +50,20 @@ Proof.
   applys s_seq.
   applys s_ens. heaps.
   applys s_ens. heaps.
+Qed.
+
+(* automation-friendly specializations of a more general lemma
+  to move only some constructs *)
+Lemma norm_float_ens_void : forall H f2,
+  entails (rs (ens_ H;; f2)) (ens_ H;; rs f2).
+Proof.
+  intros. applys* red_rs_float1.
+Qed.
+
+Lemma norm_reassoc_ens_void : forall H f2 fk,
+  entails (bind (ens_ H;; f2) fk) (ens_ H;; bind f2 fk).
+Proof.
+  intros. applys* norm_bind_seq_assoc.
 Qed.
 
 Coercion vint : Z >-> val.
@@ -41,7 +79,9 @@ Ltac freduction :=
   repeat rewrite red_extend;
   rewrite red_rs_sh_elim.
 
-Create HintDb staged_norm.
+
+
+Create HintDb staged_norm_old.
 Global Hint Rewrite
 
   (* move universal quantifiers on the left outwards *)
@@ -73,18 +113,96 @@ Global Hint Rewrite
   (* trivial rewrites *)
   norm_seq_empty_l
 
-  using shiftfree : staged_norm.
+  using shiftfree : staged_norm_old.
 
-Ltac fsimpl_rew := autorewrite with staged_norm.
+Ltac fsimpl_old := autorewrite with staged_norm_old.
 
-Create HintDb staged_norm_defun.
+
+Create HintDb staged_forall_r.
 Global Hint Rewrite
+  red_init
+using shiftfree : staged_forall_r.
+Ltac fintros_rew := autorewrite with staged_forall_r.
+Ltac fintros x := fintros_rew; simple apply ent_all_r; intros x.
+
+Create HintDb staged_exists_r.
+Global Hint Rewrite
+  red_init
+using shiftfree : staged_exists_r.
+Ltac fexists := autorewrite with staged_exists_r.
+
+Create HintDb staged_exists_l.
+Global Hint Rewrite
+  norm_bind_ex_l
+  norm_seq_ex_r
+  norm_rs_seq_ex_r
+  norm_ens_pure_ex
+  norm_rs_ex
+  norm_seq_ens_sl_ex
+  norm_seq_ens_sl_ex
+  norm_seq_ex_l
+  norm_seq_defun_ex
+using shiftfree : staged_exists_l.
+Ltac fdestruct_rew := autorewrite with staged_exists_l.
+Ltac fdestruct := fintros_rew;
+  first [
+    simple apply ent_ex_l |
+    simple apply ent_ex_r |
+    simple apply ent_seq_ex_r
+  ]; intros.
+
+Create HintDb staged_forall_l.
+Global Hint Rewrite
+  norm_bind_all_l
+  norm_rs_all
+  norm_seq_all_r
+  norm_rs_all
+  norm_req_all
+  norm_seq_all_r
+  norm_seq_defun_all
+using shiftfree : staged_forall_l.
+Ltac fspecialize_rew := autorewrite with staged_forall_l.
+Ltac fspecialize x := fspecialize_rew;
+  first [
+    simple apply ent_all_l |
+    simple apply ent_seq_all_l
+  ]; exists x.
+
+Create HintDb staged_norm.
+Global Hint Rewrite
+
+  (* associate things out of binds *)
+  (* norm_bind_seq_assoc *)
+  norm_reassoc_ens_void
+  norm_bind_req
+  norm_bind_disj
+
+  (* normalise pure assumptions *)
+  norm_ens_pure_conj
+  norm_ens_void_hstar_pure_l
+  norm_ens_void_hstar_pure_r
+
+  (* associate things out of resets *)
+  norm_rs_req
+  norm_rs_disj
+  norm_float_ens_void
+
+  (* trivial simplifications *)
+  red_rs_ens
+  norm_bind_val
+  norm_seq_empty_l
+
+  (* DEFUN *)
+
   (* push defun towards a discard *)
   norm_seq_defun_rs
   norm_seq_defun_bind_l
   norm_seq_defun_ens_void
   norm_seq_defun_req
   norm_seq_defun_skip_ens_void
+  (* don't move quantifiers *)
+  (* norm_seq_defun_all *)
+  (* norm_seq_defun_ex *)
 
   (* move out of bind/rs *)
   norm_bind_seq_defun_ens
@@ -96,30 +214,26 @@ Global Hint Rewrite
   (* cancel defun and discard *)
   norm_seq_defun_discard
   norm_defun_discard_id
-  using shiftfree : staged_norm_defun.
 
-Ltac fdefun := autorewrite with staged_norm_defun.
+  using shiftfree : staged_norm.
+Ltac fsimpl := autorewrite with staged_norm.
+
+(* Create HintDb staged_norm_defun.
+Global Hint Rewrite
+  using shiftfree : staged_norm_defun.
+Ltac fdefun := autorewrite with staged_norm_defun. *)
 
 (* this is split into two tactics because we want to
   pull things out of resets in general, but move defuns
   in, towards discards. so we pull everything out, then
   move defuns in, so that's the state the user sees.
   as defuns swap over things, this makes progress. *)
-Ltac fsimpl :=
-  repeat (fsimpl_rew; fdefun).
+(* Ltac fsimpl :=
+  fsimpl_rew. *)
+  (* repeat (fsimpl_rew; fdefun). *)
 
-(* Create HintDb staged_closing.
-
-Global Hint Resolve
-  ent_seq_ens_void_l
-
-  : staged_closing.
-
-Ltac fstep := eauto with staged_closing. *)
-
-(* applies an uncontroversial reasoning step,
-  which one would always want to apply *)
-Ltac fstep := first [
+(* apply an entailment rule, which bridges to the metalogic *)
+Ltac fentailment := first [
   apply ent_seq_ens_pure_l |
   apply ent_seq_ens_void_pure_l |
   apply ent_ens_single |
@@ -183,7 +297,6 @@ Proof.
   intros. unfold flip1.
   freduction.
   fsimpl.
-  simpl.
   reflexivity.
 Qed.
 
@@ -198,23 +311,30 @@ Proof.
   rewrite norm_seq_defun_unk.
   rewrite norm_seq_defun_rs.
   rewrite norm_bind_rs_seq_defun_ens.
+Abort.
+
+  (* have to simplify as we can't rewrite on the left of a bind *)
+  (* rewrite norm_bind_trivial. *)
+  (* rewrite norm_bind_seq_defun_ens. *)
+
+  (* rewrite norm_bind_rs_seq_defun_ens. *)
 
   (* cannot rewrite on the right side, so restart *)
-  fsimpl_rew.
+  (* fsimpl_rew. *)
 
-  rewrite norm_seq_defun_rs.
+  (* rewrite norm_seq_defun_rs.
   rewrite norm_seq_defun_bind_l.
   rewrite norm_seq_defun_unk.
-  rewrite norm_seq_defun_rs.
-  rewrite norm_bind_rs_seq_defun_ens.
+  rewrite norm_seq_defun_rs. *)
+  (* rewrite norm_bind_rs_seq_defun_ens. *)
 
-  fsimpl_rew.
+  (* fsimpl_rew. *)
 
-  rewrite* norm_seq_defun_discard.
+  (* rewrite* norm_seq_defun_discard.
 
   simpl.
   reflexivity.
-Qed.
+Qed. *)
 
 End Multi.
 
@@ -250,7 +370,7 @@ Definition flipi : flow :=
 Definition flipi_spec : flow :=
   ∀ x a, req (x~~>vint a) (ens (fun r => x~~>(a+2) \* \[r=1])).
 
-Theorem foo_summary :
+Theorem flipi_summary :
   entails_under toss_env flipi flipi_spec.
 Proof.
   intros.
@@ -278,7 +398,7 @@ Proof.
   end.
 
   case_if.
-  fsimpl.
+  fsimpl_old.
   finst (a + 1).
 
   (* somehow automate this... *)
@@ -288,7 +408,7 @@ Proof.
   | |- entails_under ?e _ _ => remember e as env
   end.
 
-  fsimpl.
+  fsimpl_old.
   case_if.
 
   (* lazymatch goal with
@@ -332,16 +452,16 @@ Proof.
   unfold flipi1, flipi_spec.
   funfold1 "toss". unfold toss1.
   freduction.
-  fsimpl. fintro x. finst x.
-  fsimpl. fintro a. finst a.
-  fsimpl. fstep. xsimpl.
+  fsimpl. fintros x. fspecialize x.
+  fsimpl. fintros a. fspecialize a.
+  fsimpl. fentailment. xsimpl.
   case_if.
-  fsimpl. finst (a+1).
+  fsimpl. fspecialize (a+1).
   fsimpl. fbiabduction.
   case_if.
   fsimpl. 2: { unfold toss_env1. solve_trivial_not_indom. }
   rewrite norm_ens_ens_void_l.
-  fstep.
+  fentailment.
   xsimpl.
   - intros. f_equal. math.
   - intros. simpl in H. rewrite H. f_equal.
@@ -521,15 +641,15 @@ Proof.
 
     fsimpl.
     fsimpl.
-    fstep. unfold veq, virel. intros.
+    fentailment. unfold veq, virel. intros.
 
     applys ent_req_r.
     fsimpl.
     rewrite <- norm_seq_assoc; shiftfree.
-    fstep. intros.
+    fentailment. intros.
     finst a.
     rewrite norm_ens_ens_void_l.
-    fstep. xsimpl. intros. split. rewrite H. math.
+    fentailment. xsimpl. intros. split. rewrite H. math.
     destruct acc.
     - case_if.
       { case_if. assumption. }
@@ -541,7 +661,7 @@ Proof.
   {
     (* recursive case *)
     fsimpl.
-    fstep. unfold vgt. simpl. intro.
+    fentailment. unfold vgt. simpl. intro.
     unfold toss.
     rewrite red_init.
     rewrite red_extend.
@@ -580,8 +700,8 @@ Proof.
     fsimpl. finst acc.
 
     rewrite norm_req_req.
-    fstep. xsimpl.
-    applys ent_req_r. fstep. intros.
+    fentailment. xsimpl.
+    applys ent_req_r. fentailment. intros.
     simpl.
 
     pose proof IH as IH1.
@@ -610,7 +730,7 @@ Proof.
     fsimpl.
 
     rewrite norm_ens_void_pure_swap.
-    fstep. intros.
+    fentailment. intros.
     fsimpl.
 
     rewrite norm_bind_all_r.
@@ -677,18 +797,18 @@ Proof.
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
 
-    fstep. math.
+    fentailment. math.
     fintro a2.
 
     rewrite norm_rearrange_ens.
     fsimpl.
-    fstep. intros.
+    fentailment. intros.
     finst a2.
 
     case_if. { false C. constructor. }
     fsimpl.
     rewrite norm_ens_ens_void_l.
-    fstep.
+    fentailment.
     xsimpl.
     intros.
     split.
@@ -749,16 +869,16 @@ Proof.
     rewrite <- norm_ens_ens_void_l.
     fsimpl.
     case_if. clear C.
-    fstep. simpl. intros.
+    fentailment. simpl. intros.
     fintro x.
     fintro a.
     apply ent_req_r.
     finst a.
     rewrite norm_ens_ens_void_l.
-    fstep. xsimpl. simpl. math.
+    fentailment. xsimpl. simpl. math.
   }
   { fsimpl.
-    fstep. simpl. intros.
+    fentailment. simpl. intros.
 
     unfold toss.
     rewrite red_init.
@@ -780,7 +900,7 @@ Proof.
     end.
 
     fsimpl.
-    fstep. xsimpl.
+    fentailment. xsimpl.
 
     unfolds in lemma_weaker.
     rewrite lemma_weaker.
@@ -805,7 +925,7 @@ Proof.
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
 
-    fstep. math.
+    fentailment. math.
     fsimpl. fintro b.
     rewrite norm_rearrange_ens.
     fsimpl.
@@ -841,19 +961,19 @@ Proof.
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
 
-    fstep. math.
+    fentailment. math.
     fintro b1.
 
     rewrite norm_rearrange_ens.
 
     fsimpl.
-    fstep. intros.
+    fentailment. intros.
     case_if.
     fsimpl.
 
     rewrite norm_ens_ens_void_l.
     finst b1.
-    fstep. { xsimpl. intros. simpl. split. math. rewrite H2; f_equal. }
+    fentailment. { xsimpl. intros. simpl. split. math. rewrite H2; f_equal. }
   }
 Qed.
 
@@ -878,18 +998,18 @@ Proof.
   applys ent_disj_l.
   {
     rewrite norm_ens_pure_conj1.
-    fsimpl. fstep. simpl. intros.
+    fsimpl. fentailment. simpl. intros.
     case_if.
     fintro x.
     fintro a.
     apply ent_req_r.
     finst a.
     rewrite norm_ens_ens_void_l.
-    fstep. xsimpl. intros. splits*. math.
+    fentailment. xsimpl. intros. splits*. math.
   }
   {
     fsimpl.
-    fstep. simpl. intros.
+    fentailment. simpl. intros.
     unfold toss.
     freduction.
     fsimpl.
@@ -903,12 +1023,12 @@ Proof.
     fsimpl.
 
     rewrite norm_req_req.
-    fstep. xsimpl.
+    fentailment. xsimpl.
 
     (* Search (entails_under _ _ (req \[_] _)). *)
 
     fassume.
-    fstep. intros.
+    fentailment. intros.
     finst (a+1).
 
     fsimpl_rew.
@@ -923,15 +1043,15 @@ Proof.
     rewrite norm_req_req.
 
     fbiabduction.
-    fstep. math.
-    fintro x0.
+    fentailment. math.
+    fintro b.
     fsimpl.
     rewrite norm_rearrange_ens.
     fsimpl.
-    fstep. intros.
+    fentailment. intros.
     case_if. 2: { false C. constructor. }
     fsimpl.
-    finst (a+1).
+    finst b.
     fsimpl.
 
     fsimpl_rew.
