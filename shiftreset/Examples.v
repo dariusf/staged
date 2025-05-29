@@ -123,6 +123,17 @@ Global Hint Rewrite
 
 Ltac fsimpl_old := autorewrite with staged_norm_old.
 
+(* Automation
+
+  The set of tactics shows the general strategy/decomposiiton of proof steps.
+
+  - fsimpl: simplify, but do not move quantifiers. Simplification generally involves: applying easy simplifying rewrites, moving assumptions as far back as possible (to facilitate lifting into metalogic), moving an ens to the beginning to serve as the "spatial context"/"symbolic execution state", moving shift-free things out of resets, moving defun forward to unfold functions and cancel it with discard
+  - fspecialize, fdestruct, fexists, fintros: these are unfortunately-named, but deal with quantifiers on both sides of entailments
+  - freduction, fbiabduction: for specific scenarios, where there is a shift inside a reset, or an ens followed by req
+  - fentailment: bridges to metalogic
+  - fleft, fright: for disjunction
+
+*)
 
 Create HintDb staged_forall_r.
 Global Hint Rewrite
