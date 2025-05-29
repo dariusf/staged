@@ -340,7 +340,10 @@ Ltac no_shift :=
   | _ => idtac
   end.
 
-Ltac auto_star ::= try solve [ shiftfree | no_shift | auto_star_default ].
+Ltac auto_star ::= try solve [
+    shiftfree | no_shift |
+    solve_not_indom | resolve_fn_in_env |
+    auto_star_default ].
 
 (* knowing that there is one norm execution does not mean
   that there are no shift executions *)

@@ -28,6 +28,12 @@ Proof.
   applys* s_seq. applys* s_defun.
 Qed.
 
+Lemma norm_rs_ens: forall Q,
+  bientails (rs (ens Q)) (ens Q).
+Proof.
+  applys red_rs_ens.
+Qed.
+
 Lemma norm_seq_defun_ex: forall (f:var) u (A:Type) (P:A->flow),
   entails (defun f u;; ∃ x, P x) (∃ x, defun f u;; P x).
 Proof.
@@ -108,7 +114,7 @@ Global Hint Rewrite
   norm_rs_req norm_rs_disj red_rs_float1
 
   (* eliminate trivial resets and binds *)
-  red_rs_ens norm_bind_val
+  norm_rs_ens norm_bind_val
 
   (* trivial rewrites *)
   norm_seq_empty_l
@@ -188,7 +194,7 @@ Global Hint Rewrite
   norm_float_ens_void
 
   (* trivial simplifications *)
-  red_rs_ens
+  norm_rs_ens
   norm_bind_val
   norm_seq_empty_l
 
@@ -311,30 +317,21 @@ Proof.
   rewrite norm_seq_defun_unk.
   rewrite norm_seq_defun_rs.
   rewrite norm_bind_rs_seq_defun_ens.
-Abort.
+  rewrite norm_rs_ens.
+  rewrite norm_bind_val.
 
-  (* have to simplify as we can't rewrite on the left of a bind *)
-  (* rewrite norm_bind_trivial. *)
-  (* rewrite norm_bind_seq_defun_ens. *)
-
-  (* rewrite norm_bind_rs_seq_defun_ens. *)
-
-  (* cannot rewrite on the right side, so restart *)
-  (* fsimpl_rew. *)
-
-  (* rewrite norm_seq_defun_rs.
   rewrite norm_seq_defun_bind_l.
   rewrite norm_seq_defun_unk.
-  rewrite norm_seq_defun_rs. *)
-  (* rewrite norm_bind_rs_seq_defun_ens. *)
+  rewrite norm_seq_defun_rs.
+  rewrite norm_bind_rs_seq_defun_ens.
+  rewrite norm_rs_ens.
+  rewrite norm_bind_val.
 
-  (* fsimpl_rew. *)
-
-  (* rewrite* norm_seq_defun_discard.
-
-  simpl.
-  reflexivity.
-Qed. *)
+  rewrite norm_seq_defun_discard.
+  - rewrite norm_rs_ens.
+    reflexivity.
+  - unfold empty_env. solve_not_indom.
+Qed.
 
 End Multi.
 
@@ -459,7 +456,7 @@ Proof.
   fsimpl. fspecialize (a+1).
   fsimpl. fbiabduction.
   case_if.
-  fsimpl. 2: { unfold toss_env1. solve_trivial_not_indom. }
+  fsimpl. 2: { unfold toss_env1. solve_not_indom. }
   rewrite norm_ens_ens_void_l.
   fentailment.
   xsimpl.

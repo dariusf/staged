@@ -47,21 +47,59 @@ Proof.
   contradiction.
 Qed.
 
-Ltac solve_trivial_not_indom :=
+Lemma not_indom_empty : forall A B (x:A),
+  ~ Fmap.indom (@Fmap.empty A B) x.
+Proof.
+  unfold indom, map_indom, empty.
+  intros.
+  simpls.
+  rew_logic.
+  reflexivity.
+Qed.
+
+Lemma not_indom_union : forall A (B:Type) (s1 s2:fmap A B) (x:A),
+  ~ Fmap.indom s1 x ->
+  ~ Fmap.indom s2 x ->
+  ~ Fmap.indom (s1 \+ s2) x.
+Proof.
+  unfold indom, map_indom, union, map_union.
+  intros.
+  simpls.
+  rew_logic in *.
+  destruct (Fmap.fmap_data s1 x); auto.
+Qed.
+
+Lemma not_indom_update : forall A (B:Type) (s1:fmap A B) (x x1:A) (v:B),
+  ~ Fmap.indom s1 x ->
+  x <> x1 ->
+  ~ Fmap.indom (Fmap.update s1 x1 v) x.
+Proof.
+  unfold update.
+  intros.
+  apply not_indom_union.
+  { unfold not. intros.
+    unfold indom, single, map_indom in *.
+    simpls *.
+    case_if. }
+  { assumption. }
+Qed.
+
+Ltac solve_not_indom :=
   rew_fmap; lazymatch goal with
-  | |- ~ Fmap.indom (Fmap.update _ _ _) _ => unfold Fmap.update; solve_trivial_not_indom
+  | |- ~ Fmap.indom (Fmap.update _ _ _) _ => unfold Fmap.update; solve_not_indom
   | |- ~ Fmap.indom (Fmap.single _ _ ) _ => unfold not; rewrite Fmap.indom_single_eq; intros; false
+  | |- ~ Fmap.indom Fmap.empty _ => apply not_indom_empty
   end.
 
 Ltac resolve_fn_in_env :=
   match goal with
   | |- Fmap.read (Fmap.update _ ?k _) ?k = _ =>
-    rewrite fmap_read_update; [reflexivity | solve_trivial_not_indom]
+    rewrite fmap_read_update; [reflexivity | solve_not_indom]
   | |- Fmap.read (Fmap.update _ _ _) _ = _ =>
     unfold Fmap.update;
     first [
       rewrite Fmap.read_union_l; [resolve_fn_in_env | apply Fmap.indom_single] |
-        rewrite Fmap.read_union_r; [resolve_fn_in_env | solve_trivial_not_indom]
+        rewrite Fmap.read_union_r; [resolve_fn_in_env | solve_not_indom]
     ]
   | |- Fmap.read (Fmap.single ?k _) ?k = _ =>
     rewrite Fmap.read_single; reflexivity
@@ -110,43 +148,6 @@ Proof.
     reflexivity.
     false. }
   { reflexivity. }
-Qed.
-
-Lemma not_indom_empty : forall A B (x:A),
-  ~ Fmap.indom (@Fmap.empty A B) x.
-Proof.
-  unfold indom, map_indom, empty.
-  intros.
-  simpls.
-  rew_logic.
-  reflexivity.
-Qed.
-
-Lemma not_indom_union : forall A (B:Type) (s1 s2:fmap A B) (x:A),
-  ~ Fmap.indom s1 x ->
-  ~ Fmap.indom s2 x ->
-  ~ Fmap.indom (s1 \+ s2) x.
-Proof.
-  unfold indom, map_indom, union, map_union.
-  intros.
-  simpls.
-  rew_logic in *.
-  destruct (Fmap.fmap_data s1 x); auto.
-Qed.
-
-Lemma not_indom_update : forall A (B:Type) (s1:fmap A B) (x x1:A) (v:B),
-  ~ Fmap.indom s1 x ->
-  x <> x1 ->
-  ~ Fmap.indom (Fmap.update s1 x1 v) x.
-Proof.
-  unfold update.
-  intros.
-  apply not_indom_union.
-  { unfold not. intros.
-    unfold indom, single, map_indom in *.
-    simpls *.
-    case_if. }
-  { assumption. }
 Qed.
 
 Lemma disjoint_single_neq : forall A (B:Type) (x1 x2:A) (u1 u2:B),
