@@ -123,15 +123,16 @@ Global Hint Rewrite
 
 Ltac fsimpl_old := autorewrite with staged_norm_old.
 
-(* Automation
+(** Automation
 
   The set of tactics shows the general strategy/decomposiiton of proof steps.
 
-  - fsimpl: simplify, but do not move quantifiers. Simplification generally involves: applying easy simplifying rewrites, moving assumptions as far back as possible (to facilitate lifting into metalogic), moving an ens to the beginning to serve as the "spatial context"/"symbolic execution state", moving shift-free things out of resets, moving defun forward to unfold functions and cancel it with discard
-  - fspecialize, fdestruct, fexists, fintros: these are unfortunately-named, but deal with quantifiers on both sides of entailments
-  - freduction, fbiabduction: for specific scenarios, where there is a shift inside a reset, or an ens followed by req
-  - fentailment: bridges to metalogic
-  - fleft, fright: for disjunction
+  - [fsimpl]: simplify. This is in charge of implicitly establishing a normal form for the left side of a sequent, which is [(defun f u;)* (ens_ H;)? f]. Simplification generally involves: applying easy simplifying rewrites, moving assumptions as far back as possible (to facilitate lifting into metalogic), moving an ens to the beginning to serve as the "spatial context"/"symbolic execution state", moving shift-free things out of resets, moving defun to the beginning. Will not move quantiifers, leaving open the possibility of handling them via heuristics based on position.
+  - [funfold2]: unfold anonymous functions or discard a defun
+  - [fspecialize], [fdestruct], [fexists], [fintros]: these are unfortunately-named, but deal with quantifiers on both sides of entailments
+  - [freduction], [fbiabduction]: for specific scenarios, where there is a shift inside a reset, or an ens followed by req
+  - [fentailment]: bridges to metalogic
+  - [fleft], [fright]: for disjunction
 
 *)
 
@@ -188,11 +189,89 @@ Ltac fspecialize x := fspecialize_rew;
     simple apply ent_seq_all_l
   ]; exists x.
 
+Lemma norm_bind_defun_out: forall (f:var) u fk f2,
+  entails (bind (defun f u;; f2) fk) (defun f u;; bind f2 fk).
+Proof.
+  intros. applys* norm_bind_seq_assoc.
+Qed.
+
+Lemma norm_seq_defun_ens_void_out: forall (f:var) u f2 H,
+  entails (ens_ H;; defun f u;; f2) (defun f u;; ens_ H;; f2).
+Proof.
+  unfold entails. intros.
+  inverts* H0.
+  inverts H8.
+  inverts* H9.
+  inverts* H8.
+  applys* s_seq.
+  applys* s_defun.
+  applys* s_seq.
+  applys* s_ens.
+Qed.
+
+(* Converse of [norm_seq_defun_rs] *)
+Lemma norm_rs_seq_defun_out: forall f f1 u,
+  entails (rs (defun f u;; f1)) (defun f u;; rs f1).
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  { inverts* H1.
+    inverts H8.
+    applys* s_seq.
+    applys* s_defun.
+    applys* s_rs_sh. }
+  { inverts* H6.
+    inverts H7.
+    applys* s_seq.
+    applys* s_defun.
+    applys* s_rs_val. }
+Qed.
+
+
+Create HintDb staged_defun_out.
+Global Hint Rewrite
+  norm_bind_defun_out
+  norm_rs_seq_defun_out
+  norm_seq_defun_ens_void_out
+using shiftfree : staged_defun_out.
+Ltac move_defun_out := autorewrite with staged_defun_out.
+
+
+
+Create HintDb staged_defun_in.
+Global Hint Rewrite
+  (* push defun towards a discard *)
+  norm_seq_defun_rs
+  norm_seq_defun_bind_l
+  norm_seq_defun_ens_void
+  norm_seq_defun_req
+  norm_seq_defun_skip_ens_void
+  (* don't move quantifiers *)
+  (* norm_seq_defun_all *)
+  (* norm_seq_defun_ex *)
+
+  (* move out of bind/rs *)
+  norm_bind_seq_defun_ens
+  norm_bind_rs_seq_defun_ens
+
+using shiftfree : staged_defun_in.
+Ltac funfold2 :=
+  autorewrite with staged_defun_in;
+  first [
+    (* unfold defun when possible *)
+    rewrite norm_seq_defun_unk; move_defun_out |
+    (* cancel defun and discard *)
+    first [
+      rewrite norm_seq_defun_discard |
+      rewrite norm_defun_discard_id
+    ]; jauto
+  ].
+
+
 Create HintDb staged_norm.
 Global Hint Rewrite
 
   (* associate things out of binds *)
-  (* norm_bind_seq_assoc *)
   norm_reassoc_ens_void
   norm_bind_req
   norm_bind_disj
@@ -212,45 +291,26 @@ Global Hint Rewrite
   norm_bind_val
   norm_seq_empty_l
 
-  (* DEFUN *)
-
-  (* push defun towards a discard *)
-  norm_seq_defun_rs
-  norm_seq_defun_bind_l
-  norm_seq_defun_ens_void
-  norm_seq_defun_req
-  norm_seq_defun_skip_ens_void
-  (* don't move quantifiers *)
-  (* norm_seq_defun_all *)
-  (* norm_seq_defun_ex *)
-
-  (* move out of bind/rs *)
-  norm_bind_seq_defun_ens
-  norm_bind_rs_seq_defun_ens
-
-  (* unfold defun when possible *)
-  norm_seq_defun_unk
-
-  (* cancel defun and discard *)
-  norm_seq_defun_discard
-  norm_defun_discard_id
-
-  using shiftfree : staged_norm.
+using shiftfree : staged_norm.
 Ltac fsimpl := autorewrite with staged_norm.
 
-(* Create HintDb staged_norm_defun.
-Global Hint Rewrite
-  using shiftfree : staged_norm_defun.
-Ltac fdefun := autorewrite with staged_norm_defun. *)
-
-(* this is split into two tactics because we want to
-  pull things out of resets in general, but move defuns
-  in, towards discards. so we pull everything out, then
-  move defuns in, so that's the state the user sees.
-  as defuns swap over things, this makes progress. *)
-(* Ltac fsimpl :=
-  fsimpl_rew. *)
-  (* repeat (fsimpl_rew; fdefun). *)
+Lemma ent_defun_req_req: forall (f:var) u f1 f2 H1 H2 env,
+  H2 ==> H1 ->
+  entails_under env (defun f u;; f1) f2 ->
+  entails_under env (defun f u;; req H1 f1) (req H2 f2).
+Proof.
+  unfold entails_under. intros.
+  applys s_req. intros.
+  inverts* H3.
+  inverts H14.
+  applys H0.
+  applys* s_seq.
+  applys* s_defun.
+  inverts H15.
+  apply H in H4.
+  symmetry in TEMP.
+  specializes H12 H4 TEMP.
+Qed.
 
 (* apply an entailment rule, which bridges to the metalogic *)
 Ltac fentailment := first [
@@ -258,6 +318,7 @@ Ltac fentailment := first [
   apply ent_seq_ens_void_pure_l |
   apply ent_ens_single |
   apply ent_req_req |
+  apply ent_defun_req_req |
   apply ent_req_l
 ].
 
@@ -316,7 +377,9 @@ Theorem flip_reduction1: forall v1,
 Proof.
   intros. unfold flip1.
   freduction.
-  fsimpl.
+  funfold2. fsimpl.
+  funfold2. fsimpl.
+  funfold2. fsimpl.
   reflexivity.
 Qed.
 
@@ -331,6 +394,7 @@ Proof.
   rewrite norm_seq_defun_unk.
   rewrite norm_seq_defun_rs.
   rewrite norm_bind_rs_seq_defun_ens.
+
   rewrite norm_rs_ens.
   rewrite norm_bind_val.
 
@@ -463,14 +527,18 @@ Proof.
   unfold flipi1, flipi_spec.
   funfold1 "toss". unfold toss1.
   freduction.
-  fsimpl. fintros x. fspecialize x.
-  fsimpl. fintros a. fspecialize a.
+  fintros x. fspecialize x.
+  fintros a. fspecialize a.
   fsimpl. fentailment. xsimpl.
+  funfold2. fsimpl.
   case_if.
   fsimpl. fspecialize (a+1).
   fsimpl. fbiabduction.
+  funfold2. fsimpl.
   case_if.
-  fsimpl. 2: { unfold toss_env1. solve_not_indom. }
+  fsimpl.
+  funfold2. 2: { unfold toss_env1. solve_not_indom. }
+  fsimpl.
   rewrite norm_ens_ens_void_l.
   fentailment.
   xsimpl.
