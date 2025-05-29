@@ -146,7 +146,12 @@ Create HintDb staged_exists_r.
 Global Hint Rewrite
   red_init
 using shiftfree : staged_exists_r.
-Ltac fexists := autorewrite with staged_exists_r.
+Ltac fexists_rew := autorewrite with staged_exists_r.
+Ltac fexists a := fexists_rew;
+  first [
+    simple apply ent_ex_r |
+    simple apply ent_seq_ex_r
+  ]; exists a.
 
 Create HintDb staged_exists_l.
 Global Hint Rewrite
@@ -161,11 +166,9 @@ Global Hint Rewrite
   norm_seq_defun_ex
 using shiftfree : staged_exists_l.
 Ltac fdestruct_rew := autorewrite with staged_exists_l.
-Ltac fdestruct := fintros_rew;
+Ltac fdestruct := fdestruct_rew;
   first [
-    simple apply ent_ex_l |
-    simple apply ent_ex_r |
-    simple apply ent_seq_ex_r
+    simple apply ent_ex_l
   ]; intros.
 
 Create HintDb staged_forall_l.
@@ -1008,10 +1011,9 @@ Proof.
     rewrite norm_ens_pure_conj1.
     fsimpl. fentailment. simpl. intros.
     case_if.
-    fintro x.
-    fintro a.
-    apply ent_req_r.
-    finst a.
+    fintros x. fintros a.
+    fassume.
+    fexists a.
     rewrite norm_ens_ens_void_l.
     fentailment. xsimpl. intros. splits*. math.
   }
@@ -1022,26 +1024,20 @@ Proof.
     freduction.
     fsimpl.
 
-
-
-    fintro x. finst x.
-    fsimpl.
-    fintro a. finst a.
+    fintros x. fspecialize x.
+    fintros a. fspecialize a.
 
     fsimpl.
-
     rewrite norm_req_req.
     fentailment. xsimpl.
+    fassume. fentailment. intros.
+    fexists (a+1).
 
-    (* Search (entails_under _ _ (req \[_] _)). *)
-
-    fassume.
-    fentailment. intros.
-    finst (a+1).
-
-    fsimpl_rew.
+    (* fsimpl. *)
 
     unfolds in lemma.
+    (* TODO now rewriting is blocked because of defun being left inside *)
+
     rewrite lemma.
     fold lemma_weaker2 in lemma.
 
