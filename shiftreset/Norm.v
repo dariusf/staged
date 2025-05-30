@@ -856,6 +856,20 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma norm_seq_defun_discard1: forall (f:var) u f1,
+  (* ~ Fmap.indom s f -> *)
+  entails (defunf f u;; discard f;; f1) f1.
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  inverts H7.
+  inverts* H8.
+  inverts H7.
+  rewrite* remove_update in H9.
+  (* TODO *)
+  false_invert H6.
+Qed.
+
 Lemma norm_seq_defun_ens_void: forall (f:var) u H,
   entails (defun f u;; ens_ H) (ens_ H;; defun f u).
 Proof.

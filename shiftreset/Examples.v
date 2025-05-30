@@ -3,6 +3,50 @@
 From ShiftReset Require Import Logic Automation.
 Local Open Scope string_scope.
 
+(* entailment sequent using entails and defun *)
+Lemma entl_all_r : forall f A (fctx:A -> flow),
+  (forall b, entails f (fctx b)) ->
+  entails f (∀ b, fctx b).
+Proof.
+  unfold entails. intros.
+  constructor. intros b.
+  auto.
+Qed.
+
+Lemma entl_all_l : forall f A (fctx:A -> flow),
+  (exists b, entails (fctx b) f) ->
+  entails (∀ b, fctx b) f.
+Proof.
+  unfold entails. intros.
+  destr H.
+  apply H1.
+  inverts H0 as H0. specializes H0 b.
+  assumption.
+Qed.
+
+Lemma entl_defun2_req_req: forall (f f3:var) u u1 f1 f2 H1 H2,
+  H2 ==> H1 ->
+  entails (defun f u;; defun f3 u1;; f1) f2 ->
+  entails (defun f u;; defun f3 u1;; req H1 f1) (req H2 f2).
+Proof.
+  unfold entails. intros.
+  applys s_req. intros.
+  inverts* H3.
+  inverts H14.
+  inverts* H15.
+  inverts H12.
+  applys H0.
+  applys* s_seq.
+  applys* s_defun.
+  applys* s_seq.
+  applys* s_defun.
+  inverts H13.
+  apply H in H4.
+  symmetry in TEMP0.
+  specializes H12 H4 TEMP0.
+Qed.
+
+(* some technical lemmas for rearranging ens *)
 Lemma norm_rearrange_ens : forall H P (P1:val->Prop),
   entails (ens (fun r => H \* \[P /\ P1 r]))
   (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r])).
@@ -111,7 +155,12 @@ Global Hint Rewrite
   red_init
 using shiftfree : staged_forall_r.
 Ltac fintros_rew := autorewrite with staged_forall_r.
-Ltac fintros x := fintros_rew; simple apply ent_all_r; intros x.
+Ltac fintros x :=
+  fintros_rew;
+  first [
+    simple apply ent_all_r |
+    simple apply entl_all_r
+  ]; intros x.
 
 Create HintDb staged_exists_r.
 Global Hint Rewrite
@@ -155,6 +204,7 @@ using shiftfree : staged_forall_l.
 Ltac fspecialize_rew := autorewrite with staged_forall_l.
 Ltac fspecialize x := fspecialize_rew;
   first [
+    simple apply entl_all_l |
     simple apply ent_all_l |
     simple apply ent_seq_all_l
   ]; exists x.
@@ -209,6 +259,30 @@ Global Hint Rewrite
 using shiftfree : staged_defun_in.
 Ltac funfold2 :=
   autorewrite with staged_defun_in;
+  first [
+    (* unfold defun when possible *)
+    rewrite norm_seq_defun_unk; move_defun_out |
+    (* cancel defun and discard *)
+    first [
+      rewrite norm_seq_defun_discard |
+      rewrite norm_defun_discard_id
+    ]; jauto
+  ].
+
+Ltac move_one_defun_in f :=
+  repeat first [
+    rewrite (@norm_seq_defun_rs f) |
+    rewrite (@norm_seq_defun_bind_l f) |
+    rewrite (@norm_seq_defun_ens_void f) |
+    rewrite (@norm_seq_defun_req f) |
+    rewrite (@norm_seq_defun_skip_ens_void f) |
+    rewrite (@norm_bind_seq_defun_ens f) |
+    rewrite (@norm_bind_rs_seq_defun_ens f)
+  ].
+
+
+Ltac funfold3 f :=
+  move_one_defun_in f;
   first [
     (* unfold defun when possible *)
     rewrite norm_seq_defun_unk; move_defun_out |
@@ -283,6 +357,7 @@ Ltac fentailment :=
 
     apply ent_req_req |
     apply ent_defun_req_req |
+    apply entl_defun2_req_req |
 
     apply ent_req_l |
     apply ent_defun_req_l |
@@ -508,6 +583,40 @@ Proof.
   case_if.
   fsimpl.
   funfold2. 2: { unfold toss_env1. solve_not_indom. }
+  fsimpl.
+  rewrite norm_ens_ens_void_l.
+  fentailment.
+  xsimpl.
+  - intros. f_equal. math.
+  - intros. simpl in H. rewrite H. f_equal.
+Qed.
+
+Theorem flipi_summary2 :
+  entails (defun "toss" toss1;; flipi1) flipi_spec.
+Proof.
+  unfold flipi1, flipi_spec.
+  unfold toss1.
+  funfold2.
+  freduction.
+  (* Search (entails _ (∀ _, _)). *)
+  (* applys fintros. *)
+  (* applys ent_all_r1. intros. *)
+  fintros x. fspecialize x.
+  fintros a. fspecialize a.
+  fsimpl. fentailment. xsimpl.
+  funfold2. fsimpl.
+  case_if.
+  fsimpl. fspecialize (a+1).
+  fsimpl. fbiabduction.
+  funfold2. fsimpl.
+  case_if.
+  fsimpl.
+  move_one_defun_in "k".
+  (* Close Scope flow_scope. *)
+  (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+
+rewrite norm_seq_defun_discard.
+  funfold3 "k". 2: { unfold toss_env1. solve_not_indom. }
   fsimpl.
   rewrite norm_ens_ens_void_l.
   fentailment.
