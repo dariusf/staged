@@ -773,20 +773,6 @@ Proof.
   applys s_fex. destruct H5 as (b&?). exists b. apply* s_bind.
 Qed.
 
-Lemma norm_rearrange_ens : forall H P (P1:val->Prop),
-  entails (ens (fun r => H \* \[P /\ P1 r]))
-  (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r])).
-Proof.
-  unfold entails. intros.
-  inverts H0.
-  heaps.
-  applys s_seq.
-  { applys s_ens. heaps. }
-  applys s_seq.
-  { applys s_ens. heaps. }
-  { applys s_ens. heaps. }
-Qed.
-
 (* This is like folding, but we can use unification to avoid specifying
   the pattern to fold against *)
 Lemma norm_bind_seq_def: forall f1 f2,
@@ -1105,4 +1091,65 @@ Proof.
   { applys ge_shift. intros.
     inverts* H.
     exists fb fk0. splits*. reflexivity. }
+Qed.
+
+Lemma norm_seq_defun_skip_ens_void: forall (f:var) u H f1,
+  entails (defun f u;; ens_ H;; f1) (ens_ H;; defun f u;; f1).
+Proof.
+  unfold entails. intros.
+  inverts* H0.
+  inverts H8.
+  inverts* H9.
+  inverts H7.
+  heaps.
+  applys* s_seq. applys* s_ens. heaps.
+  applys* s_seq. applys* s_defun.
+Qed.
+
+Lemma norm_seq_defun_all: forall (f:var) u (A:Type) (P:A->flow),
+  entails (defun f u;; ∀ x, P x) (∀ x, defun f u;; P x).
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  inverts H7.
+  inverts H8 as H8.
+  applys s_fall. intros b.
+  specializes H8 b.
+  applys* s_seq. applys* s_defun.
+Qed.
+
+Lemma norm_rs_ens: forall Q,
+  bientails (rs (ens Q)) (ens Q).
+Proof.
+  applys red_rs_ens.
+Qed.
+
+Lemma norm_seq_defun_ex: forall (f:var) u (A:Type) (P:A->flow),
+  entails (defun f u;; ∃ x, P x) (∃ x, defun f u;; P x).
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  inverts H7.
+  inverts H8 as H8.
+  applys s_fex. destruct H8 as (b&H8).
+  exists b.
+  applys* s_seq. applys* s_defun.
+Qed.
+
+(* Converse of [norm_seq_defun_rs] *)
+Lemma norm_rs_seq_defun_out: forall (f:var) f1 u,
+  entails (rs (defun f u;; f1)) (defun f u;; rs f1).
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  { inverts* H1.
+    inverts H8.
+    applys* s_seq.
+    applys* s_defun.
+    applys* s_rs_sh. }
+  { inverts* H6.
+    inverts H7.
+    applys* s_seq.
+    applys* s_defun.
+    applys* s_rs_val. }
 Qed.

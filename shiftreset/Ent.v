@@ -23,6 +23,20 @@ Proof.
   inverts H0. heaps.
 Qed.
 
+Lemma ent_seq_defun_ens_pure_l : forall (f:var) u s1 f2 f1 (P:val->Prop),
+  (forall r, P r -> entails_under s1 (defun f u;; f1) f2) ->
+  entails_under s1 (defun f u;; ens (fun r => \[P r]);; f1) f2.
+Proof.
+  unfold entails_under. intros.
+  inverts* H0.
+  inverts H8.
+  inverts* H9.
+  inverts H7. heaps.
+  applys* H.
+  applys* s_seq.
+  applys* s_defun.
+Qed.
+
 Lemma ent_seq_ens_void_pure_l : forall s1 f f1 P,
   (P -> entails_under s1 f1 f) ->
   entails_under s1 (ens_ \[P];; f1) f.
@@ -30,6 +44,20 @@ Proof.
   unfold entails_under. intros.
   inverts H0 as H0; no_shift.
   inverts H0. heaps.
+Qed.
+
+Lemma ent_seq_defun_ens_void_pure_l : forall s1 (f:var) u f2 f1 P,
+  (P -> entails_under s1 (defun f u;; f1) f2) ->
+  entails_under s1 (defun f u;; ens_ \[P];; f1) f2.
+Proof.
+  unfold entails_under. intros.
+  inverts* H0.
+  inverts H8.
+  inverts* H9.
+  inverts H7. heaps.
+  applys* H.
+  applys* s_seq.
+  applys* s_defun.
 Qed.
 
 Lemma ent_req_req : forall f1 f2 H1 H2 env,
@@ -162,6 +190,24 @@ Proof.
   fmap_disjoint.
 Qed.
 
+Lemma ent_defun_req_l : forall (f:var) u f1 f2 P env,
+  P ->
+  entails_under env (defun f u;; f1) f2 ->
+  entails_under env (defun f u;; req \[P] f1) f2.
+Proof.
+  unfold entails_under. intros.
+  inverts* H1.
+  inverts H9.
+  inverts H10.
+  specializes H8.
+  hintro. assumption.
+  fmap_eq. reflexivity.
+  fmap_disjoint.
+  applys H0.
+  applys* s_seq.
+  applys* s_defun.
+Qed.
+
 Lemma ent_req_r : forall f f1 H env,
   entails_under env (ens_ H;; f) f1 ->
   entails_under env f (req H f1).
@@ -284,4 +330,22 @@ Lemma ent_disj_l : forall f1 f2 f3 env,
 Proof.
   unfold entails_under. intros.
   inverts H1 as H1; auto.
+Qed.
+
+Lemma ent_defun_req_req: forall (f:var) u f1 f2 H1 H2 env,
+  H2 ==> H1 ->
+  entails_under env (defun f u;; f1) f2 ->
+  entails_under env (defun f u;; req H1 f1) (req H2 f2).
+Proof.
+  unfold entails_under. intros.
+  applys s_req. intros.
+  inverts* H3.
+  inverts H14.
+  applys H0.
+  applys* s_seq.
+  applys* s_defun.
+  inverts H15.
+  apply H in H4.
+  symmetry in TEMP.
+  specializes H12 H4 TEMP.
 Qed.

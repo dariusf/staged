@@ -82,7 +82,7 @@ Ltac finst a :=
 (** Move assumptions to the Coq context.
   This is the rough eqiuvalent of xpull from SLF.
   While we're comparing, xchange is replaced with rewriting and the use of lemmas around the covariance of [ens_]. *)
-Ltac fassume_ H :=
+(* Ltac fassume_ H :=
   lazymatch goal with
   | |- entails_under _ (ens_ \[_]) _ =>
     apply ent_ens_void_l; intros H
@@ -101,4 +101,4 @@ Ltac fassume_req :=
   end.
 
 Tactic Notation "fassume" simple_intropattern(p) := fassume_ p.
-Tactic Notation "fassume" := fassume_req.
+Tactic Notation "fassume" := fassume_req. *)

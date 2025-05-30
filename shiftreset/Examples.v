@@ -3,47 +3,18 @@
 From ShiftReset Require Import Logic Automation.
 Local Open Scope string_scope.
 
-Lemma norm_seq_defun_skip_ens_void: forall (f:var) u H f1,
-  entails (defun f u;; ens_ H;; f1) (ens_ H;; defun f u;; f1).
+Lemma norm_rearrange_ens : forall H P (P1:val->Prop),
+  entails (ens (fun r => H \* \[P /\ P1 r]))
+  (ens_ \[P];; ens_ H;; ens (fun r => \[P1 r])).
 Proof.
   unfold entails. intros.
-  inverts* H0.
-  inverts H8.
-  inverts* H9.
-  inverts H7.
+  inverts H0.
   heaps.
-  applys* s_seq. applys* s_ens. heaps.
-  applys* s_seq. applys* s_defun.
-Qed.
-
-Lemma norm_seq_defun_all: forall (f:var) u (A:Type) (P:A->flow),
-  entails (defun f u;; ∀ x, P x) (∀ x, defun f u;; P x).
-Proof.
-  unfold entails. intros.
-  inverts* H.
-  inverts H7.
-  inverts H8 as H8.
-  applys s_fall. intros b.
-  specializes H8 b.
-  applys* s_seq. applys* s_defun.
-Qed.
-
-Lemma norm_rs_ens: forall Q,
-  bientails (rs (ens Q)) (ens Q).
-Proof.
-  applys red_rs_ens.
-Qed.
-
-Lemma norm_seq_defun_ex: forall (f:var) u (A:Type) (P:A->flow),
-  entails (defun f u;; ∃ x, P x) (∃ x, defun f u;; P x).
-Proof.
-  unfold entails. intros.
-  inverts* H.
-  inverts H7.
-  inverts H8 as H8.
-  applys s_fex. destruct H8 as (b&H8).
-  exists b.
-  applys* s_seq. applys* s_defun.
+  applys s_seq.
+  { applys s_ens. heaps. }
+  applys s_seq.
+  { applys s_ens. heaps. }
+  { applys s_ens. heaps. }
 Qed.
 
 Lemma norm_ens_pure_conj1: forall P P1,
@@ -119,8 +90,7 @@ Global Hint Rewrite
   (* trivial rewrites *)
   norm_seq_empty_l
 
-  using shiftfree : staged_norm_old.
-
+using shiftfree : staged_norm_old.
 Ltac fsimpl_old := autorewrite with staged_norm_old.
 
 (** Automation
@@ -167,10 +137,10 @@ Global Hint Rewrite
   norm_seq_defun_ex
 using shiftfree : staged_exists_l.
 Ltac fdestruct_rew := autorewrite with staged_exists_l.
-Ltac fdestruct := fdestruct_rew;
+Ltac fdestruct a := fdestruct_rew;
   first [
     simple apply ent_ex_l
-  ]; intros.
+  ]; intros a.
 
 Create HintDb staged_forall_l.
 Global Hint Rewrite
@@ -207,24 +177,6 @@ Proof.
   applys* s_defun.
   applys* s_seq.
   applys* s_ens.
-Qed.
-
-(* Converse of [norm_seq_defun_rs] *)
-Lemma norm_rs_seq_defun_out: forall f f1 u,
-  entails (rs (defun f u;; f1)) (defun f u;; rs f1).
-Proof.
-  unfold entails. intros.
-  inverts* H.
-  { inverts* H1.
-    inverts H8.
-    applys* s_seq.
-    applys* s_defun.
-    applys* s_rs_sh. }
-  { inverts* H6.
-    inverts H7.
-    applys* s_seq.
-    applys* s_defun.
-    applys* s_rs_val. }
 Qed.
 
 
@@ -268,6 +220,26 @@ Ltac funfold2 :=
   ].
 
 
+(* obligations involving shifting around separation logic and req/ens.
+  the general strategy is to join ens, then split them into:
+
+  - pure (to be lifted to metalogic)
+  - stateful
+  - results
+*)
+Create HintDb staged_sl_ens.
+Global Hint Rewrite
+  norm_ens_pure_conj1
+  norm_ens_pure_conj
+  norm_rearrange_ens
+  (* norm_ens_ens_void_l *)
+  norm_ens_void_hstar_pure_l
+  norm_ens_void_hstar_pure_r
+using shiftfree : staged_sl_ens.
+
+
+(* simplification/normalization, optimized for interactive use.
+  for example, this splits ens so we can move the pure parts out. *)
 Create HintDb staged_norm.
 Global Hint Rewrite
 
@@ -275,11 +247,6 @@ Global Hint Rewrite
   norm_reassoc_ens_void
   norm_bind_req
   norm_bind_disj
-
-  (* normalise pure assumptions *)
-  norm_ens_pure_conj
-  norm_ens_void_hstar_pure_l
-  norm_ens_void_hstar_pure_r
 
   (* associate things out of resets *)
   norm_rs_req
@@ -292,35 +259,38 @@ Global Hint Rewrite
   norm_seq_empty_l
 
 using shiftfree : staged_norm.
-Ltac fsimpl := autorewrite with staged_norm.
+Ltac fsimpl := autorewrite with staged_norm staged_sl_ens.
 
-Lemma ent_defun_req_req: forall (f:var) u f1 f2 H1 H2 env,
-  H2 ==> H1 ->
-  entails_under env (defun f u;; f1) f2 ->
-  entails_under env (defun f u;; req H1 f1) (req H2 f2).
-Proof.
-  unfold entails_under. intros.
-  applys s_req. intros.
-  inverts* H3.
-  inverts H14.
-  applys H0.
-  applys* s_seq.
-  applys* s_defun.
-  inverts H15.
-  apply H in H4.
-  symmetry in TEMP.
-  specializes H12 H4 TEMP.
-Qed.
+
+
+(* simplifications performed prior to using entailment rules.
+  this optimises for closing out goals, so will e.g. join ens. *)
+(* Create HintDb staged_ens_join.
+Global Hint Rewrite
+  norm_ens_ens_void_l
+using shiftfree : staged_ens_join. *)
 
 (* apply an entailment rule, which bridges to the metalogic *)
-Ltac fentailment := first [
-  apply ent_seq_ens_pure_l |
-  apply ent_seq_ens_void_pure_l |
-  apply ent_ens_single |
-  apply ent_req_req |
-  apply ent_defun_req_req |
-  apply ent_req_l
-].
+Ltac fentailment :=
+  first [
+    apply ent_seq_ens_pure_l |
+    apply ent_seq_defun_ens_pure_l |
+
+    apply ent_seq_ens_void_pure_l |
+    apply ent_seq_defun_ens_void_pure_l |
+
+    apply ent_ens_single |
+
+    apply ent_req_req |
+    apply ent_defun_req_req |
+
+    apply ent_req_l |
+    apply ent_defun_req_l |
+
+    (* this is ordered last *)
+    apply ent_req_r
+  ].
+
 
 Ltac fleft := first [ apply ent_seq_disj_r_l | apply ent_disj_r_l ].
 Ltac fright := first [ apply ent_seq_disj_r_r | apply ent_disj_r_l ].
@@ -1058,29 +1028,51 @@ Qed.
 
 (* proof attempt with tactics *)
 
-Definition toss_n_env1 :=
-  Fmap.single "toss_n" toss_n.
+Definition toss_n1 : ufun := fun (n:val) =>
+  (* req \[vgt n (vint 0)] *)
+    (disj
+      (ens (fun r => \[r = true /\ veq n 0]))
+      (ens_ \[vgt n 0];;
+        bind (toss1 vunit) (fun r1 =>
+        bind (unk "toss_n" (vsub n 1)) (fun r2 =>
+        ens (fun r => \[r = vand r1 r2]))))).
 
-(* norm_ens_pure_conj  *)
-(* Lemma *)
-(* Close Scope flow_scope. *)
-(* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-(* Check norm_ens_pure_conj. *)
+Definition toss_n_env1 :=
+  Fmap.single "toss_n" toss_n1.
+
+(* Definition main1 n : flow :=
+  rs (
+    bind (unk "toss_n" (vint n)) (fun v =>
+    (* intersect empty (discard "k");; *)
+    ens (fun r => \[If v = true then r = 1 else r = 0]))). *)
+
+Lemma norm_intersect_l: forall f1 f2,
+  entails (intersect f1 f2) f1.
+Proof.
+  unfold entails. intros.
+  inverts* H.
+Qed.
+
+Lemma norm_intersect_r: forall f1 f2,
+  entails (intersect f1 f2) f2.
+Proof.
+  unfold entails. intros.
+  inverts* H.
+Qed.
 
 Theorem main_summary1 : forall n,
   lemma_weaker2 ->
   entails_under toss_n_env1 (main n) (main_spec_weaker n).
 Proof.
   intros n lemma. unfold main, main_spec_weaker.
-  funfold1 "toss_n". unfold toss_n.
+  funfold1 "toss_n". unfold toss_n1.
   fsimpl.
   applys ent_disj_l.
   {
-    rewrite norm_ens_pure_conj1.
     fsimpl. fentailment. simpl. intros.
     case_if.
     fintros x. fintros a.
-    fassume.
+    fentailment.
     fexists a.
     rewrite norm_ens_ens_void_l.
     fentailment. xsimpl. intros. splits*. math.
@@ -1088,61 +1080,61 @@ Proof.
   {
     fsimpl.
     fentailment. simpl. intros.
-    unfold toss.
+    unfold toss1.
     freduction.
-    fsimpl.
-
     fintros x. fspecialize x.
     fintros a. fspecialize a.
+    fsimpl. rewrite norm_req_req. fentailment. xsimpl.
+    fassume.
+    fentailment. intros.
 
+    funfold2.
+    fsimpl.
+
+    unfolds in lemma. rewrite lemma. fold lemma_weaker2 in lemma.
+
+    fspecialize x.
+    fspecialize (a+1).
     fsimpl.
     rewrite norm_req_req.
-    fentailment. xsimpl.
-    fassume. fentailment. intros.
-    fexists (a+1).
-
-    (* fsimpl. *)
-
-    unfolds in lemma.
-    (* TODO now rewriting is blocked because of defun being left inside *)
-
-    rewrite lemma.
-    fold lemma_weaker2 in lemma.
-
-    fsimpl. finst x.
-    fsimpl. finst (a+1).
-    fsimpl.
-    rewrite norm_req_req.
-
     fbiabduction.
     fentailment. math.
-    fintro b.
+    fdestruct b.
     fsimpl.
-    rewrite norm_rearrange_ens.
-    fsimpl.
+
     fentailment. intros.
     case_if. 2: { false C. constructor. }
     fsimpl.
-    finst b.
-    fsimpl.
 
-    fsimpl_rew.
+    fspecialize b.
+    fsimpl.
+    fbiabduction.
+    funfold2.
+    fsimpl.
 
     unfolds in lemma.
     rewrite lemma.
-    fold lemma_weaker2 in lemma.
+    clear lemma.
 
-
+    fspecialize x.
+    fspecialize (b+1).
+    rewrite norm_req_req.
     fsimpl.
+    fbiabduction.
+    fentailment. math.
 
-    (* fintro x0. *)
-
-    admit.
+    fdestruct b1.
+    fexists b1.
+    fsimpl.
+    fentailment. intros.
+    case_if.
+    fsimpl.
+    funfold2. 2: { unfold toss_n_env1. solve_not_indom. }
+    fsimpl.
+    rewrite norm_ens_ens_void_l.
+    fentailment. xsimpl. simpl. intros. splits*. math.
   }
-
-
-(* Qed. *)
-Abort.
+Qed.
 
 (* undone proof for stronger lemma *)
 
