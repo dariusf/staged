@@ -760,6 +760,12 @@ Proof.
     fsimpl_old.
     simpl.
     rewrite norm_bind_trivial.
+    (* rewrite (ens_. *)
+
+    (* assert (entails (ens_ (x~~>(a+1))) (defun "a" (fun v => empty);; ens_ (x~~>(a+1)))) as ?. admit.
+    rewrite H1.
+    rewrite <- norm_seq_assoc. *)
+
     rewrite IH.
     clear IH.
 
@@ -870,6 +876,276 @@ Proof.
       reflexivity.
   }
 Qed.
+
+
+Definition toss_n1 : ufun := fun (n:val) =>
+  (* req \[vgt n (vint 0)] *)
+    (disj
+      (ens (fun r => \[r = true /\ veq n 0]))
+      (ens_ \[vgt n 0];;
+        bind (toss1 vunit) (fun r1 =>
+        bind (unk "toss_n" (vsub n 1)) (fun r2 =>
+        ens (fun r => \[r = vand r1 r2]))))).
+
+Definition toss_n_env1 :=
+  Fmap.single "toss_n" toss_n1.
+
+
+Lemma lemma_weaker2_attempt1 : forall (n:int) (acc:bool),
+  entails_under toss_n_env1
+
+    (rs (bind
+      (bind (unk "toss_n" n) (fun r2 =>
+        ens (fun r => \[r = vand acc r2])))
+      (fun v => ens (fun r => \[If v = true then r = 1 else r = 0]))))
+
+    (∀ x a, req (x~~>vint a \* \[n >= 0])
+      (∃ b, ens (fun r => x~~>vint b \*
+        \[b >= a+n /\ (If acc = true then r = 1 else r = 0)]))).
+Proof.
+  intros n. induction_wf IH: (downto 0) n. intros.
+
+  funfold1 "toss_n". unfold toss_n1.
+  fsimpl.
+  applys ent_disj_l.
+  {
+    fsimpl. fentailment. simpl. intros ->.
+    (* fsimpl. *)
+    fintro x. fintro a.
+
+    (* base case. no shifts here *)
+
+    (* assert (forall (P:val->Prop) P1,
+      entails (ens (fun r => \[P r /\ P1]))
+        (ens_ \[P1];; ens (fun r => \[P r]))).
+    { introv H. inverts H. applys s_seq; applys s_ens; heaps. }
+
+    rewrite H.
+    clear H.
+
+    fsimpl_old.
+    fsimpl_old.
+    fentailment. unfold veq, virel. intros.
+
+    applys ent_req_r.
+    fsimpl_old.
+    rewrite <- norm_seq_assoc; shiftfree.
+    fentailment. intros.
+    finst a.
+    rewrite norm_ens_ens_void_l.
+    fentailment. xsimpl. intros. split. rewrite H. math. *)
+
+    destruct acc.
+    - case_if.
+      case_if. 2: { false C0. constructor. }
+      fentailment.
+      rewrite norm_ens_ens_void_l.
+      fexists a.
+      fentailment. xsimpl. intros. splits*. math.
+    - case_if.
+      case_if. { false C0. constructor. }
+      fentailment.
+      rewrite norm_ens_ens_void_l.
+      fexists a.
+      fentailment. xsimpl. intros. splits*. math.
+
+      (* { specializes C. constructor. false. }
+      { case_if. assumption. } *)
+  }
+  {
+    (* recursive case *)
+    fsimpl.
+    fentailment. unfold vgt. simpl. intro.
+    unfold toss1.
+    freduction.
+    (* rewrite red_init.
+    rewrite red_extend.
+    rewrite red_extend.
+    rewrite red_extend.
+    rewrite red_rs_sh_elim. *)
+
+    (* applys ent_seq_defun_idem. *)
+    (* applys ent_seq_defun_idem_weaker.
+    {
+      unfold toss_n_env. unfold update.
+      applys Fmap.indom_union_l.
+      applys Fmap.indom_single.
+    }
+    { reflexivity. }
+    {
+      intros.
+      unfold toss_n_env. unfold update.
+      rewrite Fmap.read_union_l.
+      2: { applys Fmap.indom_single. }
+      rewrite Fmap.read_single.
+      unfold entails.
+      intros.
+      inverts H0. specializes H7 n.
+      inverts H7. specializes H6 acc.
+      assumption.
+    } *)
+
+    fintro x. fintro a.
+    fspecialize x. fspecialize a.
+
+    fsimpl.
+    (* fspecialize n.
+    fsimpl. fspecialize acc. *)
+
+    (* funfold2. *)
+
+    rewrite norm_req_req.
+    fentailment. xsimpl.
+    fentailment. fentailment. intros.
+    (* applys ent_req_r. fentailment. intros. *)
+    (* simpl. *)
+
+    funfold2.
+    fsimpl.
+    simpl.
+
+    (* simpl in IH. *)
+    (* simpl. *)
+    pose proof IH as IH1.
+    specializes IH (n-1).
+    forward IH. unfold virel in H. unfold downto. math.
+    specializes IH acc.
+
+
+simpl in IH.
+(* TODO can rewrite the whole ctx *)
+    rewrite norm_bind_trivial.
+(* assert (ShiftFree (unk "toss_n" (n -1))) as ?. admit. *)
+(* match goal with
+| |- entails_under _ (defun ?f ?u;; _) _ =>
+assert (ShiftFree (defun f u))
+end.
+admit. *)
+    (* Set Typeclasses Debug. *)
+
+    assert (forall f env,
+    Proper ((respectful (entails_under env) (entails_under env))) (@seq f)
+    ) as ?.
+    unfold Proper, respectful, entails_under, entails.
+    intros.
+    (* inverts H2. *)
+    (* 2: { destruct Hsf as (Hsf). false Hsf H7. } *)
+    (* applys* s_bind. *)
+    (* applys_eq H1. *)
+    intros.
+    admit.
+
+
+    rewrite IH.
+    clear IH.
+
+    fsimpl. finst x.
+    fsimpl. finst (a+1).
+    fsimpl.
+
+    rewrite norm_req_req.
+
+    rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
+    rewrite norm_req_pure_l. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty.
+
+    applys ent_req_l. math.
+    fintro a1.
+    rewrite norm_ens_hstar_pure_r.
+    fsimpl.
+
+    rewrite norm_ens_void_pure_swap.
+    fentailment. intros.
+    fsimpl_old.
+
+    rewrite norm_bind_all_r.
+    fsimpl_old. finst a1.
+
+    lets: norm_bind_req (x~~>a1).
+    setoid_rewrite H2.
+    clear H2.
+
+    rewrite norm_bind_ens_req. 2: { shiftfree. }
+    fsimpl_old.
+
+    rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
+    rewrite norm_req_pure_l. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty.
+
+    setoid_rewrite norm_bind_seq_assoc. 2: { shiftfree. }
+
+    rewrite norm_bind_seq_past_pure_sf. 2: { shiftfree. }
+    fsimpl_old.
+
+    (* we are missing a proper instance for unfolding on the right side of a bind *)
+    lazymatch goal with
+    | |- entails_under ?env _ _ =>
+      pose proof (@entails_under_unk env "k" (vbool false))
+    end.
+    specializes H2. unfold toss_n_env. resolve_fn_in_env. simpl in H2.
+    Fail rewrite H2.
+    Fail setoid_rewrite H2.
+    clear H2.
+
+    (* workaround: eliminate the bind before we unfold *)
+    applys ent_seq_ens_rs_bind_ens_pure_l. intros.
+
+    funfold1 "k".
+    fsimpl_old. finst n.
+    fsimpl_old. finst false.
+
+    rewrite norm_bind_val.
+
+    specializes IH1 (n-1).
+    forward IH1. unfold virel in H. unfold downto. math.
+    specializes IH1 false.
+    simpl in IH1.
+
+    (* try to get the goal to match the IH *)
+    simpl.
+    rewrite norm_bind_seq_def.
+    rewrite norm_bind_seq_def.
+    rewrite <- norm_seq_assoc.
+
+    lets H3: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
+    rewrite H3.
+    clear H3.
+
+    rewrite IH1. clear IH1.
+
+    fsimpl_old. finst x.
+    fsimpl_old. finst (a1 + 1).
+    fsimpl_old.
+    rewrite norm_req_req.
+
+    rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
+    rewrite norm_req_pure_l. 2: { reflexivity. }
+    rewrite norm_seq_ens_empty.
+
+    fentailment. math.
+    fintro a2.
+
+    rewrite norm_rearrange_ens.
+    fsimpl_old.
+    fentailment. intros.
+    finst a2.
+
+    case_if. { false C. constructor. }
+    fsimpl_old.
+    rewrite norm_ens_ens_void_l.
+    fentailment.
+    xsimpl.
+    intros.
+    split.
+    math.
+    case_if; subst; simpl.
+
+    - f_equal.
+
+    - rewrite Z.add_0_r.
+      reflexivity.
+  }
+Abort.
 
 (*
   This statement differs from the proved lemma above in two ways:
@@ -1028,18 +1304,6 @@ Qed.
 
 (* proof attempt with tactics *)
 
-Definition toss_n1 : ufun := fun (n:val) =>
-  (* req \[vgt n (vint 0)] *)
-    (disj
-      (ens (fun r => \[r = true /\ veq n 0]))
-      (ens_ \[vgt n 0];;
-        bind (toss1 vunit) (fun r1 =>
-        bind (unk "toss_n" (vsub n 1)) (fun r2 =>
-        ens (fun r => \[r = vand r1 r2]))))).
-
-Definition toss_n_env1 :=
-  Fmap.single "toss_n" toss_n1.
-
 (* Definition main1 n : flow :=
   rs (
     bind (unk "toss_n" (vint n)) (fun v =>
@@ -1135,6 +1399,7 @@ Proof.
     fentailment. xsimpl. simpl. intros. splits*. math.
   }
 Qed.
+
 
 (* undone proof for stronger lemma *)
 

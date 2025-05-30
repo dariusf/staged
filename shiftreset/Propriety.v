@@ -332,6 +332,20 @@ Section Propriety.
     applys* s_seq.
   Qed.
 
+  (* see [Proper_bind_entails_under_sf] *)
+  #[global]
+  Instance Proper_seq_entails_under_sf f1 : forall env,
+    ShiftFree f1 ->
+    Proper (entails_under env ====> (entails_under env))
+      (@seq f1).
+  Proof.
+    unfold Proper, respectful, entails_under.
+    intros * Hsf **.
+    inverts* H0.
+    applys* s_seq.
+    (* cannot use H *)
+  Abort.
+
   #[global]
   Instance Proper_seq_entails_under_l : forall env,
     Proper (entails_under env ====> eq ====> entails_under env) seq.
