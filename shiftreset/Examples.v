@@ -269,6 +269,7 @@ Ltac funfold2 :=
     ]; jauto
   ].
 
+(** keep in sync with [staged_defun_in] *)
 Ltac move_one_defun_in f :=
   repeat first [
     rewrite (@norm_seq_defun_rs f) |
@@ -288,8 +289,8 @@ Ltac funfold3 f :=
     rewrite norm_seq_defun_unk; move_defun_out |
     (* cancel defun and discard *)
     first [
-      rewrite norm_seq_defun_discard |
-      rewrite norm_defun_discard_id
+      rewrite norm_seq_defun_discard1 |
+      rewrite norm_defun_discard_id1
     ]; jauto
   ].
 
@@ -592,11 +593,14 @@ Proof.
 Qed.
 
 Theorem flipi_summary2 :
-  entails (defun "toss" toss1;; flipi1) flipi_spec.
+(* defun "toss" toss1;;  *)
+  (forall a, entails (unk "toss" a) (toss1 a)) ->
+  entails flipi1 flipi_spec.
 Proof.
+  intros Htoss.
   unfold flipi1, flipi_spec.
-  unfold toss1.
-  funfold2.
+  (* funfold2. *)
+  rewrite Htoss. unfold toss1.
   freduction.
   (* Search (entails _ (∀ _, _)). *)
   (* applys fintros. *)
@@ -611,12 +615,13 @@ Proof.
   funfold2. fsimpl.
   case_if.
   fsimpl.
-  move_one_defun_in "k".
+  (* funfold3 "k". *)
+  (* move_one_defun_in "k". *)
   (* Close Scope flow_scope. *)
   (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
 
-rewrite norm_seq_defun_discard.
-  funfold3 "k". 2: { unfold toss_env1. solve_not_indom. }
+(* rewrite norm_seq_defun_discard1. *)
+  funfold3 "k".
   fsimpl.
   rewrite norm_ens_ens_void_l.
   fentailment.

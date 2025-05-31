@@ -845,6 +845,17 @@ Proof.
   applys empty_intro.
 Qed.
 
+Lemma norm_defun_discard_id1: forall (f:var) u,
+  entails (defun f u;; discard f) empty.
+Proof.
+  unfold entails. intros.
+  inverts* H.
+  inverts H7.
+  inverts H8.
+  rewrite* remove_update.
+  applys empty_intro.
+Qed.
+
 Lemma norm_seq_defun_discard: forall s (f:var) u f1,
   ~ Fmap.indom s f ->
   entails_under s (defun f u;; discard f;; f1) f1.
@@ -859,12 +870,11 @@ Qed.
 Lemma norm_seq_defun_discard1: forall (f:var) u f1,
   entails (defun f u;; discard f;; f1) f1.
 Proof.
-  unfold entails. intros.
-  inverts* H.
-  inverts H7.
-  inverts* H8.
-  inverts H7.
-  rewrite* remove_update in H9.
+  intros.
+  rewrite* norm_seq_assoc_sf.
+  rewrite* norm_defun_discard_id1.
+  rewrite norm_seq_empty_l.
+  reflexivity.
 Qed.
 
 Lemma norm_seq_defun_ens_void: forall (f:var) u H,
