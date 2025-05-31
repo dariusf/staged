@@ -278,8 +278,10 @@ Ltac funfold2 :=
     rewrite norm_seq_defun_unk; move_defun_out |
     (* cancel defun and discard *)
     first [
-      rewrite norm_seq_defun_discard |
-      rewrite norm_defun_discard_id
+      rewrite norm_seq_defun_discard | (* TODO get rid of these *)
+      rewrite norm_defun_discard_id |
+      rewrite norm_seq_defun_discard1 |
+      rewrite norm_defun_discard_id1
     ]; jauto
   ].
 
@@ -1326,8 +1328,7 @@ admit. *)
       fdestruct b. fexists b.
       fsimpl. fentailment. intros.
       case_if. fsimpl.
-      (* TODO funfold2 should work? *)
-      funfold3 "k". fsimpl.
+      funfold2. fsimpl.
       rewrite norm_ens_ens_void_l.
       fentailment. xsimpl. intros.
       split. math. subst. simpl. f_equal.
@@ -1362,8 +1363,7 @@ admit. *)
       fdestruct b. fexists b.
       fsimpl. fentailment. intros.
       case_if. fsimpl.
-      (* TODO funfold2 should work? *)
-      funfold3 "k". fsimpl.
+      funfold2. fsimpl.
       rewrite norm_ens_ens_void_l.
       fentailment. xsimpl. intros.
       split. math. subst. simpl. f_equal.
@@ -1549,49 +1549,48 @@ Proof.
 Qed.
 
 Theorem main_summary1 : forall n,
-  lemma_weaker2 ->
-  entails_under toss_n_env1 (main n) (main_spec_weaker n).
+  (forall a, entails (unk "toss_n" a) (toss_n1 a)) ->
+  entails (main n) (main_spec_weaker n).
 Proof.
-  intros n lemma. unfold main, main_spec_weaker.
-  funfold1 "toss_n". unfold toss_n1.
+  intros n. introv Htoss_n. unfold main, main_spec_weaker.
+  rewrite Htoss_n. unfold toss_n1.
   fsimpl.
-  applys ent_disj_l.
+  applys entl_disj_l.
   {
-    fsimpl. fentailment_old. simpl. intros.
+    fsimpl. fentailment. simpl. intros.
     case_if.
     fintros x. fintros a.
-    fentailment_old.
-    fexists_old a.
+    fentailment.
+    fexists a.
     rewrite norm_ens_ens_void_l.
-    fentailment_old. xsimpl. intros. splits*. math.
+    fentailment. xsimpl. intros. splits*. math.
   }
   {
     fsimpl.
-    fentailment_old. simpl. intros.
+    fentailment. simpl. intros.
     unfold toss1.
     freduction.
     fintros x. fspecialize x.
     fintros a. fspecialize a.
-    fsimpl. rewrite norm_req_req. fentailment_old. xsimpl.
-    (* fassume. *)
-    fentailment_old.
-    fentailment_old. intros.
+    fsimpl. rewrite norm_req_req. fentailment. xsimpl.
+    fentailment.
+    fentailment. intros.
 
     funfold2.
     fsimpl.
 
-    unfolds in lemma. rewrite lemma. fold lemma_weaker2 in lemma.
+    rewrite* lemma_weaker2_attempt1.
 
     fspecialize x.
     fspecialize (a+1).
     fsimpl.
     rewrite norm_req_req.
     fbiabduction.
-    fentailment_old. math.
-    fdestruct_old b.
+    fentailment. math.
+    fdestruct b.
     fsimpl.
 
-    fentailment_old. intros.
+    fentailment. intros.
     case_if. 2: { false C. constructor. }
     fsimpl.
 
@@ -1601,30 +1600,27 @@ Proof.
     funfold2.
     fsimpl.
 
-    unfolds in lemma.
-    rewrite lemma.
-    clear lemma.
+    rewrite* lemma_weaker2_attempt1.
 
     fspecialize x.
     fspecialize (b+1).
     rewrite norm_req_req.
     fsimpl.
     fbiabduction.
-    fentailment_old. math.
+    fentailment. math.
 
-    fdestruct_old b1.
-    fexists_old b1.
+    fdestruct b1.
+    fexists b1.
     fsimpl.
-    fentailment_old. intros.
+    fentailment. intros.
     case_if.
     fsimpl.
-    funfold2. 2: { unfold toss_n_env1. solve_not_indom. }
+    funfold2.
     fsimpl.
     rewrite norm_ens_ens_void_l.
-    fentailment_old. xsimpl. simpl. intros. splits*. math.
+    fentailment. xsimpl. simpl. intros. splits*. math.
   }
 Qed.
-
 
 (* undone proof for stronger lemma *)
 
