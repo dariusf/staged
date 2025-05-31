@@ -857,8 +857,7 @@ Proof.
 Qed.
 
 Lemma norm_seq_defun_discard1: forall (f:var) u f1,
-  (* ~ Fmap.indom s f -> *)
-  entails (defunf f u;; discard f;; f1) f1.
+  entails (defun f u;; discard f;; f1) f1.
 Proof.
   unfold entails. intros.
   inverts* H.
@@ -866,8 +865,6 @@ Proof.
   inverts* H8.
   inverts H7.
   rewrite* remove_update in H9.
-  (* TODO *)
-  false_invert H6.
 Qed.
 
 Lemma norm_seq_defun_ens_void: forall (f:var) u H,
@@ -957,7 +954,7 @@ Proof.
   inverts H0. 2: no_shift.
   inverts H8.
   applys s_req. intros.
-  inverts H9. specializes H11 H0 H1 H2.
+  inverts H9. specializes H12 H0 H1 H2.
   applys* s_seq.
   applys* s_defun.
 Qed.
@@ -988,8 +985,7 @@ Proof.
   inverts H8.
   applys s_seq.
   - applys* s_defun.
-  - rewrite fmap_read_update in H7.
-    assumption.
+  - rewrite* fmap_read_update in H9.
 Qed.
 
 Lemma norm_seq_ignore_res_l: forall v f,
@@ -1114,7 +1110,7 @@ Proof.
   inverts* H0.
   inverts H8.
   inverts* H9.
-  inverts H7.
+  inverts H8.
   heaps.
   applys* s_seq. applys* s_ens. heaps.
   applys* s_seq. applys* s_defun.

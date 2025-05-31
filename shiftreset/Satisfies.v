@@ -84,7 +84,7 @@ Module Examples.
   Proof.
     intros.
     eexists.
-    apply s_sh.
+    apply* s_sh.
     (* Show Proof. *)
     (* result of continuation can be anything because it's never used *)
   Qed.
@@ -107,7 +107,7 @@ Module Examples.
     eexists.
     (* the ret of the shift can be anything because the cont is never taken *)
     applys s_rs_sh k.
-    { apply s_sh. }
+    { apply* s_sh. }
     { apply s_rs_val.
       (* produced by eapply, never instantiated because continuation is never taken *)
       apply ens_pure_intro.
@@ -132,7 +132,7 @@ Module Examples.
     {
       (* show that the body produces a shift *)
       apply s_bind_sh.
-      apply s_sh. }
+      apply* s_sh. }
     { apply s_rs_val. (* handle reset *)
 
       eapply s_unk. resolve_fn_in_env. (* reset body *)
@@ -159,15 +159,14 @@ Module Examples.
     { (* show that reset produces a function *)
       applys s_rs_sh k.
       (* handle the shift *)
-      apply s_sh.
+      apply* s_sh.
       (* show how the shift body goes through the reset to produce the function *)
       { apply s_rs_val.
         eapply s_bind.
-        apply s_defun.
+        apply* s_defun.
         (* { apply not_indom_update.
           apply not_indom_empty.
           symmetry. assumption. } *)
-        reflexivity.
         apply ens_pure_intro. reflexivity. }
     }
     { (* show that applying the function returns 4 *)
@@ -208,7 +207,7 @@ Module Examples.
         applying the continuation *)
       applys s_rs_sh k.
       { apply s_bind_sh. (* this moves the ens into the continuation *)
-        apply s_sh. }
+        apply* s_sh. }
       { apply s_rs_val.
         eapply s_seq.
         apply* s_defun.

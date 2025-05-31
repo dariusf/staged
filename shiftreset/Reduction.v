@@ -18,7 +18,7 @@ Proof.
   inverts H.
   inverts H7.
   inverts H6.
-  applys s_shc.
+  applys* s_shc.
 Qed.
 
 (* RNorm1 is seq_assoc *)
@@ -96,10 +96,9 @@ Proof.
   inverts H1.
   inverts H7.
   { (* body has shift *)
-    applys s_seq. { applys s_defun. reflexivity. }
+    applys s_seq. { applys* s_defun. }
     applys* s_rs_sh. }
   { (* body has no shift *)
-    applys s_seq. { applys s_defun. reflexivity. }
-    applys s_rs_val.
-    applys H5. }
+    applys s_seq. { applys* s_defun. }
+    applys* s_rs_val. }
 Qed.

@@ -31,7 +31,7 @@ Proof.
   inverts* H0.
   inverts H8.
   inverts* H9.
-  inverts H7. heaps.
+  inverts H8. heaps.
   applys* H.
   applys* s_seq.
   applys* s_defun.
@@ -54,7 +54,7 @@ Proof.
   inverts* H0.
   inverts H8.
   inverts* H9.
-  inverts H7. heaps.
+  inverts H8. heaps.
   applys* H.
   applys* s_seq.
   applys* s_defun.
@@ -199,7 +199,7 @@ Proof.
   inverts* H1.
   inverts H9.
   inverts H10.
-  specializes H8.
+  specializes H9.
   hintro. assumption.
   fmap_eq. reflexivity.
   fmap_disjoint.

@@ -172,7 +172,6 @@ Inductive flow : Type :=
   | rs : flow -> flow
 (** [rs f vr] is a reset with body [f] and return value [vr]. *)
   | defun : var -> (val -> flow) -> flow
-  | defunf : var -> (val -> flow) -> flow
   | discard : var -> flow
 (** [defun x uf] is equivalent to [ens_ (x=(λ x r. uf x r))], where [x] can reside in the environment (which regular [ens_] cannot access).
   Should defun be scoped? We don't think so, because the resulting continuation is first-class and does not have a well-defined lifetime. *)
@@ -329,6 +328,7 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     (** The new rules for shift/reset are as follows. *)
 
   | s_shc : forall s1 h1 fb fk k,
+    ~ Fmap.indom s1 k ->
     satisfies s1 s1 h1 h1
       (* (shft x shb v (fun r1 => rs (ens (fun r => \[r = v])) r1)) *)
       (shft k fb fk)
@@ -368,14 +368,9 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     satisfies s1 s2 h1 h2 (norm v) (rs f)
 
   | s_defun s1 s2 h1 x uf :
-    (* ~ Fmap.indom s1 x -> *)
-    s2 = Fmap.update s1 x uf ->
-    satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
-
-  | s_defunf s1 s2 h1 x uf :
     ~ Fmap.indom s1 x ->
     s2 = Fmap.update s1 x uf ->
-    satisfies s1 s2 h1 h1 (norm vunit) (defunf x uf)
+    satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
 
   | s_discard s1 s2 h (f:var) :
     s2 = Fmap.remove s1 f ->
@@ -387,6 +382,7 @@ Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f" :=
   (satisfies s1 s2 h1 h2 r f) (at level 30, only printing).
 
 Lemma s_sh : forall s1 h1 fb k,
+  ~ Fmap.indom s1 k ->
   satisfies s1 s1 h1 h1
     (shft k fb (fun r1 => ens (fun r => \[r = r1])))
     (sh k fb).

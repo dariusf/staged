@@ -40,7 +40,7 @@ Proof.
   applys* s_defun.
   applys* s_seq.
   applys* s_defun.
-  inverts H13.
+  inverts H14.
   apply H in H4.
   symmetry in TEMP0.
   specializes H12 H4 TEMP0.
