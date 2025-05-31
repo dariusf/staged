@@ -757,8 +757,8 @@ Lemma norm_bind_all_r: forall (A:Type) f1 (f2:A->val->flow),
     (∀ x, bind f1 (fun r => f2 x r)).
 Proof.
   unfold entails. introv Hsf H.
-  applys s_fall. intros.
   inverts* H.
+  applys s_fall. intros.
   inverts H8. specializes H5 b.
   applys* s_bind.
 Qed.
@@ -1078,27 +1078,6 @@ Proof.
   inverts* H0.
   inverts H8.
   heaps.
-Qed.
-
-Lemma ent_seq_ens_rs_bind_ens_pure_l: forall s P fk f H,
-  (forall r, P r -> entails_under s (ens_ H;; rs (fk r)) f) ->
-  entails_under s (ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) f.
-Proof.
-  unfold entails_under. intros.
-  inverts* H1.
-  inverts H10.
-  - inverts* H2.
-    inverts H11.
-    heaps.
-    applys H0 H1.
-    applys* s_seq.
-    applys* s_rs_sh.
-  - inverts H7.
-    inverts H10.
-    heaps.
-    applys H0 H1.
-    applys* s_seq.
-    applys* s_rs_val.
 Qed.
 
 Lemma gnorm_bind_trivial: forall n f1,

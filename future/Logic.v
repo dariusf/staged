@@ -2079,7 +2079,7 @@ Lemma heap_disjoint_consequence_aux: forall [A B : Type] (h1:Fmap.fmap A B) h2 h
 Proof.
   intros.
     pose proof  disjoint_union_eq_r.
-  info_eauto.
+  eauto.
 Qed.
 
 Axiom h_subst_pure: forall (t1:loc) t2, t1 = t2.

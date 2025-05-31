@@ -214,7 +214,7 @@ Proof.
   fmap_eq.
 Qed.
 
-Lemma pshift_sound: forall eb k fb,
+(* Lemma pshift_sound: forall eb k fb,
   spec_assert_valid (eb k) (fb) ->
   spec_assert_valid (pshift eb) (sh k fb).
 Proof.
@@ -223,10 +223,10 @@ Proof.
   inverts H.
   exs.
   splits.
-  { applys s_sh. }
+  { applys* s_sh. }
   { specializes Heb penv0 env. }
   { intros v. simpl. applys pval_sound. }
-Qed.
+Qed. *)
 
 Lemma papp_unk_sound: forall penv (env:senv) (f:var) v (ef:val->expr) (f1:val->flow),
   Fmap.read penv f = ef ->

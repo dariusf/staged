@@ -174,6 +174,12 @@ Ltac fexists a := fexists_rew;
     simple apply entl_seq_ex_r
   ]; exists a.
 
+Ltac fexists_old a := fexists_rew;
+  first [
+    simple apply ent_ex_r |
+    simple apply ent_seq_ex_r
+  ]; exists a.
+
 Create HintDb staged_exists_l.
 Global Hint Rewrite
   norm_bind_ex_l
@@ -189,7 +195,14 @@ using shiftfree : staged_exists_l.
 Ltac fdestruct_rew := autorewrite with staged_exists_l.
 Ltac fdestruct a := fdestruct_rew;
   first [
-    simple apply ent_ex_l
+    simple apply entl_ex_l |
+    simple apply entl_seq_ex_l
+  ]; intros a.
+
+Ltac fdestruct_old a := fdestruct_rew;
+  first [
+    simple apply ent_ex_l |
+    simple apply ent_seq_ex_l
   ]; intros a.
 
 Create HintDb staged_forall_l.
@@ -392,6 +405,9 @@ Ltac fentailment_old :=
 
 Ltac fleft := first [ apply entl_seq_disj_r_l | apply entl_disj_r_l ].
 Ltac fright := first [ apply entl_seq_disj_r_r | apply entl_disj_r_r ].
+
+Ltac fleft_old := first [ apply ent_seq_disj_r_l | apply ent_disj_r_l ].
+Ltac fright_old := first [ apply ent_seq_disj_r_r | apply ent_disj_r_r ].
 
 Module Multi.
 
@@ -812,6 +828,27 @@ Proof.
   admit.
 Admitted.
 
+Lemma ent_seq_ens_rs_bind_ens_pure_l: forall s P fk f H,
+  (forall r, P r -> entails_under s (ens_ H;; rs (fk r)) f) ->
+  entails_under s (ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) f.
+Proof.
+  unfold entails_under. intros.
+  inverts* H1.
+  inverts H10.
+  - inverts* H2.
+    inverts H11.
+    heaps.
+    applys H0 H1.
+    applys* s_seq.
+    applys* s_rs_sh.
+  - inverts H7.
+    inverts H10.
+    heaps.
+    applys H0 H1.
+    applys* s_seq.
+    applys* s_rs_val.
+Qed.
+
 Lemma lemma_weaker2_attempt : forall (n:int) (acc:bool),
   entails_under toss_n_env
 
@@ -1039,52 +1076,36 @@ Definition toss_n1 : ufun := fun (n:val) =>
         bind (unk "toss_n" (vsub n 1)) (fun r2 =>
         ens (fun r => \[r = vand r1 r2]))))).
 
-
-Lemma norm_bind_unk_trivial_toss_n: forall (n:int),
-  (forall a, bientails (unk "toss_n" a) (toss_n1 a)) ->
-  entails
-    (bind (unk "toss_n" n) (fun r1 : val => ens (fun r => \[r = r1])))
-    (unk "toss_n" n).
-Proof.
-  intros n. induction_wf IH: (downto 0) n. introv Htoss_n.
-  rewrite Htoss_n. unfold toss_n1.
-  fsimpl.
-  applys entl_disj_l.
-  {
-    fleft.
-    simpl.
-    assert (entails
-      (ens (fun r => \[r = true /\ n = 0]))
-      (ens_ \[n = 0];; ens (fun r => \[r = true]))) as ?.
-    {
-      unfold entails. intros.
-      inverts H. heaps.
-      applys s_seq.
-      applys s_ens. heaps.
-      applys s_ens. heaps.
-    }
-    rewrite H at 1.
-    fsimpl.
-    rewrite norm_ens_ens_void_l.
-    fentailment.
-    xsimpl. intros. jauto.
-  }
-  {
-    fright.
-    fsimpl. fentailment. simpl. intros.
-    (* fassume. *)
-    (* fentailment. *)
-    unfold toss1.
-    fsimpl.
-    (* cannot reduce due to lack of reset *)
-    admit.
-  }
-Abort.
-
-
 Definition toss_n_env1 :=
   Fmap.single "toss_n" toss_n1.
 
+Lemma entl_elim_bind: forall P fk f1 (f:var) u H,
+  (forall r, P r -> entails (defun f u;; ens_ H;; rs (fk r)) f1) ->
+    entails (defun f u;; ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) f1.
+Proof.
+  unfold entails. intros.
+  inverts* H1.
+  inverts H9.
+  inverts* H10.
+  inverts H9.
+  inverts H11.
+  - inverts* H2.
+    inverts H12. heaps.
+    applys H0 H1.
+    applys* s_seq.
+    applys* s_defun.
+    applys* s_seq.
+    applys s_ens. heaps.
+    applys* s_rs_sh.
+  - inverts* H9.
+    inverts H11. heaps.
+    applys H0 H1.
+    applys* s_seq.
+    applys* s_defun.
+    applys* s_seq.
+    applys s_ens. heaps.
+    applys* s_rs_val.
+Qed.
 
 Lemma lemma_weaker2_attempt1 : forall (n:int) (acc:bool),
   (forall a, entails (unk "toss_n" a) (toss_n1 a)) ->
@@ -1208,7 +1229,7 @@ Proof.
     pose proof IH as IH1.
     specializes IH (n-1).
     forward IH. unfold virel in H. unfold downto. math.
-    specializes IH acc.
+    specializes IH acc Htoss_n.
 
 
 simpl in IH.
@@ -1234,116 +1255,121 @@ admit. *)
     admit. *)
 
 
-    rewrite IH.
-    clear IH.
+    rewrite IH. clear IH.
 
-    fsimpl. finst x.
-    fsimpl. finst (a+1).
+    fsimpl. fspecialize x.
+    fsimpl. fspecialize (a+1).
     fsimpl.
 
     rewrite norm_req_req.
 
-    rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
-    rewrite norm_req_pure_l. 2: { reflexivity. }
-    rewrite norm_seq_ens_empty.
+    fbiabduction.
 
-    applys ent_req_l. math.
-    fintro a1.
+    fentailment. math.
+    (* applys ent_req_l. math. *)
+    (* rewrite norm_seq_ex_l. *)
+    (* applys ent_seq_ex_l. *)
+
+    fdestruct a1.
+
     rewrite norm_ens_hstar_pure_r.
     fsimpl.
 
     rewrite norm_ens_void_pure_swap.
     fentailment. intros.
-    fsimpl_old.
+    (* fsimpl. *)
 
-    rewrite norm_bind_all_r.
-    fsimpl_old. finst a1.
+    rewrite* norm_bind_all_r.
+    (* fsimpl. *)
+    fspecialize a1.
 
-    lets: norm_bind_req (x~~>a1).
+    lets H2: norm_bind_req (x~~>a1).
     setoid_rewrite H2.
     clear H2.
 
-    rewrite norm_bind_ens_req. 2: { shiftfree. }
-    fsimpl_old.
+    rewrite norm_bind_ens_req.
+    fsimpl.
 
-    rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
-    rewrite norm_req_pure_l. 2: { reflexivity. }
-    rewrite norm_seq_ens_empty.
+    fbiabduction.
 
     setoid_rewrite norm_bind_seq_assoc. 2: { shiftfree. }
 
     rewrite norm_bind_seq_past_pure_sf. 2: { shiftfree. }
-    fsimpl_old.
+    fsimpl.
 
-    (* we are missing a proper instance for unfolding on the right side of a bind *)
-    lazymatch goal with
-    | |- entails_under ?env _ _ =>
-      pose proof (@entails_under_unk env "k" (vbool false))
-    end.
-    specializes H2. unfold toss_n_env. resolve_fn_in_env. simpl in H2.
-    Fail rewrite H2.
-    Fail setoid_rewrite H2.
-    clear H2.
+    applys entl_elim_bind. intros.
 
-    (* workaround: eliminate the bind before we unfold *)
-    applys ent_seq_ens_rs_bind_ens_pure_l. intros.
+    funfold3 "k".
 
-    funfold1 "k".
-    fsimpl_old. finst n.
-    fsimpl_old. finst false.
-
-    rewrite norm_bind_val.
-
-    specializes IH1 (n-1).
-    forward IH1. unfold virel in H. unfold downto. math.
-    specializes IH1 false.
-    simpl in IH1.
-
-    (* try to get the goal to match the IH *)
+    fsimpl.
     simpl.
-    rewrite norm_bind_seq_def.
-    rewrite norm_bind_seq_def.
-    rewrite <- norm_seq_assoc.
 
-    lets H3: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
-    rewrite H3.
-    clear H3.
+    case_if.
+    {
+      case_if in H2. 2: { false C0. constructor. }
 
-    rewrite IH1. clear IH1.
+      specializes IH1 (n-1).
+      forward IH1. unfold virel in H. unfold downto. math.
+      specializes IH1 false Htoss_n.
+      simpl in IH1.
 
-    fsimpl_old. finst x.
-    fsimpl_old. finst (a1 + 1).
-    fsimpl_old.
-    rewrite norm_req_req.
+      rewrite norm_bind_trivial.
+      rewrite IH1. clear IH1.
 
-    rewrite norm_ens_req_transpose. 2: { applys b_pts_single. }
-    rewrite norm_req_pure_l. 2: { reflexivity. }
-    rewrite norm_seq_ens_empty.
+      (* everything below this point is duplicated *)
+      fspecialize x.
+      fspecialize (a1 + 1).
+      fsimpl.
+      rewrite norm_req_req.
+      fbiabduction.
+      fentailment. math.
+      fdestruct b. fexists b.
+      fsimpl. fentailment. intros.
+      case_if. fsimpl.
+      (* TODO funfold2 should work? *)
+      funfold3 "k". fsimpl.
+      rewrite norm_ens_ens_void_l.
+      fentailment. xsimpl. intros.
+      split. math. subst. simpl. f_equal.
 
-    fentailment. math.
-    fintro a2.
+    }
+    {
+      case_if in H2. { false C0. constructor. }
 
-    rewrite norm_rearrange_ens.
-    fsimpl_old.
-    fentailment. intros.
-    finst a2.
+      specializes IH1 (n-1).
+      forward IH1. unfold virel in H. unfold downto. math.
+      specializes IH1 false Htoss_n.
+      simpl in IH1.
 
-    case_if. { false C. constructor. }
-    fsimpl_old.
-    rewrite norm_ens_ens_void_l.
-    fentailment.
-    xsimpl.
-    intros.
-    split.
-    math.
-    case_if; subst; simpl.
+      (* try to get the goal to match the IH *)
+      rewrite norm_bind_seq_def.
+      rewrite norm_bind_seq_def.
+      rewrite <- norm_seq_assoc.
 
-    - f_equal.
+      lets H3: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
+      rewrite H3.
+      clear H3.
 
-    - rewrite Z.add_0_r.
-      reflexivity.
+      rewrite IH1. clear IH1.
+
+      (* everything below this point is duplicated *)
+      fspecialize x.
+      fspecialize (a1 + 1).
+      fsimpl.
+      rewrite norm_req_req.
+      fbiabduction.
+      fentailment. math.
+      fdestruct b. fexists b.
+      fsimpl. fentailment. intros.
+      case_if. fsimpl.
+      (* TODO funfold2 should work? *)
+      funfold3 "k". fsimpl.
+      rewrite norm_ens_ens_void_l.
+      fentailment. xsimpl. intros.
+      split. math. subst. simpl. f_equal.
+    }
   }
-Abort.
+Qed.
 
 (*
   This statement differs from the proved lemma above in two ways:
@@ -1381,7 +1407,7 @@ Proof.
   applys ent_disj_l.
   {
     (* the defun isn't used *)
-    finst "k". { intros. shiftfree. } fleft.
+    finst "k". { intros. shiftfree. } fleft_old.
     lazymatch goal with
     | |- entails_under _ _ (empty;; ?f) =>
       rewrite (norm_seq_empty_l f)
@@ -1392,16 +1418,16 @@ Proof.
     rewrite <- norm_ens_ens_void_l.
     fsimpl_old.
     case_if. clear C.
-    fentailment. simpl. intros.
+    fentailment_old. simpl. intros.
     fintro x.
     fintro a.
     apply ent_req_r.
     finst a.
     rewrite norm_ens_ens_void_l.
-    fentailment. xsimpl. simpl. math.
+    fentailment_old. xsimpl. simpl. math.
   }
   { fsimpl_old.
-    fentailment. simpl. intros.
+    fentailment_old. simpl. intros.
 
     unfold toss.
     rewrite red_init.
@@ -1412,7 +1438,7 @@ Proof.
     (* fintro k. *)
     finst "k". { shiftfree. }
     (* recursive case; use the defun *)
-    fright. applys ent_seq_defun_both.
+    fright_old. applys ent_seq_defun_both.
 
     fintro x. finst x.
     fintro a. finst a.
@@ -1423,7 +1449,7 @@ Proof.
     end.
 
     fsimpl_old.
-    fentailment. xsimpl.
+    fentailment_old. xsimpl.
 
     unfolds in lemma_weaker.
     rewrite lemma_weaker.
@@ -1448,7 +1474,7 @@ Proof.
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
 
-    fentailment. math.
+    fentailment_old. math.
     fsimpl_old. fintro b.
     rewrite norm_rearrange_ens.
     fsimpl_old.
@@ -1484,19 +1510,19 @@ Proof.
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
 
-    fentailment. math.
+    fentailment_old. math.
     fintro b1.
 
     rewrite norm_rearrange_ens.
 
     fsimpl_old.
-    fentailment. intros.
+    fentailment_old. intros.
     case_if.
     fsimpl_old.
 
     rewrite norm_ens_ens_void_l.
     finst b1.
-    fentailment. { xsimpl. intros. simpl. split. math. rewrite H2; f_equal. }
+    fentailment_old. { xsimpl. intros. simpl. split. math. rewrite H2; f_equal. }
   }
 Qed.
 
@@ -1531,24 +1557,25 @@ Proof.
   fsimpl.
   applys ent_disj_l.
   {
-    fsimpl. fentailment. simpl. intros.
+    fsimpl. fentailment_old. simpl. intros.
     case_if.
     fintros x. fintros a.
-    fentailment.
-    fexists a.
+    fentailment_old.
+    fexists_old a.
     rewrite norm_ens_ens_void_l.
-    fentailment. xsimpl. intros. splits*. math.
+    fentailment_old. xsimpl. intros. splits*. math.
   }
   {
     fsimpl.
-    fentailment. simpl. intros.
+    fentailment_old. simpl. intros.
     unfold toss1.
     freduction.
     fintros x. fspecialize x.
     fintros a. fspecialize a.
-    fsimpl. rewrite norm_req_req. fentailment. xsimpl.
-    fassume.
-    fentailment. intros.
+    fsimpl. rewrite norm_req_req. fentailment_old. xsimpl.
+    (* fassume. *)
+    fentailment_old.
+    fentailment_old. intros.
 
     funfold2.
     fsimpl.
@@ -1560,11 +1587,11 @@ Proof.
     fsimpl.
     rewrite norm_req_req.
     fbiabduction.
-    fentailment. math.
-    fdestruct b.
+    fentailment_old. math.
+    fdestruct_old b.
     fsimpl.
 
-    fentailment. intros.
+    fentailment_old. intros.
     case_if. 2: { false C. constructor. }
     fsimpl.
 
@@ -1583,18 +1610,18 @@ Proof.
     rewrite norm_req_req.
     fsimpl.
     fbiabduction.
-    fentailment. math.
+    fentailment_old. math.
 
-    fdestruct b1.
-    fexists b1.
+    fdestruct_old b1.
+    fexists_old b1.
     fsimpl.
-    fentailment. intros.
+    fentailment_old. intros.
     case_if.
     fsimpl.
     funfold2. 2: { unfold toss_n_env1. solve_not_indom. }
     fsimpl.
     rewrite norm_ens_ens_void_l.
-    fentailment. xsimpl. simpl. intros. splits*. math.
+    fentailment_old. xsimpl. simpl. intros. splits*. math.
   }
 Qed.
 

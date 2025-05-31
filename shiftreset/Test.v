@@ -46,7 +46,7 @@ Proof.
   exs.
   splits.
   - applys s_bind_sh.
-    applys s_sh.
+    applys* s_sh.
   - reflexivity.
   - intros.
     rewrite norm_bind_assoc_sf; shiftfree.
