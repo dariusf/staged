@@ -170,8 +170,8 @@ using shiftfree : staged_exists_r.
 Ltac fexists_rew := autorewrite with staged_exists_r.
 Ltac fexists a := fexists_rew;
   first [
-    simple apply ent_ex_r |
-    simple apply ent_seq_ex_r
+    simple apply entl_ex_r |
+    simple apply entl_seq_ex_r
   ]; exists a.
 
 Create HintDb staged_exists_l.
@@ -368,6 +368,27 @@ Ltac fentailment :=
     apply entl_req_r
   ].
 
+
+Ltac fentailment_old :=
+  first [
+    apply ent_seq_ens_pure_l |
+    apply ent_seq_defun_ens_pure_l |
+
+    apply ent_seq_ens_void_pure_l |
+    apply ent_seq_defun_ens_void_pure_l |
+
+    apply ent_ens_single |
+
+    apply ent_req_req |
+    apply ent_defun_req_req |
+    (* apply ent_defun2_req_req | *)
+
+    apply ent_req_l |
+    apply ent_defun_req_l |
+
+    (* this is ordered last *)
+    apply ent_req_r
+  ].
 
 Ltac fleft := first [ apply entl_seq_disj_r_l | apply entl_disj_r_l ].
 Ltac fright := first [ apply entl_seq_disj_r_r | apply entl_disj_r_l ].
@@ -732,6 +753,26 @@ Proof.
   applys ent_seq_defun_idem_weaker H1 H2 H3 H4.
 Qed.
 
+Lemma norm_bind_unk_trivial: forall (f:var) v,
+  entails
+    (bind (unk f v) (fun r1 : val => ens (fun r => \[r = r1])))
+    (unk f v).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  {
+    inverts H7.
+    inverts H8. heaps.
+    applys* s_unk.
+  }
+  {
+    inverts H6.
+    (* inverts H8. heaps. *)
+    applys* s_unk.
+    admit.
+  }
+Abort.
+
 Lemma norm_bind_trivial: forall f1,
   entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
@@ -805,15 +846,15 @@ Proof.
 
     fsimpl_old.
     fsimpl_old.
-    fentailment. unfold veq, virel. intros.
+    fentailment_old. unfold veq, virel. intros.
 
     applys ent_req_r.
     fsimpl_old.
     rewrite <- norm_seq_assoc; shiftfree.
-    fentailment. intros.
+    fentailment_old. intros.
     finst a.
     rewrite norm_ens_ens_void_l.
-    fentailment. xsimpl. intros. split. rewrite H. math.
+    fentailment_old. xsimpl. intros. split. rewrite H. math.
     destruct acc.
     - case_if.
       { case_if. assumption. }
@@ -825,7 +866,7 @@ Proof.
   {
     (* recursive case *)
     fsimpl_old.
-    fentailment. unfold vgt. simpl. intro.
+    fentailment_old. unfold vgt. simpl. intro.
     unfold toss.
     rewrite red_init.
     rewrite red_extend.
@@ -864,8 +905,8 @@ Proof.
     fsimpl_old. finst acc.
 
     rewrite norm_req_req.
-    fentailment. xsimpl.
-    applys ent_req_r. fentailment. intros.
+    fentailment_old. xsimpl.
+    applys ent_req_r. fentailment_old. intros.
     simpl.
 
     pose proof IH as IH1.
@@ -900,7 +941,7 @@ Proof.
     fsimpl_old.
 
     rewrite norm_ens_void_pure_swap.
-    fentailment. intros.
+    fentailment_old. intros.
     fsimpl_old.
 
     rewrite norm_bind_all_r.
@@ -967,18 +1008,18 @@ Proof.
     rewrite norm_req_pure_l. 2: { reflexivity. }
     rewrite norm_seq_ens_empty.
 
-    fentailment. math.
+    fentailment_old. math.
     fintro a2.
 
     rewrite norm_rearrange_ens.
     fsimpl_old.
-    fentailment. intros.
+    fentailment_old. intros.
     finst a2.
 
     case_if. { false C. constructor. }
     fsimpl_old.
     rewrite norm_ens_ens_void_l.
-    fentailment.
+    fentailment_old.
     xsimpl.
     intros.
     split.
@@ -1007,7 +1048,10 @@ Definition toss_n_env1 :=
 
 
 Lemma lemma_weaker2_attempt1 : forall (n:int) (acc:bool),
-  entails_under toss_n_env1
+  (forall a, entails (unk "toss_n" a) (toss_n1 a)) ->
+  (* Fmap.single "toss_n" toss_n1. *)
+  entails
+  (* toss_n_env1 *)
 
     (rs (bind
       (bind (unk "toss_n" n) (fun r2 =>
@@ -1018,15 +1062,16 @@ Lemma lemma_weaker2_attempt1 : forall (n:int) (acc:bool),
       (∃ b, ens (fun r => x~~>vint b \*
         \[b >= a+n /\ (If acc = true then r = 1 else r = 0)]))).
 Proof.
-  intros n. induction_wf IH: (downto 0) n. intros.
+  intros n. induction_wf IH: (downto 0) n. introv Htoss_n.
 
-  funfold1 "toss_n". unfold toss_n1.
+  (* funfold1 "toss_n". *)
+  rewrite Htoss_n. unfold toss_n1.
   fsimpl.
-  applys ent_disj_l.
+  applys entl_disj_l.
   {
     fsimpl. fentailment. simpl. intros ->.
     (* fsimpl. *)
-    fintro x. fintro a.
+    fintros x. fintros a.
 
     (* base case. no shifts here *)
 
@@ -1100,7 +1145,7 @@ Proof.
       assumption.
     } *)
 
-    fintro x. fintro a.
+    fintros x. fintros a.
     fspecialize x. fspecialize a.
 
     fsimpl.
@@ -1138,7 +1183,7 @@ end.
 admit. *)
     (* Set Typeclasses Debug. *)
 
-    assert (forall f env,
+    (* assert (forall f env,
     Proper ((respectful (entails_under env) (entails_under env))) (@seq f)
     ) as ?.
     unfold Proper, respectful, entails_under, entails.
@@ -1148,7 +1193,7 @@ admit. *)
     (* applys* s_bind. *)
     (* applys_eq H1. *)
     intros.
-    admit.
+    admit. *)
 
 
     rewrite IH.
