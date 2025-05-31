@@ -391,7 +391,7 @@ Ltac fentailment_old :=
   ].
 
 Ltac fleft := first [ apply entl_seq_disj_r_l | apply entl_disj_r_l ].
-Ltac fright := first [ apply entl_seq_disj_r_r | apply entl_disj_r_l ].
+Ltac fright := first [ apply entl_seq_disj_r_r | apply entl_disj_r_r ].
 
 Module Multi.
 
@@ -760,14 +760,10 @@ Lemma norm_bind_unk_trivial: forall (f:var) v,
 Proof.
   unfold entails. intros.
   inverts H.
-  {
-    inverts H7.
+  { inverts H7.
     inverts H8. heaps.
-    applys* s_unk.
-  }
-  {
-    inverts H6.
-    (* inverts H8. heaps. *)
+    applys* s_unk. }
+  { inverts H6.
     applys* s_unk.
     admit.
   }
@@ -1043,6 +1039,49 @@ Definition toss_n1 : ufun := fun (n:val) =>
         bind (unk "toss_n" (vsub n 1)) (fun r2 =>
         ens (fun r => \[r = vand r1 r2]))))).
 
+
+Lemma norm_bind_unk_trivial_toss_n: forall (n:int),
+  (forall a, bientails (unk "toss_n" a) (toss_n1 a)) ->
+  entails
+    (bind (unk "toss_n" n) (fun r1 : val => ens (fun r => \[r = r1])))
+    (unk "toss_n" n).
+Proof.
+  intros n. induction_wf IH: (downto 0) n. introv Htoss_n.
+  rewrite Htoss_n. unfold toss_n1.
+  fsimpl.
+  applys entl_disj_l.
+  {
+    fleft.
+    simpl.
+    assert (entails
+      (ens (fun r => \[r = true /\ n = 0]))
+      (ens_ \[n = 0];; ens (fun r => \[r = true]))) as ?.
+    {
+      unfold entails. intros.
+      inverts H. heaps.
+      applys s_seq.
+      applys s_ens. heaps.
+      applys s_ens. heaps.
+    }
+    rewrite H at 1.
+    fsimpl.
+    rewrite norm_ens_ens_void_l.
+    fentailment.
+    xsimpl. intros. jauto.
+  }
+  {
+    fright.
+    fsimpl. fentailment. simpl. intros.
+    (* fassume. *)
+    (* fentailment. *)
+    unfold toss1.
+    fsimpl.
+    (* cannot reduce due to lack of reset *)
+    admit.
+  }
+Abort.
+
+
 Definition toss_n_env1 :=
   Fmap.single "toss_n" toss_n1.
 
@@ -1173,7 +1212,7 @@ Proof.
 
 
 simpl in IH.
-    (* rewrite norm_bind_trivial. *)
+    rewrite norm_bind_trivial.
 (* assert (ShiftFree (unk "toss_n" (n -1))) as ?. admit. *)
 (* match goal with
 | |- entails_under _ (defun ?f ?u;; _) _ =>
