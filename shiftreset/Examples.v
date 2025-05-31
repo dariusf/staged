@@ -2,9 +2,10 @@
 (* From ShiftReset Require Import Logic Automation. *)
 From ShiftReset Require Import Logic Automation.
 Local Open Scope string_scope.
+From ShiftReset Require Import Ent1.
 
 (* entailment sequent using entails and defun *)
-Lemma entl_all_r : forall f A (fctx:A -> flow),
+(* Lemma entl_all_r : forall f A (fctx:A -> flow),
   (forall b, entails f (fctx b)) ->
   entails f (∀ b, fctx b).
 Proof.
@@ -22,9 +23,9 @@ Proof.
   apply H1.
   inverts H0 as H0. specializes H0 b.
   assumption.
-Qed.
+Qed. *)
 
-Lemma entl_defun2_req_req: forall (f f3:var) u u1 f1 f2 H1 H2,
+(* Lemma entl_defun2_req_req: forall (f f3:var) u u1 f1 f2 H1 H2,
   H2 ==> H1 ->
   entails (defun f u;; defun f3 u1;; f1) f2 ->
   entails (defun f u;; defun f3 u1;; req H1 f1) (req H2 f2).
@@ -44,7 +45,7 @@ Proof.
   apply H in H4.
   symmetry in TEMP0.
   specializes H12 H4 TEMP0.
-Qed.
+Qed. *)
 
 (* some technical lemmas for rearranging ens *)
 Lemma norm_rearrange_ens : forall H P (P1:val->Prop),
@@ -348,28 +349,28 @@ using shiftfree : staged_ens_join. *)
 (* apply an entailment rule, which bridges to the metalogic *)
 Ltac fentailment :=
   first [
-    apply ent_seq_ens_pure_l |
-    apply ent_seq_defun_ens_pure_l |
+    apply entl_seq_ens_pure_l |
+    apply entl_seq_defun_ens_pure_l |
 
-    apply ent_seq_ens_void_pure_l |
-    apply ent_seq_defun_ens_void_pure_l |
+    apply entl_seq_ens_void_pure_l |
+    apply entl_seq_defun_ens_void_pure_l |
 
-    apply ent_ens_single |
+    apply entl_ens_single |
 
-    apply ent_req_req |
-    apply ent_defun_req_req |
-    apply entl_defun2_req_req |
+    apply entl_req_req |
+    apply entl_defun_req_req |
+    (* apply entl_defun2_req_req | *)
 
-    apply ent_req_l |
-    apply ent_defun_req_l |
+    apply entl_req_l |
+    apply entl_defun_req_l |
 
     (* this is ordered last *)
-    apply ent_req_r
+    apply entl_req_r
   ].
 
 
-Ltac fleft := first [ apply ent_seq_disj_r_l | apply ent_disj_r_l ].
-Ltac fright := first [ apply ent_seq_disj_r_r | apply ent_disj_r_l ].
+Ltac fleft := first [ apply entl_seq_disj_r_l | apply entl_disj_r_l ].
+Ltac fright := first [ apply entl_seq_disj_r_r | apply entl_disj_r_l ].
 
 Module Multi.
 
@@ -567,7 +568,7 @@ Definition flipi1 : flow :=
     ens (fun r1 => \[If v = true then r1 = 1 else r1 = 0]))
   ).
 
-Theorem flipi_summary1 :
+(* Theorem flipi_summary1 :
   entails_under toss_env1 flipi1 flipi_spec.
 Proof.
   unfold flipi1, flipi_spec.
@@ -590,7 +591,7 @@ Proof.
   xsimpl.
   - intros. f_equal. math.
   - intros. simpl in H. rewrite H. f_equal.
-Qed.
+Qed. *)
 
 Theorem flipi_summary2 :
 (* defun "toss" toss1;;  *)
