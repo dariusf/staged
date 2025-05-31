@@ -69,9 +69,35 @@ Section Propriety.
     (flip (gentails n) ====> (gentails n) ====> impl)
     entails.
   Proof.
-    unfold Proper, respectful, impl, flip.
+    unfold Proper, respectful, impl, flip, entails.
     intros n. induction n; intros.
     (* this should not be provable *)
+  Abort.
+
+  Definition gentails1 f1 f2 :=
+    forall n, gentails n f1 f2.
+
+  #[global]
+  Instance Proper_entails_gentails : Proper
+    (flip gentails1 ====> gentails1 ====> impl)
+    entails.
+  Proof.
+    unfold Proper, respectful, impl, flip, entails, gentails1.
+    intros.
+    destruct R.
+    { specializes H O. inverts H. specializes H3 H2.
+      specializes H1 H3.
+      specializes H0 O. inverts H0. specializes H H1.
+      auto. }
+    { specializes H (S O). inverts H. specializes H4 H2.
+      destr H4.
+      specializes H1 H.
+      specializes H0 (S O). inverts H0. specializes H6 H1.
+      destr H6.
+      applys_eq H0.
+      (* this should not be provable, as entails does not allow
+        components of shift results to be weakened *)
+      admit. }
   Abort.
 
   #[global]
@@ -786,9 +812,6 @@ Section Propriety.
       }
     }
   Abort.
-
-  Definition gentails1 f1 f2 :=
-    forall n, gentails n f1 f2.
 
   #[global]
   Instance Proper_bind_gentails :

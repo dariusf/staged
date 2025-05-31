@@ -1173,8 +1173,7 @@ Proof.
 
 
 simpl in IH.
-(* TODO can rewrite the whole ctx *)
-    rewrite norm_bind_trivial.
+    (* rewrite norm_bind_trivial. *)
 (* assert (ShiftFree (unk "toss_n" (n -1))) as ?. admit. *)
 (* match goal with
 | |- entails_under _ (defun ?f ?u;; _) _ =>
