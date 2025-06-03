@@ -11,7 +11,7 @@
 Require Export EqNat.
 (* We don't actually use any of these axioms in this file, but it's good style to say at
     the start which axioms we will use in the soundness proofs. *)
-Require Import msl.Extensionality.
+From MSL Require Import Extensionality.
 
 (* Definition of the machine *)
 
@@ -35,7 +35,7 @@ Inductive expr : Type :=
 
 (* No vars greater than n in e *)
 Fixpoint closed' (n : nat) (e : expr) : Prop :=
-  match e with 
+  match e with
    | Var n' => n' < n
    | Prim f e => closed' n e
    | Lam e => closed' (n + 1) e
@@ -50,10 +50,10 @@ Fixpoint closed' (n : nat) (e : expr) : Prop :=
 Definition closed (e : expr) : Prop :=
   closed' 0 e.
 
-(* We need a definition for values in the TCB so that we can define 
+(* We need a definition for values in the TCB so that we can define
     call-by-value semantics; also, memories only store values. *)
 Definition openValue (e:expr) : Prop :=
-  match e with 
+  match e with
    | Nat _ => True
    | Loc _ => True
    | Lam _ => True
@@ -73,12 +73,12 @@ Definition exp_to_val (e : expr) (H : isValue e) : value :=
   existT isValue e H.
 
 (* A memory that explicitly tracks the boundry between used and fresh memory. *)
-Definition mem : Type := 
+Definition mem : Type :=
   (nat * (addr -> value))%type.
 
 (* Our memories permit three operations: new, deref, and update *)
 Definition new (m : mem) (v : value) : (mem * addr) :=
-  match m with (n, m') => 
+  match m with (n, m') =>
     ((S n, fun a => if beq_nat a n then v else m' a), n)
   end.
 
@@ -180,4 +180,3 @@ Definition safe_prog (e:expr) : Prop :=
   forall m, safe (m, e).
 
 (* End TCB *)
-

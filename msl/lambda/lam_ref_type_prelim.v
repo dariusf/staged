@@ -7,7 +7,7 @@
 
 (* lam_ref_type_defs.v: the definition of the type system; this is the main event. *)
 
-Require Import msl.msl_standard.
+From MSL Require Import msl_standard.
 
 Require Import lam_ref_tcb.
 Require Import lam_ref_mach_defs.
@@ -21,8 +21,8 @@ Module TFP <: TY_FUNCTOR_PROP.
   (* We can't use g oo psi since psi is a partial function.  Still, this is not too bad. *)
     fun A B (g : A -> B) (psi : F A) => (option_map g) oo psi.
   Implicit Arguments fmap [A B].
-  
-  (* As we say just after defining the above fmap, "Clearly equations (4) and 
+
+  (* As we say just after defining the above fmap, "Clearly equations (4) and
       (5) hold for this fmap." *)
   Lemma fmap_id : forall A, fmap (id A) = id (F A).
   Proof.
@@ -40,7 +40,7 @@ Module TFP <: TY_FUNCTOR_PROP.
     destruct (FA a); trivial.
   Qed.
 
-(* From section 4.1 *)    
+(* From section 4.1 *)
   Definition other : Type := value.
 End TFP.
 
@@ -218,7 +218,7 @@ Proof.
   unfold mtype in *.
   rewrite H2; auto.
   rewrite H1 in H; discriminate.
-  
+
   destruct x; destruct y; destruct z; simpl in *.
   unfold age in H0; simpl in H0.
   hnf in H.
@@ -490,7 +490,7 @@ Definition approx_eq (n : nat) (tau1 tau2 : predicate) : Prop :=
   approx n tau1 = approx n tau2.
 
 Lemma approx_eq_downward : forall n m p q,
-  m <= n -> 
+  m <= n ->
   approx_eq n p q ->
   approx_eq m p q.
 Proof.

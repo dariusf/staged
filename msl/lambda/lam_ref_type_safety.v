@@ -7,7 +7,7 @@
 
 (* lam_ref_type_safety.v: typing implies safety *)
 
-Require Import msl.msl_standard.
+From MSL Require Import msl_standard.
 
 Require Import lam_ref_tcb.
 Require Import lam_ref_mach_defs.
@@ -25,7 +25,7 @@ Proof.
   pattern n; apply (well_founded_induction lt_wf); clear n.
   intros n Hind; intros.
   destruct st'.
-  rewrite expr_type_eqn in H.  
+  rewrite expr_type_eqn in H.
   spec H (k,v).
   detach H.
   spec H m.

@@ -7,7 +7,7 @@ Require Import lam_ref_tcb.
 Require Import lam_ref_mach_defs.
 Require Import lam_ref_mach_lemmas.
 
-Require Import msl.msl_standard.
+From MSL Require Import msl_standard.
 
 Section eval.
   Variable eval : mem -> expr -> (mem * expr).
@@ -16,7 +16,7 @@ Section eval.
   match e0 with
   | App e1 e2 =>
       match eval m e1 with
-      | (m', Lam e1') => 
+      | (m', Lam e1') =>
           let (m'',e2') := eval m' e2 in
             match value_dec e2' with
             | left H => eval m'' (subst 0 (exp_to_val e2' H) e1')

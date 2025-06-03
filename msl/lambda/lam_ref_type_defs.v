@@ -9,7 +9,7 @@
 
 Require Import lam_ref_tcb.
 Require Import lam_ref_mach_defs.
-Require Import msl.msl_standard.
+From MSL Require Import msl_standard.
 
 Require Export lam_ref_type_prelim.
 
@@ -20,8 +20,8 @@ Definition forces (psi : mtype) (v : value) (tau : pred world) :=
   tau (psi, v).
 
 (* Section 4.1, equation 17 *)
-Program Definition ty_nat : pred world := 
-  fun w => match w with (k, v) => 
+Program Definition ty_nat : pred world :=
+  fun w => match w with (k, v) =>
     exists n, v = v_Nat n
   end.
 Next Obligation.
@@ -139,7 +139,7 @@ Next Obligation.
   rewrite unsquash_squash; intros.
   unfold fmap, option_map, compose.
   spec H0 a.
-  case_eq (f a); intros. 
+  case_eq (f a); intros.
   rewrite H in H0.
   intuition.
   split; auto.
@@ -163,7 +163,7 @@ Next Obligation.
   rewrite knot_age1.
   rewrite H1; auto.
   apply rt_trans with a'0; auto.
-  apply Rt_Rft; auto. 
+  apply Rt_Rft; auto.
   rewrite H in H0.
   auto.
 Qed.
@@ -455,7 +455,7 @@ Proof.
   apply sub_equ; apply sub_type_at; apply box_positive.
   apply H.
   apply sub_equ; [ apply equ_sub2 | apply equ_sub ]; apply H.
-Qed.  
+Qed.
 
 Lemma ty_ref_contractive : forall F,
   nonexpansive F ->
