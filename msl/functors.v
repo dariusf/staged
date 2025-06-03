@@ -3,7 +3,7 @@
  *
  *)
 
-Require Import VST.msl.base.
+From MSL Require Import base.
 
 Set Implicit Arguments.
 

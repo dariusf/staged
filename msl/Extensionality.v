@@ -1,4 +1,4 @@
-Require Export VST.msl.Axioms.
+From MSL Require Export Axioms.
 
 (* NO AXIOMS AFTER THIS POINT *)
 

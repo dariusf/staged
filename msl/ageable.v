@@ -3,7 +3,7 @@
  *
  *)
 
-Require Import VST.msl.base.
+From MSL Require Import base.
   Require Coq.funind.Recdef.
 
 Local Open Scope nat_scope.
