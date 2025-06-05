@@ -3,7 +3,7 @@
  *
  *)
 
-From MSL Require Import base.
+Require Import msl.base.
   Require Coq.funind.Recdef.
 
 Local Open Scope nat_scope.

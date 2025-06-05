@@ -3,8 +3,10 @@
  *
  *)
 
-From MSL Require Import base ageable functors.
+Require Import msl.base.
+Require Import msl.ageable.
 Require Import Coq.Logic.Eqdep_dec.
+Require Import msl.functors.
 
 Import CovariantFunctor.
 Import CovariantFunctorLemmas.

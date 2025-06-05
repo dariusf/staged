@@ -4,7 +4,10 @@
 -Q shiftreset ShiftReset
 -Q future Future
 -Q types Types
--Q msl MSL
+-Q msl msl
+-Q msl_lambda msl_lambda
+-Q msl_sl msl_sl
+-Q zlist zlist
 -arg -w
 -arg -implicit-core-hint-db,-ambiguous-paths
 slf
@@ -13,3 +16,6 @@ shiftreset
 future
 types
 msl
+msl_lambda
+msl_sl
+zlist

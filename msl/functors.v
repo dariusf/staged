@@ -3,7 +3,7 @@
  *
  *)
 
-From MSL Require Import base.
+Require Import msl.base.
 
 Set Implicit Arguments.
 
