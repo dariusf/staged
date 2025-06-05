@@ -25,7 +25,6 @@ Definition empty_penv : penv := Fmap.empty.
 
 Coercion pval : val >-> expr.
 Coercion pvar : var >-> expr.
-Coercion vint : Z >-> val.
 
 Inductive bigstep : penv -> heap -> expr -> heap -> eresult -> Prop :=
 

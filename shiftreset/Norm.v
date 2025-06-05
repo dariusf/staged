@@ -1152,3 +1152,17 @@ Proof.
     applys* s_defun.
     applys* s_rs_val. }
 Qed.
+
+Lemma norm_intersect_l: forall f1 f2,
+  entails (intersect f1 f2) f1.
+Proof.
+  unfold entails. intros.
+  inverts* H.
+Qed.
+
+Lemma norm_intersect_r: forall f1 f2,
+  entails (intersect f1 f2) f2.
+Proof.
+  unfold entails. intros.
+  inverts* H.
+Qed.

@@ -112,6 +112,9 @@ Proof.
   constructor.
 Qed.
 
+Coercion vint : Z >-> val.
+Coercion vbool : bool >-> val.
+
 Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   let aux t := subst y v t in
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
