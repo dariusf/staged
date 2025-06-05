@@ -56,6 +56,7 @@ jobs:
               pipx install alectryon
             endGroup
             startGroup "Install Graphviz"
+              #sudo apt-get update
               sudo apt-get install -y graphviz
             endGroup
 
