@@ -311,7 +311,7 @@ Lemma himpl_hstar_trans_l : forall H1 H2 H3 H4,
   H2 \* H3 ==> H4 ->
   H1 \* H3 ==> H4.
 Proof using.
-  introv M1 M2. applys himpl_trans M2. applys himpl_frame_l M1.
+  introv M1 M2. applys himpl_trans_r M2. applys himpl_frame_l M1.
 Qed.
 
 Lemma himpl_hstar_trans_r : forall H1 H2 H3 H4,
@@ -319,7 +319,7 @@ Lemma himpl_hstar_trans_r : forall H1 H2 H3 H4,
   H3 \* H2 ==> H4 ->
   H3 \* H1 ==> H4.
 Proof using.
-  introv M1 M2. applys himpl_trans M2. applys himpl_frame_r M1.
+  introv M1 M2. applys himpl_trans_r M2. applys himpl_frame_r M1.
 Qed.
 
 (* ----------------------------------------------------------------- *)
@@ -510,7 +510,7 @@ Lemma hwand_hpure_l : forall P H,
   (\[P] \-* H) = H.
 Proof using.
   introv HP. applys himpl_antisym.
-  { lets K: hwand_cancel \[P] H. applys himpl_trans K.
+  { lets K: hwand_cancel \[P] H. applys himpl_trans_r K.
     applys* himpl_hstar_hpure_r. }
   { rewrite hwand_equiv. applys* himpl_hstar_hpure_l. }
 Qed.
