@@ -55,6 +55,9 @@ jobs:
               sudo apt-get install -y pipx python3-pip
               pipx install alectryon
             endGroup
+            startGroup "Install Graphviz"
+              sudo apt-get install -y graphviz
+            endGroup
 
           script: |
             startGroup "Build project"
