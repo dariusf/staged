@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html class="alectryon-standalone"><head><title>Automation.v</title><meta charset="utf-8"><meta content="Alectryon" name="generator"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="alectryon.css" rel="stylesheet"><link href="pygments.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/IBM-type/0.5.4/css/ibm-type.min.css" integrity="sha512-sky5cf9Ts6FY1kstGOBHSybfKqdHR41M0Ldb0BjNiv3ifltoQIsg0zIaQ+wwdwgQ0w9vKFW7Js50lxH9vqNSSw==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/5.2.0/fira_code.min.css" integrity="sha512-MbysAYimH1hH2xYzkkMHB6MqxBqfP0megxsCLknbYqHVwXTCg9IqHbk+ZP/vnhO8UEW6PaXAkKe2vQ+SWACxxA==" crossorigin="anonymous" /><script src="alectryon.js"></script></head><body><article class="alectryon-root alectryon-centered alectryon-coqdoc"><div class="alectryon-banner">Built with <a href="https://github.com/cpitclaudel/alectryon/">Alectryon</a>, running Coq+SerAPI v8.20.0+0.20.0. Bubbles (<span class="alectryon-bubble"></span>) indicate interactive fragments: hover for details, tap to reveal contents. Use <kbd>Ctrl+↑</kbd> <kbd>Ctrl+↓</kbd> to navigate, <kbd>Ctrl+🖱️</kbd> to focus. On Mac, use <kbd>⌘</kbd> instead of <kbd>Ctrl</kbd>.</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk1" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk1"><span class="kn">From</span> ShiftReset <span class="kn">Require Import</span> Logic Entl.</label><small class="alectryon-output"><div><div class="alectryon-messages"><blockquote class="alectryon-message">[Loading ML file ring_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file zify_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file micromega_core_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file micromega_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file btauto_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">Notations <span class="s2">&quot;exists ! _ .. _ , _&quot;</span> defined <span class="kn">at level</span> <span class="mi">200</span>
+<span class="kr">with</span> arguments <span class="kn">binder</span> <span class="kn">and</span> <span class="s2">&quot;exists ! _ , _&quot;</span>
+defined <span class="kn">at level</span> <span class="mi">200</span> <span class="kr">with</span> arguments name
+<span class="nb">have</span> incompatible prefixes.
+One of them will likely not work.
+[notation-incompatible-prefix,parsing,default]</blockquote><blockquote class="alectryon-message">Notations <span class="s2">&quot;exists ! _ .. _ , _&quot;</span> defined <span class="kn">at level</span> <span class="mi">200</span>
+<span class="kr">with</span> arguments <span class="kn">binder</span> <span class="kn">and</span> <span class="s2">&quot;exists ! _ : _ , _&quot;</span>
+defined <span class="kn">at level</span> <span class="mi">200</span> <span class="kr">with</span> arguments name
+<span class="nb">have</span> incompatible prefixes.
+One of them will likely not work.
+[notation-incompatible-prefix,parsing,default]</blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">funfold_hyp</span> H env f :=
+  rewrites (&gt;&gt; entails_under_unk env f) <span class="kr">in</span> H; [ <span class="nb">unfold</span> env; resolve_fn_in_env | ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">funfold_</span> env f :=
+  rewrites (&gt;&gt; entails_under_unk env f); [ <span class="nb">unfold</span> env; resolve_fn_in_env | ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Tactic Notation</span> <span class="s2">&quot;funfold&quot;</span> <span class="kp">constr</span>(env) <span class="kp">constr</span>(f) := funfold_ env f.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Tactic Notation</span> <span class="s2">&quot;funfold&quot;</span> <span class="kp">constr</span>(env) <span class="kp">constr</span>(f) <span class="s2">&quot;in&quot;</span> <span class="kp">constr</span>(H) := funfold_hyp H env f.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* TODO maybe this should be the interface, for working with sequents especially *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">funfold1</span> f :=
+  <span class="kr">lazymatch goal with</span>
+  | |- entails_under (<span class="nl">?env</span> <span class="nl">?a</span> <span class="nl">?b</span>) _ _ =&gt;
+    <span class="nb">rewrite</span> (@entails_under_unk (env a b) f); [ | <span class="kp">try</span> <span class="nb">unfold</span> env; resolve_fn_in_env ]; <span class="nb">simpl</span>
+  | |- entails_under (<span class="nl">?env</span> <span class="nl">?a</span>) _ _ =&gt;
+    <span class="nb">rewrite</span> (@entails_under_unk (env a) f); [ | <span class="kp">try</span> <span class="nb">unfold</span> env; resolve_fn_in_env ]; <span class="nb">simpl</span>
+  | |- entails_under <span class="nl">?env</span> _ _ =&gt;
+    <span class="nb">rewrite</span> (@entails_under_unk env f); [ | <span class="kp">try</span> <span class="nb">unfold</span> env; resolve_fn_in_env ]; <span class="nb">simpl</span>
+
+  | |- gentails_under (<span class="nl">?env</span> <span class="nl">?a</span> <span class="nl">?b</span>) _ _ _ =&gt;
+    <span class="nb">rewrite</span> (@entails_under_unk (env a b) f); [ | <span class="kp">try</span> <span class="nb">unfold</span> env; resolve_fn_in_env ]; <span class="nb">simpl</span>
+  | |- gentails_under (<span class="nl">?env</span> <span class="nl">?a</span>) _ _ _ =&gt;
+    <span class="nb">rewrite</span> (@entails_under_unk (env a) f); [ | <span class="kp">try</span> <span class="nb">unfold</span> env; resolve_fn_in_env ]; <span class="nb">simpl</span>
+  | |- gentails_under <span class="nl">?env</span> _ _ _ =&gt;
+    <span class="nb">rewrite</span> (@entails_under_unk env f); [ | <span class="kp">try</span> <span class="nb">unfold</span> env; resolve_fn_in_env ]; <span class="nb">simpl</span>
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* introduce variables *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fintro</span> x :=
+  <span class="kr">lazymatch goal with</span>
+  <span class="c">(* base cases *)</span>
+  | |- entails_under _ (<span class="kr">∃</span> <span class="nv">_</span>, _) _ =&gt;
+    <span class="c">(* let x := fresh y in *)</span>
+    <span class="nb">simple apply</span> ent_ex_l; <span class="nb">intros</span> x
+  | |- entails_under _ _ (<span class="kr">∀</span> <span class="nv">_</span>, _) =&gt;
+    <span class="c">(* let x := fresh y in *)</span>
+    <span class="nb">simple apply</span> ent_all_r; <span class="nb">intros</span> x
+
+  <span class="c">(* ex under an ens *)</span>
+  <span class="c">(* a problem with the automation is quantifiers going into the continuation *)</span>
+  <span class="c">(* | |- entails_under _ (ens_ _;; ∃ _, _) _ =&gt;</span>
+<span class="c">    rewrite norm_seq_ex; fintro x</span>
+<span class="c">  | |- entails_under _ (ens_ _;; ∃ _, _;; _) _ =&gt;</span>
+<span class="c">    rewrite norm_seq_ex; fintro x *)</span>
+
+  <span class="c">(* SL exists *)</span>
+  | |- entails_under _ (ens_ (\<span class="kr">exists</span> <span class="nv">_</span>, _)) _ =&gt;
+    <span class="nb">rewrite</span> norm_seq_ens_sl_ex; fintro x
+  | |- entails_under _ (ens_ (\<span class="kr">exists</span> <span class="nv">_</span>, _);; _) _ =&gt;
+    <span class="nb">rewrite</span> norm_seq_ens_sl_ex; fintro x
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+
+<span class="c">(* instantiate an existential or specialize a forall *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">finst</span> a :=
+  <span class="kr">lazymatch goal with</span>
+  | |- entails_under _ (rs (<span class="kr">∀</span> <span class="nv">_</span>, _)) _ =&gt;
+    <span class="nb">rewrite</span> norm_rs_all; finst a
+  | |- entails_under _ (req _ (<span class="kr">∀</span> <span class="nv">_</span>, _)) _ =&gt;
+    <span class="nb">rewrite</span> norm_req_all; finst a
+  | |- entails_under _ (_;; <span class="kr">∀</span> <span class="nv">_</span>, _) _ =&gt;
+    <span class="nb">rewrite</span> norm_seq_all_r; shiftfree; finst a
+  <span class="c">(* | |- entails_under _ ((∃ _, _);; _) _ =&gt;</span>
+<span class="c">    rewrite norm_seq_ex_l; fintro a</span>
+<span class="c">  | |- entails_under _ (_;; ∃ _, _) _ =&gt;</span>
+<span class="c">    rewrite norm_seq_ex_r; fintro a *)</span>
+
+  | |- entails_under _ ((<span class="kr">∀</span> <span class="nv">_</span>, _);; _) _ =&gt;
+    <span class="nb">apply</span> ent_seq_all_l; <span class="kr">exists</span> <span class="nv">a</span>
+
+  | |- entails_under _ (<span class="kr">∀</span> <span class="nv">_</span>, _) _ =&gt;
+    <span class="nb">apply</span> ent_all_l; <span class="kr">exists</span> <span class="nv">a</span>
+  | |- entails_under _ _ (<span class="kr">∃</span> <span class="nv">_</span>, _) =&gt;
+    <span class="nb">apply</span> ent_ex_r; <span class="kr">exists</span> <span class="nv">a</span>
+  | |- entails_under _ _ ((<span class="kr">∃</span> <span class="nv">_</span>, _);; _) =&gt;
+    <span class="nb">apply</span> ent_seq_ex_r; <span class="kp">try</span> <span class="kr">exists</span> <span class="nv">a</span>
+  <span class="nv">end</span>.</span></span></pre><div class="doc">
+Move assumptions to the Coq context.
+  This is the rough eqiuvalent of xpull from SLF.
+  While we're comparing, xchange is replaced with rewriting and the use of lemmas around the covariance of <span class="inlinecode"><span class="id" title="var">ens_</span></span>. 
+</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="c">(* Ltac fassume_ H :=</span>
+<span class="c">  lazymatch goal with</span>
+<span class="c">  | |- entails_under _ (ens_ \[_]) _ =&gt;</span>
+<span class="c">    apply ent_ens_void_l; intros H</span>
+<span class="c">  | |- entails_under _ (ens_ \[_];; _) _ =&gt;</span>
+<span class="c">    apply ent_seq_ens_void_pure_l; intros H</span>
+<span class="c">  | |- entails_under _ (ens (fun _ =&gt; \[_]);; _) _ =&gt;</span>
+<span class="c">    apply ent_seq_ens_pure_l; intros H</span>
+<span class="c">  | |- entails_under _ _ (req \[_] _) =&gt;</span>
+<span class="c">    apply ent_req_r; apply ent_seq_ens_void_pure_l; intros H</span>
+<span class="c">  end.</span>
+
+<span class="c">Ltac fassume_req :=</span>
+<span class="c">  lazymatch goal with</span>
+<span class="c">  | |- entails_under _ _ (req _ _) =&gt;</span>
+<span class="c">    apply ent_req_r</span>
+<span class="c">  end.</span>
+
+<span class="c">Tactic Notation &quot;fassume&quot; simple_intropattern(p) := fassume_ p.</span>
+<span class="c">Tactic Notation &quot;fassume&quot; := fassume_req. *)</span>
+
+<span class="c">(* some technical lemmas for rearranging ens *)</span>
+</span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk2" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk2"><span class="kn">Lemma</span> <span class="nf">norm_rearrange_ens</span> : <span class="kr">forall</span> <span class="nv">H</span> <span class="nv">P</span> (<span class="nv">P1</span>:val-&gt;<span class="kt">Prop</span>),
+  entails (ens (<span class="kr">fun</span> <span class="nv">r</span> =&gt; H \* \[P /\ P1 r]))
+  (ens_ \[P];; ens_ H;; ens (<span class="kr">fun</span> <span class="nv">r</span> =&gt; \[P1 r])).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">H</span> : hprop) (<span class="nv">P</span> : <span class="kt">Prop</span>) (<span class="nv">P1</span> : val -&gt; <span class="kt">Prop</span>),
+ens r. H \* \[P /\ P1 r]
+⊑ ens_ \[P];; ens_ H;; (ens r. \[P1 r])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk3" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk3"><span class="kn">Proof</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">H</span> : hprop) (<span class="nv">P</span> : <span class="kt">Prop</span>) (<span class="nv">P1</span> : val -&gt; <span class="kt">Prop</span>),
+ens r. H \* \[P /\ P1 r]
+⊑ ens_ \[P];; ens_ H;; (ens r. \[P1 r])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk4" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk4"><span class="nb">unfold</span> entails.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">H</span> : hprop) (<span class="nv">P</span> : <span class="kt">Prop</span>) (<span class="nv">P1</span> : val -&gt; <span class="kt">Prop</span>)
+  (<span class="nv">s1</span> <span class="nv">s2</span> : senv) (<span class="nv">h1</span> <span class="nv">h2</span> : heap) (<span class="nv">R</span> : result),
+s1, s2, h1, h2, R |= (ens r. H \* \[P /\ P1 r]) -&gt;
+s1, s2, h1, h2, R
+|= (ens_ \[P];; ens_ H;; (ens r. \[P1 r]))</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk5" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk5"><span class="nb">intros</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s1, s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>H0</var><span class="hyp-type"><b>: </b><span>s1, s2, h1, h2, R |= (ens r. H \* \[P /\ P1 r])</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s1, s2, h1, h2, R
+|= (ens_ \[P];; ens_ H;; (ens r. \[P1 r]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk6" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk6">inverts H0.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>H7</var><span class="hyp-type"><b>: </b><span><span class="kr">exists</span> (<span class="nv">v</span> : val) (<span class="nv">h3</span> : heap),
+  R = norm v /\
+  (H \* \[P /\ P1 v]) h3 /\
+  h2 = h1 \u h3 /\ Fmap.disjoint h1 h3</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, s2, h1, h2, R
+|= (ens_ \[P];; ens_ H;; (ens r. \[P1 r]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk7" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk7">heaps.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, s2, h1, h1 \u x, norm v
+|= (ens_ \[P];; ens_ H;; (ens r. \[P1 r]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk8" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk8">applys s_seq.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, <span class="nl">?s3</span>, h1, <span class="nl">?h3</span>, norm <span class="nl">?r1</span> |= ens_ \[P]</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Automation-v-chk9" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><label class="goal-separator" for="Automation-v-chk9"><hr></label><div class="goal-conclusion"><span class="nl">?s3</span>, s2, <span class="nl">?h3</span>, h1 \u x, norm v
+|= (ens_ H;; (ens r. \[P1 r]))</div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chka" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chka">{</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, <span class="nl">?s3</span>, h1, <span class="nl">?h3</span>, norm <span class="nl">?r1</span> |= ens_ \[P]</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chkb" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chkb">applys s_ens.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm <span class="nl">?r1</span> = norm v0 /\
+  (\[v0 = vunit] \* \[P]) h3 /\
+  <span class="nl">?h3</span> = h1 \u h3 /\ Fmap.disjoint h1 h3</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">heaps.</span><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chkc" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chkc">}</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, s2, h1, h1 \u x, norm v
+|= (ens_ H;; (ens r. \[P1 r]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chkd" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chkd">applys s_seq.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, <span class="nl">?s3</span>, h1, <span class="nl">?h3</span>, norm <span class="nl">?r1</span> |= ens_ H</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Automation-v-chke" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><label class="goal-separator" for="Automation-v-chke"><hr></label><div class="goal-conclusion"><span class="nl">?s3</span>, s2, <span class="nl">?h3</span>, h1 \u x, norm v |= (ens r. \[P1 r])</div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chkf" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chkf">{</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, <span class="nl">?s3</span>, h1, <span class="nl">?h3</span>, norm <span class="nl">?r1</span> |= ens_ H</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk10" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk10">applys s_ens.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm <span class="nl">?r1</span> = norm v0 /\
+  (\[v0 = vunit] \* H) h3 /\
+  <span class="nl">?h3</span> = h1 \u h3 /\ Fmap.disjoint h1 h3</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">heaps.</span><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk11" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk11">}</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, s2, h1 \u x, h1 \u x, norm v |= (ens r. \[P1 r])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk12" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk12">{</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, s2, h1 \u x, h1 \u x, norm v |= (ens r. \[P1 r])</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk13" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk13">applys s_ens.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>P</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>x</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H1</var><span class="hyp-type"><b>: </b><span>H x</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>P</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>P1 v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint x Fmap.empty</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 x</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm v = norm v0 /\
+  \[P1 v0] h3 /\
+  h1 \u x = (h1 \u x) \u h3 /\
+  Fmap.disjoint (h1 \u x) h3</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">heaps.</span><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">}</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Qed</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk14" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk14"><span class="kn">Lemma</span> <span class="nf">norm_ens_pure_conj1</span>: <span class="kr">forall</span> <span class="nv">P</span> <span class="nv">P1</span>,
+  entails (ens (<span class="kr">fun</span> <span class="nv">r</span> : val =&gt; \[P r /\ P1]))
+    (seq (ens_ \[P1]) (ens (<span class="kr">fun</span> <span class="nv">r</span> : val =&gt; \[P r]))).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">P</span> : val -&gt; <span class="kt">Prop</span>) (<span class="nv">P1</span> : <span class="kt">Prop</span>),
+ens r. \[P r /\ P1] ⊑ ens_ \[P1];; (ens r. \[P r])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk15" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk15"><span class="kn">Proof</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">P</span> : val -&gt; <span class="kt">Prop</span>) (<span class="nv">P1</span> : <span class="kt">Prop</span>),
+ens r. \[P r /\ P1] ⊑ ens_ \[P1];; (ens r. \[P r])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk16" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk16"><span class="nb">unfold</span> entails.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">P</span> : val -&gt; <span class="kt">Prop</span>) (<span class="nv">P1</span> : <span class="kt">Prop</span>) (<span class="nv">s1</span> <span class="nv">s2</span> : senv)
+  (<span class="nv">h1</span> <span class="nv">h2</span> : heap) (<span class="nv">R</span> : result),
+s1, s2, h1, h2, R |= (ens r. \[P r /\ P1]) -&gt;
+s1, s2, h1, h2, R |= (ens_ \[P1];; (ens r. \[P r]))</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk17" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk17"><span class="nb">intros</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>P</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>s1, s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>s1, s2, h1, h2, R |= (ens r. \[P r /\ P1])</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s1, s2, h1, h2, R |= (ens_ \[P1];; (ens r. \[P r]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk18" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk18">inverts H.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>P</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>H6</var><span class="hyp-type"><b>: </b><span><span class="kr">exists</span> (<span class="nv">v</span> : val) (<span class="nv">h3</span> : heap),
+  R = norm v /\
+  \[P v /\ P1] h3 /\
+  h2 = h1 \u h3 /\ Fmap.disjoint h1 h3</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, s2, h1, h2, R |= (ens_ \[P1];; (ens r. \[P r]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk19" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk19">heaps.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>P</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>P v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>P1</span></span></span><br><span><var>H3</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 Fmap.empty</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, s2, h1, h1, norm v
+|= (ens_ \[P1];; (ens r. \[P r]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk1a" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk1a">applys s_seq.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>P</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>P v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>P1</span></span></span><br><span><var>H3</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 Fmap.empty</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, <span class="nl">?s3</span>, h1, <span class="nl">?h3</span>, norm <span class="nl">?r1</span> |= ens_ \[P1]</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Automation-v-chk1b" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>P</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>P v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>P1</span></span></span><br><span><var>H3</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 Fmap.empty</span></span></span><br></div><label class="goal-separator" for="Automation-v-chk1b"><hr></label><div class="goal-conclusion"><span class="nl">?s3</span>, s2, <span class="nl">?h3</span>, h1, norm v |= (ens r. \[P r])</div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk1c" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk1c">applys s_ens.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>P</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>P v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>P1</span></span></span><br><span><var>H3</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 Fmap.empty</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm <span class="nl">?r1</span> = norm v0 /\
+  (\[v0 = vunit] \* \[P1]) h3 /\
+  <span class="nl">?h3</span> = h1 \u h3 /\ Fmap.disjoint h1 h3</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Automation-v-chk1d" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>P</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>P v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>P1</span></span></span><br><span><var>H3</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 Fmap.empty</span></span></span><br></div><label class="goal-separator" for="Automation-v-chk1d"><hr></label><div class="goal-conclusion">s2, s2, <span class="nl">?h3</span>, h1, norm v |= (ens r. \[P r])</div></blockquote></div></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk1e" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk1e">heaps.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>P</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>P v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>P1</span></span></span><br><span><var>H3</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 Fmap.empty</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s2, s2, h1, h1, norm v |= (ens r. \[P r])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk1f" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk1f">applys s_ens.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>P</var><span class="hyp-type"><b>: </b><span>val -&gt; <span class="kt">Prop</span></span></span></span><br><span><var>P1</var><span class="hyp-type"><b>: </b><span><span class="kt">Prop</span></span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H4</var><span class="hyp-type"><b>: </b><span>P v</span></span></span><br><span><var>H5</var><span class="hyp-type"><b>: </b><span>P1</span></span></span><br><span><var>H3</var><span class="hyp-type"><b>: </b><span>Fmap.disjoint h1 Fmap.empty</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm v = norm v0 /\
+  \[P v0] h3 /\ h1 = h1 \u h3 /\ Fmap.disjoint h1 h3</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">heaps.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Qed</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* automation-friendly specializations of a more general lemma</span>
+<span class="c">  to move only some constructs *)</span>
+</span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk20" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk20"><span class="kn">Lemma</span> <span class="nf">norm_float_ens_void</span> : <span class="kr">forall</span> <span class="nv">H</span> <span class="nv">f2</span>,
+  entails (rs (ens_ H;; f2)) (ens_ H;; rs f2).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">H</span> : hprop) (<span class="nv">f2</span> : flow),
+rs (ens_ H;; f2) ⊑ ens_ H;; rs f2</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk21" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk21"><span class="kn">Proof</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">H</span> : hprop) (<span class="nv">f2</span> : flow),
+rs (ens_ H;; f2) ⊑ ens_ H;; rs f2</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk22" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk22"><span class="nb">intros</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">rs (ens_ H;; f2) ⊑ ens_ H;; rs f2</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">applys* red_rs_float1.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Qed</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk23" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk23"><span class="kn">Lemma</span> <span class="nf">norm_reassoc_ens_void</span> : <span class="kr">forall</span> <span class="nv">H</span> <span class="nv">f2</span> <span class="nv">fk</span>,
+  entails (bind (ens_ H;; f2) fk) (ens_ H;; bind f2 fk).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">H</span> : hprop) (<span class="nv">f2</span> : flow) (<span class="nv">fk</span> : val -&gt; flow),
+<span class="kr">let</span> <span class="nv">x</span> = ens_ H;; f2 <span class="kr">in</span> fk x
+⊑ ens_ H;; <span class="kr">let</span> <span class="nv">x</span> = f2 <span class="kr">in</span> fk x</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk24" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk24"><span class="kn">Proof</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">H</span> : hprop) (<span class="nv">f2</span> : flow) (<span class="nv">fk</span> : val -&gt; flow),
+<span class="kr">let</span> <span class="nv">x</span> = ens_ H;; f2 <span class="kr">in</span> fk x
+⊑ ens_ H;; <span class="kr">let</span> <span class="nv">x</span> = f2 <span class="kr">in</span> fk x</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk25" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk25"><span class="nb">intros</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>fk</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">let</span> <span class="nv">x</span> = ens_ H;; f2 <span class="kr">in</span> fk x
+⊑ ens_ H;; <span class="kr">let</span> <span class="nv">x</span> = f2 <span class="kr">in</span> fk x</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">applys* norm_bind_seq_assoc.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Qed</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fbiabduction</span> :=
+  <span class="nb">rewrite</span> norm_ens_req_transpose; [ | applys b_pts_single ];
+  <span class="nb">rewrite</span> norm_req_pure_l; [ | <span class="bp">reflexivity</span> ];
+  <span class="nb">rewrite</span> norm_seq_ens_empty.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">freduction</span> :=
+  <span class="nb">rewrite</span> red_init;
+  <span class="kp">repeat</span> <span class="nb">rewrite</span> red_extend;
+  <span class="nb">rewrite</span> red_rs_sh_elim.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+
+
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Create HintDb</span> staged_norm_old.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span>
+
+  <span class="c">(* move universal quantifiers on the left outwards *)</span>
+  norm_rs_all norm_req_all norm_seq_all_r
+
+  <span class="c">(* associate things out of binds *)</span>
+  norm_bind_req norm_bind_seq_assoc norm_bind_disj
+
+  <span class="c">(* move quantifiers out *)</span>
+  norm_bind_all_l norm_bind_ex_l
+  norm_seq_ex_r
+  norm_rs_seq_ex_r
+  norm_ens_pure_ex
+  <span class="c">(* norm_bind_all_r norm_bind_ex_r *)</span>
+  norm_rs_all norm_seq_all_r
+  norm_rs_ex
+
+  <span class="c">(* normalise pure assumptions *)</span>
+  norm_ens_pure_conj
+  norm_ens_void_hstar_pure_l
+  norm_ens_void_hstar_pure_r
+
+  <span class="c">(* associate things out of resets *)</span>
+  norm_rs_req norm_rs_disj red_rs_float1
+
+  <span class="c">(* eliminate trivial resets and binds *)</span>
+  norm_rs_ens norm_bind_val
+
+  <span class="c">(* trivial rewrites *)</span>
+  norm_seq_empty_l
+
+<span class="nb">using</span> shiftfree : staged_norm_old.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fsimpl_old</span> := <span class="nb">autorewrite with</span> staged_norm_old.</span></span></pre><div class="doc">
+Automation
+
+<div class="paragraph"> </div>
+
+  The set of tactics shows the general strategy/decomposiiton of proof steps.
+
+<div class="paragraph"> </div>
+<ul class="doclist">
+<li> <span class="inlinecode"><span class="id" title="var">fsimpl</span></span>: simplify. This is in charge of implicitly establishing a normal form for the left side of a sequent, which is <span class="inlinecode">(<span class="id" title="var">defun</span></span> <span class="inlinecode"><span class="id" title="var">f</span></span> <span class="inlinecode"><span class="id" title="var">u</span>;)*</span> <span class="inlinecode">(<span class="id" title="var">ens_</span></span> <span class="inlinecode"><span class="id" title="var">H</span>;)?</span> <span class="inlinecode"><span class="id" title="var">f</span></span>. Simplification generally involves: applying easy simplifying rewrites, moving assumptions as far back as possible (to facilitate lifting into metalogic), moving an ens to the beginning to serve as the "spatial context"/"symbolic execution state", moving shift-free things out of resets, moving defun to the beginning. Will not move quantiifers, leaving open the possibility of handling them via heuristics based on position.
+
+</li>
+<li> <span class="inlinecode"><span class="id" title="var">funfold2</span></span>: unfold anonymous functions or discard a defun
+
+</li>
+<li> <span class="inlinecode"><span class="id" title="var">fspecialize</span></span>, <span class="inlinecode"><span class="id" title="var">fdestruct</span></span>, <span class="inlinecode"><span class="id" title="var">fexists</span></span>, <span class="inlinecode"><span class="id" title="var">fintros</span></span>: these are unfortunately-named, but deal with quantifiers on both sides of entailments
+
+</li>
+<li> <span class="inlinecode"><span class="id" title="var">freduction</span></span>, <span class="inlinecode"><span class="id" title="var">fbiabduction</span></span>: for specific scenarios, where there is a shift inside a reset, or an ens followed by req
+
+</li>
+<li> <span class="inlinecode"><span class="id" title="var">fentailment</span></span>: bridges to metalogic
+
+</li>
+<li> <span class="inlinecode"><span class="id" title="var">fleft</span></span>, <span class="inlinecode"><span class="id" title="var">fright</span></span>: for disjunction
+
+</li>
+</ul>
+<div class="paragraph"> </div>
+</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Create HintDb</span> staged_forall_r.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span>
+  red_init
+<span class="nb">using</span> shiftfree : staged_forall_r.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fintros_rew</span> := <span class="nb">autorewrite with</span> staged_forall_r.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fintros</span> x :=
+  fintros_rew;
+  <span class="kp">first</span> [
+    <span class="nb">simple apply</span> ent_all_r |
+    <span class="nb">simple apply</span> entl_all_r
+  ]; <span class="nb">intros</span> x.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Create HintDb</span> staged_exists_r.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span>
+  red_init
+<span class="nb">using</span> shiftfree : staged_exists_r.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fexists_rew</span> := <span class="nb">autorewrite with</span> staged_exists_r.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fexists</span> a := fexists_rew;
+  <span class="kp">first</span> [
+    <span class="nb">simple apply</span> entl_ex_r |
+    <span class="nb">simple apply</span> entl_seq_ex_r
+  ]; <span class="kr">exists</span> <span class="nv">a</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fexists_old</span> a := fexists_rew;
+  <span class="kp">first</span> [
+    <span class="nb">simple apply</span> ent_ex_r |
+    <span class="nb">simple apply</span> ent_seq_ex_r
+  ]; <span class="kr">exists</span> <span class="nv">a</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Create HintDb</span> staged_exists_l.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span>
+  norm_bind_ex_l
+  norm_seq_ex_r
+  norm_rs_seq_ex_r
+  norm_ens_pure_ex
+  norm_rs_ex
+  norm_seq_ens_sl_ex
+  norm_seq_ens_sl_ex
+  norm_seq_ex_l
+  norm_seq_defun_ex
+<span class="nb">using</span> shiftfree : staged_exists_l.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fdestruct_rew</span> := <span class="nb">autorewrite with</span> staged_exists_l.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fdestruct</span> a := fdestruct_rew;
+  <span class="kp">first</span> [
+    <span class="nb">simple apply</span> entl_ex_l |
+    <span class="nb">simple apply</span> entl_seq_ex_l
+  ]; <span class="nb">intros</span> a.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fdestruct_old</span> a := fdestruct_rew;
+  <span class="kp">first</span> [
+    <span class="nb">simple apply</span> ent_ex_l |
+    <span class="nb">simple apply</span> ent_seq_ex_l
+  ]; <span class="nb">intros</span> a.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Create HintDb</span> staged_forall_l.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span>
+  norm_bind_all_l
+  norm_rs_all
+  norm_seq_all_r
+  norm_rs_all
+  norm_req_all
+  norm_seq_all_r
+  norm_seq_defun_all
+<span class="nb">using</span> shiftfree : staged_forall_l.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fspecialize_rew</span> := <span class="nb">autorewrite with</span> staged_forall_l.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fspecialize</span> x := fspecialize_rew;
+  <span class="kp">first</span> [
+    <span class="nb">simple apply</span> entl_all_l |
+    <span class="nb">simple apply</span> ent_all_l |
+    <span class="nb">simple apply</span> ent_seq_all_l
+  ]; <span class="kr">exists</span> <span class="nv">x</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk26" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk26"><span class="kn">Lemma</span> <span class="nf">norm_bind_defun_out</span>: <span class="kr">forall</span> (<span class="nv">f</span>:var) <span class="nv">u</span> <span class="nv">fk</span> <span class="nv">f2</span>,
+  entails (bind (defun f u;; f2) fk) (defun f u;; bind f2 fk).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">f</span> : var) (<span class="nv">u</span> <span class="nv">fk</span> : val -&gt; flow) (<span class="nv">f2</span> : flow),
+<span class="kr">let</span> <span class="nv">x</span> = defun f u;; f2 <span class="kr">in</span> fk x
+⊑ defun f u;; <span class="kr">let</span> <span class="nv">x</span> = f2 <span class="kr">in</span> fk x</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk27" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk27"><span class="kn">Proof</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">f</span> : var) (<span class="nv">u</span> <span class="nv">fk</span> : val -&gt; flow) (<span class="nv">f2</span> : flow),
+<span class="kr">let</span> <span class="nv">x</span> = defun f u;; f2 <span class="kr">in</span> fk x
+⊑ defun f u;; <span class="kr">let</span> <span class="nv">x</span> = f2 <span class="kr">in</span> fk x</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk28" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk28"><span class="nb">intros</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u, fk</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">let</span> <span class="nv">x</span> = defun f u;; f2 <span class="kr">in</span> fk x
+⊑ defun f u;; <span class="kr">let</span> <span class="nv">x</span> = f2 <span class="kr">in</span> fk x</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">applys* norm_bind_seq_assoc.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Qed</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk29" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk29"><span class="kn">Lemma</span> <span class="nf">norm_seq_defun_ens_void_out</span>: <span class="kr">forall</span> (<span class="nv">f</span>:var) <span class="nv">u</span> <span class="nv">f2</span> <span class="nv">H</span>,
+  entails (ens_ H;; defun f u;; f2) (defun f u;; ens_ H;; f2).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">f</span> : var) (<span class="nv">u</span> : val -&gt; flow) (<span class="nv">f2</span> : flow)
+  (<span class="nv">H</span> : hprop),
+ens_ H;; defun f u;; f2 ⊑ defun f u;; ens_ H;; f2</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk2a" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk2a"><span class="kn">Proof</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">f</span> : var) (<span class="nv">u</span> : val -&gt; flow) (<span class="nv">f2</span> : flow)
+  (<span class="nv">H</span> : hprop),
+ens_ H;; defun f u;; f2 ⊑ defun f u;; ens_ H;; f2</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk2b" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk2b"><span class="nb">unfold</span> entails.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">f</span> : var) (<span class="nv">u</span> : val -&gt; flow) (<span class="nv">f2</span> : flow)
+  (<span class="nv">H</span> : hprop) (<span class="nv">s1</span> <span class="nv">s2</span> : senv) (<span class="nv">h1</span> <span class="nv">h2</span> : heap)
+  (<span class="nv">R</span> : result),
+s1, s2, h1, h2, R |= (ens_ H;; defun f u;; f2) -&gt;
+s1, s2, h1, h2, R |= (defun f u;; ens_ H;; f2)</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk2c" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk2c"><span class="nb">intros</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>s1, s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>H0</var><span class="hyp-type"><b>: </b><span>s1, s2, h1, h2, R |= (ens_ H;; defun f u;; f2)</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s1, s2, h1, h2, R |= (defun f u;; ens_ H;; f2)</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk2d" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk2d">inverts* H0.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>s1, s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>s3</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h3</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>s1, s3, h1, h3, norm v |= ens_ H</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>s3, s2, h3, h2, R |= (defun f u;; f2)</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s1, s2, h1, h2, R |= (defun f u;; ens_ H;; f2)</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk2e" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk2e">inverts H8.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>s3</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h3</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>s3, s2, h3, h2, R |= (defun f u;; f2)</span></span></span><br><span><var>H6</var><span class="hyp-type"><b>: </b><span><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h4</span> : heap),
+  norm v = norm v0 /\
+  (\[v0 = vunit] \* H) h4 /\
+  h3 = h1 \u h4 /\ Fmap.disjoint h1 h4</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s3, s2, h1, h2, R |= (defun f u;; ens_ H;; f2)</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk2f" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk2f">inverts* H9.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>s3</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h3</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H6</var><span class="hyp-type"><b>: </b><span><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h4</span> : heap),
+  norm v = norm v0 /\
+  (\[v0 = vunit] \* H) h4 /\
+  h3 = h1 \u h4 /\ Fmap.disjoint h1 h4</span></span></span><br><span><var>s0</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h0</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>v0</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>H8</var><span class="hyp-type"><b>: </b><span>s3, s0, h3, h0, norm v0 |= defun f u</span></span></span><br><span><var>H10</var><span class="hyp-type"><b>: </b><span>s0, s2, h0, h2, R |= f2</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s3, s2, h1, h2, R |= (defun f u;; ens_ H;; f2)</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk30" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk30">inverts* H8.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>s3</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>h0</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H6</var><span class="hyp-type"><b>: </b><span><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm v = norm v0 /\
+  (\[v0 = vunit] \* H) h3 /\
+  h0 = h1 \u h3 /\ Fmap.disjoint h1 h3</span></span></span><br><span><var>H10</var><span class="hyp-type"><b>: </b><span>Fmap.update s3 f u, s2, h0, h2, R |= f2</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>~ Fmap.indom s3 f</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s3, s2, h1, h2, R |= (defun f u;; ens_ H;; f2)</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk31" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk31">applys* s_seq.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>s3</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>h0</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H6</var><span class="hyp-type"><b>: </b><span><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm v = norm v0 /\
+  (\[v0 = vunit] \* H) h3 /\
+  h0 = h1 \u h3 /\ Fmap.disjoint h1 h3</span></span></span><br><span><var>H10</var><span class="hyp-type"><b>: </b><span>Fmap.update s3 f u, s2, h0, h2, R |= f2</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>~ Fmap.indom s3 f</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">s3, <span class="nl">?s3</span>, h1, <span class="nl">?h3</span>, norm <span class="nl">?r1</span> |= defun f u</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Automation-v-chk32" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>s3</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>h0</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H6</var><span class="hyp-type"><b>: </b><span><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm v = norm v0 /\
+  (\[v0 = vunit] \* H) h3 /\
+  h0 = h1 \u h3 /\ Fmap.disjoint h1 h3</span></span></span><br><span><var>H10</var><span class="hyp-type"><b>: </b><span>Fmap.update s3 f u, s2, h0, h2, R |= f2</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>~ Fmap.indom s3 f</span></span></span><br></div><label class="goal-separator" for="Automation-v-chk32"><hr></label><div class="goal-conclusion"><span class="nl">?s3</span>, s2, <span class="nl">?h3</span>, h2, R |= (ens_ H;; f2)</div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk33" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk33">applys* s_defun.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>s3</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>h0</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H6</var><span class="hyp-type"><b>: </b><span><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm v = norm v0 /\
+  (\[v0 = vunit] \* H) h3 /\
+  h0 = h1 \u h3 /\ Fmap.disjoint h1 h3</span></span></span><br><span><var>H10</var><span class="hyp-type"><b>: </b><span>Fmap.update s3 f u, s2, h0, h2, R |= f2</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>~ Fmap.indom s3 f</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">Fmap.update s3 f u, s2, h1, h2, R |= (ens_ H;; f2)</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Automation-v-chk34" style="display: none" type="checkbox"><label class="alectryon-input" for="Automation-v-chk34">applys* s_seq.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>f</var><span class="hyp-type"><b>: </b><span>var</span></span></span><br><span><var>u</var><span class="hyp-type"><b>: </b><span>val -&gt; flow</span></span></span><br><span><var>f2</var><span class="hyp-type"><b>: </b><span>flow</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>hprop</span></span></span><br><span><var>s2</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>h1, h2</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>R</var><span class="hyp-type"><b>: </b><span>result</span></span></span><br><span><var>s3</var><span class="hyp-type"><b>: </b><span>senv</span></span></span><br><span><var>v</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>h0</var><span class="hyp-type"><b>: </b><span>heap</span></span></span><br><span><var>H6</var><span class="hyp-type"><b>: </b><span><span class="kr">exists</span> (<span class="nv">v0</span> : val) (<span class="nv">h3</span> : heap),
+  norm v = norm v0 /\
+  (\[v0 = vunit] \* H) h3 /\
+  h0 = h1 \u h3 /\ Fmap.disjoint h1 h3</span></span></span><br><span><var>H10</var><span class="hyp-type"><b>: </b><span>Fmap.update s3 f u, s2, h0, h2, R |= f2</span></span></span><br><span><var>H9</var><span class="hyp-type"><b>: </b><span>~ Fmap.indom s3 f</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">Fmap.update s3 f u, Fmap.update s3 f u, h1, h0,
+norm <span class="nl">?r1</span> |= ens_ H</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input">applys* s_ens.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Qed</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Create HintDb</span> staged_defun_out.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span>
+  norm_bind_defun_out
+  norm_rs_seq_defun_out
+  norm_seq_defun_ens_void_out
+<span class="nb">using</span> shiftfree : staged_defun_out.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">move_defun_out</span> := <span class="nb">autorewrite with</span> staged_defun_out.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+
+
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Create HintDb</span> staged_defun_in.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span>
+  <span class="c">(* push defun towards a discard *)</span>
+  norm_seq_defun_rs
+  norm_seq_defun_bind_l
+  norm_seq_defun_ens_void
+  norm_seq_defun_req
+  norm_seq_defun_skip_ens_void
+  <span class="c">(* don&#39;t move quantifiers *)</span>
+  <span class="c">(* norm_seq_defun_all *)</span>
+  <span class="c">(* norm_seq_defun_ex *)</span>
+
+  <span class="c">(* move out of bind/rs *)</span>
+  norm_bind_seq_defun_ens
+  norm_bind_rs_seq_defun_ens
+
+<span class="nb">using</span> shiftfree : staged_defun_in.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">funfold2</span> :=
+  <span class="nb">autorewrite with</span> staged_defun_in;
+  <span class="kp">first</span> [
+    <span class="c">(* unfold defun when possible *)</span>
+    <span class="nb">rewrite</span> norm_seq_defun_unk; move_defun_out |
+    <span class="c">(* cancel defun and discard *)</span>
+    <span class="kp">first</span> [
+      <span class="nb">rewrite</span> norm_seq_defun_discard | <span class="c">(* TODO get rid of these *)</span>
+      <span class="nb">rewrite</span> norm_defun_discard_id |
+      <span class="nb">rewrite</span> norm_seq_defun_discard1 |
+      <span class="nb">rewrite</span> norm_defun_discard_id1
+    ]; jauto
+  ].</span></span></pre><div class="doc">
+keep in sync with <span class="inlinecode"><span class="id" title="var">staged_defun_in</span></span>
+</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">move_one_defun_in</span> f :=
+  <span class="kp">repeat</span> <span class="kp">first</span> [
+    <span class="nb">rewrite</span> (@norm_seq_defun_rs f) |
+    <span class="nb">rewrite</span> (@norm_seq_defun_bind_l f) |
+    <span class="nb">rewrite</span> (@norm_seq_defun_ens_void f) |
+    <span class="nb">rewrite</span> (@norm_seq_defun_req f) |
+    <span class="nb">rewrite</span> (@norm_seq_defun_skip_ens_void f) |
+    <span class="nb">rewrite</span> (@norm_bind_seq_defun_ens f) |
+    <span class="nb">rewrite</span> (@norm_bind_rs_seq_defun_ens f)
+  ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">funfold3</span> f :=
+  move_one_defun_in f;
+  <span class="kp">first</span> [
+    <span class="c">(* unfold defun when possible *)</span>
+    <span class="nb">rewrite</span> norm_seq_defun_unk; move_defun_out |
+    <span class="c">(* cancel defun and discard *)</span>
+    <span class="kp">first</span> [
+      <span class="nb">rewrite</span> norm_seq_defun_discard1 |
+      <span class="nb">rewrite</span> norm_defun_discard_id1
+    ]; jauto
+  ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+
+<span class="c">(* obligations involving shifting around separation logic and req/ens.</span>
+<span class="c">  the general strategy is to join ens, then split them into:</span>
+
+<span class="c">  - pure (to be lifted to metalogic)</span>
+<span class="c">  - stateful</span>
+<span class="c">  - results</span>
+<span class="c">*)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Create HintDb</span> staged_sl_ens.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span>
+  norm_ens_pure_conj1
+  norm_ens_pure_conj
+  norm_rearrange_ens
+  <span class="c">(* norm_ens_ens_void_l *)</span>
+  norm_ens_void_hstar_pure_l
+  norm_ens_void_hstar_pure_r
+<span class="nb">using</span> shiftfree : staged_sl_ens.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+
+<span class="c">(* simplification/normalization, optimized for interactive use.</span>
+<span class="c">  for example, this splits ens so we can move the pure parts out. *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Create HintDb</span> staged_norm.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Global</span> <span class="kn">Hint Rewrite</span>
+
+  <span class="c">(* associate things out of binds *)</span>
+  norm_reassoc_ens_void
+  norm_bind_req
+  norm_bind_disj
+
+  <span class="c">(* associate things out of resets *)</span>
+  norm_rs_req
+  norm_rs_disj
+  norm_float_ens_void
+
+  <span class="c">(* trivial simplifications *)</span>
+  norm_rs_ens
+  norm_bind_val
+  norm_seq_empty_l
+
+<span class="nb">using</span> shiftfree : staged_norm.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fsimpl</span> := <span class="nb">autorewrite with</span> staged_norm staged_sl_ens.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+
+
+<span class="c">(* simplifications performed prior to using entailment rules.</span>
+<span class="c">  this optimises for closing out goals, so will e.g. join ens. *)</span>
+<span class="c">(* Create HintDb staged_ens_join.</span>
+<span class="c">Global Hint Rewrite</span>
+<span class="c">  norm_ens_ens_void_l</span>
+<span class="c">using shiftfree : staged_ens_join. *)</span>
+
+<span class="c">(* apply an entailment rule, which bridges to the metalogic *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fentailment</span> :=
+  <span class="kp">first</span> [
+    <span class="nb">apply</span> entl_seq_ens_pure_l |
+    <span class="nb">apply</span> entl_seq_defun_ens_pure_l |
+
+    <span class="nb">apply</span> entl_seq_ens_void_pure_l |
+    <span class="nb">apply</span> entl_seq_defun_ens_void_pure_l |
+
+    <span class="nb">apply</span> entl_ens_single |
+
+    <span class="nb">apply</span> entl_req_req |
+    <span class="nb">apply</span> entl_defun_req_req |
+    <span class="c">(* apply entl_defun2_req_req | *)</span>
+
+    <span class="nb">apply</span> entl_req_l |
+    <span class="nb">apply</span> entl_defun_req_l |
+
+    <span class="c">(* this is ordered last *)</span>
+    <span class="nb">apply</span> entl_req_r
+  ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fentailment_old</span> :=
+  <span class="kp">first</span> [
+    <span class="nb">apply</span> ent_seq_ens_pure_l |
+    <span class="nb">apply</span> ent_seq_defun_ens_pure_l |
+
+    <span class="nb">apply</span> ent_seq_ens_void_pure_l |
+    <span class="nb">apply</span> ent_seq_defun_ens_void_pure_l |
+
+    <span class="nb">apply</span> ent_ens_single |
+
+    <span class="nb">apply</span> ent_req_req |
+    <span class="nb">apply</span> ent_defun_req_req |
+    <span class="c">(* apply ent_defun2_req_req | *)</span>
+
+    <span class="nb">apply</span> ent_req_l |
+    <span class="nb">apply</span> ent_defun_req_l |
+
+    <span class="c">(* this is ordered last *)</span>
+    <span class="nb">apply</span> ent_req_r
+  ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fleft</span> := <span class="kp">first</span> [ <span class="nb">apply</span> entl_seq_disj_r_l | <span class="nb">apply</span> entl_disj_r_l ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fright</span> := <span class="kp">first</span> [ <span class="nb">apply</span> entl_seq_disj_r_r | <span class="nb">apply</span> entl_disj_r_r ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fleft_old</span> := <span class="kp">first</span> [ <span class="nb">apply</span> ent_seq_disj_r_l | <span class="nb">apply</span> ent_disj_r_l ].</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Ltac</span> <span class="nf">fright_old</span> := <span class="kp">first</span> [ <span class="nb">apply</span> ent_seq_disj_r_r | <span class="nb">apply</span> ent_disj_r_r ].</span></span></pre></article></body></html>
