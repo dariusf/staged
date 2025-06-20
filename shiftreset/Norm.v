@@ -1166,3 +1166,33 @@ Proof.
   unfold entails. intros.
   inverts* H.
 Qed.
+
+Lemma norm_seq_fall : forall {A:Type} (f1 : A -> flow) f2,
+  entails (seq (fall f1) f2) (fall (fun (a:A) => seq (f1 a) f2)).
+Proof.
+  unfold entails.
+  constructor.
+  intros.
+  inverts H.
+  - inverts H7.
+    specialize (H5 b).
+    econstructor; eauto.
+  - inverts H6.
+    constructor.
+    auto.
+Qed. (* the other direction cannot be proven *)
+
+Lemma norm_seq_fex : forall {A:Type} (f1 : A -> flow) f2,
+  entails (seq (fex f1) f2) (fex (fun (a:A) => seq (f1 a) f2)).
+Proof.
+  unfold entails.
+  constructor.
+  inverts H.
+  - inverts H7 as [b H7].
+    exists b.
+    econstructor; eauto.
+  - inverts H6 as [b H6].
+    exists b.
+    constructor.
+    auto.
+Qed. (* the other direction cannot be proven *)
