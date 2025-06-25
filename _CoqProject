@@ -2,12 +2,14 @@
 -Q slf SLF
 -Q staged Staged
 -Q shiftreset ShiftReset
+-Q isl ISL
 -Q future Future
 -Q types Types
--arg -w 
+-arg -w
 -arg -implicit-core-hint-db,-ambiguous-paths
 slf
 staged
 shiftreset
+isl
 future
 types
