@@ -1,9 +1,76 @@
 <html>
   <head>
     <title>Shift/reset</title>
+    <link rel="stylesheet" href="coq2html.css" />
   </head>
   <body>
-    The following graph:
-    <div>$GRAPH</div>
+    <main style="max-width: 860px; margin: 0 auto; font-size: 1em">
+      <div class="doc">
+        The following graph gives an overview of the development. Click on the
+        nodes to jump to the corresponding file. A description of each file is
+        below.
+      </div>
+      <style>
+        .graph-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 860px;
+          margin: 1em auto;
+          /* border: solid black 1px; */
+        }
+      </style>
+      <div class="graph-container">$GRAPH</div>
+      <div class="doc">
+        <p>Prerequisites</p>
+        <ul>
+          <li>
+            <b>HeapF</b> SLF's functor for building a separation logic, given a
+            definition of values
+          </li>
+          <li><b>LibFmap</b> extra lemmas and tactics for SLF's finite maps</li>
+          <li><b>ExtraTactics</b> miscellaneous general tactics</li>
+        </ul>
+        <p>Main development</p>
+        <ul>
+          <li>
+            <b>Basics</b> definitions of the programming langauge, the
+            separation logic (via HeapF), the syntax and semantics of staged
+            formulae (flow), entailment and equivalence and basic properties
+          </li>
+          <li>
+            <b>ShiftFree</b> definition of what it means for a staged formula to
+            be shift-free and associated tactics, as well as a typeclass version
+            for use in rewriting
+          </li>
+          <li>
+            <b>Satisfies</b> introduction and elimination lemmas for the
+            constructs of staged logic
+          </li>
+          <li><b>Propriety</b> Proper instances for rewriting</li>
+          <li><b>Reduction</b> lemmas for shift/reset reduction</li>
+          <li>
+            <b>Norm</b> lemmas for normalisation and simplification, to be used
+            for rewriting
+          </li>
+          <li><b>Biab</b> definition of biabduction</li>
+          <li>
+            <b>Entl</b> entailment lemmas, for meta-operations or finishing
+            proofs
+          </li>
+          <li><b>GEnt</b> generalised entailment</li>
+          <li>
+            <b>Logic</b> entry point which re-exports all the previous modules
+          </li>
+          <li><b>Automation</b> tactics for working with staged logic</li>
+          <li><b>Examples</b> case studies</li>
+        </ul>
+        <p>Inessential</p>
+        <ul>
+          <li><b>Tests</b></li>
+          <li><b>Triples, Ent, ExamplesEnt, ReductionOld</b> deprecated</li>
+        </ul>
+      </div>
+    </main>
   </body>
 </html>
