@@ -191,6 +191,31 @@ Global Hint Rewrite
 using shiftfree : staged_norm_old.
 Ltac fsimpl_old := autorewrite with staged_norm_old.
 
+Goal forall {A} (f : A -> flow), entails (fex (fun x => rs (f x))) (rs (fex f)).
+Proof.
+  unfold entails.
+  intros.
+  inverts H.
+  destruct H6 as [b H6].
+  inverts H6.
+  - econstructor.
+    + constructor.
+      eauto.
+    + auto.
+  - constructor.
+    constructor.
+    eauto.
+Qed.
+
+Goal forall {A} (f : A -> flow), entails (fall (fun x => rs (f x))) (rs (fall f)).
+Proof.
+  Unset Printing Notations.
+  unfold entails.
+  intros.
+  inverts H.
+  (* cannot be proven *)
+Abort.
+
 (** Automation
 
   The set of tactics shows the general strategy/decomposiiton of proof steps.
@@ -405,7 +430,59 @@ Global Hint Rewrite
 using shiftfree : staged_norm.
 Ltac fsimpl := autorewrite with staged_norm staged_sl_ens.
 
+Check norm_rs_disj.
 
+Goal forall f1 f2, entails (disj (rs f1) (rs f2)) (rs (disj f1 f2)).
+Proof.
+  unfold entails.
+  intros.
+  inverts H.
+  - inverts H6.
+    + eapply s_rs_sh.
+      * apply s_disj_l.
+        exact H0.
+      * exact H7.
+    + apply s_rs_val.
+      apply s_disj_l.
+      exact H5.
+  - inverts H6.
+    + eapply s_rs_sh.
+      * apply s_disj_r.
+        exact H0.
+      * exact H7.
+    + apply s_rs_val.
+      apply s_disj_r.
+      exact H5.
+Qed.
+
+
+Check norm_float_ens_void.
+
+Goal forall Q f2, entails (seq (ens Q) (rs f2)) (rs (seq (ens Q) f2)).
+Proof.
+  unfold entails.
+  intros.
+  inverts H.
+  - inverts H8.
+    + eapply s_rs_sh.
+      * eapply s_seq; eauto.
+      * auto.
+    + apply s_rs_val.
+      eapply s_seq; eauto.
+  - false.
+    inverts H6 as (? & ? & ?).
+    intuition congruence.
+Qed.
+
+Check norm_rs_req.
+
+Goal forall H f, entails (req H (rs f)) (rs (req H f)).
+Proof.
+  unfold entails.
+  intros.
+  inverts H0.
+  (* cannot be proven *)
+Abort.
 
 (* simplifications performed prior to using entailment rules.
   this optimises for closing out goals, so will e.g. join ens. *)
