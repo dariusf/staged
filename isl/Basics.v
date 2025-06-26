@@ -453,8 +453,21 @@ Infix "⊒" := entailed (at level 90, right associativity) : flow_scope.
 (* Infix "⊑" := entailed (at level 90, right associativity) : flow_scope. *)
 
 Example ex1:
+  entailed (bind alloc read) (bind alloc (fun _ => error)).
+Proof.
+  unfold entailed. intros.
+  inverts H. 2: { inverts H6. }
+  inverts H7.
+  inverts H8.
+  applys s_bind.
+  applys* s_alloc.
+  applys* s_read_err.
+  applys indom_update.
+  right. rew_fmap. reflexivity.
+Qed.
+
+Example ex2:
   entails (bind alloc read) error.
-  (* entailed (bind alloc read) error. *)
 Proof.
   unfold entails. intros.
   inverts H.
@@ -466,40 +479,13 @@ Proof.
   rew_fmap.
   false H11. reflexivity.
   }
-  {
-    injects H0.
+  { injects H0.
   rew_fmap.
   destruct H10.
   inverts H.
-  (* rewrite fmap_read_update in H2. *)
-  applys s_error.
-
-  }
-  { inverts H1. }
-  { inverts H1. }
-
-
-Example ex1:
-  entails (bind alloc read) error.
-  (* entailed (bind alloc read) error. *)
-Proof.
-  unfold entailed. intros.
-  inverts H.
-  2: { inverts H6. }
-  inverts H7.
-  inverts H8.
-
-  rewrite <- H1 in H3.
-  admit.
-  destruct H10.
-  applys s_error.
-
-  applys s_bind.
-  applys* s_alloc.
-  admit.
-  (* admit. *)
-  (* reflexivity. *)
-  applys_eq s_read_err.
+  (* problem: error does not change the heap, so this is the wrong way to state the spec *)
+  Fail applys s_error.
+Abort.
 
 Instance entailed_refl : Reflexive entailed.
 Proof.
