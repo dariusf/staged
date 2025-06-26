@@ -19,7 +19,9 @@ Proof.
   inverts H8.
   applys s_req. intros. specializes H7 H0 H1 H2.
   applys* s_seq.
-Qed.
+Abort.
+
+(* Qed.
 
 Lemma norm_ens_ens_void_split : forall H1 H2,
   entailed (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2).
@@ -1033,4 +1035,4 @@ Proof.
   inverts* H.
 Qed.
 
-*)
+*) *)

@@ -288,6 +288,7 @@ Definition pfree e := papp (pvar "free") e.
 
 Definition spec_alloc_1 := (\[], ok, \exists l, l~~>vuninit).
 Definition spec_free := (\forall l v, l~~>v, ok, \[]).
+Definition spec_deref := (\forall l v, l~~>v, ok, \exists l v1, l~~>v1).
 
 Definition default_env :=
   Fmap.update (Fmap.single "free" spec_free) "ref" spec_alloc_1.
@@ -300,7 +301,23 @@ Example e1: exists R m q,
   /\ q = \exists l, l ~~> vuninit.
 Proof.
   exs. split.
-  applys e_fn. { unfold default_env. resolve_fn_in_env. }
-  applys b_trivial.
+  applys e_fn.
+    { unfold default_env. resolve_fn_in_env. }
+    { applys b_trivial. }
+  splits*. xsimpl.
+Qed.
+
+Example e2: forall l, exists R m q,
+  eval (Fmap.single "deref" spec_deref) (l~~>vint 1)
+  (pderef (pval (vloc l))) R m q
+  /\ R = ok
+  /\ m = \[]
+  /\ q = \exists l v, l ~~> v.
+Proof.
+  intros. exs. split.
+  (* TODO allow picking a different spec. maybe not with an env *)
+  applys e_fn.
+    { unfold default_env. resolve_fn_in_env. }
+    { applys b_trivial. }
   splits*. xsimpl.
 Qed.
