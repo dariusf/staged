@@ -115,8 +115,8 @@ Proof.
   constructor.
 Qed.
 
-Coercion vint : Z >-> val.
-Coercion vbool : bool >-> val.
+(* Coercion vint : Z >-> val.
+Coercion vbool : bool >-> val. *)
 
 (* Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   let aux t := subst y v t in
@@ -165,9 +165,9 @@ Inductive flow : Type :=
   | discard : var -> flow
   | error : flow
   | alloc : flow
-  | free : loc -> flow
-  | read : loc -> flow
-  | write : loc -> val -> flow
+  | free : val -> flow
+  | read : val -> flow
+  | write : val -> val -> flow
   .
 
 Definition seq (f1 f2:flow) := bind f1 (fun _ => f2).
@@ -264,8 +264,8 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
       Fmap.disjoint h1 h3) ->
     satisfies s1 s1 h1 h2 R (ens Q)
 
-  | s_error : forall s1 Q h1 h2 R,
-    satisfies s1 s1 h1 h2 err error
+  | s_error : forall s1 h1 R,
+    satisfies s1 s1 h1 h1 err error
 
   | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R,
     satisfies s1 s3 h1 h3 (ok v) f1 ->
@@ -313,44 +313,52 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     s2 = Fmap.remove s1 f ->
     satisfies s1 s2 h h (ok vunit) (discard f)
 
-  | s_free : forall s1 s2 h1 h2 (f:var) l,
+  | s_free : forall s1 h1 h2 l vl,
+    vl = vloc l ->
     Fmap.indom h1 l ->
     Fmap.read h1 l <> vfreed ->
     h2 = Fmap.update h1 l vfreed ->
-    satisfies s1 s2 h1 h2 (ok vunit) (free l)
+    satisfies s1 s1 h1 h2 (ok vunit) (free vl)
 
-  | s_free_err : forall s1 s2 h1 l,
+  | s_free_err : forall s1 h1 l vl,
+    vl = vloc l ->
     Fmap.indom h1 l -> (* miss would relax this *)
     Fmap.read h1 l = vfreed ->
-    satisfies s1 s2 h1 h1 err (free l)
+    satisfies s1 s1 h1 h1 err (free vl)
 
-  | s_alloc : forall s1 s2 h1 h2 l,
+  | s_alloc : forall s1 h1 h2 l vl,
+    vl = vloc l ->
     ~ Fmap.indom h1 l ->
     h2 = Fmap.update h1 l vuninit ->
-    satisfies s1 s2 h1 h2 (ok l) alloc
+    satisfies s1 s1 h1 h2 (ok vl) alloc
 
-  | s_write : forall s1 s2 h1 h2 l v,
+  | s_write : forall s1 h1 h2 l v vl,
+    vl = vloc l ->
     Fmap.indom h1 l ->
     Fmap.read h1 l <> vfreed ->
     h2 = Fmap.update h1 l v ->
-    satisfies s1 s2 h1 h2 (ok vunit) (write l v)
+    satisfies s1 s1 h1 h2 (ok vunit) (write vl v)
 
-  | s_write_err : forall s1 s2 h1 l v,
+  | s_write_err : forall s1 h1 l v vl,
+    vl = vloc l ->
     Fmap.indom h1 l ->
     Fmap.read h1 l = vfreed ->
-    satisfies s1 s2 h1 h1 err (write l v)
+    satisfies s1 s1 h1 h1 err (write vl v)
 
-  | s_read : forall s1 s2 h1 l v,
+  | s_read : forall s1 h1 (l:loc) (v vl:val),
+    vl = vloc l ->
     Fmap.indom h1 l ->
     Fmap.read h1 l = v ->
     v <> vfreed ->
-    satisfies s1 s2 h1 h1 (ok v) (read l)
+    v <> vuninit ->
+    satisfies s1 s1 h1 h1 (ok v) (read vl)
 
-  | s_read_err : forall s1 s2 h1 l v,
+  | s_read_err : forall s1 h1 (l:loc) (v vl:val),
+    vl = vloc l ->
     Fmap.indom h1 l ->
     Fmap.read h1 l = v ->
-    v = vfreed ->
-    satisfies s1 s2 h1 h1 err (read l)
+    (v = vfreed \/ v = vuninit) ->
+    satisfies s1 s1 h1 h1 err (read vl)
 
   .
 
@@ -425,13 +433,73 @@ Definition read l : flow :=
 Definition write l v1 : flow :=
   ∀ v, req (l~~>v) (ens_ (l~~>v1)). *)
 
+Definition entails (f1 f2:flow) : Prop :=
+  forall s1 s2 h1 h2 R,
+    satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
+
 (** * Entailed by, the dual of entailment *)
 Definition entailed (f1 f2:flow) : Prop :=
   forall s1 s2 h1 h2 R,
     satisfies s1 s2 h1 h2 R f2 -> satisfies s1 s2 h1 h2 R f1.
 
+(* for all states in post, exists state in pre s.t. eval goes from pre to pos *)
+(* Definition entailed (f1 f2:flow) : Prop :=
+  forall s2 h2 R,
+  exists s1 h1,
+    satisfies s1 s2 h1 h2 R f1 ->
+    satisfies s1 s2 h1 h2 R f1. *)
+
 Infix "⊒" := entailed (at level 90, right associativity) : flow_scope.
 (* Infix "⊑" := entailed (at level 90, right associativity) : flow_scope. *)
+
+Example ex1:
+  entails (bind alloc read) error.
+  (* entailed (bind alloc read) error. *)
+Proof.
+  unfold entails. intros.
+  inverts H.
+  2: { inverts H6. }
+  inverts H7.
+  inverts H8.
+  {
+  injects H0.
+  rew_fmap.
+  false H11. reflexivity.
+  }
+  {
+    injects H0.
+  rew_fmap.
+  destruct H10.
+  inverts H.
+  (* rewrite fmap_read_update in H2. *)
+  applys s_error.
+
+  }
+  { inverts H1. }
+  { inverts H1. }
+
+
+Example ex1:
+  entails (bind alloc read) error.
+  (* entailed (bind alloc read) error. *)
+Proof.
+  unfold entailed. intros.
+  inverts H.
+  2: { inverts H6. }
+  inverts H7.
+  inverts H8.
+
+  rewrite <- H1 in H3.
+  admit.
+  destruct H10.
+  applys s_error.
+
+  applys s_bind.
+  applys* s_alloc.
+  admit.
+  (* admit. *)
+  (* reflexivity. *)
+  applys_eq s_read_err.
 
 Instance entailed_refl : Reflexive entailed.
 Proof.
