@@ -15,7 +15,6 @@ Require Import Coq.Program.Equality.
 Require Import Coq.Logic.FunctionalExtensionality.
 
 Set Implicit Arguments.
-(* Ltac auto_star ::= try solve [ auto | fmap_eq | eauto | intuition eauto ]. *)
 
 (** * Programs *)
 Definition var : Type := string.
@@ -34,6 +33,9 @@ Inductive val :=
   | vbool : bool -> val
   | vlist : list val -> val
   | vfptr : var -> val
+  | verror : val
+  | vuninit : val
+  | vfreed : val
 (** A deeply-embedded function pointer, referring to a [ufun] in the environment. *)
 
 (* with expr : Type :=
@@ -161,6 +163,11 @@ Inductive flow : Type :=
   | disj : flow -> flow -> flow
   | defun : var -> (val -> flow) -> flow
   | discard : var -> flow
+  | error : flow
+  | alloc : flow
+  | free : loc -> flow
+  | read : loc -> flow
+  | write : loc -> val -> flow
   .
 
 Definition seq (f1 f2:flow) := bind f1 (fun _ => f2).
@@ -186,7 +193,7 @@ Definition senv := Fmap.fmap var ufun.
 Definition empty_env : senv := Fmap.empty.
 
 Inductive result : Type :=
-  | norm : val -> result
+  | ok : val -> result
   | err : result.
 
 Declare Scope flow_scope.
@@ -251,16 +258,23 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
 
   | s_ens : forall s1 Q h1 h2 R,
     (exists v h3,
-      R = norm v /\
+      R = ok v /\
       Q v h3 /\
       h2 = Fmap.union h1 h3 /\
       Fmap.disjoint h1 h3) ->
     satisfies s1 s1 h1 h2 R (ens Q)
 
+  | s_error : forall s1 Q h1 h2 R,
+    satisfies s1 s1 h1 h2 err error
+
   | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R,
-    satisfies s1 s3 h1 h3 (norm v) f1 ->
+    satisfies s1 s3 h1 h3 (ok v) f1 ->
     satisfies s3 s2 h3 h2 R (f2 v) ->
     satisfies s1 s2 h1 h2 R (bind f1 f2)
+
+  | s_bind_err : forall s1 s2 f1 (f2:val->flow) h1 h2,
+    satisfies s1 s2 h1 h2 err f1 ->
+    satisfies s1 s2 h1 h2 err (bind f1 f2)
 
   | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
     (H: exists b,
@@ -293,11 +307,50 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
   | s_defun s1 s2 h1 x uf :
     ~ Fmap.indom s1 x ->
     s2 = Fmap.update s1 x uf ->
-    satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
+    satisfies s1 s2 h1 h1 (ok vunit) (defun x uf)
 
   | s_discard s1 s2 h (f:var) :
     s2 = Fmap.remove s1 f ->
-    satisfies s1 s2 h h (norm vunit) (discard f)
+    satisfies s1 s2 h h (ok vunit) (discard f)
+
+  | s_free : forall s1 s2 h1 h2 (f:var) l,
+    Fmap.indom h1 l ->
+    Fmap.read h1 l <> vfreed ->
+    h2 = Fmap.update h1 l vfreed ->
+    satisfies s1 s2 h1 h2 (ok vunit) (free l)
+
+  | s_free_err : forall s1 s2 h1 l,
+    Fmap.indom h1 l -> (* miss would relax this *)
+    Fmap.read h1 l = vfreed ->
+    satisfies s1 s2 h1 h1 err (free l)
+
+  | s_alloc : forall s1 s2 h1 h2 l,
+    ~ Fmap.indom h1 l ->
+    h2 = Fmap.update h1 l vuninit ->
+    satisfies s1 s2 h1 h2 (ok l) alloc
+
+  | s_write : forall s1 s2 h1 h2 l v,
+    Fmap.indom h1 l ->
+    Fmap.read h1 l <> vfreed ->
+    h2 = Fmap.update h1 l v ->
+    satisfies s1 s2 h1 h2 (ok vunit) (write l v)
+
+  | s_write_err : forall s1 s2 h1 l v,
+    Fmap.indom h1 l ->
+    Fmap.read h1 l = vfreed ->
+    satisfies s1 s2 h1 h1 err (write l v)
+
+  | s_read : forall s1 s2 h1 l v,
+    Fmap.indom h1 l ->
+    Fmap.read h1 l = v ->
+    v <> vfreed ->
+    satisfies s1 s2 h1 h1 (ok v) (read l)
+
+  | s_read_err : forall s1 s2 h1 l v,
+    Fmap.indom h1 l ->
+    Fmap.read h1 l = v ->
+    v = vfreed ->
+    satisfies s1 s2 h1 h1 err (read l)
 
   .
 
@@ -321,7 +374,7 @@ Ltac heaps :=
   lazymatch goal with
   | H: exists _, _ |- _ => destr H; heaps
   | H: _ /\ _ |- _ => destr H; heaps
-  | H: norm _ = norm _ |- _ => injects H; heaps
+  | H: ok _ = ok _ |- _ => injects H; heaps
   | H: (_ ~~> _) _ |- _ => hinv H; heaps
   | H: \[_] _ |- _ => hinv H; heaps
   | H: (_ \* _) _ |- _ => hinv H; heaps
@@ -335,7 +388,7 @@ Ltac heaps :=
   end.
 
 Lemma s_seq : forall s3 h3 r1 s1 s2 f1 f2 h1 h2 R,
-  satisfies s1 s3 h1 h3 (norm r1) f1 ->
+  satisfies s1 s3 h1 h3 (ok r1) f1 ->
   satisfies s3 s2 h3 h2 R f2 ->
   satisfies s1 s2 h1 h2 R (seq f1 f2).
 Proof.
@@ -350,14 +403,29 @@ Lemma s_ens_ : forall H h1 h2 s1,
     H h3 /\
     h2 = Fmap.union h1 h3 /\
     Fmap.disjoint h1 h3) ->
-  satisfies s1 s1 h1 h2 (norm vunit) (ens_ H).
+  satisfies s1 s1 h1 h2 (ok vunit) (ens_ H).
 Proof.
   unfold ens_. intros.
   applys* s_ens.
   heaps.
 Qed.
 
-(** * Entailment *)
+(* possibly needs to be made primitive because l should be fresh, not in current heap *)
+(* also definitions like these would need to identify precondition failure with error, which we had trouble with before *)
+
+(* Definition alloc : flow :=
+  req \[] (ens (fun r => \exists l, l~~>vuninit \* \[r = l])).
+
+Definition free l : flow :=
+  ∀ v, req (l~~>v) (ens_ (l~~>vfreed)).
+
+Definition read l : flow :=
+  ∀ v, req (l~~>v) (ens (fun r => l~~>v \* \[r = v])).
+
+Definition write l v1 : flow :=
+  ∀ v, req (l~~>v) (ens_ (l~~>v1)). *)
+
+(** * Entailed by, the dual of entailment *)
 Definition entailed (f1 f2:flow) : Prop :=
   forall s1 s2 h1 h2 R,
     satisfies s1 s2 h1 h2 R f2 -> satisfies s1 s2 h1 h2 R f1.
