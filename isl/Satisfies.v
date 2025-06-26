@@ -3,7 +3,7 @@ From ISL Require Import Basics.
 
 (** * Lemmas about satisfies *)
 Lemma ens_void_pure_intro : forall P s h,
-  P -> satisfies s s h h (norm vunit) (ens_ \[P]).
+  P -> satisfies s s h h (ok vunit) (ens_ \[P]).
 Proof.
   intros.
   unfold ens_.
@@ -18,7 +18,7 @@ Proof.
 Qed.
 
 Lemma ens_pure_intro : forall P s h r,
-  P r -> satisfies s s h h (norm r) (ens (fun v => \[P v])).
+  P r -> satisfies s s h h (ok r) (ens (fun v => \[P v])).
 Proof.
   intros.
   constructor.
@@ -30,7 +30,7 @@ Qed.
 
 Lemma ens_void_pure_inv : forall P s1 s2 h1 h2 R,
   satisfies s1 s2 h1 h2 R (ens_ \[P]) ->
-  P /\ h1 = h2 /\ s1 = s2 /\ R = norm vunit.
+  P /\ h1 = h2 /\ s1 = s2 /\ R = ok vunit.
 Proof.
   intros.
   inverts H as H. destr H.
@@ -40,7 +40,7 @@ Proof.
 Qed.
 
 Lemma empty_intro : forall s1 h1,
-  satisfies s1 s1 h1 h1 (norm vunit) empty.
+  satisfies s1 s1 h1 h1 (ok vunit) empty.
 Proof.
   intros.
   unfold empty, ens_.
@@ -56,7 +56,7 @@ Qed.
 
 Lemma empty_inv : forall s1 s2 h1 h2 R,
   satisfies s1 s2 h1 h2 R empty ->
-  s1 = s2 /\ h1 = h2 /\ R = norm vunit.
+  s1 = s2 /\ h1 = h2 /\ R = ok vunit.
 Proof.
   unfold empty.
   intros.
@@ -80,10 +80,10 @@ Lemma ens_req_inv : forall s1 s2 h1 h2 R H f,
   satisfies s1 s2 h1 h2 R f.
 Proof.
   intros.
-  inverts H0 as H0.
-  inverts H0 as H0. destr H0. hinv H0. hinv H0.
-  inverts H8 as H15. specializes H15 H3.
-  subst. rew_fmap *.
+  inverts* H0.
+  { inverts H8. inverts H9. heaps. }
+  (* TODO *)
+  { inverts H7. zap. inverts H0. }
 Qed.
 
 Lemma req_empty_inv : forall s1 s2 h1 h2 R f,
@@ -106,7 +106,7 @@ Proof.
 Qed.
 
 Lemma ens_empty_intro : forall s1 h1 r,
-  satisfies s1 s1 h1 h1 (norm r) (ens (fun r => \[])).
+  satisfies s1 s1 h1 h1 (ok r) (ens (fun r => \[])).
 Proof.
   intros.
   apply s_ens.
@@ -116,7 +116,7 @@ Proof.
 Qed.
 
 Lemma ens_void_empty_intro : forall s1 h1,
-  satisfies s1 s1 h1 h1 (norm vunit) (ens_ \[]).
+  satisfies s1 s1 h1 h1 (ok vunit) (ens_ \[]).
 Proof.
   intros.
   constructor.
@@ -186,16 +186,14 @@ Proof.
   intros.
   inverts H as H. destr H.
   (* give up on careful reasoning *)
-  inverts H as H. destr H.
-  inverts H9 as H9. destr H9.
-  hinv H. hinv H. hinv H6. hinv H6.
-  applys_eq s_ens_. injects H0. subst. reflexivity.
-  exists (h0 \u h4).
-  splits*.
-  subst.
-  hintro; jauto.
-  rew_fmap *.
-  rew_fmap *.
+  inverts H9.
+  inverts H.
+  heaps.
+  applys s_ens_.
+  exists (x0 \u x2).
+  heaps.
+  (* TODO *)
+  { inverts H. zap. inverts H. }
 Qed.
 
 Lemma fall_intro : forall s1 s2 h1 h2 R A (fctx:A -> flow),

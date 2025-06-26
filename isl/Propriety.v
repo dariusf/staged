@@ -66,6 +66,7 @@ Section Propriety.
     intros.
     inverts H1 as H1; destr H1.
     { apply* s_bind. }
+    { applys* s_bind_err. }
   Qed.
 
   #[global]
@@ -73,7 +74,8 @@ Section Propriety.
   Proof.
     unfold Proper, entailed, respectful. intros.
     inverts H1.
-    { subst. applys* s_bind. }
+    { applys* s_bind. }
+    { applys* s_bind_err. }
   Qed.
 
   Example rewrite :

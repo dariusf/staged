@@ -22,7 +22,6 @@ Inductive biab : hprop -> hprop -> hprop -> hprop -> Prop :=
     biab Ha (H \* H1) (H \* H2) Hf
 
   | b_pts_diff : forall a b H1 H2 Ha Hf l1 l2,
-    (* l1 <> l2 -> *)
     biab Ha H1 H2 Hf ->
     biab (l2~~>b \* Ha) (l1~~>a \* H1) (l2~~>b \* H2) (l1~~>a \* Hf).
 
