@@ -64,7 +64,7 @@ Proof.
   assumption.
 Qed.
 
-Lemma transpose_pts_diff : forall Ha H1 H2 Hf f (x y:loc) (a b:val),
+(* Lemma transpose_pts_diff : forall Ha H1 H2 Hf f (x y:loc) (a b:val),
   entailed (ens_ H1;; req H2 f) (req Ha (ens_ Hf;; f)) ->
   entailed
     (ens_ (x ~~> a \* H1);; req (y ~~> b \* H2) f)
@@ -200,4 +200,4 @@ Proof.
     pose proof transpose_pts_diff.
     unfold entailed in H.
     specializes H IHHbi H3. }
-Qed.
+Qed. *)
