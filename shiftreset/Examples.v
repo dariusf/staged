@@ -54,6 +54,67 @@ Qed.
 
 End Multi.
 
+Module Times.
+
+Definition vmul (v1 v2 : val) : val :=
+  match v1, v2 with
+  | vint i1, vint i2 => vint (i1 * i2)
+  | _, _ => vunit
+  end.
+
+Definition aux : ufun := fun (xs:val) =>
+  (disj
+    (ens (fun r => \[xs = vlist nil /\ r = 1]))
+    (disj
+      (∃ ys, ens_ \[xs = vlist (vint 0::ys)];;
+        sh "k" (discard "k";; ens (fun r => \[r = 0])))
+      (∃ x ys, ens_ \[xs = vlist (x::ys)];;
+        bind (unk "aux" (vlist ys)) (fun z =>
+          ens (fun r => \[r = vmul x z]))))).
+
+Definition times : ufun := fun (xs:val) =>
+  (rs (aux xs)).
+
+Fixpoint times_pure (xs:list val) :=
+  match xs with
+  | nil => vint 1
+  | 0::ys => vint 0
+  | x::ys => vmul x (times_pure ys)
+  end.
+
+Theorem times_spec : forall xs,
+  (forall a, entails (unk "aux" a) (aux a)) ->
+  entails (times (vlist xs)) (ens (fun r => \[r = times_pure xs])).
+Proof.
+  intros xs.
+  induction_wf IH: list_sub xs. intros Haux.
+  unfold times, aux.
+  fsimpl.
+  applys entl_disj_l.
+  { fsimpl.
+    fentailment. intros. injects H.
+    fentailment. xsimpl. auto. }
+  fsimpl.
+  applys entl_disj_l.
+  { fdestruct ys.
+    fsimpl.
+    fentailment. intros. injects H.
+    freduction.
+    funfold2.
+    fsimpl.
+    fentailment. xsimpl. intros. subst. reflexivity. }
+  {
+    fdestruct x. fdestruct ys.
+    fsimpl.
+    fentailment. intros. injects H.
+    fsimpl.
+    rewrite Haux.
+    admit.
+  }
+Abort.
+
+End Times.
+
 Module Toss.
 
 (* let toss () =
