@@ -58,9 +58,19 @@ Module Times.
 
 Definition vmul (v1 v2 : val) : val :=
   match v1, v2 with
+  | _, vint 1 => v1
+  | vint 1, _ => v2
   | vint i1, vint i2 => vint (i1 * i2)
   | _, _ => vunit
   end.
+
+(* Definition vmul (v1 v2 : val) : option val :=
+  match v1, v2 with
+  | _, vint 1 => Some v1
+  | vint 1, _ => Some v2
+  | vint i1, vint i2 => Some (vint (i1 * i2))
+  | _, _ => None
+  end. *)
 
 Definition aux : ufun := fun (xs:val) =>
   (disj
@@ -73,22 +83,153 @@ Definition aux : ufun := fun (xs:val) =>
           ens (fun r => \[r = vmul x z]))))).
 
 Definition times : ufun := fun (xs:val) =>
-  (rs (aux xs)).
+  rs (aux xs).
 
-Fixpoint times_pure (xs:list val) :=
+Fixpoint all {A:Type} P (xs:list A) : Prop :=
+  match xs with
+  | nil => True
+  | x::ys => P x /\ all P ys
+  end.
+
+Definition is_vint (v:val) : Prop :=
+  exists i, v = vint i.
+
+Definition is_vint_vlist (v:val) : Prop :=
+  exists xs, v = vlist xs /\ all is_vint xs.
+
+Fixpoint times_pure (xs:list val) : val :=
   match xs with
   | nil => vint 1
-  | 0::ys => vint 0
+  | x::nil => x
+  | 0::_ => vint 0
   | x::ys => vmul x (times_pure ys)
   end.
 
-Theorem times_spec : forall xs,
+(* Fixpoint times_pure (xs:list int) : int :=
+  match xs with
+  | nil => 1
+  | x::nil => x
+  | 0::_ => 0
+  | x::ys => x * times_pure ys
+  end. *)
+
+Lemma vmul_one: forall x,
+  vmul x 1 = x.
+Proof.
+  intros x.
+  destruct x; try reflexivity.
+  simpl. destruct z; try reflexivity.
+  destruct p; reflexivity.
+Qed.
+
+Lemma times_singleton: forall x,
+  times_pure (x :: nil) = x.
+Proof.
+  intros x.
+  destruct x; try reflexivity.
+  simpl. destruct z; try reflexivity.
+Qed.
+
+(* These simple properties are admitted, pending a better encoding
+  of mul for values *)
+Lemma vmul_assoc: forall x y z,
+  (* is_vint x ->
+  is_vint y ->
+  is_vint z -> *)
+  vmul x (vmul y z) = vmul (vmul x y) z.
+Proof.
+  intros x y z.
+  (* destruct x; destruct y; destruct z; auto. *)
+Admitted.
+
+Lemma times_any_zero : forall x ys,
+  vint 0 = times_pure (x :: vint 0 :: ys).
+Proof.
+Admitted.
+
+Lemma times_first_two : forall a b c,
+  times_pure (a :: b :: c) = times_pure (vmul a b :: c).
+Proof.
+Admitted.
+
+Import ExamplesEnt.Axioms.
+
+Lemma lemma : forall xs x,
   (forall a, entails (unk "aux" a) (aux a)) ->
-  entails (times (vlist xs)) (ens (fun r => \[r = times_pure xs])).
+  entails
+    (rs (bind (aux (vlist xs)) (fun z => ens (fun r => \[r = vmul x z]))))
+    (ens (fun r => \[r = times_pure (x :: xs)])).
 Proof.
   intros xs.
-  induction_wf IH: list_sub xs. intros Haux.
-  unfold times, aux.
+  induction_wf IH: list_sub xs.
+  introv Haux.
+  destruct xs.
+  {
+    unfold aux.
+    fsimpl.
+    applys entl_disj_l.
+    (* get rid of spurious cases *)
+    2: {
+      fsimpl.
+      applys entl_disj_l.
+      { fdestruct ys.
+        fsimpl.
+        fentailment. intros. false H. }
+      { fdestruct x0. fdestruct ys.
+        fsimpl.
+        fentailment. intros. false H. } }
+    fsimpl.
+    fentailment. intros.
+    fentailment. xsimpl. intros. subst r.
+    rewrite times_singleton.
+    rewrite vmul_one.
+    reflexivity.
+  }
+  {
+    unfold aux.
+    fsimpl.
+    applys entl_disj_l. { fsimpl. fentailment. intros. false H. }
+    fsimpl.
+    applys entl_disj_l.
+    { fdestruct ys.
+      fsimpl. fentailment. intros. injects H.
+      freduction.
+      funfold2.
+      fsimpl.
+      fentailment. xsimpl. intros. subst.
+      simpl.
+      applys times_any_zero. }
+    { fdestruct x0. fdestruct ys.
+      fsimpl. fentailment. intros. injects H.
+      rewrite Haux.
+
+      rewrite norm_bind_assoc.
+      setoid_rewrite norm_bind_val.
+
+      specializes IH ys.
+      specializes IH (vmul x x0) Haux.
+      rewrite times_first_two.
+      (* more pain *)
+      applys_eq IH.
+      f_equal. f_equal.
+      applys fun_ext_dep. intros.
+      f_equal.
+      applys fun_ext_dep. intros.
+      rewrite vmul_assoc.
+      reflexivity. }
+  }
+Qed.
+
+Theorem times_spec : forall xs,
+  (forall a, entails (unk "aux" a) (aux a)) ->
+  entails
+    (times (vlist xs))
+    (ens (fun r => \[r = times_pure xs])).
+Proof.
+  intros xs.
+  unfold times.
+  intros Haux.
+  unfold aux.
   fsimpl.
   applys entl_disj_l.
   { fsimpl.
@@ -102,16 +243,16 @@ Proof.
     freduction.
     funfold2.
     fsimpl.
-    fentailment. xsimpl. intros. subst. reflexivity. }
+    fentailment. xsimpl. intros. subst. simpl. destruct ys; reflexivity. }
   {
     fdestruct x. fdestruct ys.
     fsimpl.
     fentailment. intros. injects H.
     fsimpl.
     rewrite Haux.
-    admit.
+    apply* lemma.
   }
-Abort.
+Qed.
 
 End Times.
 
