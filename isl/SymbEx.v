@@ -28,37 +28,50 @@ Inductive val :=
   (* | vfun : var -> expr -> val *)
   (* | vfix : var -> var -> expr -> val *)
   | vloc : loc -> val
-  | vtup : val -> val -> val
-  | vstr : string -> val
-  | vbool : bool -> val
-  | vlist : list val -> val
-  | vfptr : var -> val
+  (* | vtup : val -> val -> val *)
+  (* | vstr : string -> val *)
+  (* | vbool : bool -> val *)
+  (* | vlist : list val -> val *)
+  (* | vfptr : var -> val *)
+  | vvar : var -> val
   | verror : val
   | vuninit : val
   | vfreed : val
 
 with expr : Type :=
-  | pvar (x: var)
+  (* | pvar (x: var) *)
   | pval (v: val)
+  | prefmut (e: expr)
+  | pref (e: expr)
+  | plet (x: var) (e1 e2:expr)
+  | pletmut (x: var) (e1 e2:expr)
+  (* | pseq (e1 e2: expr) *)
+  | passume (e: expr)
+  | pchoice (e1: expr) (e2: expr)
+  | prepeat (e: expr)
+  | papp (e1: expr) (e2: expr)
+
+  | padd (v1 v2: val)
+
   (* | plet (x: var) (e1 e2: expr) *)
-  | pseq (e1 e2: expr)
   (* | pfix (xf: var) (x: var) (e: expr) *)
   (* | pfun (x: var) (e: expr) *)
-  (* | padd (e1 e2: expr) *)
   (* | pfst (e: expr) *)
   (* | psnd (e: expr) *)
   (* | pminus (e1 e2: expr) *)
   (* | passert (e: expr) *)
-  | passume (e: expr)
-  | pchoice (e1: expr) (e2: expr)
-  | prepeat (e: expr)
   (* | pref (e: expr)
   | pderef (e: expr)
   | passign (e1: expr) (e2: expr)
   | pfree (e: expr) *)
   (* | pif (v: expr) (e1: expr) (e2: expr) *)
-  | papp (e1: expr) (e2: expr)
   .
+
+(* Definition padd (e1 e2 : expr) : expr :=
+  match e1, e2 with
+  | pval (vint i1), pval (vint i2) => pval (vint (i1 + i2))
+  | _, _ => pval vunit
+  end. *)
 
 Definition vadd (v1 v2 : val) : val :=
   match v1, v2 with
@@ -72,11 +85,11 @@ Definition viop f a b :=
   | _, _ => vunit
   end.
 
-Definition vbop f a b :=
+(* Definition vbop f a b :=
   match a, b with
   | vbool a1, vbool b1 => f a1 b1
   | _, _ => vunit
-  end.
+  end. *)
 
 Definition virel f a b :=
   match a, b with
@@ -100,14 +113,14 @@ Definition vsub a b := viop (fun x y => vint (x - y)) a b.
   | _, _ => vunit
   end. *)
 
-Definition vand (a b:val) :=
+(* Definition vand (a b:val) :=
   match a, b with
   | vbool true, _ => b
   | vbool false, _ => vbool false
   | _, vbool false => vbool false
   | _, vbool true => a
   | _, _ => vunit
-  end.
+  end. *)
 
 #[global]
 Instance Inhab_val : Inhab val.
@@ -120,28 +133,34 @@ Qed.
 (* Coercion vint : Z >-> val.
 Coercion vbool : bool >-> val. *)
 
-(* Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
+Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   let aux t := subst y v t in
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
-  | padd e1 e2 => padd (aux e1) (aux e2)
-  | pminus x z => pminus x z
-  | pfst x => pfst x
-  | psnd x => psnd x
-  | pvar x => if_y_eq x (pval v) e
-  | passert b => passert (aux b)
-  | pderef r => pderef (aux r)
-  | passign x z => passign (aux x) (aux z)
+  (* | padd e1 e2 => padd (aux e1) (aux e2) *)
+  | padd v1 v2 => padd v1 v2
+  (* | pminus x z => pminus x z *)
+  (* | pfst x => pfst x *)
+  (* | psnd x => psnd x *)
+  (* | pvar x => if_y_eq x (pval v) e *)
+  (* | passert b => passert (aux b) *)
+  (* | pderef r => pderef (aux r) *)
+  (* | passign x z => passign (aux x) (aux z) *)
   | pref v => pref (aux v)
-  | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
-  | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
+  | prefmut v => prefmut (aux v)
+  | passume e => passume (aux e)
+  (* | pfun x t1 => pfun x (if_y_eq x t1 (aux t1)) *)
+  (* | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1))) *)
   | papp e1 e2 => papp (aux e1) (aux e2)
   | plet x t1 t2 => plet x (aux t1) (if_y_eq x t2 (aux t2))
-  | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2)
-  | pshift e => pshift (fun k => aux (e k))
-  | preset e => preset (aux e)
-  end. *)
+  | pletmut x t1 t2 => pletmut x (aux t1) (if_y_eq x t2 (aux t2))
+  (* | pif t0 t1 t2 => pif (aux t0) (aux t1) (aux t2) *)
+  | pchoice t1 t2 => pchoice (aux t1) (aux t2)
+  | prepeat e => prepeat (aux e)
+  (* | pshift e => pshift (fun k => aux (e k)) *)
+  (* | preset e => preset (aux e) *)
+  end.
 
 Module Val.
   Definition value := val.
@@ -151,7 +170,8 @@ Module Export Heap := HeapF.HeapSetup Val.
 
 Definition empty_heap : heap := Fmap.empty.
 
-Definition postcond := val -> hprop.
+(* Definition postcond := val -> hprop. *)
+Definition postcond : Type := val * hprop.
 
 Inductive result : Type :=
   | ok : result
@@ -239,8 +259,28 @@ Proof.
   auto.
 Qed.
 
-Inductive eval : senv -> hprop -> expr -> result -> hprop -> hprop -> Prop :=
-  | e_bind : forall s p e1 e2 R m1 m2 q q1,
+
+Implicit Types H : hprop.
+Implicit Types Q : postcond.
+Implicit Types v : val.
+Implicit Types e : expr.
+Implicit Types R : result.
+Implicit Types s : senv.
+
+(* the eval function: (senv, pre, e) -> (ok/err, missing, post) *)
+Inductive eval : senv -> hprop -> expr -> result -> hprop -> postcond -> Prop :=
+  | e_val : forall s H v,
+    eval s H (pval v) ok \[] (v, H)
+
+  | e_add : forall s H v1 v2,
+    eval s H (padd v1 v2) ok \[] (vadd v1 v2, H)
+
+  | e_let : forall s H e1 e2 R m1 m2 Q Hq x v,
+    eval s H e1 ok m1 (v, Hq) ->
+    eval s Hq (subst x v e2) R m2 Q ->
+    eval s H (plet x e1 e2) R (m1 \* m2) Q
+
+  (* | e_bind : forall s p e1 e2 R m1 m2 q q1,
     eval s p e1 ok m1 q1 ->
     eval s q1 e2 R m2 q ->
     eval s p (pseq e1 e2) R (m1 \* m2) q
@@ -260,7 +300,10 @@ Inductive eval : senv -> hprop -> expr -> result -> hprop -> hprop -> Prop :=
   | e_fn : forall s p e R m (f:var) F A p1 q1,
     Fmap.read s f = (p1, R, q1) ->
     biab m p A F ->
-    eval s p (papp (pvar f) e) R m (q1 \* F)
+    eval s p (papp (pvar f) e) R m (q1 \* F) *)
+
+
+
 
   (* | e_ref : forall p e R m q,
     eval p (pref e) R m q *)
@@ -275,23 +318,54 @@ Inductive eval : senv -> hprop -> expr -> result -> hprop -> hprop -> Prop :=
 Declare Scope expr_scope.
 Open Scope expr_scope.
 
-Infix ";;" := pseq (at level 38, right associativity) : expr_scope.
+(* Infix ";;" := pseq (at level 38, right associativity) : expr_scope. *)
 
 (* Notation "'let' x '=' f1 'in' f2" :=
   (bind f1 (fun x => f2))
   (at level 38, x binder, right associativity, only printing) : expr_scope. *)
 
-Definition pref e := papp (pvar "ref") e.
+Definition default_env : senv := Fmap.empty.
+
+Example e0: exists R m q,
+  eval default_env \[]
+  (pval (vint 1)) R m q
+  /\ R = ok
+  /\ m = \[]
+  /\ q = (vint 1, \[]).
+Proof.
+  exs. split.
+  applys e_val.
+  splits*.
+Qed.
+
+Example e0_let: exists R m q,
+  eval default_env \[]
+  (plet "x" (pval (vint 1)) (padd (vvar "x") (vint 2))) R m q
+  /\ R = ok
+  /\ m = \[]
+  /\ q = (vint 1, \[]).
+Proof.
+  exs. split.
+  applys e_let.
+  - applys e_val.
+  - simpl.
+    applys e_add.
+    splits*.
+    xsimpl.
+  (* apply fun_ext_dep. intros. xsimpl*. *)
+Qed.
+
+(* Definition pref e := papp (pvar "ref") e.
 Definition pderef e := papp (pvar "deref") e.
 Definition passign e := papp (pvar "assign") e.
-Definition pfree e := papp (pvar "free") e.
+Definition pfree e := papp (pvar "free") e. *)
 
-Definition spec_alloc_1 := (\[], ok, \exists l, l~~>vuninit).
+(* Definition spec_alloc_1 := (\[], ok, \exists l, l~~>vuninit).
 Definition spec_free := (\forall l v, l~~>v, ok, \[]).
 Definition spec_deref := (\forall l v, l~~>v, ok, \exists l v1, l~~>v1).
 
 Definition default_env :=
-  Fmap.update (Fmap.single "free" spec_free) "ref" spec_alloc_1.
+  Fmap.update (Fmap.single "free" spec_free) "ref" spec_alloc_1. *)
 
 Example e1: exists R m q,
   eval default_env \[]
