@@ -33,25 +33,26 @@ Inductive val :=
   (* | vbool : bool -> val *)
   (* | vlist : list val -> val *)
   (* | vfptr : var -> val *)
-  | vvar : var -> val
+  (* | vvar : var -> val *)
   | verror : val
   | vuninit : val
   | vfreed : val
 
 with expr : Type :=
   (* | pvar (x: var) *)
+  | pvar (x: loc)
   | pval (v: val)
-  | prefmut (e: expr)
+  (* | prefmut (e: expr) *)
   | pref (e: expr)
-  | plet (x: var) (e1 e2:expr)
-  | pletmut (x: var) (e1 e2:expr)
+  | plet (x: loc) (e1 e2:expr)
+  (* | pletmut (x: var) (e1 e2:expr) *)
   (* | pseq (e1 e2: expr) *)
   | passume (e: expr)
   | pchoice (e1: expr) (e2: expr)
   | prepeat (e: expr)
   | papp (e1: expr) (e2: expr)
 
-  | padd (v1 v2: val)
+  (* | padd (e1 e2: expr) *)
 
   (* | plet (x: var) (e1 e2: expr) *)
   (* | pfix (xf: var) (x: var) (e: expr) *)
@@ -67,11 +68,15 @@ with expr : Type :=
   (* | pif (v: expr) (e1: expr) (e2: expr) *)
   .
 
-(* Definition padd (e1 e2 : expr) : expr :=
+Coercion vint : Z >-> val.
+Coercion vloc : loc >-> val.
+Coercion pval : val >-> expr.
+
+Definition padd (e1 e2 : expr) : expr :=
   match e1, e2 with
   | pval (vint i1), pval (vint i2) => pval (vint (i1 + i2))
   | _, _ => pval vunit
-  end. *)
+  end.
 
 Definition vadd (v1 v2 : val) : val :=
   match v1, v2 with
@@ -133,7 +138,7 @@ Qed.
 (* Coercion vint : Z >-> val.
 Coercion vbool : bool >-> val. *)
 
-Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
+(* Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   let aux t := subst y v t in
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
@@ -160,10 +165,23 @@ Fixpoint subst (y:var) (v:val) (e:expr) : expr :=
   | prepeat e => prepeat (aux e)
   (* | pshift e => pshift (fun k => aux (e k)) *)
   (* | preset e => preset (aux e) *)
-  end.
+  end. *)
+
+Variant perm: Type := read | write.
+
+#[global]
+Instance Inhab_val_perm : Inhab (val * perm)%type.
+Proof.
+  constructor.
+  exists (vunit, read).
+  constructor.
+Qed.
+
+Definition rd v : (val*perm) := (v, read).
+Definition wr v : (val*perm) := (v, read).
 
 Module Val.
-  Definition value := val.
+  Definition value: Type := val * perm.
 End Val.
 
 Module Export Heap := HeapF.HeapSetup Val.
@@ -243,12 +261,14 @@ Proof.
   { xchange IHHbiab. xsimpl. }
 Qed.
 
+(* Definition pts x v := \exists p, x~~>(v, p). *)
+
 (* BiabDiscover(y→Y * v→V * z→Z ∧Z= nil, y→Y * z→Z * Y →W ),
 which yields {(m, f)}with m ≡ Y→W and f≡v→V∧Z=nil. *)
 Example ex_biab: forall y Y z Z v V W nil, exists m f,
   biab m
-    (y~~>vloc Y \* z~~>Z \* v~~>V \* \[Z=nil])
-    (y~~>vloc Y \* z~~>Z \* Y~~>W) f
+    (y~~>rd (vloc Y) \* z~~>Z \* v~~>V \* \[Z=nil])
+    (y~~>rd (vloc Y) \* z~~>Z \* Y~~>W) f
   /\ m = Y~~>W /\ f = v~~>V \* \[Z = nil].
 Proof.
   intros. exs.
@@ -272,12 +292,12 @@ Inductive eval : senv -> hprop -> expr -> result -> hprop -> postcond -> Prop :=
   | e_val : forall s H v,
     eval s H (pval v) ok \[] (v, H)
 
-  | e_add : forall s H v1 v2,
-    eval s H (padd v1 v2) ok \[] (vadd v1 v2, H)
+  (* | e_add : forall s H v1 v2,
+    eval s H (padd v1 v2) ok \[] (vadd v1 v2, H) *)
 
   | e_let : forall s H e1 e2 R m1 m2 Q Hq x v,
     eval s H e1 ok m1 (v, Hq) ->
-    eval s Hq (subst x v e2) R m2 Q ->
+    eval s (\exists l, x~~>rd (vloc l) \* l~~>rd v \* (* read \* *) Hq) e2 R m2 Q ->
     eval s H (plet x e1 e2) R (m1 \* m2) Q
 
   (* | e_bind : forall s p e1 e2 R m1 m2 q q1,
@@ -338,21 +358,38 @@ Proof.
   splits*.
 Qed.
 
-Example e0_let: exists R m q,
+Example e0_let: forall x, exists R m q,
   eval default_env \[]
-  (plet "x" (pval (vint 1)) (padd (vvar "x") (vint 2))) R m q
+  (plet x (pval (vint 1)) (pval (vint 2))) R m q
   /\ R = ok
   /\ m = \[]
-  /\ q = (vint 1, \[]).
+  /\ q = (vint 2, \exists l, x ~~> rd (vloc l) \* l ~~> rd (vint 1)).
 Proof.
-  exs. split.
+  intros. exs. split.
   applys e_let.
   - applys e_val.
-  - simpl.
-    applys e_add.
-    splits*.
+  - applys e_val.
+  - splits*.
     xsimpl.
-  (* apply fun_ext_dep. intros. xsimpl*. *)
+    f_equal.
+    xsimpl.
+Qed.
+
+Example e1_let: forall x, exists R m q,
+  eval default_env \[]
+  (plet x (pval (vint 1)) (pval (vint 2))) R m q
+  /\ R = ok
+  /\ m = \[]
+  /\ q = (vint 2, \exists l, x ~~> rd (vloc l) \* l ~~> rd (vint 1)).
+Proof.
+  intros. exs. split.
+  applys e_let.
+  - applys e_val.
+  - applys e_val.
+  - splits*.
+    xsimpl.
+    f_equal.
+    xsimpl.
 Qed.
 
 (* Definition pref e := papp (pvar "ref") e.
@@ -367,12 +404,12 @@ Definition spec_deref := (\forall l v, l~~>v, ok, \exists l v1, l~~>v1).
 Definition default_env :=
   Fmap.update (Fmap.single "free" spec_free) "ref" spec_alloc_1. *)
 
-Example e1: exists R m q,
+(* Example e1: exists R m q,
   eval default_env \[]
   (pref (pval (vint 1))) R m q
   /\ R = ok
   /\ m = \[]
-  /\ q = \exists l, l ~~> vuninit.
+  /\ q = \exists l,l ~~> vuninit.
 Proof.
   exs. split.
   applys e_fn.
@@ -394,4 +431,4 @@ Proof.
     { unfold default_env. resolve_fn_in_env. }
     { applys b_trivial. }
   splits*. xsimpl.
-Qed.
+Qed. *)
