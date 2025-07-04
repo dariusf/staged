@@ -48,6 +48,7 @@ End Multi.
 
 Module Axioms.
 
+(* Justified by [gnorm_bind_trivial] *)
 Lemma norm_bind_trivial: forall f1,
   entails (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
@@ -74,6 +75,7 @@ Proof.
   admit.
 Admitted.
 
+(* Justified by [gnorm_bind_assoc] *)
 Lemma norm_bind_assoc: forall f fk fk1,
   entails (bind (bind f fk) fk1)
     (bind f (fun r => bind (fk r) fk1)).
