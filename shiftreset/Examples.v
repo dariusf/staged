@@ -58,23 +58,23 @@ Module Times.
 
 Definition vmul (v1 v2 : val) : val :=
   match v1, v2 with
-  | _, vint 1 => v1
-  | vint 1, _ => v2
+  (* | _, vint 1 => Some v1 *)
+  (* | vint 1, _ => Some v2 *)
   | vint i1, vint i2 => vint (i1 * i2)
   | _, _ => vunit
   end.
 
 (* Definition vmul (v1 v2 : val) : option val :=
   match v1, v2 with
-  | _, vint 1 => Some v1
-  | vint 1, _ => Some v2
+  (* | _, vint 1 => Some v1 *)
+  (* | vint 1, _ => Some v2 *)
   | vint i1, vint i2 => Some (vint (i1 * i2))
   | _, _ => None
   end. *)
 
 Definition aux : ufun := fun (xs:val) =>
   (disj
-    (ens (fun r => \[xs = vlist nil /\ r = 1]))
+    (ens_ \[xs = vlist nil];; ens (fun r => \[r = 1]))
     (disj
       (∃ ys, ens_ \[xs = vlist (vint 0::ys)];;
         sh "k" (discard "k";; ens (fun r => \[r = 0])))
@@ -97,11 +97,22 @@ Definition is_vint (v:val) : Prop :=
 Definition is_vint_vlist (v:val) : Prop :=
   exists xs, v = vlist xs /\ all is_vint xs.
 
+(* Fixpoint times_pure (xs:list val) : option val :=
+  match xs with
+  | nil => Some (vint 1)
+  (* | x::nil => Some x *)
+  | 0::_ => Some (vint 0)
+  | x::ys =>
+    match times_pure ys with
+    | None => None
+    | Some ys => vmul x ys
+    end
+  (* vmul x (times_pure ys) *)
+  end. *)
+
 Fixpoint times_pure (xs:list val) : val :=
   match xs with
   | nil => vint 1
-  | x::nil => x
-  | 0::_ => vint 0
   | x::ys => vmul x (times_pure ys)
   end.
 
@@ -113,56 +124,155 @@ Fixpoint times_pure (xs:list val) : val :=
   | x::ys => x * times_pure ys
   end. *)
 
-Lemma vmul_one: forall x,
-  vmul x 1 = x.
+Lemma vmul_one: forall i,
+  vmul (vint i) 1 = (vint i).
 Proof.
   intros x.
-  destruct x; try reflexivity.
-  simpl. destruct z; try reflexivity.
-  destruct p; reflexivity.
+  simpl.
+  f_equal. math.
 Qed.
 
-Lemma times_singleton: forall x,
-  times_pure (x :: nil) = x.
+Lemma times_singleton: forall i,
+  times_pure (vint i :: nil) = vint i.
 Proof.
   intros x.
-  destruct x; try reflexivity.
-  simpl. destruct z; try reflexivity.
+  simpl.
+  f_equal. math.
 Qed.
 
-(* These simple properties are admitted, pending a better encoding
-  of mul for values *)
 Lemma vmul_assoc: forall x y z,
-  (* is_vint x ->
+  is_vint x ->
   is_vint y ->
-  is_vint z -> *)
+  is_vint z ->
   vmul x (vmul y z) = vmul (vmul x y) z.
 Proof.
-  intros x y z.
-  (* destruct x; destruct y; destruct z; auto. *)
-Admitted.
+  unfold is_vint. intros. destr H. destr H0. destr H1. subst.
+  simpl.
+  rewrite Z.mul_assoc.
+  reflexivity.
+Qed.
 
 Lemma times_any_zero : forall x ys,
+  is_vint x ->
+  is_vint (times_pure ys) ->
   vint 0 = times_pure (x :: vint 0 :: ys).
 Proof.
-Admitted.
+  unfold is_vint. intros. destr H. destr H0. subst.
+  simpl.
+  rewrite H.
+  f_equal.
+  math.
+Qed.
+
+Lemma is_vint_vlist_head : forall xs x,
+  is_vint_vlist (vlist (x::xs)) ->
+  is_vint x.
+Proof.
+  unfold is_vint_vlist.
+  intros. destr H. injects H.
+  simpl in H1. destr H1.
+  assumption.
+Qed.
+
+Lemma is_vint_vlist_tail : forall xs x,
+  is_vint_vlist (vlist (x::xs)) ->
+  is_vint_vlist (vlist xs).
+Proof.
+  unfold is_vint_vlist.
+  intros xs. induction xs; intros.
+  - destr H. injects H. simpl in H1. destr H1.
+    exists (@nil val).
+    splits*.
+  - destr H. injects H. simpl in H1. destr H1.
+    exists (a::xs).
+    splits*.
+    simpl.
+    splits*.
+Qed.
+
+Lemma times_pure_on_list : forall xs,
+  is_vint_vlist (vlist xs) -> is_vint (times_pure xs).
+Proof.
+  unfold is_vint_vlist, is_vint.
+  intros xs. induction xs; intros.
+  - simpl. exists* 1.
+  - destr H. injects H.
+    simpl in H1. destr H1. subst.
+    specializes IHxs. { exists xs. splits*. }
+    destr IHxs.
+    exists* (i*i0).
+    simpl.
+    rewrite H.
+    f_equal.
+Qed.
 
 Lemma times_first_two : forall a b c,
+  is_vint a ->
+  is_vint b ->
+  is_vint_vlist (vlist c) ->
   times_pure (a :: b :: c) = times_pure (vmul a b :: c).
 Proof.
-Admitted.
+  intros.
+  simpl.
+  rewrite* vmul_assoc.
+  applys* times_pure_on_list.
+Qed.
+
+Lemma is_vint_mul: forall x x0,
+  is_vint x ->
+  is_vint x0 ->
+  is_vint (vmul x x0).
+Proof.
+  unfold is_vint. intros. destr H. destr H0.
+  subst.
+  exs. reflexivity.
+Qed.
+
+Lemma norm_bind_cancel_sf: forall f fk1 fk2,
+  shift_free f ->
+  (forall a, entails (fk1 a) (fk2 a)) ->
+  entails (bind f fk1) (bind f fk2).
+Proof.
+  unfold entails.
+  intros.
+  inverts H1.
+  { applys* s_bind. }
+  { no_shift. }
+Qed.
+
+Lemma norm_split_pure: forall P Q,
+  entails (ens (fun r => \[P /\ Q r]))
+    (ens_ \[P];; ens (fun r => \[Q r])).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  applys s_seq.
+  applys s_ens. heaps.
+  applys s_ens. heaps.
+Qed.
 
 Import ExamplesEnt.Axioms.
 
+Lemma norm_bind_cancel: forall f fk1 fk2,
+  (forall a, entails (fk1 a) (fk2 a)) ->
+  entails (bind f fk1) (bind f fk2).
+Proof.
+  intros.
+  applys* norm_bind_cancel_sf.
+  admit.
+Admitted.
+
 Lemma lemma : forall xs x,
   (forall a, entails (unk "aux" a) (aux a)) ->
+  is_vint x ->
+  is_vint_vlist (vlist xs) ->
   entails
     (rs (bind (aux (vlist xs)) (fun z => ens (fun r => \[r = vmul x z]))))
     (ens (fun r => \[r = times_pure (x :: xs)])).
 Proof.
   intros xs.
   induction_wf IH: list_sub xs.
-  introv Haux.
+  introv Haux. intros.
   destruct xs.
   {
     unfold aux.
@@ -181,6 +291,7 @@ Proof.
     fsimpl.
     fentailment. intros.
     fentailment. xsimpl. intros. subst r.
+    unfold is_vint in H. destr H. subst.
     rewrite times_singleton.
     rewrite vmul_one.
     reflexivity.
@@ -192,15 +303,17 @@ Proof.
     fsimpl.
     applys entl_disj_l.
     { fdestruct ys.
-      fsimpl. fentailment. intros. injects H.
+      fsimpl. fentailment. intros. injects H1.
       freduction.
       funfold2.
       fsimpl.
       fentailment. xsimpl. intros. subst.
-      simpl.
-      applys times_any_zero. }
+      applys times_any_zero.
+      assumption.
+      lets: is_vint_vlist_tail H0.
+      applys* times_pure_on_list. }
     { fdestruct x0. fdestruct ys.
-      fsimpl. fentailment. intros. injects H.
+      fsimpl. fentailment. intros. injects H1.
       rewrite Haux.
 
       rewrite norm_bind_assoc.
@@ -208,15 +321,32 @@ Proof.
 
       specializes IH ys.
       specializes IH (vmul x x0) Haux.
-      rewrite times_first_two.
-      (* more pain *)
-      applys_eq IH.
-      f_equal. f_equal.
-      applys fun_ext_dep. intros.
-      f_equal.
-      applys fun_ext_dep. intros.
-      rewrite vmul_assoc.
-      reflexivity. }
+      specializes IH.
+      { applys is_vint_mul. assumption. applys is_vint_vlist_head H0. }
+      { applys is_vint_vlist_tail H0. }
+
+      rewrite* times_first_two.
+      2: { applys is_vint_vlist_head H0. }
+      2: { applys is_vint_vlist_tail H0. }
+
+      assert (entails
+        (bind (aux (vlist ys)) (fun z =>
+          ens (fun r => \[r = vmul x (vmul x0 z)])))
+        (bind (aux (vlist ys)) (fun z =>
+          ens (fun r => \[r = vmul (vmul x x0) z])))) as H1.
+      { intros.
+        applys norm_bind_cancel. intros.
+        fentailment.
+        xsimpl.
+        intros.
+        subst r.
+        apply* vmul_assoc.
+        applys is_vint_vlist_head H0.
+        admit.
+      }
+        rewrite H1.
+        applys IH.
+    }
   }
 Qed.
 

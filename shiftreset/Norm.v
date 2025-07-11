@@ -689,6 +689,23 @@ Proof.
     - applys s_disj_r. applys* s_bind_sh. }
 Qed.
 
+Lemma norm_bind_disj_conv: forall f1 f2 fk,
+  entails (disj (bind f1 fk) (bind f2 fk)) (bind (disj f1 f2) fk).
+Proof.
+  unfold entails. intros.
+  inverts H.
+  { inverts H6.
+    applys* s_bind.
+    applys* s_disj_l.
+    applys* s_bind_sh.
+    applys* s_disj_l. }
+  { inverts H6.
+    applys* s_bind.
+    applys* s_disj_r.
+    applys* s_bind_sh.
+    applys* s_disj_r. }
+Qed.
+
 Lemma norm_rs_disj: forall f1 f2,
   entails (rs (disj f1 f2)) (disj (rs f1) (rs f2)).
 Proof.
