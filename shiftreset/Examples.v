@@ -256,6 +256,141 @@ Qed.
 
 End Times.
 
+Module Append.
+
+Definition aux : ufun := fun (xs:val) =>
+  (disj
+    (ens_ \[xs = vlist nil];; sh "k" (ens (fun r => \[r = vfptr "k"])))
+    (∃ x ys, ens_ \[xs = vlist (x::ys)];;
+      bind (unk "aux" (vlist ys)) (fun r =>
+        ∃ r0, ens_ \[r = vlist r0];;
+        ens (fun r1 => \[r1 = vlist (x::r0)]))
+      )).
+
+Definition append_cps : ufun := fun (xys:val) =>
+  ∃ xs ys,
+    ens_ \[xys = vtup xs ys];;
+    bind (rs (aux xs)) (fun r =>
+      ∀ k, ens_ \[r = vfptr k];;
+        unk k ys).
+
+Import ExamplesEnt.Axioms.
+
+(* Lemma lemma : forall xs x,
+  (forall a, entails (unk "aux" a) (aux a)) ->
+  entails
+    (rs (bind (aux (vlist xs)) (fun z => ens (fun r => \[r = vmul x z]))))
+    (ens (fun r => \[r = times_pure (x :: xs)])).
+Proof. *)
+  (* intros xs.
+  induction_wf IH: list_sub xs.
+  introv Haux.
+  destruct xs.
+  {
+    unfold aux.
+    fsimpl.
+    applys entl_disj_l.
+    (* get rid of spurious cases *)
+    2: {
+      fsimpl.
+      applys entl_disj_l.
+      { fdestruct ys.
+        fsimpl.
+        fentailment. intros. false H. }
+      { fdestruct x0. fdestruct ys.
+        fsimpl.
+        fentailment. intros. false H. } }
+    fsimpl.
+    fentailment. intros.
+    fentailment. xsimpl. intros. subst r.
+    rewrite times_singleton.
+    rewrite vmul_one.
+    reflexivity.
+  }
+  {
+    unfold aux.
+    fsimpl.
+    applys entl_disj_l. { fsimpl. fentailment. intros. false H. }
+    fsimpl.
+    applys entl_disj_l.
+    { fdestruct ys.
+      fsimpl. fentailment. intros. injects H.
+      freduction.
+      funfold2.
+      fsimpl.
+      fentailment. xsimpl. intros. subst.
+      simpl.
+      applys times_any_zero. }
+    { fdestruct x0. fdestruct ys.
+      fsimpl. fentailment. intros. injects H.
+      rewrite Haux.
+
+      rewrite norm_bind_assoc.
+      setoid_rewrite norm_bind_val.
+
+      specializes IH ys.
+      specializes IH (vmul x x0) Haux.
+      rewrite times_first_two.
+      (* more pain *)
+      applys_eq IH.
+      f_equal. f_equal.
+      applys fun_ext_dep. intros.
+      f_equal.
+      applys fun_ext_dep. intros.
+      rewrite vmul_assoc.
+      reflexivity. }
+  } *)
+(* Qed. *)
+(* Abort. *)
+
+Fixpoint append_pure (xs ys: list val) : val :=
+  match xs with
+  | vlist nil => ys
+  | vlist (x::ys') =>
+    match append_pure (vlist ys') ys with
+    | vlist ys => vlist (x::ys)
+    | _ => vunit
+    end
+  | _ => vunit
+  end.
+
+(* Fix *)
+Theorem append_spec : forall xs ys,
+  (* (forall a, entails (unk "aux" a) (aux a)) -> *)
+  entails
+    (append_cps (vtup xs ys))
+    (ens (fun r => \[r = append_pure xs ys])).
+Proof.
+  intros xs.
+  unfold times.
+  intros Haux.
+  unfold aux.
+  fsimpl.
+  applys entl_disj_l.
+  { fsimpl.
+    fentailment. intros. injects H.
+    fentailment. xsimpl. auto. }
+  fsimpl.
+  applys entl_disj_l.
+  { fdestruct ys.
+    fsimpl.
+    fentailment. intros. injects H.
+    freduction.
+    funfold2.
+    fsimpl.
+    fentailment. xsimpl. intros. subst. simpl. destruct ys; reflexivity. }
+  {
+    fdestruct x. fdestruct ys.
+    fsimpl.
+    fentailment. intros. injects H.
+    fsimpl.
+    rewrite Haux.
+    apply* lemma.
+  }
+Qed.
+
+End Append.
+
 Module Toss.
 
 (* let toss () =
