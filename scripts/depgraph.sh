@@ -2,7 +2,7 @@
 
 # Modified from https://discourse.rocq-prover.org/t/tool-for-drawing-coq-project-dependency-graph/653/16
 
-project=shiftreset
+project=msl
 
 ( echo "digraph $project_deps {" ;
   # echo "node [shape=ellipse, style=filled, URL=\"html/$PROJECT.\N.html\", color=black];";
