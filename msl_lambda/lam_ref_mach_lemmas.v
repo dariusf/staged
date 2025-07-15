@@ -11,7 +11,7 @@ Require Import msl_lambda.lam_ref_tcb.
 Require Import msl_lambda.lam_ref_mach_defs.
 Require Import msl.msl_standard.
 Require Import Coq.Arith.Compare_dec.
-(* Require Import Coq.Arith.EqNat. *)
+Require Import Coq.Arith.EqNat.
 Require Import Coq.Arith.PeanoNat.
 Require Import Lia.
 
@@ -193,7 +193,7 @@ Proof.
   clear Heqn.
   revert n.
   induction e; simpl; intros; firstorder.
-  case_eq (Nat.eq_dec x n); intros.
+  case_eq (Nat.eqb x n); intros.
   apply closed'_le with 0.
   lia.
   destruct v; auto.
@@ -245,14 +245,13 @@ Proof.
   trivial.
   simpl.
   generalize (IHrho n (m + 1)); intro.
-  replace (n + (m + 1)) with (n + m + 1) in H by omega.
+  replace (n + (m + 1)) with (n + m + 1) in H by lia.
   rewrite H.
   simpl.
   destruct n; auto.
-  case_eq (beq_nat (S n + m) n); intros; auto.
-  symmetry in H0.
-  apply beq_nat_eq in H0.
-  omegac.
+  case_eq (Nat.eqb (S n + m) n); intros; auto.
+  apply Nat.eqb_eq in H0.
+  lia.
 Qed.
 
 Lemma subst_env'_Var: forall rho n v m,
@@ -269,19 +268,19 @@ Proof.
   inversion H; clear H.
   subst v0.
   generalize (subst_env'_Var' m 0 rho); intro.
-  replace (S (m + 0)) with (m + 1) in H by omega.
+  replace (S (m + 0)) with (m + 1) in H by lia.
   rewrite H.
   simpl.
-  case_eq (beq_nat m m); intros; auto.
-  apply beq_nat_false in H0.
+  case_eq (Nat.eqb m m); intros; auto.
+  apply Nat.eqb_neq in H0.
   elim H0; auto.
 
   destruct rho.
   inversion H.
   simpl in H.
   simpl.
-  spec IHn rho v (m + 1) H.
-  replace (n + (m + 1)) with (S (n + m)) in IHn by omega.
+  specialize (IHn rho v (m + 1) H).
+  replace (n + (m + 1)) with (S (n + m)) in IHn by lia.
   rewrite IHn.
   destruct v.
   unfold val_to_exp.
@@ -379,26 +378,26 @@ Lemma subst_subst_neq : forall e n m v1 v2,
 Proof.
   induction e; simpl; intuition.
   rewrite <- IHe; auto.
-  case_eq (beq_nat m n); intros.
-  case_eq (beq_nat n0 n); intros.
+  case_eq (Nat.eqb m n); intros.
+  case_eq (Nat.eqb n0 n); intros.
   elim H.
-  apply beq_nat_true in H0.
-  apply beq_nat_true in H1.
+  apply Nat.eqb_eq in H0.
+  apply Nat.eqb_eq in H1.
   subst; auto.
   simpl.
   rewrite H0.
   apply (closed'_subst n0 (val_to_exp v2) 0 v1).
   apply closed'_le with 0.
-  omega.
+  lia.
   destruct v2.
   case i; auto.
-  case_eq (beq_nat n0 n); intros.
+  case_eq (Nat.eqb n0 n); intros.
   simpl.
   rewrite H1.
   symmetry.
   apply (closed'_subst m (val_to_exp v1) 0 v2).
   apply closed'_le with 0; auto.
-  omega.
+  lia.
   destruct v1; simpl.
   case i; auto.
   simpl.
@@ -409,7 +408,7 @@ Proof.
   intros.
   apply H.
   unfold var_t in *.
-  omega.
+  lia.
   rewrite <- IHe1; auto.
   rewrite <- IHe2; auto.
   rewrite <- IHe; auto.
@@ -426,7 +425,7 @@ Proof.
   induction env1; simpl; intros; auto.
   rewrite IHenv1.
   do 3 f_equal.
-  omega.
+  lia.
 Qed.
 
 Lemma subst_subst_env_lt : forall env n m v e,
@@ -436,9 +435,9 @@ Lemma subst_subst_env_lt : forall env n m v e,
 Proof.
   induction env; simpl; intros; auto.
   rewrite <- IHenv.
-  2: omega.
+  2: lia.
   rewrite subst_subst_neq; auto.
-  omega.
+  lia.
 Qed.
 
 
@@ -450,23 +449,23 @@ Lemma subst_closed' :
     closed' n (subst n v e).
 Proof.
   induction e; simpl; intuition.
-  destruct (eq_nat_dec n0 n); simpl; subst; auto.
+  destruct (Nat.eq_dec n0 n); simpl; subst; auto.
   destruct v.
   case i; intros.
   unfold val_to_exp; simpl.
   apply closed'_le with 0; auto.
-  omega.
-  case_eq (beq_nat n n); intros.
+  lia.
+  case_eq (Nat.eqb n n); intros.
   auto.
-  apply beq_nat_false in H0.
+  apply Nat.eqb_neq in H0.
   elim H0; auto.
-  case_eq (beq_nat n0 n); intros; auto.
-  apply beq_nat_true in H0.
+  case_eq (Nat.eqb n0 n); intros; auto.
+  apply Nat.eqb_eq in H0.
   subst.
   elim n1; auto.
   simpl.
-  apply beq_nat_false in H0.
-  omega.
+  apply Nat.eqb_neq in H0.
+  lia.
 Qed.
 
 Lemma closed_subst_env : forall env e x n,
@@ -475,12 +474,12 @@ Lemma closed_subst_env : forall env e x n,
 Proof.
   induction env; simpl; intros.
   apply closed'_le with x; auto.
-  omega.
+  lia.
   apply subst_closed'.
-  replace (x + n + 1) with (S (x + n)) by omega.
+  replace (x + n + 1) with (S (x + n)) by lia.
   change (S (x + n)) with (S x + n).
   eapply IHenv; eauto.
-  replace (length env + S x) with (S (length env + x)) by omega; auto.
+  replace (length env + S x) with (S (length env + x)) by lia; auto.
 Qed.
 
 Lemma closed_step : forall x y ,
@@ -563,14 +562,14 @@ Proof.
 (* APP *)
   inversion H; subst.
   inversion H0; subst; try (inversion H2; discriminate).
-  spec IHe1 m1 e1' m2 e1'0.
-  spec IHe1 H2 H3.
+  specialize (IHe1 m1 e1' m2 e1'0).
+  specialize (IHe1 H2 H3).
   destruct IHe1.
   subst e1'0.
   tauto.
   inversion H0; subst; try (inversion H3; discriminate).
-  spec IHe2 m1 e2' m2 e2'0.
-  spec IHe2 H2 H3.
+  specialize (IHe2 m1 e2' m2 e2'0).
+  specialize (IHe2 H2 H3).
   destruct IHe2.
   subst e2'0.
   tauto.
@@ -584,8 +583,8 @@ Proof.
 (* NEW *)
   inversion H; subst.
   inversion H0; subst.
-  spec IHe m1 e' m2 e'0.
-  spec IHe H2 H3.
+  specialize (IHe m1 e' m2 e'0).
+  specialize (IHe H2 H3).
   destruct IHe.
   subst e'0.
   tauto.
@@ -611,13 +610,13 @@ Proof.
 (* UPDATE *)
   inversion H; subst.
   inversion H0; subst; try (inversion H2; discriminate).
-  spec IHe1 m1 e1' m2 e1'0.
-  spec IHe1 H2 H3.
+  specialize (IHe1 m1 e1' m2 e1'0).
+  specialize (IHe1 H2 H3).
   destruct IHe1.
   subst; tauto.
   inversion H0; subst; try (inversion H3; discriminate).
-  spec IHe2 m1 e2' m2 e2'0.
-  spec IHe2 H2 H3.
+  specialize (IHe2 m1 e2' m2 e2'0).
+  specialize (IHe2 H2 H3).
   destruct IHe2.
   subst.
   tauto.
