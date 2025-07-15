@@ -6,6 +6,7 @@
 Require Import msl_lambda.lam_ref_tcb.
 Require Import msl_lambda.lam_ref_mach_defs.
 Require Import msl_lambda.lam_ref_mach_lemmas.
+From Coq Require Import ZArith.
 
 Require Import msl.msl_standard.
 
