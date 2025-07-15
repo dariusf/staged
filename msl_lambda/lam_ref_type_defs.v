@@ -11,7 +11,7 @@ Require Import msl_lambda.lam_ref_tcb.
 Require Import msl_lambda.lam_ref_mach_defs.
 Require Import msl.msl_standard.
 
-Require Export lam_ref_type_prelim.
+Require Export msl_lambda.lam_ref_type_prelim.
 
 Open Scope pred.
 
