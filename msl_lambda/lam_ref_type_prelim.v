@@ -7,38 +7,47 @@
 
 (* lam_ref_type_defs.v: the definition of the type system; this is the main event. *)
 
-Require Import msl.msl_standard.
+(* Require Import msl.msl_standard. *)
 
 Require Import msl_lambda.lam_ref_tcb.
 Require Import msl_lambda.lam_ref_mach_defs.
+Require Import msl.base.
+Require Import msl.functors.
+Require Import msl.knot_hered.
+Require Import msl.knot_prop.
 
 
 Module TFP <: TY_FUNCTOR_PROP.
 (* From section 4.1 *)
-  Definition F : Type -> Type := fun K => addr -> option K.
+  Definition F1 : Type -> Type := fun K => addr -> option K.
 (* From section 3, equation 5.5 *)
-  Definition fmap : forall A B, (A -> B) -> F A -> F B :=
+  Definition fmap1 : forall A B, (A -> B) -> F1 A -> F1 B :=
   (* We can't use g oo psi since psi is a partial function.  Still, this is not too bad. *)
-    fun A B (g : A -> B) (psi : F A) => (option_map g) oo psi.
-  Implicit Arguments fmap [A B].
+    fun A B (g : A -> B) (psi : F1 A) => (option_map g) oo psi.
+  Arguments fmap1 [A B].
 
-  (* As we say just after defining the above fmap, "Clearly equations (4) and
-      (5) hold for this fmap." *)
-  Lemma fmap_id : forall A, fmap (id A) = id (F A).
+  (* As we say just after defining the above fmap1, "Clearly equations (4) and
+      (5) hold for this fmap1." *)
+  Lemma fmap_id : forall A, fmap1 (id A) = id (F1 A).
   Proof.
-    unfold fmap, id, compose, option_map.
+    unfold fmap1, id, compose, option_map.
     intro.
     extensionality FA a.
     destruct (FA a); trivial.
   Qed.
   Lemma fmap_comp : forall A B C (f:B -> C) (g:A -> B),
-    fmap f oo fmap g = fmap (f oo g).
+    fmap1 f oo fmap1 g = fmap1 (f oo g).
   Proof.
-    unfold fmap, id, compose, option_map.
+    unfold fmap1, id, compose, option_map.
     intros.
     extensionality FA a.
     destruct (FA a); trivial.
   Qed.
+
+  Definition F :=
+    {| _functor := F1; fmap := fmap1;
+      functor_facts :=
+      {| ff_id := fmap_id; ff_comp := fmap_comp |} |}.
 
 (* From section 4.1 *)
   Definition other : Type := value.
