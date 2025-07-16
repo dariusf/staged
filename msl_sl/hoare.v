@@ -1,7 +1,7 @@
 Require Import Relations.
 Require Import msl.msl_standard.
 
-Require Import imp.
+Require Import msl_sl.imp.
 
 (* Gives us a logic over nats *)
 Existing Instance nat_ageable.
