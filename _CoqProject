@@ -6,7 +6,7 @@
 -Q types Types
 -Q msl msl
 #-Q msl_lambda msl_lambda
--Q msl_sl msl_sl
+#-Q msl_sl msl_sl
 -Q zlist zlist
 -arg -w
 -arg -implicit-core-hint-db,-ambiguous-paths
@@ -17,5 +17,5 @@ future
 types
 msl
 #msl_lambda
-msl_sl
+#msl_sl
 zlist
