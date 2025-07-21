@@ -237,6 +237,31 @@ Inductive bigstep : heap -> expr -> heap -> val -> Prop :=
 
   .
 
+Example e1_let: exists h,
+  bigstep empty_heap
+    (plet "x" (pval (vbool false))
+      (pvar "x")) h (vbool false).
+Proof.
+  exists empty_heap.
+  applys eval_plet.
+  - applys eval_pval.
+  - unfold not. intros. discriminate.
+  - simpl.
+    applys eval_pval.
+Qed.
+
+Example e1: exists h v,
+  bigstep empty_heap (pref (pval (vint 2))) h v.
+Proof.
+  exists (Fmap.single (1%nat) (vint 2)).
+  exists (vloc (1%nat)).
+  applys_eq eval_pref.
+  - unfold Fmap.update.
+    fmap_eq.
+    reflexivity.
+  - applys fmap_indom_empty.
+Qed.
+
 Inductive bigstep_pure : expr -> val -> Prop :=
   | pure_pval : forall v,
     bigstep_pure (pval v) v
@@ -330,6 +355,40 @@ Definition tbot : type := fun _ => False.
 Definition tintersect t1 t2 : type := fun v => t1 v /\ t2 v.
 Definition tunion t1 t2 : type := fun v => t1 v \/ t2 v.
 Definition tnot t : type := fun v => not (t v).
+
+(* Definition tref : type := (fun v => exists l, v = vloc l). *)
+
+Definition has_type (l:loc) (v:val) : hprop :=
+  fun h => Fmap.read h l = v.
+
+(* x->ref(1) ==> x:ref(1) *)
+Lemma weakening: forall l v,
+  l~~>v ==> has_type l v.
+Proof.
+  intros. unfold has_type.
+  unfold himpl. intros.
+  apply hsingle_inv in H. subst.
+  applys Fmap.read_single.
+Qed.
+
+Lemma hsingle_has_type_same_loc: forall l v,
+  l~~>v \* has_type l v ==> \[False].
+Proof.
+  (* proof can be similar to this lemma *)
+  Check hstar_hsingle_same_loc.
+Abort.
+
+Lemma hsingle_duplicable: forall l v,
+  has_type l v = has_type l v \* has_type l v.
+Proof.
+  (* this is probably not true, unless pure conj is lifted to hprop? *)
+Abort.
+
+Lemma hstar_hsingle_emp: forall l v,
+  has_type l v \* \[] = has_type l v.
+Proof.
+  intros. apply hstar_hempty_r.
+Qed.
 
 Definition tint : type := tunion terr (fun v => exists i, v = vint i).
 Definition tbool : type := tunion terr (fun v => exists b, v = vbool b).
