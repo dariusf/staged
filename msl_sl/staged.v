@@ -111,26 +111,34 @@ Definition flow : Type := env -> heap -> heap -> val -> Prop.
 
 Definition ens (H:hprop) : flow :=
   fun s h1 h2 v =>
-  (* TODO ignore s *)
+  (* TODO ignore s and implement this *)
     True.
 
 (* Check k_age1. *)
 Search "age".
 
-Check predicate.
+Print TF.F.
+(* the functor F we defined in the module above *)
+Locate TF.F.
 Print predicate.
 
 Definition unk (f:var) (v:val) : flow :=
   fun s h1 h2 v =>
-    let (k, m) := unsquash s in
-    let f1 := m f in
+    let (k, env) := unsquash s in
+    (* env : TF.F predicate *)
+    let f1 := env f in
     let x := f1 h1 h2 v in
+
+    (* TODO need to age the predicate before i can read out of it. read about aging *)
+    (* TODO is the definition of F1 above even right? *)
+    (* TODO need to construct something custom. replacing the prod other with something else *)
+
     (* forall  *)
     (* let y := squash (k, m) in *)
     (* x must be applied to an env *)
   (* age *)
-    x (y, tt)
-    (* True *)
+    (* x (y, tt) *)
+    True
     .
 
 (* TODO parameters *)
