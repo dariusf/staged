@@ -1,6 +1,7 @@
 
 From Coq Require Import Classes.RelationClasses.
 From Coq Require Import Lia.
+From Coq Require Import Morphisms Program.Basics.
 
 Set Implicit Arguments.
 
@@ -15,10 +16,6 @@ Definition pp_ret (A:Type) (a:A): PP A :=
 Definition pp_bind (A B:Type) (s1:PP A) (s2:A -> PP B): (PP B) :=
   pre_post (pre s1 /\ (forall a:A, post s1 a -> pre (s2 a)))
     (fun b => exists a:A, post s1 a /\ post (s2 a) b).
-
-
-
-
 
 
 Inductive W (a : Type) : Type :=
@@ -39,22 +36,47 @@ Definition wrefines {a : Type} (w1 w2 : W a) :=
 
 Notation entails a b := (wrefines a b).
 
+
+#[global]
+Instance Proper_entails_entails {a:Type} : Proper
+  (flip (@wrefines a) ==> @wrefines a ==> impl)
+  (@wrefines a).
+Proof.
+  unfold Proper, respectful, impl, flip.
+  unfold entails, refines. intros.
+  specialize (H0 H2). destruct H0.
+  specialize (H1 H0). destruct H1.
+  specialize (H H1). destruct H.
+  split.
+  { assumption. }
+  { intros. eauto. }
+Qed.
+
+Instance entails_refl : forall A, Reflexive (@wrefines A).
+Proof.
+  unfold Reflexive, wrefines, refines. intros. auto.
+Qed.
+Instance entails_trans : forall A, Transitive (@wrefines A).
+Proof.
+  unfold Transitive, wrefines, refines. intros.
+  specialize (H0 H1). destruct H0.
+  specialize (H H0). destruct H.
+  split. assumption.
+  intros. eauto.
+Qed.
+
 (* Fixpoint *)
-(* {struct w} *)
 Definition bind {a b : Type} (w : W a) (k : a -> W b) : W b :=
   match w with
   | Spec pt => Spec (pp_bind pt (fun x => semantics (k x)))
   | Return x => k x
   end.
 
-(* https://www.cs.cornell.edu/courses/cs6115/2017fa/notes/Monads.html *)
 Notation "x <- c1 ;; c2" := (bind c1 (fun x => c2))
                              (right associativity, at level 84, c1 at next level).
 
 Definition seq (A B : Type) (s1:W A) (s2:W B) : W B
  := bind s1 (fun (_:A) => s2).
-
-(* Infix ";;" := seq (at level 38, right associativity). *)
 
 Notation "c1 ;; c2" := (bind c1 (fun _ => c2)) (at level 100, right associativity).
 
@@ -64,6 +86,22 @@ Definition ensure (p:Prop) : W unit := Spec (pre_post True (fun _ => p)).
 
 Definition val {A:Type} (a:A) : W A :=
   Return a.
+
+Example ex0: forall x,
+  entails (ensure (x > 1)) (ensure (x >= 1)).
+Proof.
+  intros.
+  unfold entails, refines. simpl. intros.
+  split. constructor. lia.
+Qed.
+
+Example ex01: forall x,
+  entails (ensure (x > 1)) (ensure (x >= 1)).
+Proof.
+  intros.
+  rewrite ex0.
+  reflexivity.
+Qed.
 
 Example ex1: forall x,
   entails (require (x >= 1)) (require (x > 1)).
@@ -138,6 +176,16 @@ Proof.
   intros.
   apply cancel_seq.
   assumption.
+Qed.
+
+Lemma cancel_functions1: forall (f:nat->W unit) x (w1 w2:W unit),
+  entails w1 w2 ->
+  entails (f x;; w1) (f x;; w2).
+Proof.
+  intros.
+  rewrite (cancel_seq (f0 x)).
+  2: { eassumption. }
+  reflexivity.
 Qed.
 
 Example ex4: forall (f:nat -> W unit) x,

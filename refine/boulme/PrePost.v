@@ -18,8 +18,6 @@ Definition bind (A B:Type) (s1:W A) (s2:A -> W B): (W B) :=
 Definition seq (A B : Type) (s1:W A) (s2:W B) : W B
  := bind s1 (fun (_:A) => s2).
 
-(* Infix ";;" := seq (at level 38, right associativity). *)
-
 Notation "c1 ;; c2" := (bind c1 (fun _ => c2)) (at level 100, right associativity).
 
 (* https://www.cs.cornell.edu/courses/cs6115/2017fa/notes/Monads.html *)
