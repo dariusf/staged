@@ -94,7 +94,7 @@ Proof.
    intuition eauto.
 Qed.
 
-Lemma bind_correct :
+(* Lemma bind_correct :
  forall (A B : Type) (s1 : W A) (s2 : A -> W B),
  is_wp_pair (fun R => sdemon s1 (fun a => sdemon (s2 a) R))
             (fun R => angel s1 (fun a => angel (s2 a) R)).
@@ -178,4 +178,4 @@ Proof.
   destruct H.
   split. lia.
   assumption.
-Qed.
+Qed. *)

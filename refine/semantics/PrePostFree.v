@@ -23,12 +23,14 @@ Definition pp_bind (A B:Type) (s1:PP A) (s2:A -> PP B): (PP B) :=
 
 Inductive W (a : Type) : Type :=
   | Spec   : PP a -> W a
+  (* | Eff  : nat -> (nat -> W a) -> W a *)
   | Return : a -> W a.
 
 (* Fixpoint *)
 Definition semantics {a : Type} (w: W a) : PP a :=
   match w with
     | Spec s => s
+    (* | Eff s => s *)
     | Return x => pre_post True (fun v => v = x)
   end.
 
