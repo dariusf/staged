@@ -122,7 +122,13 @@ Proof.
   split. lia. constructor.
 Qed.
 
-Definition f x := (ensure (x = 1)).
+Definition f x := ensure (x = 1).
+
+Fixpoint fact n : W unit :=
+  match n with
+  | O => ensure (n = 1)
+  | S n1 => x <- fact n1;; ensure (x = tt)
+  end.
 
 Example ex3: forall x,
   x >= 0 ->
