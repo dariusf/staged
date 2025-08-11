@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html class="alectryon-standalone"><head><title>Hello.v</title><meta charset="utf-8"><meta content="Alectryon" name="generator"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="alectryon.css" rel="stylesheet"><link href="pygments.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/IBM-type/0.5.4/css/ibm-type.min.css" integrity="sha512-sky5cf9Ts6FY1kstGOBHSybfKqdHR41M0Ldb0BjNiv3ifltoQIsg0zIaQ+wwdwgQ0w9vKFW7Js50lxH9vqNSSw==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/5.2.0/fira_code.min.css" integrity="sha512-MbysAYimH1hH2xYzkkMHB6MqxBqfP0megxsCLknbYqHVwXTCg9IqHbk+ZP/vnhO8UEW6PaXAkKe2vQ+SWACxxA==" crossorigin="anonymous" /><script src="alectryon.js"></script></head><body><article class="alectryon-root alectryon-centered alectryon-coqdoc"><div class="alectryon-banner">Built with <a href="https://github.com/cpitclaudel/alectryon/">Alectryon</a>, running Coq+SerAPI v8.20.0+0.20.0. Bubbles (<span class="alectryon-bubble"></span>) indicate interactive fragments: hover for details, tap to reveal contents. Use <kbd>Ctrl+↑</kbd> <kbd>Ctrl+↓</kbd> to navigate, <kbd>Ctrl+🖱️</kbd> to focus. On Mac, use <kbd>⌘</kbd> instead of <kbd>Ctrl</kbd>.</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk0" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk0"><span class="kn">From</span> Staged <span class="kn">Require Import</span> Logic Automation.</label><small class="alectryon-output"><div><div class="alectryon-messages"><blockquote class="alectryon-message">[Loading ML file ring_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file zify_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file micromega_core_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file micromega_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">[Loading ML file btauto_plugin.cmxs (<span class="nb">using</span> legacy method) ... <span class="bp">done</span>]</blockquote><blockquote class="alectryon-message">Notations <span class="s2">&quot;exists ! _ .. _ , _&quot;</span> defined <span class="kn">at level</span> <span class="mi">200</span>
+<span class="kr">with</span> arguments <span class="kn">binder</span> <span class="kn">and</span> <span class="s2">&quot;exists ! _ , _&quot;</span>
+defined <span class="kn">at level</span> <span class="mi">200</span> <span class="kr">with</span> arguments name
+<span class="nb">have</span> incompatible prefixes.
+One of them will likely not work.
+[notation-incompatible-prefix,parsing,default]</blockquote><blockquote class="alectryon-message">Notations <span class="s2">&quot;exists ! _ .. _ , _&quot;</span> defined <span class="kn">at level</span> <span class="mi">200</span>
+<span class="kr">with</span> arguments <span class="kn">binder</span> <span class="kn">and</span> <span class="s2">&quot;exists ! _ : _ , _&quot;</span>
+defined <span class="kn">at level</span> <span class="mi">200</span> <span class="kr">with</span> arguments name
+<span class="nb">have</span> incompatible prefixes.
+One of them will likely not work.
+[notation-incompatible-prefix,parsing,default]</blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Local</span> <span class="kn">Open Scope</span> string_scope.</span></span></pre><div class="doc">
+<a id="lab1"></a><h1 class="section">Basic example</h1>
+</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Definition</span> <span class="nf">hello</span> : ufun := <span class="kr">fun</span> <span class="nv">args</span> <span class="nv">res</span> =&gt;
+  <span class="kr">match</span> args <span class="kr">with</span>
+  | vtup (vstr f) (vtup (vloc x) (vloc y)) =&gt;
+    <span class="kr">∀</span> <span class="nv">a</span>, req (x~~&gt;vint a) (ens_ (x~~&gt;vint (a+<span class="mi">1</span>));;
+    <span class="kr">∃</span> <span class="nv">r</span>, unk f (vloc y) (vint r);;
+    <span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span>, req (x~~&gt;vint b \* y~~&gt;vint b1)
+      (ens_ (x~~&gt;vint b \* y~~&gt;res \* \[res = vint (b+r)])))
+  | _ =&gt; empty
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Definition</span> <span class="nf">hello_env</span> (<span class="nv">x</span> <span class="nv">y</span>:loc) :=
+  Fmap.update
+    (Fmap.single <span class="s2">&quot;f&quot;</span>
+      (<span class="kr">fun</span> <span class="nv">y</span> <span class="nv">r</span> =&gt; <span class="kr">∀</span> <span class="nv">b</span>,
+        req (x~~&gt;vint b)
+          (ens_ ((x~~&gt;vint (b+<span class="mi">1</span>) \* \[r = vint <span class="mi">0</span>])))))
+      <span class="s2">&quot;hello&quot;</span> hello.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* [f] is allowed to capture [x] *)</span>
+</span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk1" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk1"><span class="kn">Lemma</span> <span class="nf">hello_capture</span> : <span class="kr">forall</span> <span class="nv">x</span> <span class="nv">y</span> <span class="nv">res</span>,
+  <span class="c">(* x &lt;&gt; y is implied by the precondition *)</span>
+  entails_under (hello_env x y)
+    (unk <span class="s2">&quot;hello&quot;</span> (vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y))) res)
+    (<span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span>, req (x~~&gt;vint a \* y~~&gt;vint b)
+      (ens_ (x~~&gt;vint (a+<span class="mi">2</span>) \* y~~&gt;res \* \[res = vint (a+<span class="mi">2</span>)]))).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">x</span> <span class="nv">y</span> : loc) (<span class="nv">res</span> : val),
+hello_env x y
+⊢ <span class="s2">&quot;hello&quot;</span>$(vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)), res)
+⊑ <span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b)
+      (ens_
+         (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+          y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk2" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk2"><span class="kn">Proof</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">x</span> <span class="nv">y</span> : loc) (<span class="nv">res</span> : val),
+hello_env x y
+⊢ <span class="s2">&quot;hello&quot;</span>$(vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)), res)
+⊑ <span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b)
+      (ens_
+         (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+          y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk3" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk3"><span class="nb">intros</span> x y res.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ <span class="s2">&quot;hello&quot;</span>$(vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)), res)
+⊑ <span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b)
+      (ens_
+         (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+          y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk4" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk4">funfold1 <span class="s2">&quot;hello&quot;</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ hello (vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y))) res
+⊑ <span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b)
+      (ens_
+         (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+          y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk5" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk5"><span class="nb">simpl</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ <span class="kr">∀</span> <span class="nv">a</span> : int,
+    req (x ~~&gt; vint a)
+      (ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+       (<span class="kr">∃</span> <span class="nv">r</span> : int,
+          (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+          (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+             req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+               (ens_
+                  (x ~~&gt; vint b \*
+                   y ~~&gt; res \* \[res = vint (b + r)])))))
+⊑ <span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b)
+      (ens_
+         (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+          y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk6" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk6">fintro a.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ <span class="kr">∀</span> <span class="nv">a</span> : int,
+    req (x ~~&gt; vint a)
+      (ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+       (<span class="kr">∃</span> <span class="nv">r</span> : int,
+          (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+          (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+             req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+               (ens_
+                  (x ~~&gt; vint b \*
+                   y ~~&gt; res \* \[res = vint (b + r)])))))
+⊑ <span class="kr">∀</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b)
+      (ens_
+         (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+          y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk7" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk7">fintro b.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ <span class="kr">∀</span> <span class="nv">a</span> : int,
+    req (x ~~&gt; vint a)
+      (ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+       (<span class="kr">∃</span> <span class="nv">r</span> : int,
+          (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+          (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+             req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+               (ens_
+                  (x ~~&gt; vint b \*
+                   y ~~&gt; res \* \[res = vint (b + r)])))))
+⊑ req (x ~~&gt; vint a \* y ~~&gt; vint b)
+    (ens_
+       (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+        y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk8" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk8">finst a.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req (x ~~&gt; vint a)
+    (ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+     (<span class="kr">∃</span> <span class="nv">r</span> : int,
+        (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+        (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+           req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+             (ens_
+                (x ~~&gt; vint b \*
+                 y ~~&gt; res \* \[res = vint (b + r)])))))
+⊑ req (x ~~&gt; vint a \* y ~~&gt; vint b)
+    (ens_
+       (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+        y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]))</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk9" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk9">fassume.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (x ~~&gt; vint a \* y ~~&gt; vint b);;
+  req (x ~~&gt; vint a)
+    (ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+     (<span class="kr">∃</span> <span class="nv">r</span> : int,
+        (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+        (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+           req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+             (ens_
+                (x ~~&gt; vint b \*
+                 y ~~&gt; res \* \[res = vint (b + r)])))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chka" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chka"><span class="nb">rewrite</span> (norm_ens_req_transpose).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req <span class="nl">?Goal0</span>
+    (ens_ <span class="nl">?Goal1</span>;;
+     ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+     (<span class="kr">∃</span> <span class="nv">r</span> : int,
+        (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+        (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+           req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+             (ens_
+                (x ~~&gt; vint b \*
+                 y ~~&gt; res \* \[res = vint (b + r)])))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chkb" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><label class="goal-separator" for="Hello-v-chkb"><hr></label><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (x ~~&gt; vint a \* y ~~&gt; vint b)
+  (x ~~&gt; vint a) <span class="nl">?Goal1</span></div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chkc" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chkc"><span class="mi">2</span>: {</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (x ~~&gt; vint a \* y ~~&gt; vint b)
+  (x ~~&gt; vint a) <span class="nl">?Goal1</span></div></blockquote></div></div></small><span class="alectryon-wsp"> 
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chkd" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chkd"><span class="nb">rewrite</span> &lt;- (hstar_hempty_r (x~~&gt;vint a)) <span class="nb">at</span> <span class="mi">2</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?x</span> (x ~~&gt; vint a \* y ~~&gt; vint b)
+  (x ~~&gt; vint a \* \[]) <span class="nl">?x0</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chke" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chke"><span class="nb">apply</span> b_pts_match.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Ha</span> (y ~~&gt; vint b) \[] <span class="nl">?x</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="nb">apply</span> b_base_empty.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chkf" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chkf">}</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req (\[vint a = vint a] \* \[])
+    (ens_ (y ~~&gt; vint b);;
+     ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+     (<span class="kr">∃</span> <span class="nv">r</span> : int,
+        (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+        (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+           req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+             (ens_
+                (x ~~&gt; vint b \*
+                 y ~~&gt; res \* \[res = vint (b + r)])))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* norm. *)</span>
+  <span class="c">(* prove trivial reqs *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk10" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk10"><span class="nb">rewrite</span> hstar_hempty_r.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req \[vint a = vint a]
+    (ens_ (y ~~&gt; vint b);;
+     ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+     (<span class="kr">∃</span> <span class="nv">r</span> : int,
+        (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+        (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+           req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+             (ens_
+                (x ~~&gt; vint b \*
+                 y ~~&gt; res \* \[res = vint (b + r)])))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk11" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk11"><span class="nb">apply</span> ent_req_l.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">vint a = vint a</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk12" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><label class="goal-separator" for="Hello-v-chk12"><hr></label><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b);;
+  ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+  (<span class="kr">∃</span> <span class="nv">r</span> : int,
+     (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + r)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk13" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk13"><span class="bp">reflexivity</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b);;
+  ens_ (x ~~&gt; vint (a + <span class="mi">1</span>));;
+  (<span class="kr">∃</span> <span class="nv">r</span> : int,
+     (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + r)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* combine everything into the SL context *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk14" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk14"><span class="nb">rewrite</span> norm_seq_assoc.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ (ens_ (y ~~&gt; vint b);; ens_ (x ~~&gt; vint (a + <span class="mi">1</span>)));;
+  (<span class="kr">∃</span> <span class="nv">r</span> : int,
+     (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + r)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk15" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk15"><span class="nb">rewrite</span> norm_ens_ens_void_combine.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>));;
+  (<span class="kr">∃</span> <span class="nv">r</span> : int,
+     (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + r)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* rewrite under the existential *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk16" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk16">rewrites (&gt;&gt; ent_ex_seq_unk (hello_env x y)).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">Fmap.read (hello_env x y) <span class="s2">&quot;f&quot;</span> = <span class="nl">?TEMP3</span></div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk17" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><label class="goal-separator" for="Hello-v-chk17"><hr></label><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>));;
+  (<span class="kr">∃</span> <span class="nv">b0</span> : int,
+     <span class="nl">?TEMP3</span> (vloc y) (vint b0);;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + b0)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk18" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk18">{</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">Fmap.read (hello_env x y) <span class="s2">&quot;f&quot;</span> = <span class="nl">?TEMP3</span></div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk19" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk19"><span class="nb">unfold</span> hello_env.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">Fmap.read
+  (Fmap.update
+     (Fmap.single <span class="s2">&quot;f&quot;</span>
+        (<span class="kr">fun</span> <span class="nv">_</span> <span class="nv">r</span> : val =&gt;
+         <span class="kr">∀</span> <span class="nv">b</span> : int,
+           req (x ~~&gt; vint b)
+             (ens_
+                (x ~~&gt; vint (b + <span class="mi">1</span>) \* \[r = vint <span class="mi">0</span>]))))
+     <span class="s2">&quot;hello&quot;</span> hello) <span class="s2">&quot;f&quot;</span> = <span class="nl">?TEMP3</span></div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">resolve_fn_in_env.</span><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk1a" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk1a">}</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>));;
+  (<span class="kr">∃</span> <span class="nv">b</span> : int,
+     (<span class="kr">fun</span> <span class="nv">_</span> <span class="nv">r</span> : val =&gt;
+      <span class="kr">∀</span> <span class="nv">b0</span> : int,
+        req (x ~~&gt; vint b0)
+          (ens_ (x ~~&gt; vint (b0 + <span class="mi">1</span>) \* \[r = vint <span class="mi">0</span>])))
+       (vloc y) (vint b);;
+     (<span class="kr">∀</span> <span class="nv">b0</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b0 \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b0 \*
+              y ~~&gt; res \* \[res = vint (b0 + b)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk1b" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk1b"><span class="nb">simpl</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>));;
+  (<span class="kr">∃</span> <span class="nv">b</span> : int,
+     (<span class="kr">∀</span> <span class="nv">b0</span> : int,
+        req (x ~~&gt; vint b0)
+          (ens_
+             (x ~~&gt; vint (b0 + <span class="mi">1</span>) \*
+              \[vint b = vint <span class="mi">0</span>])));;
+     (<span class="kr">∀</span> <span class="nv">b0</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b0 \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b0 \*
+              y ~~&gt; res \* \[res = vint (b0 + b)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* intro the existential, and specialize the forall *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk1c" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk1c">fintro v.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>));;
+  (<span class="kr">∀</span> <span class="nv">b</span> : int,
+     req (x ~~&gt; vint b)
+       (ens_
+          (x ~~&gt; vint (b + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>])));;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk1d" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk1d"><span class="nb">rewrite</span> norm_seq_forall_distr_r.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>));;
+  (<span class="kr">∀</span> <span class="nv">x0</span> : int,
+     req (x ~~&gt; vint x0)
+       (ens_
+          (x ~~&gt; vint (x0 + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>]));;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + v)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk1e" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk1e">finst (a + <span class="mi">1</span>).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>));;
+  req (x ~~&gt; vint (a + <span class="mi">1</span>))
+    (ens_
+       (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>]));;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk1f" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk1f"><span class="nb">rewrite</span> norm_reassoc.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>));;
+  req (x ~~&gt; vint (a + <span class="mi">1</span>))
+    (ens_
+       (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>]);;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + v)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk20" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk20"><span class="nb">rewrite</span> (norm_ens_req_transpose).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req <span class="nl">?Goal0</span>
+    (ens_ <span class="nl">?Goal1</span>;;
+     ens_
+       (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>]);;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + v)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk21" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><label class="goal-separator" for="Hello-v-chk21"><hr></label><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>))
+  (x ~~&gt; vint (a + <span class="mi">1</span>)) <span class="nl">?Goal1</span></div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk22" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk22"><span class="mi">2</span>: {</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span>))
+  (x ~~&gt; vint (a + <span class="mi">1</span>)) <span class="nl">?Goal1</span></div></blockquote></div></div></small><span class="alectryon-wsp"> 
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk23" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk23"><span class="nb">rewrite</span> hstar_comm.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (x ~~&gt; vint (a + <span class="mi">1</span>) \* y ~~&gt; vint b)
+  (x ~~&gt; vint (a + <span class="mi">1</span>)) <span class="nl">?Goal1</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk24" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk24"><span class="nb">rewrite</span> &lt;- (hstar_hempty_r (x~~&gt;vint (a + <span class="mi">1</span>))) <span class="nb">at</span> <span class="mi">2</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?x</span> (x ~~&gt; vint (a + <span class="mi">1</span>) \* y ~~&gt; vint b)
+  (x ~~&gt; vint (a + <span class="mi">1</span>) \* \[]) <span class="nl">?x0</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk25" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk25"><span class="nb">apply</span> b_pts_match.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Ha</span> (y ~~&gt; vint b) \[] <span class="nl">?x</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="nb">apply</span> b_base_empty.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk26" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk26">}</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req (\[vint (a + <span class="mi">1</span>) = vint (a + <span class="mi">1</span>)] \* \[])
+    (ens_ (y ~~&gt; vint b);;
+     ens_
+       (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>]);;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + v)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* norm *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk27" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk27"><span class="nb">rewrite</span> hstar_hempty_r.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req \[vint (a + <span class="mi">1</span>) = vint (a + <span class="mi">1</span>)]
+    (ens_ (y ~~&gt; vint b);;
+     ens_
+       (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>]);;
+     (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+        req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint b \*
+              y ~~&gt; res \* \[res = vint (b + v)]))))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk28" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk28"><span class="nb">apply</span> ent_req_l.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">vint (a + <span class="mi">1</span>) = vint (a + <span class="mi">1</span>)</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk29" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><label class="goal-separator" for="Hello-v-chk29"><hr></label><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b);;
+  ens_ (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>]);;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk2a" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk2a"><span class="bp">reflexivity</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b);;
+  ens_ (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>]);;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* move the pure assumption up... *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk2b" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk2b"><span class="nb">rewrite</span> norm_ens_ens_void_split.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b);;
+  (ens_ (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>));;
+   ens_ \[vint v = vint <span class="mi">0</span>]);;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk2c" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk2c"><span class="nb">rewrite</span> norm_seq_assoc.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ (ens_ (y ~~&gt; vint b);;
+   ens_ (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>));;
+   ens_ \[vint v = vint <span class="mi">0</span>]);;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk2d" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk2d"><span class="nb">rewrite</span> norm_seq_assoc.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ((ens_ (y ~~&gt; vint b);;
+    ens_ (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>)));;
+   ens_ \[vint v = vint <span class="mi">0</span>]);;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk2e" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk2e"><span class="nb">rewrite</span> norm_ens_ens_void_combine.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ (ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>));;
+   ens_ \[vint v = vint <span class="mi">0</span>]);;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk2f" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk2f"><span class="nb">rewrite</span> norm_ens_ens_pure_comm.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ (ens_ \[vint v = vint <span class="mi">0</span>];;
+   ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>)));;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk30" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk30"><span class="nb">rewrite</span> &lt;- norm_seq_assoc.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ \[vint v = vint <span class="mi">0</span>];;
+  ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>));;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk31" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk31">fassume H.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>));;
+  (<span class="kr">∀</span> <span class="nv">b</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint b \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint b \*
+           y ~~&gt; res \* \[res = vint (b + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* instantiate before biabduction *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk32" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk32">finst (a + <span class="mi">2</span>).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>));;
+  (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+     req (x ~~&gt; vint (a + <span class="mi">2</span>) \* y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+           y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + v)])))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk33" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk33">finst b.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>));;
+  req (x ~~&gt; vint (a + <span class="mi">2</span>) \* y ~~&gt; vint b)
+    (ens_
+       (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+        y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + v)]))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk34" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk34"><span class="nb">rewrite</span> norm_ens_req_transpose.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req <span class="nl">?Goal0</span>
+    (ens_ <span class="nl">?Goal1</span>;;
+     ens_
+       (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+        y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + v)]))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk35" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><label class="goal-separator" for="Hello-v-chk35"><hr></label><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>))
+  (x ~~&gt; vint (a + <span class="mi">2</span>) \* y ~~&gt; vint b) <span class="nl">?Goal1</span></div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk36" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk36"><span class="mi">2</span>: {</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (y ~~&gt; vint b \* x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>))
+  (x ~~&gt; vint (a + <span class="mi">2</span>) \* y ~~&gt; vint b) <span class="nl">?Goal1</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk37" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk37"><span class="nb">rewrite</span> hstar_comm.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (x ~~&gt; vint (a + <span class="mi">1</span> + <span class="mi">1</span>) \* y ~~&gt; vint b)
+  (x ~~&gt; vint (a + <span class="mi">2</span>) \* y ~~&gt; vint b) <span class="nl">?Goal1</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk38" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk38"><span class="nb">apply</span> b_pts_match.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Ha</span> (y ~~&gt; vint b) (y ~~&gt; vint b) <span class="nl">?Hf</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="nb">apply</span> b_pts_single.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk39" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk39">}</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req
+    (\[vint (a + <span class="mi">1</span> + <span class="mi">1</span>) = vint (a + <span class="mi">2</span>)] \*
+     \[vint b = vint b])
+    (ens_ \[];;
+     ens_
+       (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+        y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + v)]))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* dispatch trivial req again *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk3a" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk3a"><span class="nb">rewrite</span> hstar_hpure_conj.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ req
+    \[vint (a + <span class="mi">1</span> + <span class="mi">1</span>) = vint (a + <span class="mi">2</span>) /\
+      vint b = vint b]
+    (ens_ \[];;
+     ens_
+       (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+        y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + v)]))
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk3b" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk3b"><span class="nb">apply</span> ent_req_l.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">vint (a + <span class="mi">1</span> + <span class="mi">1</span>) = vint (a + <span class="mi">2</span>) /\ vint b = vint b</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk3c" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><label class="goal-separator" for="Hello-v-chk3c"><hr></label><div class="goal-conclusion">hello_env x y
+⊢ ens_ \[];;
+  ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + v)])
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk3d" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk3d">{</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">vint (a + <span class="mi">1</span> + <span class="mi">1</span>) = vint (a + <span class="mi">2</span>) /\ vint b = vint b</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk3e" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk3e"><span class="nb">split</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">vint (a + <span class="mi">1</span> + <span class="mi">1</span>) = vint (a + <span class="mi">2</span>)</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk3f" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><label class="goal-separator" for="Hello-v-chk3f"><hr></label><div class="goal-conclusion">vint b = vint b</div></blockquote></div></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk40" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk40"><span class="nb">f_equal</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">a + <span class="mi">1</span> + <span class="mi">1</span> = a + <span class="mi">2</span></div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk41" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><label class="goal-separator" for="Hello-v-chk41"><hr></label><div class="goal-conclusion">vint b = vint b</div></blockquote></div></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk42" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk42">math.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">vint b = vint b</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="bp">reflexivity</span>.</span><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk43" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk43">}</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_ \[];;
+  ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + v)])
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk44" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk44"><span class="nb">rewrite</span> norm_seq_ens_empty.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env x y
+⊢ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + v)])
+⊑ ens_
+    (x ~~&gt; vint (a + <span class="mi">2</span>) \*
+     y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* close *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk45" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk45"><span class="nb">apply</span> ent_ens_single.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>vint v = vint <span class="mi">0</span></span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">x ~~&gt; vint (a + <span class="mi">2</span>) \*
+y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + v)] ==&gt;
+x ~~&gt; vint (a + <span class="mi">2</span>) \*
+y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk46" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk46">injects H.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">x ~~&gt; vint (a + <span class="mi">2</span>) \*
+y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span> + <span class="mi">0</span>)] ==&gt;
+x ~~&gt; vint (a + <span class="mi">2</span>) \*
+y ~~&gt; res \* \[res = vint (a + <span class="mi">2</span>)]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk47" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk47">xsimpl.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">res = vint (a + <span class="mi">2</span> + <span class="mi">0</span>) -&gt; res = vint (a + <span class="mi">2</span>)</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk48" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk48"><span class="nb">intros</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>res = vint (a + <span class="mi">2</span> + <span class="mi">0</span>)</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">res = vint (a + <span class="mi">2</span>)</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk49" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk49"><span class="nb">rewrite</span> H.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>res = vint (a + <span class="mi">2</span> + <span class="mi">0</span>)</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">vint (a + <span class="mi">2</span> + <span class="mi">0</span>) = vint (a + <span class="mi">2</span>)</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk4a" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk4a"><span class="nb">f_equal</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br><span><var>H</var><span class="hyp-type"><b>: </b><span>res = vint (a + <span class="mi">2</span> + <span class="mi">0</span>)</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">a + <span class="mi">2</span> + <span class="mi">0</span> = a + <span class="mi">2</span></div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">math.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Qed</span>.</span></span></pre><div class="doc">
+<a id="lab2"></a><h1 class="section">Preventing the use of an <span class="inlinecode"><span class="id" title="var">f</span></span> that captures <span class="inlinecode"><span class="id" title="var">x</span></span></h1>
+</div><pre class="alectryon-io highlight"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="c">(* Suppose we have a hello that does not release x,</span>
+<span class="c">    and it is called with an f that captures x *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Definition</span> <span class="nf">hello1</span> : ufun := <span class="kr">fun</span> <span class="nv">args</span> <span class="nv">res</span> =&gt;
+  <span class="kr">match</span> args <span class="kr">with</span>
+  | vtup (vstr f) (vtup (vloc x) (vloc y)) =&gt;
+    <span class="kr">∀</span> <span class="nv">a</span>, req (x~~&gt;vint a)
+    (<span class="kr">∃</span> <span class="nv">r</span>, unk f (vloc y) (vint r);;
+    <span class="kr">∀</span> <span class="nv">b1</span>, req (y~~&gt;vint b1)
+      (ens_ (x~~&gt;vint (a+<span class="mi">1</span>) \* y~~&gt;res \* \[res = vint (a+<span class="mi">1</span>+r)])))
+  | _ =&gt; empty
+  <span class="kr">end</span>.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* same as before except for using hello1 *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Definition</span> <span class="nf">hello_env1</span> (<span class="nv">x</span> <span class="nv">y</span>:loc) :=
+  Fmap.update
+    (Fmap.single <span class="s2">&quot;f&quot;</span>
+      (<span class="kr">fun</span> <span class="nv">y</span> <span class="nv">r</span> =&gt; <span class="kr">∀</span> <span class="nv">b</span>,
+        req (x~~&gt;vint b)
+          (ens_ ((x~~&gt;vint (b+<span class="mi">1</span>) \* \[r = vint <span class="mi">0</span>])))))
+      <span class="s2">&quot;hello&quot;</span> hello1.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+<span class="c">(* the proof should not go through *)</span>
+</span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk4b" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk4b"><span class="kn">Lemma</span> <span class="nf">hello_capture1</span> : <span class="kr">forall</span> <span class="nv">x</span> <span class="nv">y</span> <span class="nv">res</span>,
+  entails_under (hello_env1 x y)
+    (unk <span class="s2">&quot;hello&quot;</span> (vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y))) res)
+    (<span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span>, req (x~~&gt;vint a \* y~~&gt;vint b)
+      (ens_ \[<span class="kt">True</span>])).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">x</span> <span class="nv">y</span> : loc) (<span class="nv">res</span> : val),
+hello_env1 x y
+⊢ <span class="s2">&quot;hello&quot;</span>$(vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)), res)
+⊑ <span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b) (ens_ \[<span class="kt">True</span>])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk4c" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk4c"><span class="kn">Proof</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="kr">forall</span> (<span class="nv">x</span> <span class="nv">y</span> : loc) (<span class="nv">res</span> : val),
+hello_env1 x y
+⊢ <span class="s2">&quot;hello&quot;</span>$(vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)), res)
+⊑ <span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b) (ens_ \[<span class="kt">True</span>])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk4d" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk4d"><span class="nb">intros</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ <span class="s2">&quot;hello&quot;</span>$(vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)), res)
+⊑ <span class="kr">∀</span> <span class="nv">a</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b) (ens_ \[<span class="kt">True</span>])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk4e" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk4e">fintro a.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ <span class="s2">&quot;hello&quot;</span>$(vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)), res)
+⊑ <span class="kr">∀</span> <span class="nv">b</span> : int,
+    req (x ~~&gt; vint a \* y ~~&gt; vint b) (ens_ \[<span class="kt">True</span>])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk4f" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk4f">fintro b.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ <span class="s2">&quot;hello&quot;</span>$(vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)), res)
+⊑ req (x ~~&gt; vint a \* y ~~&gt; vint b) (ens_ \[<span class="kt">True</span>])</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk50" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk50">fassume.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (x ~~&gt; vint a \* y ~~&gt; vint b);;
+  (<span class="s2">&quot;hello&quot;</span>$(vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)), res))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk51" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk51">funfold1 <span class="s2">&quot;hello&quot;</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (x ~~&gt; vint a \* y ~~&gt; vint b);;
+  hello1 (vtup (vstr <span class="s2">&quot;f&quot;</span>) (vtup (vloc x) (vloc y)))
+    res ⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk52" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk52"><span class="nb">simpl</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (x ~~&gt; vint a \* y ~~&gt; vint b);;
+  (<span class="kr">∀</span> <span class="nv">a</span> : int,
+     req (x ~~&gt; vint a)
+       (<span class="kr">∃</span> <span class="nv">r</span> : int,
+          (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+          (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+             req (y ~~&gt; vint b1)
+               (ens_
+                  (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+                   y ~~&gt; res \*
+                   \[res = vint (a + <span class="mi">1</span> + r)])))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk53" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk53">finst a.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (x ~~&gt; vint a \* y ~~&gt; vint b);;
+  req (x ~~&gt; vint a)
+    (<span class="kr">∃</span> <span class="nv">r</span> : int,
+       (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+       (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+          req (y ~~&gt; vint b1)
+            (ens_
+               (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+                y ~~&gt; res \* \[res = vint (a + <span class="mi">1</span> + r)]))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk54" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk54"><span class="nb">rewrite</span> norm_ens_req_transpose.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ req <span class="nl">?Goal0</span>
+    (ens_ <span class="nl">?Goal1</span>;;
+     (<span class="kr">∃</span> <span class="nv">r</span> : int,
+        (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+        (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+           req (y ~~&gt; vint b1)
+             (ens_
+                (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+                 y ~~&gt; res \*
+                 \[res = vint (a + <span class="mi">1</span> + r)])))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk55" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><label class="goal-separator" for="Hello-v-chk55"><hr></label><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (x ~~&gt; vint a \* y ~~&gt; vint b)
+  (x ~~&gt; vint a) <span class="nl">?Goal1</span></div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk56" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk56"><span class="mi">2</span>: {</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Goal0</span> (x ~~&gt; vint a \* y ~~&gt; vint b)
+  (x ~~&gt; vint a) <span class="nl">?Goal1</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    <span class="c">(* rewrite hstar_comm. *)</span>
+</span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk57" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk57"><span class="nb">rewrite</span> &lt;- (hstar_hempty_r (x ~~&gt; vint a)) <span class="nb">at</span> <span class="mi">2</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?x</span> (x ~~&gt; vint a \* y ~~&gt; vint b)
+  (x ~~&gt; vint a \* \[]) <span class="nl">?x0</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk58" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk58"><span class="nb">apply</span> b_pts_match.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">biab <span class="nl">?Ha</span> (y ~~&gt; vint b) \[] <span class="nl">?x</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="nb">apply</span> b_base_empty.</span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk59" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk59">}</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ req (\[vint a = vint a] \* \[])
+    (ens_ (y ~~&gt; vint b);;
+     (<span class="kr">∃</span> <span class="nv">r</span> : int,
+        (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+        (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+           req (y ~~&gt; vint b1)
+             (ens_
+                (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+                 y ~~&gt; res \*
+                 \[res = vint (a + <span class="mi">1</span> + r)])))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+  <span class="c">(* norm *)</span>
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk5a" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk5a"><span class="nb">rewrite</span> hstar_hempty_r.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ req \[vint a = vint a]
+    (ens_ (y ~~&gt; vint b);;
+     (<span class="kr">∃</span> <span class="nv">r</span> : int,
+        (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+        (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+           req (y ~~&gt; vint b1)
+             (ens_
+                (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+                 y ~~&gt; res \*
+                 \[res = vint (a + <span class="mi">1</span> + r)])))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk5b" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk5b"><span class="nb">apply</span> ent_req_l.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">vint a = vint a</div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk5c" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><label class="goal-separator" for="Hello-v-chk5c"><hr></label><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (y ~~&gt; vint b);;
+  (<span class="kr">∃</span> <span class="nv">r</span> : int,
+     (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+     (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+        req (y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+              y ~~&gt; res \* \[res = vint (a + <span class="mi">1</span> + r)]))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk5d" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk5d"><span class="bp">reflexivity</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (y ~~&gt; vint b);;
+  (<span class="kr">∃</span> <span class="nv">r</span> : int,
+     (<span class="s2">&quot;f&quot;</span>$(vloc y, vint r));;
+     (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+        req (y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+              y ~~&gt; res \* \[res = vint (a + <span class="mi">1</span> + r)]))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">
+</span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk5e" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk5e">rewrites (&gt;&gt; ent_ex_seq_unk (hello_env1 x y) <span class="s2">&quot;f&quot;</span>).</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">Fmap.read (hello_env1 x y) <span class="s2">&quot;f&quot;</span> = <span class="nl">?TEMP2</span></div></blockquote><div class="alectryon-extra-goals"><input class="alectryon-extra-goal-toggle" id="Hello-v-chk5f" style="display: none" type="checkbox"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><label class="goal-separator" for="Hello-v-chk5f"><hr></label><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (y ~~&gt; vint b);;
+  (<span class="kr">∃</span> <span class="nv">b0</span> : int,
+     <span class="nl">?TEMP2</span> (vloc y) (vint b0);;
+     (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+        req (y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+              y ~~&gt; res \* \[res = vint (a + <span class="mi">1</span> + b0)]))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk60" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk60">{</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">Fmap.read (hello_env1 x y) <span class="s2">&quot;f&quot;</span> = <span class="nl">?TEMP2</span></div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk61" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk61"><span class="nb">unfold</span> hello_env1.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">Fmap.read
+  (Fmap.update
+     (Fmap.single <span class="s2">&quot;f&quot;</span>
+        (<span class="kr">fun</span> <span class="nv">_</span> <span class="nv">r</span> : val =&gt;
+         <span class="kr">∀</span> <span class="nv">b</span> : int,
+           req (x ~~&gt; vint b)
+             (ens_
+                (x ~~&gt; vint (b + <span class="mi">1</span>) \* \[r = vint <span class="mi">0</span>]))))
+     <span class="s2">&quot;hello&quot;</span> hello1) <span class="s2">&quot;f&quot;</span> = <span class="nl">?TEMP2</span></div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input">resolve_fn_in_env.</span><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk62" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk62">}</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (y ~~&gt; vint b);;
+  (<span class="kr">∃</span> <span class="nv">b</span> : int,
+     (<span class="kr">fun</span> <span class="nv">_</span> <span class="nv">r</span> : val =&gt;
+      <span class="kr">∀</span> <span class="nv">b0</span> : int,
+        req (x ~~&gt; vint b0)
+          (ens_ (x ~~&gt; vint (b0 + <span class="mi">1</span>) \* \[r = vint <span class="mi">0</span>])))
+       (vloc y) (vint b);;
+     (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+        req (y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+              y ~~&gt; res \* \[res = vint (a + <span class="mi">1</span> + b)]))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk63" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk63"><span class="nb">simpl</span>.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (y ~~&gt; vint b);;
+  (<span class="kr">∃</span> <span class="nv">b</span> : int,
+     (<span class="kr">∀</span> <span class="nv">b0</span> : int,
+        req (x ~~&gt; vint b0)
+          (ens_
+             (x ~~&gt; vint (b0 + <span class="mi">1</span>) \*
+              \[vint b = vint <span class="mi">0</span>])));;
+     (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+        req (y ~~&gt; vint b1)
+          (ens_
+             (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+              y ~~&gt; res \* \[res = vint (a + <span class="mi">1</span> + b)]))))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Hello-v-chk64" style="display: none" type="checkbox"><label class="alectryon-input" for="Hello-v-chk64">fintro v.</label><small class="alectryon-output"><div><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><span><var>x, y</var><span class="hyp-type"><b>: </b><span>loc</span></span></span><br><span><var>res</var><span class="hyp-type"><b>: </b><span>val</span></span></span><br><span><var>a, b, v</var><span class="hyp-type"><b>: </b><span>int</span></span></span><br></div><span class="goal-separator"><hr></span><div class="goal-conclusion">hello_env1 x y
+⊢ ens_ (y ~~&gt; vint b);;
+  (<span class="kr">∀</span> <span class="nv">b</span> : int,
+     req (x ~~&gt; vint b)
+       (ens_
+          (x ~~&gt; vint (b + <span class="mi">1</span>) \* \[vint v = vint <span class="mi">0</span>])));;
+  (<span class="kr">∀</span> <span class="nv">b1</span> : int,
+     req (y ~~&gt; vint b1)
+       (ens_
+          (x ~~&gt; vint (a + <span class="mi">1</span>) \*
+           y ~~&gt; res \* \[res = vint (a + <span class="mi">1</span> + v)])))
+⊑ ens_ \[<span class="kt">True</span>]</div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  <span class="c">(* f cannot capture x *)</span>
+</span><span class="alectryon-sentence"><span class="alectryon-input"><span class="kn">Abort</span>.</span></span></pre></article></body></html>
