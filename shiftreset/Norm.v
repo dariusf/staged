@@ -134,6 +134,17 @@ Proof.
     false Hsf H6. }
 Qed.
 
+Lemma norm_bind_assoc_sf_equiv : forall f fk fk1,
+  shift_free f ->
+  bientails (bind (bind f fk) fk1) (bind f (fun r => bind (fk r) fk1)).
+Proof.
+  unfold bientails.
+  intros f fk fk1 H_shift_free h1 h2 R s1 s2.
+  split.
+  - exact (norm_bind_assoc_sf f fk fk1 H_shift_free s1 s2 h1 h2 R).
+  - exact (norm_bind_assoc_sf_conv f fk fk1 H_shift_free s1 s2 h1 h2 R).
+Qed.
+
 Lemma norm_seq_assoc1 : forall f1 f2 f3,
   shift_free f1 ->
   entails (f1;; (f2;; f3)) ((f1;; f2);; f3).
