@@ -42,7 +42,8 @@ Section Propriety.
     (flip entails ====> entails ====> impl)
     entails.
   Proof.
-    unfold entails, Proper, respectful, impl. intros. auto.
+    unfold flip, Proper, respectful, impl.
+    unfold entails. intros. auto.
   Qed.
 
   Example rewrite :
@@ -353,7 +354,8 @@ Section Propriety.
     ShiftFree f ->
     Proper (entails ====> entails) (@seq f).
   Proof.
-    unfold Proper, entails, respectful. intros.
+    unfold Proper, respectful.
+    unfold entails. intros.
     inverts H1. 2: { no_shift. }
     applys* s_seq.
   Qed.
