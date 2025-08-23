@@ -80,3 +80,19 @@ Definition append_delim_unit_tests : bool :=
   && unit_test [0; 1] [2; 3].
 
 Compute append_delim_unit_tests.
+
+Lemma append_delim_base: forall (A:Type) ys,
+  append_delim A [] ys = ys.
+Proof.
+  intros.
+  unfold append_delim.
+  simpl.
+Admitted.
+
+Lemma append_delim_correct: forall (A:Type) xs ys,
+  append_delim A xs ys = xs ++ ys.
+Proof.
+  intros A xs. induction xs; intros.
+  { simpl.
+    apply append_delim_base. }
+Abort.
