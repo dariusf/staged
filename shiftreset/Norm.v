@@ -1177,3 +1177,15 @@ Proof.
   unfold entails. intros.
   inverts* H.
 Qed.
+
+Lemma norm_bind_seq_ex: forall f fk,
+  shift_free f ->
+  entails (bind f fk) (f;; ∃ x, fk x).
+Proof.
+  unfold entails. introv Hsf. intros.
+  inverts H.
+  { applys* s_bind.
+    applys s_fex. exists v.
+    assumption. }
+  { no_shift. }
+Qed.
