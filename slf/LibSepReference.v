@@ -2844,7 +2844,7 @@ Tactic Notation "xvars" :=
 (** [xwp_simpl] is a specialized version of [simpl] to be used for
     getting the function [wp] to compute properly. *)
 
-From Coq Require Bool.
+From Stdlib Require Bool.
 
 Ltac xwp_simpl :=
   xvars;

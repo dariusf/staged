@@ -8,8 +8,8 @@ $ which vscoqtop
 opam pin add vscoq-language-server.2.2.2  https://github.com/coq/vscoq/releases/download/v2.2.2/vscoq-language-server-2.2.2.tar.gz
 *)
 
-From Coq Require Import Classes.RelationClasses.
-From Coq Require Morphisms Program.Basics.
+From Stdlib Require Import Classes.RelationClasses.
+From Stdlib Require Morphisms Program.Basics.
 
 (* remove when https://github.com/coq/coq/pull/19673 is merged *)
 Set Warnings "-notation-incompatible-prefix".
@@ -25,7 +25,7 @@ Local Open Scope list_scope.
 
 Set Implicit Arguments.
 
-From Coq Require Recdef.
+From Stdlib Require Recdef.
 
 
 

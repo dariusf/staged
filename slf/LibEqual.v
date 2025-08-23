@@ -874,7 +874,7 @@ Proof using. introv E. dependent rewrite E. simple~. constructor. Qed.
 (* ################################################################# *)
 (** * John Major's equality *)
 
-From Coq Require Import JMeq.
+From Stdlib Require Import JMeq.
 
 (** The module above defines John Major's equality:
 

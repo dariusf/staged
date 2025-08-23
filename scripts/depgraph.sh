@@ -7,7 +7,7 @@ project=shiftreset
 ( echo "digraph $project_deps {" ;
   # echo "node [shape=ellipse, style=filled, URL=\"html/$PROJECT.\N.html\", color=black];";
   echo "rankdir=BT";
-  ( coqdep -f _CoqProject ) |
+  ( rocq dep -f _CoqProject ) |
     sed -n -e 's,/,.,g;s/[.]vo.*: [^ ]*[.]v//p' | grep $project |
     while read src dst; do
       # color=$(echo "$src" | sed -e 's,Real.*,turquoise,;s,$PROJECT[.].*,plum,;s,Integral.*,lightcoral,;s,Poly.*,yellow,;s,Float.*,cornflowerblue,;s,Eval.*,green,;s,[A-Z].*,white,')

@@ -9,7 +9,7 @@
 
 Set Implicit Arguments.
 From SLF Require Import LibTactics LibReflect.
-From Coq Require Export String.
+From Stdlib Require Export String.
 
 (* ********************************************************************** *)
 (* ################################################################# *)

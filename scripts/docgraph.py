@@ -5,7 +5,7 @@ import re
 
 lines = (
     subprocess.check_output(
-        "coqdep -f _CoqProject",
+        "rocq dep -f _CoqProject",
         shell=True,
     )
     .decode("utf-8")

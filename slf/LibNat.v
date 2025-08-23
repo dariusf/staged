@@ -8,7 +8,7 @@
 **************************************************************************)
 
 Set Implicit Arguments.
-From Coq Require Export Arith Lia.
+From Stdlib Require Export Arith Lia.
 From SLF Require Import LibTactics LibReflect LibBool LibOperation LibRelation LibOrder.
 From SLF Require Export LibOrder.
 Global Close Scope positive_scope.

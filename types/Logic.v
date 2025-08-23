@@ -1,5 +1,5 @@
-From Coq Require Import Classes.RelationClasses.
-From Coq Require Morphisms Program.Basics.
+From Stdlib Require Import Classes.RelationClasses.
+From Stdlib Require Morphisms Program.Basics.
 
 (* remove when https://github.com/coq/coq/pull/19673 is merged *)
 Set Warnings "-notation-incompatible-prefix".

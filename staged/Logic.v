@@ -1,6 +1,6 @@
 (** A reference formalization of #<a href="https://dl.acm.org/doi/10.1007/978-3-031-71162-6_26">Staged Specification Logic for Verifying Higher-Order Imperative Programs</a># (FM 2024). *)
-From Coq Require Import Classes.RelationClasses.
-From Coq Require Morphisms Program.Basics.
+From Stdlib Require Import Classes.RelationClasses.
+From Stdlib Require Morphisms Program.Basics.
 
 (* remove when https://github.com/coq/coq/pull/19673 is merged *)
 Set Warnings "-notation-incompatible-prefix".
@@ -751,7 +751,7 @@ Lemma req_void_pure_inv: forall env h1 h2 R P,
   satisfies env h1 h2 R (req_ \[P]) ->
   h1 = h2 /\ R = norm vunit.
 Proof.
-  intros env h1 h2 r P HP H. 
+  intros env h1 h2 r P HP H.
   apply empty_inv with (env := env).
   inverts H as H. specialize (H empty_heap h1). apply* H.
   apply hpure_intro. assumption.
@@ -2042,8 +2042,8 @@ Proof.
   assert (HP: hp' = empty_heap). (* and thus hr = hr' *)
   { inverts H1. inverts H0. reflexivity. }
 
-  inverts H as H. specialize (H hp' hr' H1 H2 H3). subst. 
-  
+  inverts H as H. specialize (H hp' hr' H1 H2 H3). subst.
+
   eapply s_seq.
   apply ens_void_pure_intro. destruct H1. assumption.
   assumption.
@@ -2057,25 +2057,25 @@ Proof.
   intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
   constructor.
   - apply req_generates_info.
-  - intros H. 
+  - intros H.
 
     (* Remove req p \* \[P] *)
     apply s_req. intros hp hr H1 H2 H3.
-    inverts H as H. specialize (H hp hr H1 H2 H3). 
+    inverts H as H. specialize (H hp hr H1 H2 H3).
 
     (* Just prove the ens_ f *)
     apply seq_ens_void_pure_inv in H. destruct H. assumption.
 Qed.
 
-Lemma ens_generates_info: forall P q f g, 
-  let original_flow := ens_ (q \* \[P]) ;; f ;; g in 
-  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in 
+Lemma ens_generates_info: forall P q f g,
+  let original_flow := ens_ (q \* \[P]) ;; f ;; g in
+  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in
   entails original_flow new_flow.
 Proof.
   intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
   intros env h1 h2 r H.
 
-  fdestr H. 
+  fdestr H.
   eapply s_seq. eassumption.
 
   fdestr H6.
@@ -2087,22 +2087,22 @@ Proof.
   assumption.
 Qed.
 
-Lemma ens_generates_info_bientails: forall P q f g, 
-  let original_flow := ens_ (q \* \[P]) ;; f ;; g in 
-  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in 
+Lemma ens_generates_info_bientails: forall P q f g,
+  let original_flow := ens_ (q \* \[P]) ;; f ;; g in
+  let new_flow      := ens_ (q \* \[P]) ;; f ;; req_ \[P] ;; g in
   bientails original_flow new_flow.
 Proof.
   intros. unfold original_flow, new_flow, entails. clear original_flow new_flow.
   constructor.
   - apply ens_generates_info.
-  - intro H. 
-    
+  - intro H.
+
     (* Remove the ens_ q *)
     fdestr H.
     eapply s_seq. eassumption.
 
     (* Extract proof of P. *)
-    rewrite hstar_comm in H. 
+    rewrite hstar_comm in H.
     apply norm_ens_ens_void in H. fdestr H. fdestr H.
 
     (* Proving env, h3, h2, r |= (f;; g) *)
@@ -2117,15 +2117,15 @@ Proof.
     assumption.
 Qed.
 
-(** In ens_generates_info, the final flow g is not within the context of 
+(** In ens_generates_info, the final flow g is not within the context of
     req_ \[P] (i.e. req \[P] g). This is inconsequential as we can bring g in
     and out of the context of the req.
-    
+
     This is important for the normalized form of a specification. *)
 Lemma move_seq_into_req: forall P f,
   entails (req_ P ;; f) (req P f).
 Proof.
-  intros. 
+  intros.
   assert (bientails (req P f) (req P (empty ;; f))) as H.
   { rewrite  (norm_empty_l f). reflexivity. }
   rewrite H.
@@ -3004,7 +3004,7 @@ Module HistoryTriples.
 
   (** * History triples *)
   (** A #<i>history triple</i># (i.e. not just a "triple", which typically refers to a Hoare triple) also constrains the history of a program. *)
-  (* 
+  (*
       h0 ╶─[fh]──▶ h1 ╶─[e]──▶ h2
       ╷                        ▲
       └───────────[f]──────────┘

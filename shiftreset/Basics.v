@@ -1,6 +1,6 @@
 
-From Coq Require Import Classes.RelationClasses.
-From Coq Require Morphisms Program.Basics.
+From Stdlib Require Import Classes.RelationClasses.
+From Stdlib Require Morphisms Program.Basics.
 
 From Staged Require Export HeapF.
 From Staged Require Export LibFmap.
