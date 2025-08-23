@@ -19,10 +19,6 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-        coq_version:
-          - "8.20"
-        ocaml_version:
-          - "4.14-flambda"
 
     runs-on: ${{ matrix.os }}
 
@@ -32,12 +28,11 @@ jobs:
 
       - uses: coq-community/docker-coq-action@v1
         with:
-          coq_version: ${{ matrix.coq_version }}
-          ocaml_version: ${{ matrix.ocaml_version }}
+          custom_image: "rocq/rocq-prover:9.0.0-ocaml-4.14.2-flambda"
 
           before_install: |
             startGroup "Workaround permission issue"
-              sudo chown -R coq:coq . /usr/local
+              sudo chown -R rocq:rocq . /usr/local
             endGroup
 
           # https://github.com/coq-community/docker-coq-action#permissions
@@ -50,13 +45,15 @@ jobs:
               cd -
               rm -rf coq2html
             endGroup
-            startGroup "Install Alectryon"
-              sudo apt-get update
-              sudo apt-get install -y pipx python3-pip
-              pipx install alectryon
-            endGroup
+            # requires opam install coq-serapi,
+            # not available for rocq 9 yet
+            #startGroup "Install Alectryon"
+            #  sudo apt-get update
+            #  sudo apt-get install -y pipx python3-pip
+            #  pipx install alectryon
+            #endGroup
             startGroup "Install Graphviz"
-              #sudo apt-get update
+              sudo apt-get update
               sudo apt-get install -y graphviz
             endGroup
 
@@ -64,15 +61,16 @@ jobs:
             startGroup "Build project"
               make
               make docs
-              make alectryon
+              #make alectryon
             endGroup
 
       # why does this take so long?
-      # - name: Revert permissions
-      #   # to avoid a warning at cleanup time
-      #   if: ${{ always() }}
-      #   run: |
-      #     sudo chown -R 1001:116 . /usr/local
+      - name: Revert permissions
+        # to avoid a warning at cleanup time
+        if: ${{ always() }}
+        run: |
+          # sudo chown -R 1001:116 . /usr/local
+          sudo chown -R 1001:116 .
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
