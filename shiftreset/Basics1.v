@@ -67,20 +67,21 @@ Section flow.
     | app : flow -> flow -> flow
     | bind : flow -> (val -> flow) -> flow
     | fex : forall (A:Type), (A -> flow) -> flow
+    | fall : forall (A:Type), (A -> flow) -> flow
     .
 End flow.
 
 (* closed terms *)
 Definition flow0 := forall V, flow V.
 
-(* terms with 1 free variable *)
+(* terms with one free variable *)
 Definition flow1 := forall V, V -> flow V.
 
 (* a constructor for a closed term *)
 Example app0 (f1 f2: flow0) : flow0 := fun _ =>
   app (f1 _) (f2 _).
 
-(* constructors for open terms, which are needed for abstraction *)
+(* constructors for open terms, which have to be defined this way *)
 Example identity {V} : flow V :=
   lambda (fun x => ident x).
 
@@ -90,18 +91,45 @@ Definition ret {V} (v:val): flow V :=
 Example app2 : flow0 := fun _ =>
   app identity (ret (vint 1)).
 
-(* going from an open term to a closed term doesn't seem to be possible? *)
-(* Definition inj {V} (f:flow V) : flow0 := fun _ => f. *)
+Inductive satisfies {V} : heap -> heap -> val -> flow V -> Prop :=
 
-Inductive satisfies : heap -> heap -> val -> flow0 -> Prop :=
-
-  (* | s_req : forall H (h1 h2:heap) R V (f:flow V),
+  | s_req : forall H (h1 h2:heap) R (f:flow V),
     (forall (hp hr:heap),
       H hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
       satisfies hr h2 R f) ->
-    satisfies h1 h2 R (req H f) *)
+    satisfies h1 h2 R (req H f)
+
+  | s_ens : forall Q h1 h2 R,
+    (exists v h3,
+      R = v /\
+      Q v h3 /\
+      h2 = Fmap.union h1 h3 /\
+      Fmap.disjoint h1 h3) ->
+    satisfies h1 h2 R (ens _ Q)
+
+  | s_bind : forall h3 v f1 (f2:val->flow V) h1 h2 R,
+    satisfies h1 h3 v f1 ->
+    satisfies h3 h2 R (f2 v) ->
+    satisfies h1 h2 R (bind f1 f2)
+
+  | s_fex h1 h2 R (A:Type) (f:A->flow V)
+    (H: exists b,
+      satisfies h1 h2 R (f b)) :
+    satisfies h1 h2 R (@fex _ A f)
+
+  | s_fall h1 h2 R (A:Type) (f:A->flow V)
+    (H: forall b,
+      satisfies h1 h2 R (f b)) :
+    satisfies h1 h2 R (@fall _ A f)
+
+(* this case probably needs type info *)
+
+  (* | s_app : forall h1 h2 R (f1 f2:flow V) (f3:V->flow V),
+    f1 = lambda f3 ->
+    satisfies h1 h2 R (f3 f2) ->
+    satisfies h1 h2 R (@app _ f1 f2) *)
 
 .
 
