@@ -1189,3 +1189,21 @@ Proof.
     assumption. }
   { no_shift. }
 Qed.
+
+Lemma norm_ens_empty_r : forall H,
+  bientails (ens_ H;; empty) (ens_ H).
+Proof.
+  unfold bientails.
+  iff H1.
+  { inverts H1. 2: { no_shift. }
+    inverts H8.
+    inverts H9.
+    applys s_ens.
+    heaps. }
+  { inverts H1.
+    destr H7.
+    heaps.
+    applys s_bind.
+    applys s_ens. heaps.
+    unfold empty. applys s_ens. heaps. }
+Qed.

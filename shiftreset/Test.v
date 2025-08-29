@@ -52,3 +52,19 @@ Proof.
     rewrite norm_bind_assoc_sf; shiftfree.
     reflexivity.
 Qed.
+
+Example ex_biab: forall x y i,
+  entails (ens_ (x~~>vint 3 \* y~~>vint 2);; req_ (x~~>vint i))
+    (req \[i = 3] (ens_ (y~~>vint 2))).
+Proof.
+  intros.
+  rewrite norm_ens_req_transpose.
+  2: {
+    rewrite <- (hstar_hempty_r (x~~>i)).
+    apply b_pts_match.
+    apply b_base_empty. }
+  apply entails_req1.
+  xsimpl. symmetry. f_equal. assumption.
+  rewrite norm_ens_empty_r.
+  reflexivity.
+Qed.
