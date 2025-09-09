@@ -59,28 +59,35 @@ Module TFP <: TY_FUNCTOR_PROP.
   (* Definition T_bot := False. *)
 
   Definition F1 : Type -> Type :=
-    fun X => var -> heap -> heap -> val -> X.
+    (* fun X => var -> heap -> heap -> val -> X. *)
+    fun X => var -> X.
+
+  (* Definition fmap : forall A B, (A -> B) -> F1 A -> F1 B :=
+    fun A B (g : A -> B) (psi : F1 A) =>
+    fun x h1 h2 v =>
+      g (psi x h1 h2 v). *)
 
   Definition fmap : forall A B, (A -> B) -> F1 A -> F1 B :=
     fun A B (g : A -> B) (psi : F1 A) =>
-    fun x h1 h2 v =>
-      g (psi x h1 h2 v).
+    fun x =>
+      g (psi x).
 
   Lemma fmap_id : forall A, fmap (id A) = id (F1 A).
   Proof.
     unfold fmap, id, compose, option_map.
     intro.
     extensionality FA a.
-    extensionality FB v.
+    (* extensionality FB v. *)
     reflexivity.
   Qed.
+
   Lemma fmap_comp : forall A B C (f:B -> C) (g:A -> B),
     fmap f oo fmap g = fmap (f oo g).
   Proof.
     unfold fmap, id, compose, option_map.
     intros.
     extensionality FA a.
-    extensionality FB b.
+    (* extensionality FB b. *)
     reflexivity.
   Qed.
 
@@ -91,7 +98,7 @@ Module TFP <: TY_FUNCTOR_PROP.
         {| ff_id := fmap_id;
           ff_comp := fmap_comp |} |}.
 
-  Definition other : Type := unit.
+  Definition other : Type := heap * heap * val.
 End TFP.
 
 Export TFP.
@@ -106,39 +113,106 @@ Module K := KnotHered(TFP).
 Export K.
 (* Export KL. *)
 
+Variant result A : Type :=
+| norm : val -> result A
+| shift : (val -> A) -> (val -> A) -> result A.
+
 Definition env : Type := knot.
 Definition flow : Type := env -> heap -> heap -> val -> Prop.
 
-Definition ens (H:hprop) : flow :=
+Definition ens (Q:val->hprop) : flow :=
   fun s h1 h2 v =>
-  (* TODO ignore s and implement this *)
-    True.
+    exists v1 h3,
+      v1 = v /\
+      Q v1 h3 /\
+      h2 = Fmap.union h1 h3 /\
+      Fmap.disjoint h1 h3.
 
-(* Check k_age1. *)
+Definition req (H:hprop) (f:flow) : flow :=
+  fun s h1 h2 v =>
+    forall (hp hr:heap),
+      H hp ->
+      h1 = Fmap.union hr hp ->
+      Fmap.disjoint hr hp ->
+      f s hr h2 v.
+
+Definition unk (f:var) (v:val) : flow :=
+  fun s h1 h2 v =>
+    let (k, env) := unsquash s in
+    let f1 := env f in
+    let f2 := proj1_sig f1 in
+    (* TODO does not have to be hereditary because the env is never updated? *)
+    (* TODO later s? otherwise we get a meaningless env *)
+    let f3 := f2 (s, (h1, h2, v)) in
+    f3.
+
+Definition bind (f:flow) (fk:val->flow) : flow :=
+  fun s h1 h2 v =>
+    forall h3 v1,
+      f s h1 h3 v1 ->
+      (fk v1) s h3 h2 v.
+
+Definition seq (f1 f2:flow) : flow :=
+  bind f1 (fun _ => f2).
+
+Definition ens_ (H:hprop) : flow :=
+  ens (fun r => H \* \[r = vunit]).
+
+Definition ret (v:val) : flow :=
+  ens (fun r => \[r = v]).
+
+Definition entails (f1 f2:flow) : Prop :=
+  forall s h1 h2 v,
+    f1 s h1 h2 v ->
+      f2 s h1 h2 v.
+
+Instance entails_refl : Reflexive entails.
+Proof.
+  unfold Reflexive, entails.
+  intros.
+  exact H.
+Qed.
+
+Instance entails_trans : Transitive entails.
+Proof.
+  unfold Transitive, entails.
+  intros.
+  auto.
+Qed.
+
+Instance entails_preorder : PreOrder entails.
+Proof.
+  constructor.
+  apply entails_refl.
+  apply entails_trans.
+Qed.
+
+
+Example ex1 : forall x,
+  entails (ens_ \[x = 1]) (ens_ \[x >= 1]).
+Proof.
+  unfold entails. intros.
+  unfold ens_, ens in *.
+  destr H. hinv H. hinv H. hinv H2.
+  exs.
+  splits*.
+  subst.
+  hintro.
+  hintro. lia.
+  hintro. reflexivity.
+  fmap_disjoint.
+Qed.
+
+Example ex2 : forall f v,
+  entails (unk f v) (unk f v).
+Proof.
+  reflexivity.
+Qed.
+
+Check age1.
 Search "age".
 
 Print TF.F.
 (* the functor F we defined in the module above *)
 Locate TF.F.
 Print predicate.
-
-Definition unk (f:var) (v:val) : flow :=
-  fun s h1 h2 v =>
-    let (k, env) := unsquash s in
-    (* env : TF.F predicate *)
-    let f1 := env f in
-    let x := f1 h1 h2 v in
-
-    (* TODO need to age the predicate before i can read out of it. read about aging *)
-    (* TODO is the definition of F1 above even right? *)
-    (* TODO need to construct something custom. replacing the prod other with something else *)
-
-    (* forall  *)
-    (* let y := squash (k, m) in *)
-    (* x must be applied to an env *)
-  (* age *)
-    (* x (y, tt) *)
-    True
-    .
-
-(* TODO parameters *)
