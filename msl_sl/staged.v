@@ -35,7 +35,8 @@ Definition loc := nat.
 
 Inductive val :=
   | vunit : val
-  | vint : Z -> val.
+  | vint : Z -> val
+  | vfptr : var -> val.
 
 #[global]
 Instance Inhab_val : Inhab val.
@@ -113,15 +114,15 @@ Module K := KnotHered(TFP).
 Export K.
 (* Export KL. *)
 
-Variant result A : Type :=
-| norm : val -> result A
-| shift : (val -> A) -> (val -> A) -> result A.
+Variant result : Type :=
+| norm : val -> result
+| shift : var -> var -> result.
 
 Definition env : Type := knot.
-Definition flow : Type := env -> heap -> heap -> val -> Prop.
+Definition flow : Type := env -> env -> heap -> heap -> val -> Prop.
 
 Definition ens (Q:val->hprop) : flow :=
-  fun s h1 h2 v =>
+  fun s1 s2 h1 h2 v =>
     exists v1 h3,
       v1 = v /\
       Q v1 h3 /\
@@ -129,28 +130,28 @@ Definition ens (Q:val->hprop) : flow :=
       Fmap.disjoint h1 h3.
 
 Definition req (H:hprop) (f:flow) : flow :=
-  fun s h1 h2 v =>
+  fun s1 s2 h1 h2 v =>
     forall (hp hr:heap),
       H hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      f s hr h2 v.
+      f s1 s2 hr h2 v.
 
 Definition unk (f:var) (v:val) : flow :=
-  fun s h1 h2 v =>
-    let (k, env) := unsquash s in
+  fun s1 s2 h1 h2 v =>
+    let (k, env) := unsquash s1 in
     let f1 := env f in
     let f2 := proj1_sig f1 in
     (* TODO does not have to be hereditary because the env is never updated? *)
     (* TODO later s? otherwise we get a meaningless env *)
-    let f3 := f2 (s, (h1, h2, v)) in
+    let f3 := f2 (s1, (h1, h2, v)) in
     f3.
 
 Definition bind (f:flow) (fk:val->flow) : flow :=
-  fun s h1 h2 v =>
+  fun s1 s2 h1 h2 v =>
     forall h3 v1,
-      f s h1 h3 v1 ->
-      (fk v1) s h3 h2 v.
+      f s1 s2 h1 h3 v1 ->
+      (fk v1) s1 s2 h3 h2 v.
 
 Definition seq (f1 f2:flow) : flow :=
   bind f1 (fun _ => f2).
@@ -161,10 +162,23 @@ Definition ens_ (H:hprop) : flow :=
 Definition ret (v:val) : flow :=
   ens (fun r => \[r = v]).
 
+Definition defun (f:var) (fk:val->flow) : flow :=
+  fun s1 s2 h1 h2 v =>
+  h1 = h2 /\ v = vunit /\
+  (* s2 = (fun k => if k = f then fk else s1 k) *)
+  let s3 := s1 in
+  let (k, env) := unsquash s3 in
+  (* 1 *)
+  s2 = s3
+  .
+
+(* Definition effect (v:var) : flow :=
+  ens (fun r => \[r = v]). *)
+
 Definition entails (f1 f2:flow) : Prop :=
-  forall s h1 h2 v,
-    f1 s h1 h2 v ->
-      f2 s h1 h2 v.
+  forall s1 s2 h1 h2 v,
+    f1 s1 s2 h1 h2 v ->
+      f2 s1 s2 h1 h2 v.
 
 Instance entails_refl : Reflexive entails.
 Proof.
