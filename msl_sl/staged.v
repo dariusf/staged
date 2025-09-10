@@ -7,6 +7,8 @@ Require Import msl.base.
 (* Require Import msl.functor_facts. *)
 (* Require Import msl.knot. *)
 Require Import msl.knot_hered.
+Require Import msl.knot_prop.
+
 
 Require Import msl.functors.
 Require Import msl.ageable.
@@ -54,8 +56,9 @@ Module Export Heap := HeapF.HeapSetup Val.
 
 Definition empty_heap : heap := Fmap.empty.
 
-Module TFP <: TY_FUNCTOR_PROP.
+(* Locate TY_FUNCTOR_PROP. *)
 
+Module TFP <: TY_FUNCTOR_PROP.
   (* Definition T := Prop. *)
   (* Definition T_bot := False. *)
 
@@ -105,10 +108,10 @@ End TFP.
 Export TFP.
 
 
-(* Module K := KnotProp(TFP). *)
+Module K := KnotProp(TFP).
 (* Module KL := KnotProp_Lemmas(K). *)
 
-Module K := KnotHered(TFP).
+(* Module K := KnotHered(TFP). *)
 (* Module KL := KnotHered_Lemmas(K). *)
 
 Export K.
@@ -141,7 +144,8 @@ Definition unk (f:var) (v:val) : flow :=
   fun s1 s2 h1 h2 v =>
     let (k, env) := unsquash s1 in
     let f1 := env f in
-    let f2 := proj1_sig f1 in
+    (* let f2 := proj1_sig f1 in *)
+    let f2 := f1 in
     (* TODO does not have to be hereditary because the env is never updated? *)
     (* TODO later s? otherwise we get a meaningless env *)
     let f3 := f2 (s1, (h1, h2, v)) in
