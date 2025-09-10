@@ -166,14 +166,50 @@ Definition ens_ (H:hprop) : flow :=
 Definition ret (v:val) : flow :=
   ens (fun r => \[r = v]).
 
+
+Lemma val_eq_dec : forall (x1 x2 : val), {x1 = x2} + {x1 <> x2}.
+Proof.
+  decide equality.
+  apply Z.eq_dec.
+  apply String.string_dec.
+Defined.
+
+  (* Locate "=?". *)
+  (* Locate eqb. *)
+
+Definition p2f (p:predicate) : flow :=
+  fun s1 s2 h1 h2 v =>
+  (* TODO s2 *)
+    p (s1, (h1, h2, v)).
+
+Definition f2p (f:flow) : predicate :=
+  fun '(s1, (h1, h2, v)) =>
+  (* TODO s2 *)
+    f s1 s1 h1 h2 v.
+
 Definition defun (f:var) (fk:val->flow) : flow :=
   fun s1 s2 h1 h2 v =>
   h1 = h2 /\ v = vunit /\
-  (* s2 = (fun k => if k = f then fk else s1 k) *)
   let s3 := s1 in
   let (k, env) := unsquash s3 in
+  let _ : var->predicate := env in
+  let y : var->predicate := fun f1 =>
+  (* f2p (fk ) *)
+    (* fun '(s4, (h3, h4, v1)) => *)
+    (* TODO convert a val->flow into a var->predicate *)
+    fun '(s3, (h3, h4, v)) => exists (f2:val), f2 = vfptr f1 /\
+      fk f2 s3 s3 h3 h4 v
+  in
+  let z : var->predicate := fun x =>
+    if var_eq x f then y x else env x
+  in
+  (* let w :=  in *)
+  (* let y:predicate :=
+  fun '(s1, (h1, h2, v)) =>
+  (fun (v1:var) => if var_eq v1 f then f2p (fk (vfptr f)) else env v1) in *)
+  (* s2 = (fun k => if k = f then fk else env k) *)
   (* 1 *)
-  s2 = s3
+  s2 = squash (k, z)
   .
 
 (* Definition effect (v:var) : flow :=
