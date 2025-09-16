@@ -1,6 +1,7 @@
 
 From ShiftReset Require Import Basics Norm ShiftFree.
 
+(*
 (* sadly this has to be proven from scratch *)
 Lemma gent_seq_defun_idem : forall n s x uf f1 f2,
   Fmap.indom s x ->
@@ -193,3 +194,4 @@ Lemma gent_disj_l : forall n f1 f2 f3 env,
   gentails_under env n (disj f1 f2) f3.
 Proof.
 Abort.
+*)

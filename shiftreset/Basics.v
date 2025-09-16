@@ -490,6 +490,7 @@ Definition entails (f1 f2:flow) : Prop :=
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
+(*
 Inductive gentails_under : senv -> nat -> flow -> flow -> Prop :=
 
   | geu_base : forall s1 f1 f2,
@@ -512,10 +513,7 @@ Inductive gentails_under : senv -> nat -> flow -> flow -> Prop :=
 (* hide the index *)
 Notation "env '⊢' f1 '⊆' f2" :=
   (gentails_under env _ f1 f2) (at level 90, only printing) : flow_scope.
-
-(* Definition gentails n f1 f2 :=
-  forall s1, gentails_under s1 n f1 f2. *)
-
+*)
 Inductive gentails : nat -> flow -> flow -> Prop :=
 
   | ge_base : forall f1 f2,
@@ -579,6 +577,7 @@ Definition entails_under s1 f1 f2 :=
 Notation "env '⊢' f1 '⊑' f2" :=
   (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
 
+(*
 Lemma entails_under_gentails_under: forall n s1 f1 f2,
   entails_under s1 f1 f2 -> gentails_under s1 n f1 f2.
 Proof.
@@ -589,7 +588,7 @@ Admitted.
   { applys geu_shift.
     - intros m H_le.
     - jauto. }
-Qed.*)
+Qed.*) *)
 
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 R s1 s2,
@@ -663,40 +662,6 @@ Proof.
   constructor.
   apply gentails_refl.
   apply gentails_trans.
-Qed.
-
-Instance gentails_under_refl : forall n env, Reflexive (gentails_under env n).
-Proof.
-Admitted.
-(*
-  unfold Reflexive.
-  intros n. induction n; intros.
-  - applys geu_base. intros.
-    assumption.
-  - intros.
-    applys geu_shift. intros.
-    exs. splits*.
-Qed.
-*)
-
-Instance gentails_under_trans : forall n env, Transitive (gentails_under env n).
-Proof.
-Admitted.
-  (*unfold Transitive.
-  intros n. induction n; intros.
-  - inverts H. inverts H0. applys geu_base. intros.
-    eauto.
-  - applys geu_shift. intros.
-    inverts H as H. specializes H H1. destr H.
-    inverts H0 as H0. specializes H0 H2. destr H0.
-    exs. splits*.
-Qed.*)
-
-Instance gentails_under_preorder : forall n env, PreOrder (gentails_under env n).
-Proof.
-  constructor.
-  apply gentails_under_refl.
-  apply gentails_under_trans.
 Qed.
 
 Instance entails_under_refl : forall env, Reflexive (entails_under env).

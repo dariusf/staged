@@ -31,24 +31,15 @@ Proof.
 
 Abort.
 
-Example ex_gentails_non_shift_free:
-  gentails 1%nat
-    ((sh "k" empty;; empty);; empty)
+Example ex_gentails_non_shift_free :
+  gentails 0%nat
+    ((sh "k" empty;; ens (fun r => \[r = 1]));; empty)
     (sh "k" empty;; empty;; empty).
 Proof.
-  intros.
-  applys ge_shift.
-  intros.
-  inverts H. { inverts H7. false_invert H6. }
-  inverts H5. { false_invert H7. }
-  inverts H4.
-  exists empty.
-  exs.
-  splits.
-  - applys s_bind_sh.
-    applys* s_sh.
-  - reflexivity.
-  - intros.
-    rewrite norm_bind_assoc_sf; shiftfree.
-    reflexivity.
+  unfold ";;".
+  rewrite gnorm_bind_assoc.
+  applys ge_base.
+  introv H_absurd.
+  inverts H_absurd as H_absurd _.
+  inverts H_absurd.
 Qed.

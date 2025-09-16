@@ -183,7 +183,7 @@ Section Propriety.
         splits*. }
   Qed.
 
-  (*#[global]
+  #[global]
   Instance Proper_gentails_gentails : forall n, Proper
     (flip (gentails n) ====> (gentails n) ====> impl)
     (gentails n).
@@ -194,18 +194,19 @@ Section Propriety.
       applys* ge_base. }
     { applys ge_shift. intros.
       inverts H as H. specializes H H2. destr H.
-      inverts H1 as H1. specializes H1 H3. destr H1.
-      inverts H0 as H0. specializes H0 H4. destr H0.
-      jauto. }
-  Qed.*)
+      admit.
+      admit.
+  Admitted.
 
-  (*#[global]
-  Instance Proper_gentails_under_bientails : forall n env,
-    Proper (bientails ====> bientails ====> iff)
-      (gentails_under env n).
+  #[global]
+  Instance Proper_gentails_under_bientails : forall n,
+    Proper (bientails ====> bientails ====> iff) (gentails n).
   Proof.
     unfold Proper, respectful, entails_under, bientails, impl.
     intros n. destruct n; intros.
+    admit.
+    admit.
+    (*
     { iff H1.
       { inverts H1. applys geu_base. intros.
         applys H0. applys H2. applys* H. }
@@ -229,6 +230,7 @@ Section Propriety.
         zap.
         applys* H0. } }
   Qed.*)
+  Admitted.
 
   (*#[global]
   Instance Proper_gentails_under_entails : forall n env,

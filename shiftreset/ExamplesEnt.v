@@ -13,6 +13,7 @@ Definition flip : ufun := fun _ =>
     sh "k" (
       bind (unk "k" true) (fun r1 =>
       bind (unk "k" false) (fun r2 =>
+        discard "k";;
         ens (fun r => \[r = vand r1 r2])
       )))).
 
@@ -20,7 +21,7 @@ Definition flip_env :=
   Fmap.single "k" (fun v : val => rs (ens (fun r => \[r = v]))).
 
 Theorem flip_reduction: forall n v1,
-  gentails_under flip_env n (flip v1) (ens (fun r => \[r = false])).
+  gentails n (flip v1) (ens (fun r => \[r = false])).
 Proof.
   intros. unfold flip.
   rewrite red_init.
@@ -29,19 +30,25 @@ Proof.
   (* rewrite entails_under_seq_defun_idem.
   2: { unfold flip_env. apply Fmap.indom_single. }
   2: { unfold flip_env. resolve_fn_in_env. } *)
-
+(*
   applys gent_seq_defun_idem.
   { unfold flip_env. apply Fmap.indom_single. }
   { unfold flip_env. resolve_fn_in_env. }
-
-  funfold1 "k".
-  fsimpl.
-  funfold1 "k".
-  lazymatch goal with
-  | |- gentails_under ?e _ _ _ => remember e as env
-  end.
-  fsimpl.
+*)
+  move_one_defun_in "k".
+  rewrite norm_seq_defun_unk.
+  move_defun_out.
+  rewrite norm_rs_ens.
+  rewrite norm_bind_val.
+  move_one_defun_in "k".
+  rewrite norm_seq_defun_unk.
+  move_defun_out.
+  rewrite norm_rs_ens.
+  rewrite norm_bind_val.
+  rewrite red_normal.
+  rewrite norm_seq_defun_discard1.
   reflexivity.
+  shiftfree.
 Qed.
 
 End Multi.

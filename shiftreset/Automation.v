@@ -19,13 +19,6 @@ Ltac funfold1 f :=
     rewrite (@entails_under_unk (env a) f); [ | try unfold env; resolve_fn_in_env ]; simpl
   | |- entails_under ?env _ _ =>
     rewrite (@entails_under_unk env f); [ | try unfold env; resolve_fn_in_env ]; simpl
-
-  | |- gentails_under (?env ?a ?b) _ _ _ =>
-    rewrite (@entails_under_unk (env a b) f); [ | try unfold env; resolve_fn_in_env ]; simpl
-  | |- gentails_under (?env ?a) _ _ _ =>
-    rewrite (@entails_under_unk (env a) f); [ | try unfold env; resolve_fn_in_env ]; simpl
-  | |- gentails_under ?env _ _ _ =>
-    rewrite (@entails_under_unk env f); [ | try unfold env; resolve_fn_in_env ]; simpl
   end.
 
 (* introduce variables *)
