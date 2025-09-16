@@ -1,5 +1,5 @@
 
-From ShiftReset Require Import Logic Automation Entl.
+From ShiftReset Require Import Logic Automation Entl GEntl.
 From ShiftReset Require ExamplesEnt.
 Local Open Scope string_scope.
 
@@ -151,6 +151,77 @@ Lemma times_first_two : forall a b c,
   times_pure (a :: b :: c) = times_pure (vmul a b :: c).
 Proof.
 Admitted.
+
+(* Import ExamplesEnt.Axioms. *)
+
+Lemma lemma : forall xs x n,
+  (forall a, gentails n (unk "aux" a) (aux a)) ->
+  gentails n
+    (rs (bind (aux (vlist xs)) (fun z => ens (fun r => \[r = vmul x z]))))
+    (ens (fun r => \[r = times_pure (x :: xs)])).
+Proof.
+  intros xs.
+  induction_wf IH: list_sub xs.
+  introv Haux.
+  destruct xs.
+  {
+    unfold aux.
+    fsimpl.
+    applys gentl_disj_l.
+    (* get rid of spurious cases *)
+    2: {
+      fsimpl.
+      applys gentl_disj_l.
+      { fdestruct ys.
+        fsimpl.
+        fentailment. intros. false H. }
+      { fdestruct x0. fdestruct ys.
+        fsimpl.
+        fentailment. intros. false H. } }
+    fsimpl.
+    fentailment. intros.
+    fentailment. xsimpl. intros. subst r.
+    rewrite times_singleton.
+    rewrite vmul_one.
+    reflexivity.
+  }
+  {
+    unfold aux.
+    fsimpl.
+    applys gentl_disj_l. { fsimpl. fentailment. intros. false H. }
+    fsimpl.
+    applys gentl_disj_l.
+    { fdestruct ys.
+      fsimpl. fentailment. intros. injects H.
+      freduction.
+      funfold2.
+      fsimpl.
+      fentailment. xsimpl. intros. subst.
+      simpl.
+      applys times_any_zero. }
+    { fdestruct x0. fdestruct ys.
+      fsimpl. fentailment. intros. injects H.
+
+      specializes Haux (vlist ys).
+
+      rewrite Haux.
+
+      rewrite norm_bind_assoc.
+      setoid_rewrite norm_bind_val.
+
+      specializes IH ys.
+      specializes IH (vmul x x0) Haux.
+      rewrite times_first_two.
+      (* more pain *)
+      applys_eq IH.
+      f_equal. f_equal.
+      applys fun_ext_dep. intros.
+      f_equal.
+      applys fun_ext_dep. intros.
+      rewrite vmul_assoc.
+      reflexivity. }
+  }
+Qed.
 
 Import ExamplesEnt.Axioms.
 

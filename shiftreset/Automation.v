@@ -1,5 +1,5 @@
 
-From ShiftReset Require Import Logic Entl.
+From ShiftReset Require Import Logic Entl GEntl.
 
 (* Ltac funfold_hyp H env f :=
   rewrites (>> entails_under_unk env f) in H; [ unfold env; resolve_fn_in_env | ].
@@ -241,8 +241,8 @@ using shiftfree : staged_exists_l.
 Ltac fdestruct_rew := autorewrite with staged_exists_l.
 Ltac fdestruct a := fdestruct_rew;
   first [
-    simple apply entl_ex_l |
-    simple apply entl_seq_ex_l
+    simple apply gentl_ex_l |
+    simple apply gentl_seq_ex_l
   ]; intros a.
 
 (* Ltac fdestruct_old a := fdestruct_rew;
@@ -411,23 +411,23 @@ using shiftfree : staged_ens_join. *)
 (* apply an entailment rule, which bridges to the metalogic *)
 Ltac fentailment :=
   first [
-    apply entl_seq_ens_pure_l |
-    apply entl_seq_defun_ens_pure_l |
+    apply gentl_seq_ens_pure_l |
+    apply gentl_seq_defun_ens_pure_l |
 
-    apply entl_seq_ens_void_pure_l |
-    apply entl_seq_defun_ens_void_pure_l |
+    apply gentl_seq_ens_void_pure_l |
+    apply gentl_seq_defun_ens_void_pure_l |
 
-    apply entl_ens_single |
+    apply gentl_ens_single |
 
-    apply entl_req_req |
-    apply entl_defun_req_req |
-    (* apply entl_defun2_req_req | *)
+    apply gentl_req_req |
+    apply gentl_defun_req_req |
+    (* apply gentl_defun2_req_req | *)
 
-    apply entl_req_l |
-    apply entl_defun_req_l |
+    apply gentl_req_l |
+    apply gentl_defun_req_l |
 
     (* this is ordered last *)
-    apply entl_req_r
+    apply gentl_req_r
   ].
 
 
