@@ -1,17 +1,17 @@
 
 From ShiftReset Require Import Logic Entl.
 
-Ltac funfold_hyp H env f :=
+(* Ltac funfold_hyp H env f :=
   rewrites (>> entails_under_unk env f) in H; [ unfold env; resolve_fn_in_env | ].
 
 Ltac funfold_ env f :=
   rewrites (>> entails_under_unk env f); [ unfold env; resolve_fn_in_env | ].
 
 Tactic Notation "funfold" constr(env) constr(f) := funfold_ env f.
-Tactic Notation "funfold" constr(env) constr(f) "in" constr(H) := funfold_hyp H env f.
+Tactic Notation "funfold" constr(env) constr(f) "in" constr(H) := funfold_hyp H env f. *)
 
 (* TODO maybe this should be the interface, for working with sequents especially *)
-Ltac funfold1 f :=
+(* Ltac funfold1 f :=
   lazymatch goal with
   | |- entails_under (?env ?a ?b) _ _ =>
     rewrite (@entails_under_unk (env a b) f); [ | try unfold env; resolve_fn_in_env ]; simpl
@@ -19,10 +19,10 @@ Ltac funfold1 f :=
     rewrite (@entails_under_unk (env a) f); [ | try unfold env; resolve_fn_in_env ]; simpl
   | |- entails_under ?env _ _ =>
     rewrite (@entails_under_unk env f); [ | try unfold env; resolve_fn_in_env ]; simpl
-  end.
+  end. *)
 
 (* introduce variables *)
-Ltac fintro x :=
+(* Ltac fintro x :=
   lazymatch goal with
   (* base cases *)
   | |- entails_under _ (∃ _, _) _ =>
@@ -70,7 +70,7 @@ Ltac finst a :=
     apply ent_ex_r; exists a
   | |- entails_under _ _ ((∃ _, _);; _) =>
     apply ent_seq_ex_r; try exists a
-  end.
+  end. *)
 
 (** Move assumptions to the Coq context.
   This is the rough eqiuvalent of xpull from SLF.
@@ -205,7 +205,7 @@ Ltac fintros_rew := autorewrite with staged_forall_r.
 Ltac fintros x :=
   fintros_rew;
   first [
-    simple apply ent_all_r |
+    (* simple apply ent_all_r | *)
     simple apply entl_all_r
   ]; intros x.
 
@@ -220,11 +220,11 @@ Ltac fexists a := fexists_rew;
     simple apply entl_seq_ex_r
   ]; exists a.
 
-Ltac fexists_old a := fexists_rew;
+(* Ltac fexists_old a := fexists_rew;
   first [
     simple apply ent_ex_r |
     simple apply ent_seq_ex_r
-  ]; exists a.
+  ]; exists a. *)
 
 Create HintDb staged_exists_l.
 Global Hint Rewrite
@@ -245,11 +245,11 @@ Ltac fdestruct a := fdestruct_rew;
     simple apply entl_seq_ex_l
   ]; intros a.
 
-Ltac fdestruct_old a := fdestruct_rew;
+(* Ltac fdestruct_old a := fdestruct_rew;
   first [
     simple apply ent_ex_l |
     simple apply ent_seq_ex_l
-  ]; intros a.
+  ]; intros a. *)
 
 Create HintDb staged_forall_l.
 Global Hint Rewrite
@@ -265,8 +265,8 @@ Ltac fspecialize_rew := autorewrite with staged_forall_l.
 Ltac fspecialize x := fspecialize_rew;
   first [
     simple apply entl_all_l |
-    simple apply ent_all_l |
-    simple apply ent_seq_all_l
+    (* simple apply ent_all_l | *)
+    simple apply entl_seq_all_l
   ]; exists x.
 
 Lemma norm_bind_defun_out: forall (f:var) u fk f2,
@@ -324,8 +324,9 @@ Ltac funfold2 :=
     rewrite norm_seq_defun_unk; move_defun_out |
     (* cancel defun and discard *)
     first [
-      rewrite norm_seq_defun_discard | (* TODO get rid of these *)
-      rewrite norm_defun_discard_id |
+      (* rewrite norm_seq_defun_discard | *)
+      (* TODO get rid of these *)
+      (* rewrite norm_defun_discard_id | *)
       rewrite norm_seq_defun_discard1 |
       rewrite norm_defun_discard_id1
     ]; jauto
@@ -430,7 +431,7 @@ Ltac fentailment :=
   ].
 
 
-Ltac fentailment_old :=
+(* Ltac fentailment_old :=
   first [
     apply ent_seq_ens_pure_l |
     apply ent_seq_defun_ens_pure_l |
@@ -449,10 +450,10 @@ Ltac fentailment_old :=
 
     (* this is ordered last *)
     apply ent_req_r
-  ].
+  ]. *)
 
 Ltac fleft := first [ apply entl_seq_disj_r_l | apply entl_disj_r_l ].
 Ltac fright := first [ apply entl_seq_disj_r_r | apply entl_disj_r_r ].
 
-Ltac fleft_old := first [ apply ent_seq_disj_r_l | apply ent_disj_r_l ].
-Ltac fright_old := first [ apply ent_seq_disj_r_r | apply ent_disj_r_r ].
+(* Ltac fleft_old := first [ apply ent_seq_disj_r_l | apply ent_disj_r_l ]. *)
+(* Ltac fright_old := first [ apply ent_seq_disj_r_r | apply ent_disj_r_r ]. *)

@@ -1,5 +1,5 @@
 
-From ShiftReset Require Import Basics Norm ShiftFree Satisfies.
+(* From ShiftReset Require Import Basics Norm ShiftFree Satisfies.
 
 (** * Entailment sequent *)
 
@@ -348,4 +348,4 @@ Proof.
   apply H in H4.
   symmetry in TEMP.
   specializes H12 H4 TEMP.
-Qed.
+Qed. *)

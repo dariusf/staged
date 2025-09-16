@@ -5,7 +5,7 @@
 From ShiftReset Require Import Logic Automation Entl.
 Local Open Scope string_scope.
 
-Module Multi.
+(* Module Multi.
 
 (* < sh k. let a = k true in let b = k false in a && b > *)
 Definition flip : ufun := fun _ =>
@@ -51,7 +51,7 @@ Proof.
   shiftfree.
 Qed.
 
-End Multi.
+End Multi. *)
 
 Module Axioms.
 
@@ -102,7 +102,7 @@ Admitted.
 
 End Axioms.
 
-Module Toss.
+(* Module Toss.
 
 (* let toss () =
   shift k.
@@ -659,4 +659,4 @@ Proof.
   }
 Qed.
 
-End Main.
+End Main. *)

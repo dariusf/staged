@@ -8,7 +8,7 @@ From ShiftReset Require Export
 
 Implicit Types a v r : val.
 
-Section EnvFraming.
+(* Section EnvFraming.
 
 (* Informally, this is true because the environment only grows,
   and k is fresh *)
@@ -66,7 +66,7 @@ Proof.
   eassumption.
 Qed.
 
-End EnvFraming.
+End EnvFraming. *)
 
 (** * Reduction example *)
 (**
@@ -124,7 +124,7 @@ Proof.
   rewrite <- norm_ens_ens_void.
 Abort.
 
-Example ex_rewrite_right1:
+(* Example ex_rewrite_right1:
   entails_under empty_env (ens_ \[True]) (ens_ \[True];; ens_ \[True];; ens_ \[True]).
 Proof.
   assert (forall H1 H2, entails_under empty_env (ens_ H1;; ens_ H2) (ens_ (H1 \* H2))) as ?. admit.
@@ -137,7 +137,7 @@ Proof.
   rewrite <- H0.
   rewrite <- H.
 
-Abort.
+Abort. *)
 
 
 (** * Correspondence with the paper *)

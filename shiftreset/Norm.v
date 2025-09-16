@@ -37,7 +37,7 @@ Proof.
   applys* s_seq h3.
 Qed.
 
-Lemma ent_seq_defun_both : forall s x uf f2 f1,
+(* Lemma ent_seq_defun_both : forall s x uf f2 f1,
   entails_under (Fmap.update s x uf) f1 f2 ->
   entails_under s (defun x uf;; f1) (defun x uf;; f2).
 Proof.
@@ -47,10 +47,10 @@ Proof.
   inverts H0 as H0.
   apply H in H8.
   applys* s_seq.
-Qed.
+Qed. *)
 
 (* For rewriting *)
-Lemma entails_under_seq_defun_idem : forall s x uf f1,
+(* Lemma entails_under_seq_defun_idem : forall s x uf f1,
   Fmap.indom s x ->
   Fmap.read s x = uf ->
   entails_under s (defun x uf;; f1) f1.
@@ -61,7 +61,7 @@ Proof.
   lets: update_idem H H0.
   rewrite H1 in H10.
   assumption.
-Qed.
+Qed. *)
 
 Lemma norm_ens_ens_void_split : forall H1 H2,
   entails (ens_ (H1 \* H2)) (ens_ H1;; ens_ H2).
@@ -83,7 +83,7 @@ Proof.
   - apply norm_ens_ens_void_combine.
 Qed.
 
-Lemma entails_under_unk : forall s (x:var) a uf,
+(* Lemma entails_under_unk : forall s (x:var) a uf,
   Fmap.read s x = uf ->
   entails_under s (unk x a) (uf a).
 Proof.
@@ -91,7 +91,7 @@ Proof.
   eapply unk_inv.
   exact H.
   assumption.
-Qed.
+Qed. *)
 
 Lemma norm_rs_rs : forall f r,
   entails (rs (rs f)) (rs f).
@@ -858,7 +858,7 @@ Proof.
   heaps.
 Qed.
 
-Lemma norm_defun_discard_id: forall s (f:var) u,
+(* Lemma norm_defun_discard_id: forall s (f:var) u,
   ~ Fmap.indom s f ->
   entails_under s (defun f u;; discard f) empty.
 Proof.
@@ -868,7 +868,7 @@ Proof.
   inverts H9.
   rewrites* remove_update.
   applys empty_intro.
-Qed.
+Qed. *)
 
 Lemma norm_defun_discard_id1: forall (f:var) u,
   entails (defun f u;; discard f) empty.
@@ -881,7 +881,7 @@ Proof.
   applys empty_intro.
 Qed.
 
-Lemma norm_seq_defun_discard: forall s (f:var) u f1,
+(* Lemma norm_seq_defun_discard: forall s (f:var) u f1,
   ~ Fmap.indom s f ->
   entails_under s (defun f u;; discard f;; f1) f1.
 Proof.
@@ -890,7 +890,7 @@ Proof.
   rewrite* norm_defun_discard_id.
   rewrite norm_seq_empty_l.
   reflexivity.
-Qed.
+Qed. *)
 
 Lemma norm_seq_defun_discard1: forall (f:var) u f1,
   entails (defun f u;; discard f;; f1) f1.
@@ -1095,7 +1095,7 @@ Proof.
   inverts H8. heaps.
 Qed.
 
-Lemma ent_bind_ens_pure_l: forall s P fk f,
+(* Lemma ent_bind_ens_pure_l: forall s P fk f,
   (forall r, P r -> entails_under s (fk r) f) ->
   entails_under s (bind (ens (fun r => \[P r])) fk) f.
 Proof.
@@ -1103,7 +1103,7 @@ Proof.
   inverts* H0.
   inverts H8.
   heaps.
-Qed.
+Qed. *)
 
 Lemma gnorm_bind_trivial: forall n f1,
   gentails n (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
