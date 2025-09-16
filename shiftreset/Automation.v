@@ -205,8 +205,7 @@ Ltac fintros_rew := autorewrite with staged_forall_r.
 Ltac fintros x :=
   fintros_rew;
   first [
-    (* simple apply ent_all_r | *)
-    simple apply entl_all_r
+    simple apply gentl_all_r
   ]; intros x.
 
 Create HintDb staged_exists_r.
@@ -216,8 +215,8 @@ using shiftfree : staged_exists_r.
 Ltac fexists_rew := autorewrite with staged_exists_r.
 Ltac fexists a := fexists_rew;
   first [
-    simple apply entl_ex_r |
-    simple apply entl_seq_ex_r
+    simple apply gentl_ex_r |
+    simple apply gentl_seq_ex_r
   ]; exists a.
 
 (* Ltac fexists_old a := fexists_rew;
@@ -264,9 +263,9 @@ using shiftfree : staged_forall_l.
 Ltac fspecialize_rew := autorewrite with staged_forall_l.
 Ltac fspecialize x := fspecialize_rew;
   first [
-    simple apply entl_all_l |
+    simple apply gentl_all_l |
     (* simple apply ent_all_l | *)
-    simple apply entl_seq_all_l
+    simple apply gentl_seq_all_l
   ]; exists x.
 
 Lemma norm_bind_defun_out: forall (f:var) u fk f2,

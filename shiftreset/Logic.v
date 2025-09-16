@@ -8,65 +8,7 @@ From ShiftReset Require Export
 
 Implicit Types a v r : val.
 
-(* Section EnvFraming.
 
-(* Informally, this is true because the environment only grows,
-  and k is fresh *)
-Lemma satisfies_env_frame : forall s1 s2 h1 h2 R f k u,
-  ~ Fmap.indom s1 k ->
-  satisfies (Fmap.update s1 k u) s2 h1 h2 R f <->
-  satisfies s1 (Fmap.remove s2 k) h1 h2 R f.
-Proof.
-  introv Hfresh.
-  iff H.
-  { remember (Fmap.update s1 k u) as s0.
-    induction H; subst s0.
-    { applys s_req.
-      intros. specializes H1 H2 H3 H4. }
-    { rewrites (>> remove_update Hfresh).
-      applys s_ens. heaps. }
-    { applys s_bind.
-      specializes* IHsatisfies1.
-      admit.
-    }
-    {
-      destruct H as (b&?).
-      applys s_fex. exists b.
-      (* another broken induction principle *)
-      admit.
-    }
-    {
-      admit.
-    }
-    {
-      specializes IHsatisfies. constructor.
-      destruct (classic (k = xf)).
-      applys s_unk.
-      rewrite H1 in H. rewrite fmap_read_update in H.
-      admit.
-      admit.
-      admit.
-    }
-    Admitted.
-  (* }
-  {
-    admit.
-  }
-Admitted. *)
-
-Lemma ent_env_frame : forall s1 k u f1 f2,
-  ~ Fmap.indom s1 k ->
-  entails_under s1 f1 f2 ->
-  entails_under (Fmap.update s1 k u) f1 f2.
-Proof.
-  unfold entails_under. introv Hfresh H H1.
-  rewrite~ satisfies_env_frame in H1.
-  specializes H H1.
-  rewrite~ <- satisfies_env_frame in H.
-  eassumption.
-Qed.
-
-End EnvFraming. *)
 
 (** * Reduction example *)
 (**

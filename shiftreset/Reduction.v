@@ -7,7 +7,7 @@ Lemma red_init : forall fb k,
   entails (sh k fb) (shc k fb (fun v => ens (fun r => \[r = v]))).
 Proof.
   unfold sh.
-  intros. applys entails_refl.
+  intros. reflexivity.
 Qed.
 
 Lemma red_extend : forall k fb fk fk1,

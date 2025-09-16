@@ -18,7 +18,7 @@ clean::
 	$(RM) $(wildcard Makefile.coq Makefile.coq.conf)
 
 Makefile.coq:
-	coq_makefile -f _CoqProject -o Makefile.coq
+	rocq makefile -f _CoqProject -o Makefile.coq
 
 -include Makefile.coq
 

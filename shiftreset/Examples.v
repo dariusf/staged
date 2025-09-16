@@ -222,91 +222,23 @@ Proof.
   }
 Qed.
 
-Import ExamplesEnt.Axioms.
-
-Lemma lemma1 : forall xs x,
-  (forall a, entails (unk "aux" a) (aux a)) ->
-  entails
-    (rs (bind (aux (vlist xs)) (fun z => ens (fun r => \[r = vmul x z]))))
-    (ens (fun r => \[r = times_pure (x :: xs)])).
-Proof.
-  intros xs.
-  induction_wf IH: list_sub xs.
-  introv Haux.
-  destruct xs.
-  {
-    unfold aux.
-    fsimpl.
-    applys entl_disj_l.
-    (* get rid of spurious cases *)
-    2: {
-      fsimpl.
-      applys entl_disj_l.
-      { fdestruct ys.
-        fsimpl.
-        fentailment. intros. false H. }
-      { fdestruct x0. fdestruct ys.
-        fsimpl.
-        fentailment. intros. false H. } }
-    fsimpl.
-    fentailment. intros.
-    fentailment. xsimpl. intros. subst r.
-    rewrite times_singleton.
-    rewrite vmul_one.
-    reflexivity.
-  }
-  {
-    unfold aux.
-    fsimpl.
-    applys entl_disj_l. { fsimpl. fentailment. intros. false H. }
-    fsimpl.
-    applys entl_disj_l.
-    { fdestruct ys.
-      fsimpl. fentailment. intros. injects H.
-      freduction.
-      funfold2.
-      fsimpl.
-      fentailment. xsimpl. intros. subst.
-      simpl.
-      applys times_any_zero. }
-    { fdestruct x0. fdestruct ys.
-      fsimpl. fentailment. intros. injects H.
-      rewrite Haux.
-
-      rewrite norm_bind_assoc.
-      setoid_rewrite norm_bind_val.
-
-      specializes IH ys.
-      specializes IH (vmul x x0) Haux.
-      rewrite times_first_two.
-      (* more pain *)
-      applys_eq IH.
-      f_equal. f_equal.
-      applys fun_ext_dep. intros.
-      f_equal.
-      applys fun_ext_dep. intros.
-      rewrite vmul_assoc.
-      reflexivity. }
-  }
-Qed.
-
-Theorem times_spec : forall xs,
-  (forall a, entails (unk "aux" a) (aux a)) ->
-  entails
+Theorem times_spec : forall n xs,
+  (forall a, gentails n (unk "aux" a) (aux a)) ->
+  gentails n
     (times (vlist xs))
     (ens (fun r => \[r = times_pure xs])).
 Proof.
-  intros xs.
+  intros n xs.
   unfold times.
   intros Haux.
   unfold aux.
   fsimpl.
-  applys entl_disj_l.
+  applys gentl_disj_l.
   { fsimpl.
     fentailment. intros. injects H.
     fentailment. xsimpl. auto. }
   fsimpl.
-  applys entl_disj_l.
+  applys gentl_disj_l.
   { fdestruct ys.
     fsimpl.
     fentailment. intros. injects H.
@@ -350,12 +282,15 @@ Definition flipi1 : flow :=
     ens (fun r1 => \[If v = true then r1 = 1 else r1 = 0]))
   ).
 
-Theorem flipi_summary2 :
-  (forall a, entails (unk "toss" a) (toss1 a)) ->
-  entails flipi1 ExamplesEnt.Toss.flipi_spec.
+Definition flipi_spec : flow :=
+  ∀ x a, req (x~~>vint a) (ens (fun r => x~~>(a+2) \* \[r=1])).
+
+Theorem flipi_summary2 : forall n,
+  (forall a, gentails n (unk "toss" a) (toss1 a)) ->
+  gentails n flipi1 flipi_spec.
 Proof.
-  intros Htoss.
-  unfold flipi1, ExamplesEnt.Toss.flipi_spec.
+  intros n Htoss.
+  unfold flipi1, flipi_spec.
   rewrite Htoss. unfold toss1.
   freduction.
   fintros x. fspecialize x.
@@ -392,6 +327,8 @@ Definition toss_n1 : ufun := fun (n:val) =>
       bind (unk "toss_n" (vsub n 1)) (fun r2 =>
       ens (fun r => \[r = vand r1 r2]))))).
 
+Import ExamplesEnt.Axioms.
+
 Lemma entl_elim_bind: forall P fk f1 (f:var) u H,
   (forall r, P r -> entails (defun f u;; ens_ H;; rs (fk r)) f1) ->
     entails (defun f u;; ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) f1.
@@ -420,11 +357,15 @@ Proof.
     applys* s_rs_val.
 Qed.
 
-Import ExamplesEnt.Axioms.
+Lemma gentl_elim_bind: forall n P fk f1 (f:var) u H,
+  (forall r, P r -> gentails n (defun f u;; ens_ H;; rs (fk r)) f1) ->
+    gentails n (defun f u;; ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) f1.
+Proof.
+Admitted.
 
-Lemma lemma_weaker : forall (n:int) (acc:bool),
-  (forall a, entails (unk "toss_n" a) (toss_n1 a)) ->
-  entails
+Lemma lemma_weaker : forall (n:int) n1 (acc:bool),
+  (forall a, gentails n1 (unk "toss_n" a) (toss_n1 a)) ->
+  gentails n1
     (rs (bind
       (bind (unk "toss_n" n) (fun r2 =>
         ens (fun r => \[r = vand acc r2])))
@@ -437,7 +378,7 @@ Proof.
   intros n. induction_wf IH: (downto 0) n. introv Htoss_n.
   rewrite Htoss_n. unfold toss_n1.
   fsimpl.
-  applys entl_disj_l.
+  applys gentl_disj_l.
   { (* base case *)
     fsimpl. fentailment. simpl. intros ->.
     fintros x. fintros a.
@@ -500,7 +441,7 @@ Proof.
     setoid_rewrite norm_bind_seq_assoc. 2: { shiftfree. }
     rewrite norm_bind_seq_past_pure_sf. 2: { shiftfree. }
     fsimpl.
-    applys entl_elim_bind. intros.
+    applys gentl_elim_bind. intros.
     funfold3 "k".
     fsimpl.
     simpl.
@@ -578,14 +519,19 @@ Definition main n : flow :=
     bind (unk "toss_n" (vint n)) (fun v =>
     ens (fun r => \[If v = true then r = 1 else r = 0]))).
 
-Theorem main_summary1 : forall n,
-  (forall a, entails (unk "toss_n" a) (toss_n1 a)) ->
-  entails (main n) (ExamplesEnt.Main.main_spec_weaker n).
+Definition main_spec_weaker n : flow :=
+  ∀ x a,
+    req (x~~>vint a \* \[vgt (vint n) 0])
+      (∃ b, ens (fun r => x~~>b \* \[vge b (vadd a n) /\ r = 1])).
+
+Theorem main_summary1 : forall n n1,
+  (forall a, gentails n1 (unk "toss_n" a) (toss_n1 a)) ->
+  gentails n1 (main n) (main_spec_weaker n).
 Proof.
-  intros n. introv Htoss_n. unfold main, ExamplesEnt.Main.main_spec_weaker.
+  intros n. introv Htoss_n. unfold main, main_spec_weaker.
   rewrite Htoss_n. unfold toss_n1.
   fsimpl.
-  applys entl_disj_l.
+  applys gentl_disj_l.
 
   { fsimpl. fentailment. simpl. intros.
     case_if.
@@ -608,7 +554,9 @@ Proof.
     funfold2.
     fsimpl.
 
-    rewrite* lemma_weaker.
+    lets: lemma_weaker (n-1) n1.
+    rewrite* H1.
+    clear H1.
 
     fspecialize x.
     fspecialize (a+1).
@@ -629,7 +577,9 @@ Proof.
     funfold2.
     fsimpl.
 
-    rewrite* lemma_weaker.
+    lets: lemma_weaker (n-1) n1.
+    rewrite* H2.
+    clear H2.
 
     fspecialize x.
     fspecialize (b+1).

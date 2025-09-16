@@ -31,6 +31,19 @@ Lemma gentl_ex_l : forall n f A (fctx:A -> flow),
 Proof.
 Admitted.
 
+Lemma gentl_ex_r : forall n f A (fctx:A -> flow),
+  (exists b, gentails n f (fctx b)) ->
+  gentails n f (fex (fun b => fctx b)).
+Proof.
+Admitted.
+
+Lemma gentl_seq_ex_r : forall n f f1 A (fctx:A -> flow),
+  (forall b, shift_free (fctx b)) ->
+  (exists b, gentails n f (fctx b;; f1)) ->
+  gentails n f ((∃ b, fctx b);; f1).
+Proof.
+Admitted.
+
 Lemma gentl_seq_ex_l : forall n f f1 A (fctx:A -> flow),
   (forall b, shift_free (fctx b)) ->
   (forall b, gentails n (fctx b;; f1) f) ->
@@ -100,5 +113,23 @@ Admitted.
 Lemma gentl_req_r : forall n f f1 H,
   gentails n (ens_ H;; f) f1 ->
   gentails n f (req H f1).
+Proof.
+Admitted.
+
+Lemma gentl_all_r : forall n f A (fctx:A -> flow),
+  (forall b, gentails n f (fctx b)) ->
+  gentails n f (∀ b, fctx b).
+Proof.
+Admitted.
+
+Lemma gentl_all_l : forall n f A (fctx:A -> flow),
+  (exists b, gentails n (fctx b) f) ->
+  gentails n (∀ b, fctx b) f.
+Proof.
+Admitted.
+
+Lemma gentl_seq_all_l : forall n f f1 A (fctx:A -> flow),
+  (exists b, gentails n (fctx b;; f1) f) ->
+  gentails n ((∀ b, fctx b);; f1) f.
 Proof.
 Admitted.

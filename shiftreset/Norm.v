@@ -664,6 +664,21 @@ Proof.
   assumption.
 Qed.
 
+Lemma gnorm_bind_val : forall n fk v,
+  gentails n (bind (ens (fun r => \[r = v])) fk) (fk v).
+Proof.
+  intros n. induction n as [n IH] using lt_wf_ind.
+  destruct n; intros.
+  { applys* ge_base. intros.
+    inverts H. inverts H7. heaps. }
+  { applys* ge_shift; intros.
+    - applys IH. lia.
+    - inverts H. 2: { no_shift. }
+      inverts H7. heaps.
+      reflexivity.
+      reflexivity. }
+Qed.
+
 (* TODO something more general would be to push disjunction out *)
 Lemma norm_bind_disj_val : forall fk v1 v2,
   entails (bind (ens (fun r => \[r = v1 \/ r = v2])) fk)
