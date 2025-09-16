@@ -1,5 +1,5 @@
-From Coq Require Import Classes.RelationClasses.
-From Coq Require Morphisms Program.Basics.
+From Stdlib Require Import Classes.RelationClasses.
+From Stdlib Require Morphisms Program.Basics.
 
 (* remove when https://github.com/coq/coq/pull/19673 is merged *)
 Set Warnings "-notation-incompatible-prefix".
@@ -375,7 +375,7 @@ Lemma hsingle_has_type_same_loc: forall l v,
   l~~>v \* has_type l v ==> \[False].
 Proof.
   (* proof can be similar to this lemma *)
-  Check hstar_hsingle_same_loc.
+  (* Check hstar_hsingle_same_loc. *)
 Abort.
 
 Lemma hsingle_duplicable: forall l v,

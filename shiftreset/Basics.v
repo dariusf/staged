@@ -1,7 +1,7 @@
 
-From Coq Require Import Classes.RelationClasses.
-From Coq Require Morphisms Program.Basics.
-From Coq Require Import Lia.
+From Stdlib Require Import Classes.RelationClasses.
+From Stdlib Require Morphisms Program.Basics.
+From Stdlib Require Import Lia.
 
 From Staged Require Export HeapF.
 From Staged Require Export LibFmap.
@@ -12,8 +12,8 @@ Local Open Scope string_scope.
 Local Open Scope Z_scope.
 Local Open Scope list_scope.
 
-Require Import Coq.Program.Equality.
-Require Import Coq.Logic.FunctionalExtensionality.
+From Stdlib Require Import Program.Equality.
+From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Set Implicit Arguments.
 (* Ltac auto_star ::= try solve [ auto | fmap_eq | eauto | intuition eauto ]. *)
@@ -570,26 +570,6 @@ Proof.
   - (* cannot be proven, we don't know the 'level' *)
 Abort.
 
-Definition entails_under s1 f1 f2 :=
-  forall h1 h2 s2 R,
-    satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
-
-Notation "env '⊢' f1 '⊑' f2" :=
-  (entails_under env f1 f2) (at level 90, only printing) : flow_scope.
-
-(*
-Lemma entails_under_gentails_under: forall n s1 f1 f2,
-  entails_under s1 f1 f2 -> gentails_under s1 n f1 f2.
-Proof.
-Admitted.
-  (*unfold entails_under.
-  intros n. induction n; intros.
-  { applys* geu_base. }
-  { applys geu_shift.
-    - intros m H_le.
-    - jauto. }
-Qed.*) *)
-
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 R s1 s2,
     satisfies s1 s2 h1 h2 R f1 <-> satisfies s1 s2 h1 h2 R f2.
@@ -664,7 +644,7 @@ Proof.
   apply gentails_trans.
 Qed.
 
-Instance entails_under_refl : forall env, Reflexive (entails_under env).
+(* Instance entails_under_refl : forall env, Reflexive (entails_under env).
 Proof.
   unfold Reflexive, entails_under.
   intros.
@@ -683,7 +663,7 @@ Proof.
   constructor.
   apply entails_under_refl.
   apply entails_under_trans.
-Qed.
+Qed. *)
 
 Instance bientails_equiv : Equivalence bientails.
 Proof.
