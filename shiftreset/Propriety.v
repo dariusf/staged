@@ -75,6 +75,7 @@ Section Propriety.
     (* this should not be provable *)
   Abort.
 
+  (*
   Definition gentails1 f1 f2 :=
     forall n, gentails n f1 f2.
 
@@ -99,7 +100,7 @@ Section Propriety.
       (* this should not be provable, as entails does not allow
         components of shift results to be weakened *)
       admit. }
-  Abort.
+  Abort.*)
 
   #[global]
   Instance Proper_entails_under_bientails : forall env,
@@ -160,18 +161,29 @@ Section Propriety.
     (flip entails ====> entails ====> impl)
     (gentails n).
   Proof.
-    unfold entails, Proper, respectful, impl, flip.
-    intros n. induction n; intros.
-    { inverts H1.
+    unfold Proper, respectful, impl, flip.
+    intros n. induction n as [n IH] using lt_wf_ind.
+    intros x y.
+    destruct n as [| n'].
+    { intros H_entails x0 y0 H_entails0 H_gentails.
+      inverts H_gentails as H_gentails.
       applys* ge_base. }
-    { inverts H1.
-      applys ge_shift. intros.
-      specializes H H1.
-      specializes H3 H.
-      jauto. }
+    { intros H_entails x0 y0 H_entails0 H_gentails.
+      inverts H_gentails as H_gentails_mono H_gentails_succ.
+      applys ge_shift.
+      - intros m Hm.
+        specialize (H_gentails_mono m Hm).
+        rewrite* <- Nat.lt_succ_r in Hm.
+      - introv Hy.
+        specializes H_entails Hy.
+        specializes H_gentails_succ H_entails.
+        clear Hy H_entails.
+        destruct H_gentails_succ as (fb' & fk' & Hx0 & H_fb' & H_fk').
+        exists fb', fk'.
+        splits*. }
   Qed.
 
-  #[global]
+  (*#[global]
   Instance Proper_gentails_gentails : forall n, Proper
     (flip (gentails n) ====> (gentails n) ====> impl)
     (gentails n).
@@ -185,9 +197,9 @@ Section Propriety.
       inverts H1 as H1. specializes H1 H3. destr H1.
       inverts H0 as H0. specializes H0 H4. destr H0.
       jauto. }
-  Qed.
+  Qed.*)
 
-  #[global]
+  (*#[global]
   Instance Proper_gentails_under_bientails : forall n env,
     Proper (bientails ====> bientails ====> iff)
       (gentails_under env n).
@@ -216,9 +228,9 @@ Section Propriety.
         specializes H4 H2.
         zap.
         applys* H0. } }
-  Qed.
+  Qed.*)
 
-  #[global]
+  (*#[global]
   Instance Proper_gentails_under_entails : forall n env,
     Proper (flip entails ====> entails ====> impl)
       (gentails_under env n).
@@ -235,9 +247,9 @@ Section Propriety.
       specializes H H1.
       specializes H4 H.
       jauto. }
-  Qed.
+  Qed.*)
 
-  #[global]
+  (*#[global]
   Instance Proper_gentails_under_entails_under : forall n env,
     Proper (flip (entails_under env) ====> (entails_under env) ====> impl)
       (gentails_under env n).
@@ -254,7 +266,7 @@ Section Propriety.
       specializes H H1.
       specializes H4 H.
       jauto. }
-  Qed.
+  Qed.*)
 
   (* Definition res_weaker R1 R2 :=
     match R1, R2 with
@@ -710,58 +722,67 @@ Section Propriety.
     setoid_rewrite H.
   Abort.
 
+  Print gentails.
+
   #[global]
   Instance Proper_bind_gentails : forall n,
     Proper (gentails n ====> Morphisms.pointwise_relation val (gentails n) ====> (gentails n)) bind.
   Proof.
     unfold Proper, respectful, Morphisms.pointwise_relation.
-    intros n. induction n; intros.
-    { inverts H.
-      applys ge_base. intros.
-      inverts H as H2 H3.
-      specializes H1 H2.
+    intros n.
+    induction n as [n IH] using lt_wf_ind.
+    intros x y H_entails x0 y0 H_entails0.
+    destruct n as [| n'].
+    { inverts H_entails as H_entails.
+      applys ge_base. introv Hx.
+      inverts Hx as Hx Hx0.
+      specializes H_entails Hx.
       applys* s_bind.
-      specializes H0 v0.
-      inverts H0 as H.
-      applys H H3. }
-    {
-      (* already we see the capacities are wrong, as we don't have shifts in both sides *)
-      applys ge_shift. intros.
-      inverts H1.
-      {
-        (* the shift is on the right *)
-        specializes H0 v.
-        inverts H0 as H0.
-        specializes H0 H10.
-        zap.
-        applys* s_bind.
-        (* x is norm, but we only have x gentails_(S n) y *)
-        (* inverts H. *)
-        (* seemingly cannot be proven without allowing the
-          operational semantics of bind to distribute the index? *)
-        admit.
-      }
-      {
-        (* the shift is on the left *)
-        inverts H as H.
-        specializes H H7.
-        zap.
-        { applys* s_bind_sh. }
-        {
-          intros.
-          applys* IHn.
-          intros a.
-          specializes H0 a.
-          (* we need x0 gentails y0 at n, but have it at S n *)
-          inverts H0.
-          admit.
-        }
-      }
-    }
-  Abort.
+      specializes H_entails0 v0.
+      inverts H_entails0 as H_entails0.
+      auto. }
+    { inverts H_entails as H_entails_mono H_entails_succ.
+      applys ge_shift.
+      - intros m Hm.
+        specializes H_entails_mono Hm.
+        assert (H_entails0_mono : forall a, gentails m (x0 a) (y0 a)).
+        { intros a.
+          specialize (H_entails0 a).
+          inverts H_entails0 as H_entails0_mono _.
+          applys* H_entails0_mono. }
+        rewrite* <- Nat.lt_succ_r in Hm.
+      - introv Hx.
+        inverts Hx as.
+        + introv Hx Hx0. (* shift on the right *)
+          clear H_entails_succ. (* clear the hypothesis *)
+          specialize (H_entails_mono O (Nat.le_0_l _)).
+          inverts H_entails_mono as H_entails_mono.
+          specialize (H_entails0 v).
+          inverts H_entails0 as H_entails0_mono H_entails0_succ.
+          clear H_entails0_mono.
+          specializes H_entails0_succ Hx0.
+          destruct H_entails0_succ as (fb' & fk' & Hy0 & H_fb' & H_fk').
+          exists fb', fk'.
+          splits; [| exact H_fb' | exact H_fk'].
+          applys* s_bind.
+        + introv Hx. (* shift on the left *)
+          specializes H_entails_succ Hx.
+          destruct H_entails_succ as (fb' & fk' & Hy & H_fb' & H_fk').
+          exists fb' (fun v => bind (fk' v) y0).
+          splits; [| exact H_fb' |].
+          * applys* s_bind_sh.
+          * intros v.
+            assert (H_entails0_mono : forall a, gentails n' (x0 a) (y0 a)).
+            { intros a.
+              specialize (H_entails0 a).
+              inverts H_entails0 as H_entails0_mono _.
+              applys* H_entails0_mono. }
+            specializes H_entails_mono (Nat.le_refl n').
+            applys* IH. }
+  Qed.
 
   (* this statement also isn't easy to use *)
-  #[global]
+  (*#[global]
   Instance Proper_bind_gentails : forall n n1 n2,
     n = (n1 + n2)%nat ->
     Proper (gentails n1 ====> Morphisms.pointwise_relation val (gentails n2) ====> (gentails n)) bind.
@@ -813,9 +834,9 @@ Section Propriety.
         admit.
       }
     }
-  Abort.
+  Abort.*)
 
-  #[global]
+  (*#[global]
   Instance Proper_bind_gentails :
     Proper (gentails1 ====> Morphisms.pointwise_relation val (gentails1) ====> (gentails1)) bind.
   Proof.
@@ -830,9 +851,9 @@ Section Propriety.
       (* the IH doesn't let us progress *)
       admit.
     }
-  Abort.
+  Abort.*)
 
-  #[global]
+  (*#[global]
   Instance Proper_bind_gentails_l : forall n,
     Proper (gentails n ====> eq ====> gentails n) bind.
   Proof.
@@ -860,9 +881,9 @@ Section Propriety.
         intros. simpl.
         applys* IHn. }
     }
-  Abort.
+  Abort.*)
 
-  #[global]
+  (*#[global]
   Instance Proper_bind_gentails_l : forall n,
     Proper (gentails1 ====> eq ====> gentails n) bind.
   Proof.
@@ -1036,7 +1057,7 @@ Section Propriety.
         }
       }
     }
-  Abort.
+  Abort.*)
   (* Admitted. *)
 
   (* #[global]
@@ -1067,7 +1088,7 @@ Section Propriety.
     intros n H.
     (* TODO this should work for unfolding on the right of a bind, but currently doesn't *)
     (* Set Typeclasses Debug. *)
-    Fail rewrite H.
+    rewrite H.
   Abort.
 
   Example rewrite : forall n,
@@ -1078,8 +1099,15 @@ Section Propriety.
   Proof.
     intros n H.
     (* Set Typeclasses Debug. *)
-    (* Fail setoid_rewrite H. *)
+    setoid_rewrite H.
   Abort.
+
+  Example refl_shift : forall n,
+    gentails n (sh "k" (unk "k" (vint 1))) (sh "k" (unk "k" (vint 1))).
+  Proof.
+    intros n.
+    reflexivity.
+  Qed.
 
   #[global]
   Instance Proper_rs_entails : Proper (entails ====> entails) rs.

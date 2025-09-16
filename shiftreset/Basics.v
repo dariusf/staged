@@ -1,6 +1,7 @@
 
 From Coq Require Import Classes.RelationClasses.
 From Coq Require Morphisms Program.Basics.
+From Coq Require Import Lia.
 
 From Staged Require Export HeapF.
 From Staged Require Export LibFmap.
@@ -497,7 +498,8 @@ Inductive gentails_under : senv -> nat -> flow -> flow -> Prop :=
       satisfies s1 s2 h1 h2 (norm v) f2) ->
     gentails_under s1 O f1 f2
 
-  | geu_shift : forall s1 n f1 f2,
+  | geu_shift : forall s1 (n : nat) f1 f2,
+    (forall (m : nat), (m <= n)%nat -> gentails_under s1 m f1 f2) -> (* monotone *)
     (forall s2 h1 h2 k fb fk,
       satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
       exists fb1 fk1,
@@ -522,7 +524,8 @@ Inductive gentails : nat -> flow -> flow -> Prop :=
       satisfies s1 s2 h1 h2 (norm v) f2) ->
     gentails O f1 f2
 
-  | ge_shift : forall n f1 f2,
+  | ge_shift : forall (n : nat) f1 f2,
+    (forall (m : nat), (m <= n)%nat -> gentails m f1 f2) ->
     (forall s1 s2 h1 h2 k fb fk,
       satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
       exists fb1 fk1,
@@ -538,11 +541,36 @@ Notation "f1 '⊆' n f2" :=
 Lemma entails_gentails: forall n f1 f2,
   entails f1 f2 -> gentails n f1 f2.
 Proof.
-  unfold entails.
-  intros n. induction n; intros.
+  intros n. induction n as [n IH] using lt_wf_ind.
+  intros f1 f2 H_entails.
+  destruct n as [| n'].
   { applys* ge_base. }
-  { applys ge_shift. jauto. }
+  { applys ge_shift.
+    - intros m Hm.
+      rewrite* <- (Nat.lt_succ_r m n') in Hm.
+    - intros.
+      unfold entails in H_entails.
+      exists fb, fk.
+      splits.
+      + auto.
+      + apply IH; auto.
+        unfold entails. auto.
+      + intros. apply IH; auto.
+        unfold entails. auto. }
 Qed.
+
+Lemma gentails_entails : forall f1 f2,
+  (forall (n : nat), gentails n f1 f2) -> entails f1 f2.
+Proof.
+  unfold entails.
+  intros f1 f2 H_gentails.
+  introv H_f1.
+  destruct R.
+  - specialize (H_gentails O).
+    inverts H_gentails as H_gentails.
+    auto.
+  - (* cannot be proven, we don't know the 'level' *)
+Abort.
 
 Definition entails_under s1 f1 f2 :=
   forall h1 h2 s2 R,
@@ -554,11 +582,14 @@ Notation "env '⊢' f1 '⊑' f2" :=
 Lemma entails_under_gentails_under: forall n s1 f1 f2,
   entails_under s1 f1 f2 -> gentails_under s1 n f1 f2.
 Proof.
-  unfold entails_under.
+Admitted.
+  (*unfold entails_under.
   intros n. induction n; intros.
   { applys* geu_base. }
-  { applys geu_shift. jauto. }
-Qed.
+  { applys geu_shift.
+    - intros m H_le.
+    - jauto. }
+Qed.*)
 
 Definition bientails (f1 f2:flow) : Prop :=
   forall h1 h2 R s1 s2,
@@ -588,25 +619,43 @@ Qed.
 Instance gentails_refl : forall n, Reflexive (gentails n).
 Proof.
   unfold Reflexive.
-  intros n. induction n; intros.
+  intros n. induction n as [n IH] using lt_wf_ind.
+  intros x.
+  destruct n as [| n'].
   - applys ge_base. intros.
     assumption.
-  - intros.
-    applys ge_shift. intros.
-    exs. splits*.
+  - applys ge_shift.
+    + intros.
+      rewrite* <- Nat.lt_succ_r in H.
+    + intros.
+      exists fb, fk.
+      splits; auto.
 Qed.
 
 (* This is the first lemma we need the index to prove. *)
 Instance gentails_trans : forall n, Transitive (gentails n).
 Proof.
   unfold Transitive.
-  intros n. induction n; intros.
-  - inverts H. inverts H0. applys ge_base. intros.
-    eauto.
-  - applys ge_shift. intros.
-    inverts H as H. specializes H H1. destr H.
-    inverts H0 as H0. specializes H0 H2. destr H0.
-    exs. splits*.
+  intros n. induction n as [n IH] using lt_wf_ind.
+  intros x y z H_xy H_yz.
+  destruct n as [| n'].
+  - inverts H_xy as H_xy.
+    inverts H_yz as H_yz.
+    applys ge_base. auto.
+  - inverts H_xy as H_xy_mono H_xy_succ.
+    inverts H_yz as H_yz_mono H_yz_succ.
+    applys ge_shift.
+    + intros m Hm.
+      specialize (H_xy_mono m Hm).
+      specialize (H_yz_mono m Hm).
+      rewrite* <- Nat.lt_succ_r in Hm.
+    + intros.
+      specializes H_xy_succ H. clear H.
+      destruct H_xy_succ as (fb' & fk' & H & H_fb' & H_fk').
+      specializes H_yz_succ H. clear H.
+      destruct H_yz_succ as (fb'' & fk'' & H & H_fb'' & H_fk'').
+      exists fb'', fk''.
+      splits*.
 Qed.
 
 Instance gentails_preorder : forall n, PreOrder (gentails n).
@@ -618,6 +667,8 @@ Qed.
 
 Instance gentails_under_refl : forall n env, Reflexive (gentails_under env n).
 Proof.
+Admitted.
+(*
   unfold Reflexive.
   intros n. induction n; intros.
   - applys geu_base. intros.
@@ -626,10 +677,12 @@ Proof.
     applys geu_shift. intros.
     exs. splits*.
 Qed.
+*)
 
 Instance gentails_under_trans : forall n env, Transitive (gentails_under env n).
 Proof.
-  unfold Transitive.
+Admitted.
+  (*unfold Transitive.
   intros n. induction n; intros.
   - inverts H. inverts H0. applys geu_base. intros.
     eauto.
@@ -637,7 +690,7 @@ Proof.
     inverts H as H. specializes H H1. destr H.
     inverts H0 as H0. specializes H0 H2. destr H0.
     exs. splits*.
-Qed.
+Qed.*)
 
 Instance gentails_under_preorder : forall n env, PreOrder (gentails_under env n).
 Proof.
