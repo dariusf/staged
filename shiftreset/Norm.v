@@ -187,33 +187,47 @@ Lemma gnorm_bind_assoc: forall n f fk fk1,
   gentails n (bind (bind f fk) fk1)
     (bind f (fun r => bind (fk r) fk1)).
 Proof.
-  intros n. induction n; intros.
+  intros n f fk fk1. revert f.
+  induction n as [n IH] using lt_wf_ind.
+  intros f.
+  destruct n as [| n'].
   { applys ge_base. intros.
     inverts H.
     inverts H7.
     applys* s_bind.
     applys* s_bind. }
-  { applys ge_shift. intros.
-    inverts H.
-    { inverts H7.
-      exists fb fk0.
-      splits.
-      - applys* s_bind.
-        applys* s_bind.
-      - reflexivity.
-      - reflexivity. }
-    { inverts H5.
-      { exists fb. exs.
+  { applys ge_shift.
+    - (* monotone *)
+      intros m Hm.
+      rewrite <- Nat.lt_succ_r in Hm.
+      exact (IH m Hm f).
+    - introv H_bind.
+      inverts H_bind as.
+      + introv H_bind H_fk1.
+        inverts H_bind as.
+        introv H_f H_fk.
+        exists fb, fk0.
         splits.
-        - applys* s_bind.
-          applys* s_bind_sh.
-        - reflexivity.
-        - reflexivity. }
-      { exists fb. exs.
-        splits.
-        - applys* s_bind_sh.
-        - reflexivity.
-        - intros. simpl. applys IHn. } } }
+        * applys* s_bind.
+          applys* s_bind.
+        * reflexivity.
+        * reflexivity.
+      + introv H_bind.
+        inverts H_bind as.
+        * introv H_f H_fk.
+          exists fb (fun v => bind (fk2 v) fk1).
+          splits.
+          { applys* s_bind.
+            applys* s_bind_sh. }
+          { reflexivity. }
+          { reflexivity. }
+        * introv H_f.
+          exists fb (fun v => bind (fk0 v) (fun r => bind (fk r) fk1)).
+          splits.
+          { applys* s_bind_sh. }
+          { reflexivity. }
+          { intros v.
+            exact (IH n' (Nat.lt_succ_diag_r n') (fk0 v)). } }
 Qed.
 
 (* A pure fact about a result on the left of a seq doesn't contribute anything *)
@@ -1094,13 +1108,20 @@ Qed.
 Lemma gnorm_bind_trivial: forall n f1,
   gentails n (bind f1 (fun r2 => ens (fun r1 => \[r1 = r2]))) f1.
 Proof.
-  intros n. induction n; intros.
+  intros n.
+  induction n as [n IH] using lt_wf_ind.
+  intros f1. destruct n as [| n'].
   { applys ge_base. intros.
     inverts H.
     inverts H8. heaps. }
-  { applys ge_shift. intros.
-    inverts* H.
-    exists fb fk0. splits*. reflexivity. }
+  { applys ge_shift.
+    - (* monotone *)
+      intros m Hm.
+      rewrite <- Nat.lt_succ_r in Hm.
+      exact (IH m Hm f1).
+    - introv H_bind.
+      inverts* H_bind.
+      exists fb fk0. splits*. reflexivity. }
 Qed.
 
 Lemma norm_seq_defun_skip_ens_void: forall (f:var) u H f1,
