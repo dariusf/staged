@@ -108,111 +108,57 @@ Section Propriety.
     (gentails n).
   Proof.
     unfold Proper, respectful, impl, flip.
-    intros n. induction n; intros.
-    { inverts H. inverts H1. inverts H0.
-      applys* ge_base. }
-    { applys ge_shift. intros.
-      inverts H as H. specializes H H2. destr H.
-      admit.
-      admit.
-  Admitted.
+    intros n. induction n as [n IH] using lt_wf_ind.
+    destruct n; intros.
+    { inverts H. inverts H0. inverts H1. applys* ge_base. }
+    { lets: gentails_trans H H1.
+      applys* gentails_trans. }
+  Qed.
 
   #[global]
   Instance Proper_gentails_under_bientails : forall n,
     Proper (bientails ====> bientails ====> iff) (gentails n).
   Proof.
     unfold Proper, respectful, bientails, impl.
-    intros n. destruct n; intros.
-    admit.
-    admit.
-    (*
-    { iff H1.
-      { inverts H1. applys geu_base. intros.
+    intros n. induction n as [n IH] using lt_wf_ind.
+    destruct n; intros.
+    { clear IH.
+      iff H1.
+      { inverts H1.
+        applys ge_base. intros.
         applys H0. applys H2. applys* H. }
-      { inverts H1. applys geu_base. intros.
+      { inverts H1.
+        applys ge_base. intros.
         applys H0. applys H2. applys* H. } }
     { iff H1.
-      { inverts H1. applys geu_shift. intros.
-        lets H2: H.
-        specializes H2 h1 h2 (shft k fb fk) env s2.
-        destruct H2.
-        specializes H3 H1.
-        specializes H4 H3.
-        zap.
-        applys* H0. }
-      { inverts H1. applys geu_shift. intros.
-        lets H2: H.
-        specializes H2 h1 h2 (shft k fb fk) env s2.
-        destruct H2.
-        specializes H2 H1.
-        specializes H4 H2.
-        zap.
-        applys* H0. } }
-  Qed.*)
-  Admitted.
-
-  (*#[global]
-  Instance Proper_gentails_under_entails : forall n env,
-    Proper (flip entails ====> entails ====> impl)
-      (gentails_under env n).
-  Proof.
-    unfold Proper, respectful, entails_under, entails, flip, impl.
-    intros n. destruct n; intros.
-    { inverts H1.
-      applys geu_base. intros.
-      applys H0.
-      applys H2.
-      applys* H. }
-    { inverts H1.
-      applys geu_shift. intros.
-      specializes H H1.
-      specializes H4 H.
-      jauto. }
-  Qed.*)
-
-  (*#[global]
-  Instance Proper_gentails_under_entails_under : forall n env,
-    Proper (flip (entails_under env) ====> (entails_under env) ====> impl)
-      (gentails_under env n).
-  Proof.
-    unfold Proper, respectful, entails_under, entails, flip, impl.
-    intros n. destruct n; intros.
-    { inverts H1.
-      applys geu_base. intros.
-      applys H0.
-      applys H2.
-      applys* H. }
-    { inverts H1.
-      applys geu_shift. intros.
-      specializes H H1.
-      specializes H4 H.
-      jauto. }
-  Qed.*)
-
-  (* Definition res_weaker R1 R2 :=
-    match R1, R2 with
-    | norm v1, norm v2 => v1 = v2
-    | shft k1 fb1 fk1, shft k2 fb2 fk2 =>
-      k1 = k2 /\
-      entails fb1 fb2 /\
-      (forall v, entails (fk1 v) (fk2 v))
-    | _, _ => False
-    end.
-
-  #[global]
-  Instance Proper_satisfies_entails_weaker : Proper
-    (eq ====> eq ====> eq ====> eq ====> res_weaker ====> entails ====> impl)
-    satisfies.
-  Proof.
-    unfold entails, Proper, respectful, impl, res_weaker.
-    intros. subst.
-    destruct x3; destruct y3; subst.
-    - auto.
-    - false.
-    - false.
-    - destr H3.
-      specializes H4 H5.
-  Abort. *)
+      { inverts H1 as Hmono Hsucc.
+        applys ge_shift; intros.
+        { clear Hsucc.
+          specializes Hmono H1.
+          rewrite <- Nat.lt_succ_r in H1.
+          specializes IH H1 H H0. }
+        { clear Hmono.
+          rewrite <- H in H1.
+          specializes Hsucc H1.
+          destr Hsucc.
+          rewrite H0 in H2.
+          exs. splits*.
+        } }
+      { inverts H1 as Hmono Hsucc.
+        applys ge_shift; intros.
+        { clear Hsucc.
+          specializes Hmono H1.
+          rewrite <- Nat.lt_succ_r in H1.
+          specializes IH H1 H H0. }
+        { clear Hmono.
+          rewrite H in H1.
+          specializes Hsucc H1.
+          destr Hsucc.
+          rewrite <- H0 in H2.
+          exs. splits*.
+        } }
+    }
+  Qed.
 
   (** entails is proper wrt satisfies *)
   #[global]
