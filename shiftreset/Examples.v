@@ -202,14 +202,13 @@ Proof.
     { fdestruct x0. fdestruct ys.
       fsimpl. fentailment. intros. injects H.
 
-      specializes Haux (vlist ys).
-
       rewrite Haux.
 
-      rewrite norm_bind_assoc.
+      rewrite gnorm_bind_assoc.
       setoid_rewrite norm_bind_val.
 
       specializes IH ys.
+
       specializes IH (vmul x x0) Haux.
       rewrite times_first_two.
       (* more pain *)
@@ -225,7 +224,7 @@ Qed.
 
 Import ExamplesEnt.Axioms.
 
-Lemma lemma : forall xs x,
+Lemma lemma1 : forall xs x,
   (forall a, entails (unk "aux" a) (aux a)) ->
   entails
     (rs (bind (aux (vlist xs)) (fun z => ens (fun r => \[r = vmul x z]))))
