@@ -464,6 +464,16 @@ Section Propriety.
   Qed.
 
   #[global]
+  Instance Proper_seq_gentails : forall n,
+    Proper (gentails n ====> gentails n ====> gentails n) seq.
+  Proof.
+    lets: Proper_bind_gentails.
+    unfold seq, Morphisms.pointwise_relation, Proper, respectful in *.
+    intros.
+    applys* H.
+  Qed.
+
+  #[global]
   Instance Proper_rs_gentails : forall n,
     Proper (gentails n ====> (gentails n)) rs.
   Proof.

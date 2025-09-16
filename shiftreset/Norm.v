@@ -230,6 +230,15 @@ Proof.
             exact (IH n' (Nat.lt_succ_diag_r n') (fk0 v)). } }
 Qed.
 
+Lemma gnorm_seq_assoc: forall n f1 f2 f3,
+  gentails n ((f1;; f2);; f3)
+    (f1;; f2;; f3).
+Proof.
+  unfold seq.
+  intros.
+  applys gnorm_bind_assoc.
+Qed.
+
 (* A pure fact about a result on the left of a seq doesn't contribute anything *)
 Lemma norm_seq_pure_l : forall p f,
   entails (ens (fun r => \[p r]);; f) f.
