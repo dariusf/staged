@@ -152,8 +152,6 @@ Lemma times_first_two : forall a b c,
 Proof.
 Admitted.
 
-(* Import ExamplesEnt.Axioms. *)
-
 Lemma lemma : forall xs x n,
   (forall a, gentails n (unk "aux" a) (aux a)) ->
   gentails n
@@ -327,8 +325,6 @@ Definition toss_n1 : ufun := fun (n:val) =>
       bind (unk "toss_n" (vsub n 1)) (fun r2 =>
       ens (fun r => \[r = vand r1 r2]))))).
 
-Import ExamplesEnt.Axioms.
-
 Lemma entl_elim_bind: forall P fk f1 (f:var) u H,
   (forall r, P r -> entails (defun f u;; ens_ H;; rs (fk r)) f1) ->
     entails (defun f u;; ens_ H;; rs (bind (ens (fun r => \[P r])) fk)) f1.
@@ -414,7 +410,8 @@ Proof.
     forward IH. unfold virel in H. unfold downto. math.
     specializes IH acc Htoss_n.
     simpl in IH.
-    rewrite norm_bind_trivial.
+
+    rewrite (gnorm_bind_trivial n1).
 
     rewrite IH. clear IH.
 
@@ -454,7 +451,7 @@ Proof.
       specializes IH1 false Htoss_n.
       simpl in IH1.
 
-      rewrite norm_bind_trivial.
+      rewrite (gnorm_bind_trivial n1).
       rewrite IH1. clear IH1.
 
       (* everything below this point is duplicated *)
@@ -482,7 +479,8 @@ Proof.
       (* try to get the goal to match the IH *)
       rewrite norm_bind_seq_def.
       rewrite norm_bind_seq_def.
-      rewrite <- norm_seq_assoc.
+
+      rewrite (gnorm_seq_assoc n1).
 
       lets H3: norm_seq_ignore_res_l false (ens (fun r => \[r = false])).
       rewrite H3.
