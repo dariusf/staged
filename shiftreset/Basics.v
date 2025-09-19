@@ -278,15 +278,15 @@ Implicit Types R : result.
 Implicit Types e : expr.
 
 (** * Interpretation of a staged formula *)
-Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
+Inductive satisfies : senv -> senv -> heap -> heap -> result -> nat -> flow -> Prop :=
 
-  | s_req : forall (s1 s2:senv) H (h1 h2:heap) R f,
+  | s_req : forall (s1 s2:senv) H (h1 h2:heap) R f n,
     (forall (hp hr:heap),
       H hp ->
       h1 = Fmap.union hr hp ->
       Fmap.disjoint hr hp ->
-      satisfies s1 s2 hr h2 R f) ->
-    satisfies s1 s2 h1 h2 R (req H f)
+      satisfies s1 s2 hr h2 R n f) ->
+    satisfies s1 s2 h1 h2 R n (req H f)
 
   | s_ens : forall s1 Q h1 h2 R,
     (exists v h3,
@@ -294,40 +294,40 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
       Q v h3 /\
       h2 = Fmap.union h1 h3 /\
       Fmap.disjoint h1 h3) ->
-    satisfies s1 s1 h1 h2 R (ens Q)
+    satisfies s1 s1 h1 h2 R O (ens Q)
 
-  | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R,
-    satisfies s1 s3 h1 h3 (norm v) f1 ->
-    satisfies s3 s2 h3 h2 R (f2 v) ->
-    satisfies s1 s2 h1 h2 R (bind f1 f2)
+  | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R n,
+    satisfies s1 s3 h1 h3 (norm v) O f1 ->
+    satisfies s3 s2 h3 h2 R n (f2 v) ->
+    satisfies s1 s2 h1 h2 R n (bind f1 f2)
 
-  | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow)
+  | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow) n
     (H: exists b,
-      satisfies s1 s2 h1 h2 R (f b)) :
-    satisfies s1 s2 h1 h2 R (@fex A f)
+      satisfies s1 s2 h1 h2 R n (f b)) :
+    satisfies s1 s2 h1 h2 R n (@fex A f)
 
-  | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow)
+  | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow) n
     (H: forall b,
-      satisfies s1 s2 h1 h2 R (f b)) :
-    satisfies s1 s2 h1 h2 R (@fall A f)
+      satisfies s1 s2 h1 h2 R n (f b)) :
+    satisfies s1 s2 h1 h2 R n (@fall A f)
 
-  | s_unk : forall s1 s2 h1 h2 R xf uf a,
+  | s_unk : forall s1 s2 h1 h2 R xf uf a n,
     Fmap.read s1 xf = uf ->
-    satisfies s1 s2 h1 h2 R (uf a) ->
-    satisfies s1 s2 h1 h2 R (unk xf a)
+    satisfies s1 s2 h1 h2 R n (uf a) ->
+    satisfies s1 s2 h1 h2 R n (unk xf a)
 
-  | s_intersect s1 s2 h1 h2 R f1 f2
-    (H1: satisfies s1 s2 h1 h2 R f1)
-    (H2: satisfies s1 s2 h1 h2 R f2) :
-    satisfies s1 s2 h1 h2 R (intersect f1 f2)
+  | s_intersect s1 s2 h1 h2 R f1 f2 n
+    (H1: satisfies s1 s2 h1 h2 R n f1)
+    (H2: satisfies s1 s2 h1 h2 R n f2) :
+    satisfies s1 s2 h1 h2 R n (intersect f1 f2)
 
-  | s_disj_l s1 s2 h1 h2 R f1 f2
-    (H: satisfies s1 s2 h1 h2 R f1) :
-    satisfies s1 s2 h1 h2 R (disj f1 f2)
+  | s_disj_l s1 s2 h1 h2 R f1 f2 n
+    (H: satisfies s1 s2 h1 h2 R n f1) :
+    satisfies s1 s2 h1 h2 R n (disj f1 f2)
 
-  | s_disj_r s1 s2 h1 h2 R f1 f2
-    (H: satisfies s1 s2 h1 h2 R f2) :
-    satisfies s1 s2 h1 h2 R (disj f1 f2)
+  | s_disj_r s1 s2 h1 h2 R f1 f2 n
+    (H: satisfies s1 s2 h1 h2 R n f2) :
+    satisfies s1 s2 h1 h2 R n (disj f1 f2)
 
     (** The new rules for shift/reset are as follows. *)
 
@@ -335,7 +335,7 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     ~ Fmap.indom s1 k ->
     satisfies s1 s1 h1 h1
       (* (shft x shb v (fun r1 => rs (ens (fun r => \[r = v])) r1)) *)
-      (shft k fb fk)
+      (shft k fb fk) O
       (shc k fb fk)
 
     (** A [sh] on its own reduces to a [shft] containing an identity continuation. *)
@@ -350,45 +350,45 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> flow -> Prop :=
     satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs fk r1)) f1 ->
     satisfies s1 s2 h1 h2 (shft k shb v (fun r1 => rs (fk;; f2) r1)) (f1;; f2) *)
 
-  | s_bind_sh : forall s1 s2 f1 (f2:val->flow) fk h1 h2 fb k,
-    satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
+  | s_bind_sh : forall s1 s2 f1 (f2:val->flow) fk h1 h2 fb k n,
+    satisfies s1 s2 h1 h2 (shft k fb fk) n f1 ->
     satisfies s1 s2 h1 h2 (shft k fb (fun r1 => bind (fk r1) f2))
-      (bind f1 f2)
+      n (bind f1 f2)
 
     (** This rule extends the continuation in a [shft] on the left side of a [seq]. Notably, it moves whatever comes next #<i>under the reset</i>#, preserving shift-freedom by constructon. *)
 
-  | s_rs_sh : forall k s1 s2 fr h1 h2 rf s3 h3 fb fk,
-    satisfies s1 s3 h1 h3 (shft k fb fk) fr ->
+  | s_rs_sh : forall k s1 s2 fr h1 h2 rf s3 h3 fb fk n,
+    satisfies s1 s3 h1 h3 (shft k fb fk) O fr ->
     satisfies (Fmap.update s3 k (fun a => rs (fk a))) s2
-      h3 h2 rf (rs fb) ->
-    satisfies s1 s2 h1 h2 rf (rs fr)
+      h3 h2 rf n (rs fb) ->
+    satisfies s1 s2 h1 h2 rf (S n) (rs fr)
 
     (** This rule applies when the body of a [rs] #<i>evaluates to</i># a [shft] (not when a [sh] is directly inside a [rs]; that happens in reduction). The continuation carried by the [shft] is known, so it is bound in (the environment of) the [sh]ift body before that is run. *)
     (** The two resets in the semantics are accounted for: one is around the shift body, and one is already the topmost form in the continuation. *)
     (** Note: because staged formulae are turned into values (via [shft] and being added to the [senv]), rewriting can no longer be done to weaken them. Environment entailment was an attempt at solving this problem; the Proper instances might have to be tweaked to allow rewriting too. Another possible solution is a syntactic entailment relation in the relevant rules to allow weakening. *)
 
   | s_rs_val : forall s1 s2 h1 h2 v f,
-    satisfies s1 s2 h1 h2 (norm v) f ->
-    satisfies s1 s2 h1 h2 (norm v) (rs f)
+    satisfies s1 s2 h1 h2 (norm v) O f ->
+    satisfies s1 s2 h1 h2 (norm v) O (rs f)
 
-  | s_defun s1 s2 h1 x uf :
+  | s_defun s1 s2 h1 x uf n :
     ~ Fmap.indom s1 x ->
     s2 = Fmap.update s1 x uf ->
-    satisfies s1 s2 h1 h1 (norm vunit) (defun x uf)
+    satisfies s1 s2 h1 h1 (norm vunit) n (defun x uf)
 
-  | s_discard s1 s2 h (f:var) :
+  | s_discard s1 s2 h (f:var) n :
     s2 = Fmap.remove s1 f ->
-    satisfies s1 s2 h h (norm vunit) (discard f)
+    satisfies s1 s2 h h (norm vunit) n (discard f)
 
   .
 
-Notation "s1 ',' s2 ','  h1 ','  h2 ','  r  '|=' f" :=
-  (satisfies s1 s2 h1 h2 r f) (at level 30, only printing).
+Notation "s1 ',' s2 ','  h1 ','  h2 ','  r ','  n  '|=' f" :=
+  (satisfies s1 s2 h1 h2 r n f) (at level 30, only printing).
 
 Lemma s_sh : forall s1 h1 fb k,
   ~ Fmap.indom s1 k ->
   satisfies s1 s1 h1 h1
-    (shft k fb (fun r1 => ens (fun r => \[r = r1])))
+    (shft k fb (fun r1 => ens (fun r => \[r = r1]))) O
     (sh k fb).
 Proof.
   unfold sh. intros.
@@ -425,10 +425,10 @@ Ltac heaps :=
   | _ => subst; rew_fmap *
   end.
 
-Lemma s_seq : forall s3 h3 r1 s1 s2 f1 f2 h1 h2 R,
-  satisfies s1 s3 h1 h3 (norm r1) f1 ->
-  satisfies s3 s2 h3 h2 R f2 ->
-  satisfies s1 s2 h1 h2 R (seq f1 f2).
+Lemma s_seq : forall s3 h3 r1 s1 s2 f1 f2 h1 h2 R n,
+  satisfies s1 s3 h1 h3 (norm r1) O f1 ->
+  satisfies s3 s2 h3 h2 R n f2 ->
+  satisfies s1 s2 h1 h2 R n (seq f1 f2).
 Proof.
   unfold seq. intros.
   applys* s_bind.
@@ -441,7 +441,7 @@ Lemma s_ens_ : forall H h1 h2 s1,
     H h3 /\
     h2 = Fmap.union h1 h3 /\
     Fmap.disjoint h1 h3) ->
-  satisfies s1 s1 h1 h2 (norm vunit) (ens_ H).
+  satisfies s1 s1 h1 h2 (norm vunit) O (ens_ H).
 Proof.
   unfold ens_. intros.
   applys* s_ens.
@@ -485,8 +485,8 @@ Ltac cont_eq1 :=
 
 (** * Entailment *)
 Definition entails (f1 f2:flow) : Prop :=
-  forall s1 s2 h1 h2 R,
-    satisfies s1 s2 h1 h2 R f1 -> satisfies s1 s2 h1 h2 R f2.
+  forall s1 s2 h1 h2 R n,
+    satisfies s1 s2 h1 h2 R n f1 -> satisfies s1 s2 h1 h2 R n f2.
 
 Infix "⊑" := entails (at level 90, right associativity) : flow_scope.
 
@@ -518,16 +518,16 @@ Inductive gentails : nat -> flow -> flow -> Prop :=
 
   | ge_base : forall f1 f2,
     (forall s1 s2 h1 h2 v,
-      satisfies s1 s2 h1 h2 (norm v) f1 ->
-      satisfies s1 s2 h1 h2 (norm v) f2) ->
+      satisfies s1 s2 h1 h2 (norm v) O f1 ->
+      satisfies s1 s2 h1 h2 (norm v) O f2) ->
     gentails O f1 f2
 
   | ge_shift : forall (n : nat) f1 f2,
     (forall (m : nat), (m <= n)%nat -> gentails m f1 f2) ->
     (forall s1 s2 h1 h2 k fb fk,
-      satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
+      satisfies s1 s2 h1 h2 (shft k fb fk) (S n) f1 ->
       exists fb1 fk1,
-        satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
+        satisfies s1 s2 h1 h2 (shft k fb1 fk1) (S n) f2 /\
         gentails n fb fb1 /\
         forall v, gentails n (fk v) (fk1 v)) ->
 
@@ -550,6 +550,7 @@ Proof.
       unfold entails in H_entails.
       exists fb, fk.
       splits.
+
       + auto.
       + apply IH; auto.
         unfold entails. auto.
@@ -557,7 +558,7 @@ Proof.
         unfold entails. auto. }
 Qed.
 
-Lemma gentails_entails : forall f1 f2,
+(* Lemma gentails_entails : forall f1 f2,
   (forall (n : nat), gentails n f1 f2) -> entails f1 f2.
 Proof.
   unfold entails.
@@ -568,11 +569,11 @@ Proof.
     inverts H_gentails as H_gentails.
     auto.
   - (* cannot be proven, we don't know the 'level' *)
-Abort.
+Abort. *)
 
 Definition bientails (f1 f2:flow) : Prop :=
-  forall h1 h2 R s1 s2,
-    satisfies s1 s2 h1 h2 R f1 <-> satisfies s1 s2 h1 h2 R f2.
+  forall h1 h2 R s1 s2 n,
+    satisfies s1 s2 h1 h2 R n f1 <-> satisfies s1 s2 h1 h2 R n f2.
 
 Instance entails_refl : Reflexive entails.
 Proof.
@@ -684,8 +685,8 @@ Proof.
 Qed.
 
 Definition flow_res (f:flow) (v:val) : Prop :=
-  forall s1 s2 h1 h2, satisfies s1 s2 h1 h2 (norm v) f.
+  forall s1 s2 h1 h2, satisfies s1 s2 h1 h2 (norm v) O f.
 
 (* which definition of flow_res should be used? *)
 Definition flow_res1 (f:flow) (v1:val) : Prop :=
-  forall s1 s2 h1 h2 v, satisfies s1 s2 h1 h2 (norm v) f -> v1 = v.
+  forall s1 s2 h1 h2 v, satisfies s1 s2 h1 h2 (norm v) O f -> v1 = v.

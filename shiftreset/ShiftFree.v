@@ -10,10 +10,10 @@ Implicit Types H : hprop.
 (** * Shift-freedom *)
 (** Semantic definition of shift-freedom. *)
 Definition shift_free (f:flow) : Prop :=
-  forall s1 s2 h1 h2 k fb fk,
+  forall s1 s2 h1 h2 k fb fk n,
   (* exists v, *)
     (* satisfies s1 s2 h1 h2 (norm v) f /\ *)
-      not (satisfies s1 s2 h1 h2 (shft k fb fk) f).
+      not (satisfies s1 s2 h1 h2 (shft k fb fk) n f).
 
 (** [Sh#], the syntactic analogue of [shft], or a CPS version of [Sh], where the continuation is shift-free. *)
 (* Definition shs x fb vr c : flow :=
@@ -42,7 +42,7 @@ Lemma sf_ens_ : forall H,
   shift_free (ens_ H).
 Proof.
   unfold shift_free, not. intros.
-  inverts H0. destr H7.
+  inverts H0. destr H8.
   false.
 Qed.
 
@@ -107,7 +107,7 @@ Lemma sf_empty :
   shift_free empty.
 Proof.
   unfold shift_free, not. intros.
-  inverts H. destr H6. discriminate.
+  inverts H. destr H7. discriminate.
 Qed.
 
 Instance ShiftFreeEmpty :
@@ -130,8 +130,8 @@ Proof.
   unfold not. introv Hreq Hsf. introv H1.
   inverts H1.
   unfolds in Hreq. specializes Hreq h1. destr Hreq.
-  specializes H8 H0 H1 H3.
-  false Hsf H8.
+  specializes H9 H0 H1 H3.
+  false Hsf H9.
 Qed.
 
 Lemma sf_req_pure : forall P f,
@@ -184,7 +184,7 @@ Lemma sf_seq : forall f1 f2,
 Proof.
   unfold shift_free, not. intros.
   inverts H1 as H1; destr H1.
-  { specializes~ H0 H9. }
+  { specializes~ H0 H10. }
   { specializes~ H H1. }
 Qed.
 
@@ -206,8 +206,8 @@ Lemma sf_bind : forall f fk,
 Proof.
   unfold shift_free, not; intros.
   inverts H1.
-  - false H0 H10.
-  - false H H7.
+  - false H0 H11.
+  - false H H10.
 Qed.
 
 Instance ShiftFreeBind : forall f fk,
@@ -320,21 +320,21 @@ Ltac shiftfree := intros; auto with staged_shiftfree.
   or a shift_free assumption that can be used *)
 Ltac no_shift :=
   lazymatch goal with
-  | H: satisfies _ _ _ _ (shft _ _ _) empty |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) _ empty |- _ =>
     false sf_empty H
-  | H: satisfies _ _ _ _ (shft _ _ _) (ens _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) _ (ens _) |- _ =>
     false sf_ens H
-  | H: satisfies _ _ _ _ (shft _ _ _) (ens_ _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) _ (ens_ _) |- _ =>
     unfold ens_ in H; false sf_ens H
-  | H: satisfies _ _ _ _ (shft _ _ _) (rs _ _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) _ (rs _ _) |- _ =>
     false sf_rs H
-  | H: satisfies _ _ _ _ (shft _ _ _) (defun _ _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) _ (defun _ _) |- _ =>
     false sf_defun H
-  | H: satisfies _ _ _ _ (shft _ _ _) (discard _) |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) _ (discard _) |- _ =>
     false sf_discard H
-  | H: satisfies _ _ _ _ (shft _ _ _) ?f, Hsf: shift_free ?f |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) _ ?f, Hsf: shift_free ?f |- _ =>
     false Hsf H
-  | H: satisfies _ _ _ _ (shft _ _ _) ?f, Hsf: ShiftFree ?f |- _ =>
+  | H: satisfies _ _ _ _ (shft _ _ _) _ ?f, Hsf: ShiftFree ?f |- _ =>
     destruct Hsf as (Hsf);
     false Hsf H
   | _ => idtac
@@ -348,23 +348,23 @@ Ltac auto_star ::= try solve [
 (* knowing that there is one norm execution does not mean
   that there are no shift executions *)
 Lemma norm_sf_attempt : forall s1 s2 h1 h2 v f,
-  satisfies s1 s2 h1 h2 (norm v) f ->
+  satisfies s1 s2 h1 h2 (norm v) O f ->
   shift_free f.
 Proof.
   intros * Hf.
   unfold shift_free. intros * H.
 Abort.
 
-Definition det f := forall s1 s2 h1 h2 R1 R2,
-  satisfies s1 s2 h1 h2 R1 f ->
-  satisfies s1 s2 h1 h2 R2 f ->
+Definition det f := forall s1 s2 h1 h2 R1 R2 n1 n2,
+  satisfies s1 s2 h1 h2 R1 n1 f ->
+  satisfies s1 s2 h1 h2 R2 n2 f ->
   R1 = R2.
 
 (* if all executions end in norm and f is deterministic,
   then f is shift-free. *)
 Lemma norm_sf : forall f,
   det f ->
-  (forall s1 s2 h1 h2, exists v, satisfies s1 s2 h1 h2 (norm v) f) ->
+  (forall s1 s2 h1 h2, exists v, satisfies s1 s2 h1 h2 (norm v) O f) ->
   shift_free f.
 Proof.
   intros * Hd Hf.

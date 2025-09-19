@@ -163,7 +163,7 @@ Section Propriety.
   (** entails is proper wrt satisfies *)
   #[global]
   Instance Proper_satisfies_entails : Proper
-    (eq ====> eq ====> eq ====> eq ====> eq ====> entails ====> impl)
+    (eq ====> eq ====> eq ====> eq ====> eq ====> eq ====> entails ====> impl)
     satisfies.
   Proof.
     unfold entails, Proper, respectful, impl.
@@ -173,13 +173,12 @@ Section Propriety.
 
   #[global]
   Instance Proper_satisfies_bientails : Proper
-    (eq ====> eq ====> eq ====> eq ====> eq ====> bientails ====> impl)
+    (eq ====> eq ====> eq ====> eq ====> eq ====> eq ====> bientails ====> impl)
     satisfies.
   Proof.
     unfold bientails, entails, Proper, respectful, impl.
     intros. subst.
-    apply H4.
-    auto.
+    apply* H5.
   Qed.
 
   (* A weaker Proper instance that only allows rewriting in the left
@@ -225,6 +224,7 @@ Section Propriety.
   Proof.
     unfold Proper, respectful.
     unfold entails. intros.
+
     inverts H1. 2: { no_shift. }
     applys* s_seq.
   Qed.
@@ -284,7 +284,7 @@ Section Propriety.
     unfold Proper, entails, respectful. intros.
     inverts H1.
     { subst. applys* s_bind. }
-    { specializes H H8.
+    { specializes H H9.
       applys_eq s_bind_sh.
       2: { applys H. }
       congruence. }
@@ -355,7 +355,7 @@ Section Propriety.
     unfold Proper, respectful, Morphisms.pointwise_relation, bientails. intros.
     iff H0.
     { inverts H0.
-      { applys* s_bind. rewrite* H in H9. }
+      { applys* s_bind. rewrite* H in H10. }
       { applys_eq s_bind_sh. 2: { eassumption. }
         f_equal.
         applys fun_ext_dep.
@@ -376,7 +376,7 @@ Section Propriety.
     unfold Proper, respectful, Morphisms.pointwise_relation, entails.
     intros.
     inverts H0.
-    { applys* s_bind. rewrite* H in H9. }
+    { applys* s_bind. rewrite* H in H10. }
     { applys_eq s_bind_sh. 2: { eassumption. }
       f_equal.
       applys fun_ext_dep.
@@ -392,7 +392,7 @@ Section Propriety.
     unfold Proper, respectful, Morphisms.pointwise_relation, entails.
     intros * Hsf **.
     inverts H0.
-    2: { destruct Hsf as (Hsf). false Hsf H7. }
+    2: { destruct Hsf as (Hsf). false Hsf H8. }
     applys* s_bind.
   Qed.
 
@@ -482,17 +482,12 @@ Section Propriety.
     destruct n; intros.
     {
       inverts H.
-      applys* ge_base.
-      intros.
+      applys* ge_base. intros.
       inverts H.
-      { (* shift *)
-        clear H0.
-        admit.
-        (* applys* s_rs_sh. *)
-      }
-      { (* val *)
-        specializes H0 H7.
-        applys* s_rs_val. }
+      applys* s_rs_val.
+    }
+    {
+      admit.
     }
   Admitted.
 
@@ -542,11 +537,11 @@ Section Propriety.
     unfold bientails, Proper, respectful, impl.
     split; subst; intros.
     { inverts H0 as H0.
-      { eapply s_rs_sh. apply H. exact H0. exact H7. }
-      { apply H in H0. apply s_rs_val. assumption. } }
+      { eapply s_rs_sh. apply H. apply H0. auto. }
+      { apply H in H0. apply* s_rs_val. } }
     { inverts H0 as H0.
       { eapply s_rs_sh. apply H. eauto. eauto. }
-      { apply H in H0. apply s_rs_val. assumption. } }
+      { apply H in H0. apply* s_rs_val. } }
   Qed.
 
   Example rewrite :
