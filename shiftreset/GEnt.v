@@ -357,48 +357,149 @@ Proof.
   xsimpl; auto.
 Qed.
 
-Lemma gent_seq_disj_l : forall n s f1 f2 f3,
-  gentails_under s n f1 f3 ->
-  gentails_under s n f2 f3 ->
-  gentails_under s n (disj f1 f2) f3.
+Lemma gent_disj_l : forall n f1 f2 f3,
+  gentails n f1 f3 ->
+  gentails n f2 f3 ->
+  gentails n (disj f1 f2) f3.
 Proof.
-Abort.
-
-Lemma gent_seq_disj_r_l : forall n s f1 f2 f3 f4,
-  gentails_under s n f3 (f1;; f4) ->
-  gentails_under s n f3 (disj f1 f2;; f4).
-Proof.
-Abort.
-
-Lemma gent_seq_disj_r_r : forall n s f1 f2 f3 f4,
-  gentails_under s n f3 (f2;; f4) ->
-  gentails_under s n f3 (disj f1 f2;; f4).
-Proof.
-Abort.
-
-Lemma gent_disj_r_l : forall n s f1 f2 f3,
-  gentails_under s n f3 f1 ->
-  gentails_under s n f3 (disj f1 f2).
-Proof.
-  intros.
-  inverts H.
-  { applys geu_base. intros.
-    applys* s_disj_l. }
-  { applys geu_shift. intros.
-    specializes H0 H.
-    zap. applys* s_disj_l. }
+  intros n f1 f2 f3 H_gentails1 H_gentails2.
+  induction n as [n IH] using lt_wf_ind.
+  destruct n as [| n'].
+  - applys ge_base.
+    introv H_disj.
+    inverts H_disj as.
+    + inverts* H_gentails1.
+    + inverts* H_gentails2.
+  - inverts H_gentails1 as H_gentails1_mono H_gentails1_succ.
+    inverts H_gentails2 as H_gentails2_mono H_gentails2_succ.
+    applys ge_shift.
+    + intros m Hm.
+      assert (H_gentails1' := H_gentails1_mono m Hm).
+      assert (H_gentails2' := H_gentails2_mono m Hm).
+      rewrite <- Nat.lt_succ_r in Hm.
+      exact (IH m Hm H_gentails1' H_gentails2').
+    + introv H_disj.
+      inverts* H_disj.
 Qed.
 
-Lemma gent_disj_r_r : forall n s f1 f2 f3,
-  gentails_under s n f3 f2 ->
-  gentails_under s n f3 (disj f1 f2).
+Lemma gent_seq_disj_r_l : forall n f1 f2 f3 f4,
+  gentails n f3 (f1;; f4) ->
+  gentails n f3 (disj f1 f2;; f4).
 Proof.
-Abort.
+  intros n f1 f2 f3 f4 H_gentails.
+  induction n as [n IH] using lt_wf_ind.
+  inverts H_gentails as.
+  - introv H_gentails.
+    applys ge_base.
+    introv H_f3.
+    specializes H_gentails H_f3.
+    inverts H_gentails as H_f1 H_f4.
+    applys s_seq.
+    * applys* s_disj_l.
+    * exact H_f4.
+  - introv H_gentails_mono H_gentails_succ.
+    applys ge_shift.
+    + intros m Hm.
+      assert (H_gentails' := H_gentails_mono m Hm).
+      rewrite <- Nat.lt_succ_r in Hm.
+      exact (IH m Hm H_gentails').
+    + introv H_f3.
+      specializes H_gentails_succ H_f3.
+      destruct H_gentails_succ as (fb' & fk' & H_seq & H_fb & H_fk).
+      exists fb', fk'.
+      splits; [| exact H_fb | exact H_fk].
+      inverts H_seq as.
+      * introv H_f1 H_f4.
+        applys s_seq.
+        { applys* s_disj_l. }
+        { exact H_f4. }
+      * introv H_f1.
+        applys s_seq_sh.
+        applys s_disj_l.
+        exact H_f1.
+Qed.
 
-Lemma gent_disj_l : forall n f1 f2 f3 env,
-  gentails_under env n f1 f3 ->
-  gentails_under env n f2 f3 ->
-  gentails_under env n (disj f1 f2) f3.
+Lemma gent_seq_disj_r_r : forall n f1 f2 f3 f4,
+  gentails n f3 (f2;; f4) ->
+  gentails n f3 (disj f1 f2;; f4).
 Proof.
-Abort.
-*)
+  intros n f1 f2 f3 f4 H_gentails.
+  induction n as [n IH] using lt_wf_ind.
+  inverts H_gentails as.
+  - introv H_gentails.
+    applys ge_base.
+    introv H_f3.
+    specializes H_gentails H_f3.
+    inverts H_gentails as H_f2 H_f4.
+    applys s_seq.
+    * applys* s_disj_r.
+    * exact H_f4.
+  - introv H_gentails_mono H_gentails_succ.
+    applys ge_shift.
+    + intros m Hm.
+      assert (H_gentails' := H_gentails_mono m Hm).
+      rewrite <- Nat.lt_succ_r in Hm.
+      exact (IH m Hm H_gentails').
+    + introv H_f3.
+      specializes H_gentails_succ H_f3.
+      destruct H_gentails_succ as (fb' & fk' & H_seq & H_fb & H_fk).
+      exists fb', fk'.
+      splits; [| exact H_fb | exact H_fk].
+      inverts H_seq as.
+      * introv H_f2 H_f4.
+        applys s_seq.
+        { applys* s_disj_r. }
+        { exact H_f4. }
+      * introv H_f2.
+        applys s_seq_sh.
+        applys s_disj_r.
+        exact H_f2.
+Qed.
+
+Lemma gent_disj_r_l : forall n f1 f2 f3,
+  gentails n f3 f1 ->
+  gentails n f3 (disj f1 f2).
+Proof.
+  intros n f1 f2 f3 H_gentails.
+  induction n as [n IH] using lt_wf_ind.
+  inverts H_gentails as.
+  - introv H_gentails.
+    applys ge_base.
+    introv H_f3.
+    applys* s_disj_l.
+  - introv H_gentails_mono H_gentails_succ.
+    applys ge_shift.
+    + intros m Hm.
+      assert (H_gentails' := H_gentails_mono m Hm).
+      rewrite <- Nat.lt_succ_r in Hm.
+      exact (IH m Hm H_gentails').
+    + introv H_f3.
+      specializes H_gentails_succ H_f3.
+      destruct H_gentails_succ as (fb' & fk' & H_f1 & H_fb & H_fk).
+      exists fb', fk'.
+      splits; [applys* s_disj_l | exact H_fb | exact H_fk].
+Qed.
+
+Lemma gent_disj_r_r : forall n f1 f2 f3,
+  gentails n f3 f2 ->
+  gentails n f3 (disj f1 f2).
+Proof.
+  intros n f1 f2 f3 H_gentails.
+  induction n as [n IH] using lt_wf_ind.
+  inverts H_gentails as.
+  - introv H_gentails.
+    applys ge_base.
+    introv H_f3.
+    applys* s_disj_r.
+  - introv H_gentails_mono H_gentails_succ.
+    applys ge_shift.
+    + intros m Hm.
+      assert (H_gentails' := H_gentails_mono m Hm).
+      rewrite <- Nat.lt_succ_r in Hm.
+      exact (IH m Hm H_gentails').
+    + introv H_f3.
+      specializes H_gentails_succ H_f3.
+      destruct H_gentails_succ as (fb' & fk' & H_f2 & H_fb & H_fk).
+      exists fb', fk'.
+      splits; [applys* s_disj_r | exact H_fb | exact H_fk].
+Qed.
