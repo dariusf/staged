@@ -85,8 +85,15 @@ Section Propriety.
     intros x y.
     destruct n as [| n'].
     { intros H_entails x0 y0 H_entails0 H_gentails.
-      inverts H_gentails as H_gentails.
-      applys* ge_base. }
+      inverts H_gentails as H_gentails_norm H_gentails_shft.
+      applys ge_base.
+      - auto.
+      - introv Hy.
+        specializes H_entails Hy.
+        specializes H_gentails_shft H_entails.
+        destruct H_gentails_shft as (fb' & fk' & Hx).
+        exists fb' fk'.
+        auto. }
     { intros H_entails x0 y0 H_entails0 H_gentails.
       inverts H_gentails as H_gentails_mono H_gentails_succ.
       applys ge_shift.
@@ -108,56 +115,23 @@ Section Propriety.
     (gentails n).
   Proof.
     unfold Proper, respectful, impl, flip.
-    intros n. induction n as [n IH] using lt_wf_ind.
-    destruct n; intros.
-    { inverts H. inverts H0. inverts H1. applys* ge_base. }
-    { lets: gentails_trans H H1.
-      applys* gentails_trans. }
+    intros n x y H_yx x0 y0 H_x0y0 H_xx0.
+    transitivity x.
+    { exact H_yx. }
+    transitivity x0.
+    { exact H_xx0. }
+    { exact H_x0y0. }
   Qed.
 
   #[global]
   Instance Proper_gentails_under_bientails : forall n,
     Proper (bientails ====> bientails ====> iff) (gentails n).
   Proof.
-    unfold Proper, respectful, bientails, impl.
-    intros n. induction n as [n IH] using lt_wf_ind.
-    destruct n; intros.
-    { clear IH.
-      iff H1.
-      { inverts H1.
-        applys ge_base. intros.
-        applys H0. applys H2. applys* H. }
-      { inverts H1.
-        applys ge_base. intros.
-        applys H0. applys H2. applys* H. } }
-    { iff H1.
-      { inverts H1 as Hmono Hsucc.
-        applys ge_shift; intros.
-        { clear Hsucc.
-          specializes Hmono H1.
-          rewrite <- Nat.lt_succ_r in H1.
-          specializes IH H1 H H0. }
-        { clear Hmono.
-          rewrite <- H in H1.
-          specializes Hsucc H1.
-          destr Hsucc.
-          rewrite H0 in H2.
-          exs. splits*.
-        } }
-      { inverts H1 as Hmono Hsucc.
-        applys ge_shift; intros.
-        { clear Hsucc.
-          specializes Hmono H1.
-          rewrite <- Nat.lt_succ_r in H1.
-          specializes IH H1 H H0. }
-        { clear Hmono.
-          rewrite H in H1.
-          specializes Hsucc H1.
-          destr Hsucc.
-          rewrite <- H0 in H2.
-          exs. splits*.
-        } }
-    }
+    unfold Proper, respectful, impl.
+    intros n x y H_xy x0 y0 H_x0y0.
+    apply bientails_split in H_xy as [H_xy1 H_xy2].
+    apply bientails_split in H_x0y0 as [H_x0y01 H_x0y02].
+    splits; apply Proper_gentails_entails; auto.
   Qed.
 
   (** entails is proper wrt satisfies *)
@@ -413,16 +387,33 @@ Section Propriety.
     unfold Proper, respectful, Morphisms.pointwise_relation.
     intros n.
     induction n as [n IH] using lt_wf_ind.
-    intros x y H_entails x0 y0 H_entails0.
+    intros x y H_entails x0 y0 H_entails0. (* necessary to 'descent' into the body of the continuation, which contains 'bind' *)
     destruct n as [| n'].
-    { inverts H_entails as H_entails.
-      applys ge_base. introv Hx.
-      inverts Hx as Hx Hx0.
-      specializes H_entails Hx.
-      applys* s_bind.
-      specializes H_entails0 v0.
-      inverts H_entails0 as H_entails0.
-      auto. }
+    { inverts H_entails as H_entails_norm H_entails_shft.
+      applys ge_base.
+      - introv Hx.
+        inverts Hx as Hx Hx0.
+        specializes H_entails_norm Hx.
+        applys* s_bind.
+        specializes H_entails0 v0.
+        inverts H_entails0 as H_entails0.
+        auto.
+      - introv H_bind.
+        inverts H_bind as.
+        + introv Hx Hx0.
+          specializes H_entails_norm Hx.
+          specialize (H_entails0 v).
+          inverts H_entails0 as _ H_entails0_shft.
+          specializes H_entails0_shft Hx0.
+          destruct H_entails0_shft as (fb' & fk' & Hy0).
+          exists fb', fk'.
+          applys s_bind; eauto.
+        + introv Hx.
+          specializes H_entails_shft Hx.
+          destruct H_entails_shft as (fb' & fk' & Hy).
+          exists fb' (fun v => bind (fk' v) y0).
+          applys s_bind_sh.
+          exact Hy. }
     { inverts H_entails as H_entails_mono H_entails_succ.
       applys ge_shift.
       - intros m Hm.
@@ -475,25 +466,50 @@ Section Propriety.
 
   #[global]
   Instance Proper_rs_gentails : forall n,
-    Proper (gentails n ====> (gentails n)) rs.
+    Proper (gentails n ====> gentails n) rs.
   Proof.
     unfold Proper, respectful.
     intros n. induction n as [n IH] using lt_wf_ind.
-    destruct n; intros.
-    {
-      inverts H.
+    intros x y H_gentails.
+    destruct n as [| n'].
+    { inverts H_gentails as H_gentails_norm H_gentails_shft.
       applys* ge_base.
-      intros.
-      inverts H.
-      { (* shift *)
-        clear H0.
-        admit.
-        (* applys* s_rs_sh. *)
-      }
-      { (* val *)
-        specializes H0 H7.
-        applys* s_rs_val. }
-    }
+      - introv Hx.
+        inverts Hx as.
+        + introv Hx H_body.
+          specializes H_gentails_shft Hx.
+          destruct H_gentails_shft as (fb' & fk' & Hy).
+          applys s_rs_sh.
+          { exact Hy. }
+          { admit. }
+        + intros Hx.
+          applys* s_rs_val.
+      - introv Hx.
+        inverts Hx as.
+        introv Hx H_body.
+        specializes H_gentails_shft Hx.
+        destruct H_gentails_shft as (fb' & fk' & Hy).
+        exists fb'. eexists.
+        applys s_rs_sh.
+        { exact Hy. }
+        { admit. } (* same problem as the case above *) }
+    { inverts H_gentails as H_gentails_mono H_gentails_succ.
+      applys ge_shift.
+      - intros m Hm.
+        assert (H_gentails' := H_gentails_mono m Hm).
+        rewrite <- Nat.lt_succ_r in Hm.
+        exact (IH m Hm _ _ H_gentails').
+      - introv Hx.
+        inverts Hx as Hx H_body.
+        specializes H_gentails_succ Hx.
+        destruct H_gentails_succ as (fb' & fk' & Hy & H_fb & H_fk).
+        exists fb, fk.
+        splits*.
+        + applys s_rs_sh.
+          { exact Hy. }
+          { admit. }
+        + reflexivity.
+        + reflexivity.
   Admitted.
 
   Example rewrite : forall n,

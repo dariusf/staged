@@ -518,19 +518,21 @@ Inductive gentails : nat -> flow -> flow -> Prop :=
 
   | ge_base : forall f1 f2,
     (forall s1 s2 h1 h2 v,
-      satisfies s1 s2 h1 h2 (norm v) f1 ->
-      satisfies s1 s2 h1 h2 (norm v) f2) ->
+        satisfies s1 s2 h1 h2 (norm v) f1 ->
+        satisfies s1 s2 h1 h2 (norm v) f2) ->
+    (forall s1 s2 h1 h2 k fb fk,
+        satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
+        exists fb' fk', satisfies s1 s2 h1 h2 (shft k fb' fk') f2) ->
     gentails O f1 f2
 
   | ge_shift : forall (n : nat) f1 f2,
-    (forall (m : nat), (m <= n)%nat -> gentails m f1 f2) ->
+    (forall m : nat, (m <= n)%nat -> gentails m f1 f2) ->
     (forall s1 s2 h1 h2 k fb fk,
-      satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
-      exists fb1 fk1,
-        satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
-        gentails n fb fb1 /\
-        forall v, gentails n (fk v) (fk1 v)) ->
-
+        satisfies s1 s2 h1 h2 (shft k fb fk) f1 ->
+        exists fb1 fk1,
+          satisfies s1 s2 h1 h2 (shft k fb1 fk1) f2 /\
+          gentails n fb fb1 /\
+          forall v, gentails n (fk v) (fk1 v)) ->
     gentails (S n) f1 f2.
 
 Notation "f1 '⊆' n f2" :=
@@ -539,7 +541,8 @@ Notation "f1 '⊆' n f2" :=
 Lemma entails_gentails: forall n f1 f2,
   entails f1 f2 -> gentails n f1 f2.
 Proof.
-  intros n. induction n as [n IH] using lt_wf_ind.
+  intros n.
+  induction n as [n IH] using lt_wf_ind.
   intros f1 f2 H_entails.
   destruct n as [| n'].
   { applys* ge_base. }
@@ -601,8 +604,7 @@ Proof.
   intros n. induction n as [n IH] using lt_wf_ind.
   intros x.
   destruct n as [| n'].
-  - applys ge_base. intros.
-    assumption.
+  - applys* ge_base.
   - applys ge_shift.
     + intros.
       rewrite* <- Nat.lt_succ_r in H.
@@ -618,9 +620,14 @@ Proof.
   intros n. induction n as [n IH] using lt_wf_ind.
   intros x y z H_xy H_yz.
   destruct n as [| n'].
-  - inverts H_xy as H_xy.
-    inverts H_yz as H_yz.
-    applys ge_base. auto.
+  - inverts H_xy as H_xy_norm H_xy_shft.
+    inverts H_yz as H_yz_norm H_yz_shft.
+    applys ge_base.
+    + auto.
+    + introv Hx.
+      specializes H_xy_shft Hx.
+      destruct H_xy_shft as (fb_y & fk_y & Hy).
+      eauto.
   - inverts H_xy as H_xy_mono H_xy_succ.
     inverts H_yz as H_yz_mono H_yz_succ.
     applys ge_shift.
@@ -681,6 +688,20 @@ Proof.
     split.
     + intros. apply H0. apply H. easy.
     + intros. apply H. apply H0. easy.
+Qed.
+
+Lemma bientails_split :
+  forall f1 f2, bientails f1 f2 <-> (entails f1 f2 /\ entails f2 f1).
+Proof.
+  unfold bientails, entails.
+  intros f1 f2.
+  split.
+  - intros H_bientails.
+    split.
+    * intros. apply H_bientails. auto.
+    * intros. apply H_bientails. auto.
+  - intros [H_entails_lr H_entails_rl] *.
+    split; auto.
 Qed.
 
 Definition flow_res (f:flow) (v:val) : Prop :=
