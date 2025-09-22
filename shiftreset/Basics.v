@@ -288,22 +288,21 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> nat -> flow -> P
       satisfies s1 s2 hr h2 R n f) ->
     satisfies s1 s2 h1 h2 R n (req H f)
 
-  | s_ens : forall s1 Q h1 h2 R,
+  | s_ens : forall s1 Q h1 h2 R n,
     (exists v h3,
       R = norm v /\
       Q v h3 /\
       h2 = Fmap.union h1 h3 /\
       Fmap.disjoint h1 h3) ->
-    satisfies s1 s1 h1 h2 R O (ens Q)
+    satisfies s1 s1 h1 h2 R n (ens Q)
 
   | s_bind : forall s3 h3 v s1 s2 f1 (f2:val->flow) h1 h2 R n,
     satisfies s1 s3 h1 h3 (norm v) O f1 ->
     satisfies s3 s2 h3 h2 R n (f2 v) ->
     satisfies s1 s2 h1 h2 R n (bind f1 f2)
 
-  | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow) n
-    (H: exists b,
-      satisfies s1 s2 h1 h2 R n (f b)) :
+  | s_fex s1 s2 h1 h2 R (A:Type) (f:A->flow) n b :
+    satisfies s1 s2 h1 h2 R n (f b) ->
     satisfies s1 s2 h1 h2 R n (@fex A f)
 
   | s_fall s1 s2 h1 h2 R (A:Type) (f:A->flow) n
@@ -314,13 +313,14 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> nat -> flow -> P
   | s_unk : forall s1 s2 h1 h2 R xf uf a n,
     Fmap.read s1 xf = uf ->
     satisfies s1 s2 h1 h2 R n (uf a) ->
-    satisfies s1 s2 h1 h2 R n (unk xf a)
+    satisfies s1 s2 h1 h2 R n (unk xf a) (* guarded here *)
 
+(*
   | s_intersect s1 s2 h1 h2 R f1 f2 n
     (H1: satisfies s1 s2 h1 h2 R n f1)
     (H2: satisfies s1 s2 h1 h2 R n f2) :
     satisfies s1 s2 h1 h2 R n (intersect f1 f2)
-
+*)
   | s_disj_l s1 s2 h1 h2 R f1 f2 n
     (H: satisfies s1 s2 h1 h2 R n f1) :
     satisfies s1 s2 h1 h2 R n (disj f1 f2)
@@ -331,12 +331,11 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> nat -> flow -> P
 
     (** The new rules for shift/reset are as follows. *)
 
-  | s_shc : forall s1 h1 fb fk k,
+  | s_shc : forall s1 h1 fb fk k n,
     ~ Fmap.indom s1 k ->
     satisfies s1 s1 h1 h1
       (* (shft x shb v (fun r1 => rs (ens (fun r => \[r = v])) r1)) *)
-      (shft k fb fk) O
-      (shc k fb fk)
+      (shft k fb fk) n (shc k fb fk)
 
     (** A [sh] on its own reduces to a [shft] containing an identity continuation. *)
 
@@ -356,9 +355,11 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> nat -> flow -> P
       n (bind f1 f2)
 
     (** This rule extends the continuation in a [shft] on the left side of a [seq]. Notably, it moves whatever comes next #<i>under the reset</i>#, preserving shift-freedom by constructon. *)
+  | s_rs_O : forall s1 s2 h1 h2 R f,
+    satisfies s1 s2 h1 h2 R O (rs f)
 
   | s_rs_sh : forall k s1 s2 fr h1 h2 rf s3 h3 fb fk n,
-    satisfies s1 s3 h1 h3 (shft k fb fk) O fr ->
+    satisfies s1 s3 h1 h3 (shft k fb fk) (S n) fr ->
     satisfies (Fmap.update s3 k (fun a => rs (fk a))) s2
       h3 h2 rf n (rs fb) ->
     satisfies s1 s2 h1 h2 rf (S n) (rs fr)
@@ -367,9 +368,9 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> nat -> flow -> P
     (** The two resets in the semantics are accounted for: one is around the shift body, and one is already the topmost form in the continuation. *)
     (** Note: because staged formulae are turned into values (via [shft] and being added to the [senv]), rewriting can no longer be done to weaken them. Environment entailment was an attempt at solving this problem; the Proper instances might have to be tweaked to allow rewriting too. Another possible solution is a syntactic entailment relation in the relevant rules to allow weakening. *)
 
-  | s_rs_val : forall s1 s2 h1 h2 v f,
-    satisfies s1 s2 h1 h2 (norm v) O f ->
-    satisfies s1 s2 h1 h2 (norm v) O (rs f)
+  | s_rs_val : forall s1 s2 h1 h2 v f n,
+    satisfies s1 s2 h1 h2 (norm v) n f ->
+    satisfies s1 s2 h1 h2 (norm v) n (rs f)
 
   | s_defun s1 s2 h1 x uf n :
     ~ Fmap.indom s1 x ->
@@ -379,8 +380,40 @@ Inductive satisfies : senv -> senv -> heap -> heap -> result -> nat -> flow -> P
   | s_discard s1 s2 h (f:var) n :
     s2 = Fmap.remove s1 f ->
     satisfies s1 s2 h h (norm vunit) n (discard f)
-
   .
+
+Lemma satisfies_mono :
+  forall s1 s2 h1 h2 (r : result) (n : nat) f,
+    satisfies s1 s2 h1 h2 r n f ->
+    forall m : nat,
+      (m <= n)%nat ->
+      satisfies s1 s2 h1 h2 r m f.
+Proof.
+  intros s1 s2 h1 h2 r n f H_satisfies.
+  induction H_satisfies; intros m Hm.
+  - applys s_req. eauto.
+  - applys s_ens. eauto.
+  - applys s_bind; eauto.
+  - applys s_fex. eauto.
+  - applys s_fall. eauto.
+  - applys s_unk; eauto.
+  - applys s_disj_l. eauto.
+  - applys s_disj_r. eauto.
+  - applys s_shc. eauto.
+  - applys s_bind_sh. eauto.
+  - rewrite -> Nat.le_0_r in Hm.
+    rewrite -> Hm.
+    applys s_rs_O.
+  - destruct m as [| m'].
+    { applys s_rs_O. }
+    applys s_rs_sh.
+    + eauto.
+    + rewrite <- Nat.succ_le_mono in Hm.
+      eauto.
+  - applys s_rs_val. eauto.
+  - applys s_defun; eauto.
+  - applys s_discard. eauto.
+Qed.
 
 Notation "s1 ',' s2 ','  h1 ','  h2 ','  r ','  n  '|=' f" :=
   (satisfies s1 s2 h1 h2 r n f) (at level 30, only printing).
@@ -550,7 +583,6 @@ Proof.
       unfold entails in H_entails.
       exists fb, fk.
       splits.
-
       + auto.
       + apply IH; auto.
         unfold entails. auto.

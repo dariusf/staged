@@ -146,15 +146,18 @@ Proof.
   assumption.
 Qed.
 
+(*
 Lemma sf_rs_val : forall f,
   shift_free f ->
   shift_free (rs f).
 Proof.
   unfold shift_free, not; intros.
-  inverts H0 as H0. destr H0.
+  inverts H0 as H0; auto. destr H0.
   applys~ H H0.
 Qed.
+*)
 
+(*
 Lemma sf_rs : forall f,
   shift_free (rs f).
 Proof.
@@ -176,6 +179,7 @@ Proof.
   intros.
   constructor. apply* sf_rs.
 Qed.
+*)
 
 Lemma sf_seq : forall f1 f2,
   shift_free f1 ->
@@ -249,8 +253,7 @@ Lemma sf_fex : forall A (p:A->flow),
 Proof.
   unfold shift_free, not. intros.
   inverts H0 as H0. destr H0.
-  eapply H.
-  exact H1.
+  eauto.
 Qed.
 
 Lemma sf_fall : forall A (p:A->flow) b,
@@ -309,7 +312,7 @@ Create HintDb staged_shiftfree.
 Global Hint Resolve
   sf_ens sf_ens_ sf_defun sf_discard
   sf_seq sf_bind sf_disj sf_empty
-  sf_req_pure sf_fex sf_fall sf_rs
+  sf_req_pure sf_fex sf_fall (*sf_rs*)
   (* sf_rs_val *)
   : staged_shiftfree.
 
@@ -326,8 +329,8 @@ Ltac no_shift :=
     false sf_ens H
   | H: satisfies _ _ _ _ (shft _ _ _) _ (ens_ _) |- _ =>
     unfold ens_ in H; false sf_ens H
-  | H: satisfies _ _ _ _ (shft _ _ _) _ (rs _ _) |- _ =>
-    false sf_rs H
+  (*| H: satisfies _ _ _ _ (shft _ _ _) _ (rs _ _) |- _ =>
+    false sf_rs H*)
   | H: satisfies _ _ _ _ (shft _ _ _) _ (defun _ _) |- _ =>
     false sf_defun H
   | H: satisfies _ _ _ _ (shft _ _ _) _ (discard _) |- _ =>

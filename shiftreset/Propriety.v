@@ -475,20 +475,31 @@ Section Propriety.
 
   #[global]
   Instance Proper_rs_gentails : forall n,
-    Proper (gentails n ====> (gentails n)) rs.
+    Proper (gentails n ====> gentails n) rs.
   Proof.
     unfold Proper, respectful.
-    intros n. induction n as [n IH] using lt_wf_ind.
-    destruct n; intros.
-    {
-      inverts H.
-      applys* ge_base. intros.
-      inverts H.
-      applys* s_rs_val.
-    }
-    {
-      admit.
-    }
+    intros n x y H_gentails.
+    induction n as [n IH] using lt_wf_ind.
+    destruct n as [| n'].
+    - applys* ge_base.
+      introv _.
+      applys* s_rs_O.
+    - inverts H_gentails as H_gentails_mono H_gentails_succ.
+      applys ge_shift.
+      + intros m Hm.
+        assert (H_gentails' := H_gentails_mono m Hm).
+        rewrite* <- Nat.lt_succ_r in Hm.
+      + introv Hx.
+        inverts Hx as Hx H_senv.
+        specializes H_gentails_succ Hx.
+        destruct H_gentails_succ as (fb' & fk' & Hy & H_fb & H_fk).
+        exists fb, fk.
+        splits.
+        * applys s_rs_sh.
+          { exact Hy. }
+          { admit. (* need to talk about the env! *) }
+        * reflexivity.
+        * reflexivity.
   Admitted.
 
   Example rewrite : forall n,
