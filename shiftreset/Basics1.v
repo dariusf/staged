@@ -210,12 +210,26 @@ Check le_dec.
 Check eq_nat_decide.
 (* Check eqb_dec. *)
 
-Definition approx_flow (k j:nat) : j<k -> iflow k -> iflow j.
+Definition approx_flow (k j : nat) : j<k -> iflow k -> iflow j.
 (* := *)
 Proof.
-  intros H f.
-  (* keep going to the fst compnent, util j = k*)
-Admitted.
+  intros H_lt f.
+  induction k as [| k' IHk'].
+  - exfalso.
+    exact (Nat.nlt_0_r j H_lt).
+  - unfold "<" in H_lt.
+    destruct (le_lt_eq_dec _ _ H_lt) as [H_cmp | H_cmp].
+    + rewrite <- Nat.succ_lt_mono in H_cmp.
+      exact (IHk' H_cmp (fst f)).
+    + injection H_cmp as H_cmp.
+      rewrite <- H_cmp in f.
+      exact (fst f).
+Defined.
+
+(*
+Search (0 < _).
+Compute (approx_flow Nat.lt_1_2 (ens (fun _ => \[]) 2)).
+*)
 
 (* fun f1 =>
 if eq_nat_decide k j then
