@@ -55,9 +55,9 @@ Inductive satisfies : nat -> store -> store -> result -> term -> Prop :=
 | s_bind_bubble : forall n t1 t2 s1 s2 b k,
     satisfies n s1 s2 (RBubble b k) t1 ->
     satisfies (S n) s1 s2 (RBubble b (fun v => TBind (k v) t2)) (TBind t1 t2)
-| s_apply : forall n x v s1 s2 r t,
-    store_lookup x s1 = Some t ->
-    satisfies n s1 s2 r (t v) ->
+| s_apply : forall n x v s1 s2 r f,
+    store_lookup x s1 = Some f ->
+    satisfies n s1 s2 r (f v) ->
     satisfies (S n) s1 s2 r (TApply (VFun x) v)
 | s_shift : forall n t s,
     satisfies (S n) s s (RBubble t (fun v => TEnsure (fun r => r = v))) (TShift t)
@@ -69,6 +69,9 @@ Inductive satisfies : nat -> store -> store -> result -> term -> Prop :=
     store_lookup x s3 = None ->
     satisfies n ((x, fun v' => TReset (k v')) :: s3) s2 (RVal v) (TReset (f (VFun x))) ->
     satisfies (S n) s1 s2 (RVal v) (TReset t).
+
+Definition satisfies_ex (s1 s2 : store) (r : result) (t : term) : Prop :=
+  exists n, satisfies n s1 s2 r t.
 
 (*
 Lemma satisfies_mono_aux :
@@ -136,35 +139,88 @@ Proof.
 Qed.
 *)
 
-Definition entails_store_aux (rec : term -> term -> Prop) (s s' : store) : Prop :=
+(*
+Definition entails_store_aux
+  (k : nat)
+  (rec : term -> term -> Prop) (s s' : store) : Prop :=
   forall x f,
     store_lookup x s = Some f ->
     exists f',
       store_lookup x s' = Some f' /\
       forall v, rec (f v) (f' v).
-
-Definition entails_result_aux (rec : term -> term -> Prop) (r r' : result) : Prop :=
-  (exists v, r = RVal v /\ r' = RVal v) \/
-  (exists b b' k k',
-      r = RBubble b k /\
-      r' = RBubble b' k' /\
-      (forall v, rec (b v) (b' v)) /\
-      (forall v, rec (k v) (k' v))).
-
-(*
-Fixpoint entails (n : nat) (t t' : term) : Prop :=
-  match n with
-  | O => True
-  | S n' =>
-      entails n' t t' /\
-      (forall s1 s1' s2 s2' r r',
-        entails_store_aux (entails n') s1 s1' ->
-        entails_store_aux (entails n') s2 s2' ->
-        entails_result_aux (entails n') r r' ->
-        satisfies n s1 s2 r t ->
-        satisfies n s1' s2' r' t')
-  end.
 *)
+
+Axiom todo : forall {A}, A.
+
+Definition well_formed (s1 s1' s2 : store) :=
+  forall x f,
+    store_lookup x s1 = None ->
+    store_lookup x s1' = Some f ->
+    store_lookup x s2 = None.
+
+Definition entails_result_aux
+  (k : nat)
+  (R : forall i, i <= k -> (val -> term) -> (val -> term) -> Prop)
+  (r1 r2 : result) : Prop :=
+  match r1, r2 with
+  | RVal v1, RVal v2 => v1 = v2
+  | RBubble f1 k1, RBubble f2 k2 =>
+      forall (j : nat)
+             (H_le : j <= k),
+        R j H_le f1 f2 /\ R j H_le k1 k2
+  | _, _ => False
+  end.
+
+Definition entails_store_aux
+  (k : nat)
+  (R : forall i, i <= k -> (val -> term) -> (val -> term) -> Prop)
+  (s1 s2 : store) : Prop :=
+  forall x f1,
+    store_lookup x s1 = Some f1 ->
+    exists f2,
+      store_lookup x s2 = Some f2 /\
+      forall (j : nat) (H_le : j <= k), R j H_le f1 f2.
+
+Definition entails_term_aux
+  (k : nat)
+  (R : forall i, i <= k -> (val -> term) -> (val -> term) -> Prop)
+  (t1 t2 : term) : Prop :=
+  forall (j : nat)
+         (H_le : j <= k)
+         (s1 s1' : store)
+         (r1 : result),
+    satisfies j s1 s1' r1 t1 ->
+    forall (s2 : store),
+      well_formed s1 s1' s2 ->
+      entails_store_aux j (fun i H_le' => R i (Nat.le_trans _ _ _ H_le' H_le)) s1 s2 ->
+      exists (s2' : store)
+             (r2 : result),
+        satisfies_ex s2 s2' r2 t2 /\
+        entails_store_aux (k - j) (fun i H_le' => R i (Nat.le_trans _ _ _ H_le' (Nat.le_sub_l _ _))) s1' s2' /\
+        entails_result_aux (k - j) (fun i H_le' => R i (Nat.le_trans _ _ _ H_le' (Nat.le_sub_l _ _))) r1 r2.
+
+Definition entails_function_aux
+  (k : nat)
+  (R : forall i, i < k -> (val -> term) -> (val -> term) -> Prop)
+  (f1 f2 : val -> term) : Prop :=
+  forall (j : nat)
+         (H_lt : j < k)
+         (v : val),
+    entails_term_aux j (fun i H_le => R i (Nat.le_lt_trans i j k H_le H_lt)) (f1 v) (f2 v).
+
+Definition entails_function (k : nat) : (val -> term) -> (val -> term) -> Prop :=
+  lt_wf_rect k _ entails_function_aux.
+
+Definition entails_store (k : nat) : store -> store -> Prop :=
+  entails_store_aux k (fun i _ => entails_function i).
+
+Definition entails_result (k : nat) : result -> result -> Prop :=
+  entails_result_aux k (fun i _ => entails_function i).
+
+Definition entails_term (k : nat) : term -> term -> Prop :=
+  entails_term_aux k (fun i _ => entails_function i).
+
+Definition entails := entails_term.
 
 Definition substore (s1 s2 : store) :=
   forall x f, store_lookup x s1 = Some f -> store_lookup x s2 = Some f.
@@ -188,12 +244,7 @@ Fixpoint store_diff (s1 s2 : store) :=
 Definition store_union (s1 s2 : store) :=
   s1 ++ s2.
 
-Definition well_formed (s1 s2 s1' : store) :=
-  forall x f,
-    store_lookup x s1 = None ->
-    store_lookup x s2 = Some f ->
-    store_lookup x s1' = None.
-
+(*
 Fixpoint entails (n : nat) (t t' : term) : Prop :=
   match n with
   | O => True
@@ -344,6 +395,36 @@ Lemma store_union_store_diff_trans :
 Proof.
 Admitted.
 
+Goal exists t, (fun n => entails_store (S n)) = t.
+Proof.
+  eexists.
+  unfold entails_store.
+  unfold entails_store_aux.
+  simpl.
+Abort.
+
+(*
+  H_lookup : store_lookup x s1 = Some f
+  H_sat_f : satisfies n' s1 s2 r (f v)
+  f' : val -> term
+  H_lookup' : store_lookup x s1' = Some f'
+  H_entails : forall v : val, entails n' (f v) (f' v)
+  ============================
+  exists (s2' : store) (r' : result),
+    entails_store_aux (entails n') s2 s2' /\
+    entails_result_aux (entails n') r r' /\
+    satisfies (S n') s1' s2' r' (TApply (VFun x) v)
+
+Lemma satisfies_entails :
+    forall n,
+      entails n t t' ->
+      satisfies n s1 s2 r t ->
+      exists s2' r',
+        
+        satisfies n s1' s2' r' t'
+*)
+
+(*
 Lemma entails_refl_obligation1 :
   forall n s1 s2 s1' r t,
     entails_store_aux (entails n) s1 s1' ->
@@ -375,10 +456,14 @@ Proof.
     eapply s_bind_val; eauto.
   - apply entails_store_mono in H_s1'.
     eapply s_bind_bubble. auto.
-  - unfold entails_store_aux in H_s1'.
-    specialize (H_s1' _ _ H) as (f' & H_lookup & H_entails).
+  - destruct (H_s1' _ _ H) as (f' & H_lookup & H_entails).
     eapply s_apply.
     { exact H_lookup. }
+    { apply entails_store_mono in H_s1'.
+      specialize (IHH_sat _ H_wf H_s1').
+      simpl in H_entails.
+*)
+*)
 
 Instance entails_refl : forall n, Reflexive (entails n).
 Proof.
@@ -389,7 +474,33 @@ Proof.
   simpl. split.
   { auto. }
   intros s1 s2 r s1' H_sat H_s1' H_wf.
-  exists (store_union (store_diff s2 s1) s1'), r.
+  inverts H_sat as.
+  - intros HQ.
+    exists s1', (RVal v).
+    splits.
+    + exact H_s1'.
+    + apply entails_result_RVal.
+    + eapply s_ensure. exact HQ.
+  - admit. (* proved before *)
+  - admit. (* proved before *)
+  - admit. (* proved before *)
+  - intros f H_lookup H_sat_f.
+    destruct (H_s1' _ _ H_lookup) as (f' & H_lookup' & H_entails).
+    destruct n' as [| n''].
+    { inverts H_sat_f. }
+    specialize (H_entails v) as (H_entails_mono & H_entails_succ).
+    specialize (H_entails_succ _ _ _ _ H_sat_f (entails_store_mono _ _ _ H_s1') H_wf) as (s2' & r' & H_s2' & H_r' & H_sat_f').
+    exists s2', r'. splits.
+    + unfold entails_store_aux.
+      intros x0 f0 H_lookup_f0.
+      destruct (H_s2' _ _ H_lookup_f0) as (f0' & H_lookup_f0' & H_entails').
+      exists f0'. splits.
+      * exact H_lookup_f0'.
+      * clear H_s1' H_wf H_lookup H_sat_f s1 H_lookup' H_entails_mono H_entails_succ.
+    + admit.
+    + eapply s_apply; eauto.
+
+
   splits.
     + unfold entails_store_aux in H_s1' |- *.
       intros x f H_lookup.
