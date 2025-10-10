@@ -4,7 +4,7 @@ From Stdlib Require Morphisms Program.Basics.
 
 From Staged Require Export HeapF.
 From Staged Require Export LibFmap.
-From Staged Require Export ExtraTactics.
+From Staged Require Export EvenMoreTactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
@@ -394,17 +394,6 @@ Proof.
   applys* s_shc.
 Qed.
 
-(* For when the goal can be dispatched by brute force.
-  jauto handles these but will not leave unsolved goals. *)
-Ltac zap :=
-  lazymatch goal with
-  | H: exists _, _ |- _ => destr H; zap
-  | H: _ /\ _ |- _ => destr H; zap
-  | |- _ /\ _ => splits; zap
-  | |- exists _, _ => eexists; zap
-  | _ => jauto
-  end.
-
 (* Dispatch goals involving the heaps that come out of ens once
   we have to reason about semantics *)
 Ltac heaps :=
@@ -415,6 +404,7 @@ Ltac heaps :=
   | H: (_ ~~> _) _ |- _ => hinv H; heaps
   | H: \[_] _ |- _ => hinv H; heaps
   | H: (_ \* _) _ |- _ => hinv H; heaps
+  | H: hexists (_) _ |- _ => hinv H; heaps
   | |- (_ ~~> _) _ => hintro; heaps
   | |- (_ \* _) _ => hintro; heaps
   | |- \[_] _ => hintro; heaps

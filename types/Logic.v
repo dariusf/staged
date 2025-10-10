@@ -375,7 +375,7 @@ Lemma hsingle_has_type_same_loc: forall l v,
   l~~>v \* has_type l v ==> \[False].
 Proof.
   (* proof can be similar to this lemma *)
-  Check hstar_hsingle_same_loc.
+  (* Check hstar_hsingle_same_loc. *)
 Abort.
 
 Lemma hsingle_duplicable: forall l v,

@@ -3,7 +3,7 @@ From SLF Require Export LibString LibCore.
 From SLF Require Export LibSepTLCbuffer.
 From SLF Require LibSepSimpl.
 
-From Staged Require Import LibFmap.
+From Staged Require Import LibFmap ExtraTactics.
 
 Module Type Params.
 
@@ -773,12 +773,14 @@ Ltac hinv H :=
   | (_ \* _) _ => apply hstar_inv in H as (?&?&?&?&?&?)
   | (\[_] \* _) _ => rewrite hstar_hpure_l
   | (_ \* \[_]) _ => rewrite hstar_hpure_r
+  | (hexists _) _ => apply hexists_inv in H
   end.
 
 Ltac hintro :=
   lazymatch goal with
   | |- \[] _ => apply hempty_intro
   | |- \[_] _ => apply hpure_intro
+  | |- (_ ~~> _) _ => apply hsingle_intro
   | |- (_ \* _) (_ \u _) => apply hstar_intro
   | |- (\[_] \* _) _ => rewrite hstar_hpure_l
   | |- (_ \* \[_]) _ => rewrite hstar_hpure_r

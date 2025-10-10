@@ -7,7 +7,7 @@ Set Warnings "-notation-incompatible-prefix".
 From Staged Require Export HeapF.
 Set Warnings "notation-incompatible-prefix".
 From Staged Require Export LibFmap.
-From Staged Require Export ExtraTactics.
+From Staged Require Export EvenMoreTactics.
 
 Local Open Scope string_scope.
 (* Local Open Scope nat_scope. *)
@@ -64,14 +64,14 @@ Fixpoint subst (y:var) (w:val) (e:expr) : expr :=
   let if_y_eq x t1 t2 := if var_eq x y then t1 else t2 in
   match e with
   | pval v => pval v
-  | padd x y => padd x y
+  | padd x y => padd (aux x) (aux y)
   | pminus x y => pminus x y
   | pfst x => pfst x
   | psnd x => psnd x
   | pvar x => if_y_eq x (pval w) e
   | passert b => passert b
   | pderef r => pderef r
-  | passign x y => passign x y
+  | passign x y => passign (aux x) (aux y)
   | pref v => pref v
   | pfun x t1 => pfun x (if_y_eq x t1 (aux t1))
   | pfix f x t1 => pfix f x (if_y_eq f t1 (if_y_eq x t1 (aux t1)))
@@ -865,6 +865,26 @@ Qed.
 
 (** * Some tactics *)
 
+(* Dispatch goals involving the heaps that come out of ens once
+  we have to reason about semantics *)
+Ltac heaps :=
+  lazymatch goal with
+  | H: exists _, _ |- _ => destr H; heaps
+  | H: _ /\ _ |- _ => destr H; heaps
+  | H: norm _ = norm _ |- _ => injects H; heaps
+  | H: (_ ~~> _) _ |- _ => hinv H; heaps
+  | H: \[_] _ |- _ => hinv H; heaps
+  | H: (_ \* _) _ |- _ => hinv H; heaps
+  | H: hexists (_) _ |- _ => hinv H; heaps
+  | |- (_ ~~> _) _ => hintro; heaps
+  | |- (_ \* _) _ => hintro; heaps
+  | |- \[_] _ => hintro; heaps
+  (* as late as we can *)
+  | |- _ /\ _ => splits; heaps
+  | |- exists _, _ => eexists; heaps
+  | _ => subst; rew_fmap *
+  end.
+
 Ltac fdestr_rec H :=
   match type of H with
   | satisfies _ _ _ _ (fex (fun _ => _)) => inverts H as H; destr H
@@ -882,6 +902,19 @@ Ltac fdestr_pat H pat :=
 (** Use these on product-like things like sequencing, existentials, and ens *)
 Tactic Notation "fdestr" constr(H) := fdestr_rec H.
 Tactic Notation "fdestr" constr(H) "as" simple_intropattern(pat) := fdestr_pat H pat.
+
+Ltac finv0 H :=
+  match type of H with
+  | satisfies _ _ _ _ empty =>
+    let v := fresh "v" in
+    let hp := fresh "hp" in
+    let H1 := fresh in
+    let H2 := fresh in
+    let H3 := fresh in
+    let H4 := fresh in
+    inverts H as (v&hp&H1&H2&H3&H4); hinv H2
+    (* TODO need to name hinv *)
+  end.
 
 Ltac finv H :=
   match type of H with
@@ -3087,15 +3120,17 @@ Module HistoryTriples.
 
   (** The (arbitrary) result of the history does not matter, enabling this rewriting. *)
   Lemma hist_pre_result : forall fh f e,
-    hist_triple (fh;; empty) e f ->
+    hist_triple (fh;; empty) e f <->
     hist_triple fh e f.
   Proof.
     unfold hist_triple.
-    introv H. intros.
-    eapply H.
-    - applys s_seq. eassumption. apply empty_intro.
-    - eassumption.
-    - assumption.
+    iff H; intros.
+    { eapply H.
+      - applys s_seq. eassumption. apply empty_intro.
+      - eassumption.
+      - assumption. }
+    { inverts H0.
+      inverts H10. destr H7. hinv H3. hinv H3. hinv H5. subst. rew_fmap *. }
   Qed.
 
   (** History triples which only append to history can be derived directly from the history-frame rule. *)
@@ -3106,8 +3141,7 @@ Module HistoryTriples.
     intros.
     apply hist_sem in H.
     lets H3: hist_frame fh H. clear H.
-    apply hist_pre_result in H3.
-    exact H3.
+    rewrite* hist_pre_result in H3.
   Qed.
 
   (** Rules for program constructs *)
