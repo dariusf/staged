@@ -28,7 +28,7 @@ jobs:
 
       - uses: coq-community/docker-coq-action@v1
         with:
-          custom_image: "rocq/rocq-prover:9.0.0-ocaml-4.14.2-flambda"
+          custom_image: "rocq/rocq-prover:9.0.1-ocaml-4.14.2-flambda"
 
           before_install: |
             startGroup "Workaround permission issue"
