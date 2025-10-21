@@ -23,6 +23,31 @@ Inductive hpred :=
   | hpts_to (p : loc) (v : val)
   | hemp.
 
+Open Scope list_scope.
+Fixpoint hprop_of_hpred pred :=
+  match pred with
+  | hsplit lhs rhs => (hprop_of_hpred lhs) \* (hprop_of_hpred rhs)
+  | hpts_to p v => p ~~> v
+  | hemp => \[]
+  end.
+
+Fixpoint conjuncts_of_hpred hp :=
+  match hp with
+  | hpts_to p v => cons (p, v) nil
+  | hsplit r1 r2 => conjuncts_of_hpred r1 ++ conjuncts_of_hpred r2
+  | hemp => nil
+ end.
+
+Definition hpred_biab (antiframe h1 h2 frame : hpred) (obligations : Prop) : Prop :=
+  obligations -> (hprop_of_hpred antiframe \* hprop_of_hpred h1 ==> hprop_of_hpred h2 \* hprop_of_hpred frame).
+
+Definition hpred_solve_biab (h1 : hpred) (h2 : hpred)
+  : exists antiframe_p antiframe_h frame_h,
+    hpred_biab antiframe_h h1 h2 frame_h antiframe_p.
+Proof. Admitted.
+     
+
+
 (* because a lot of existing lemmas and tactics are written in terms of the shallowly-embedded
   [ens] though, it's useful to reflect the common structure of [hprop]s into our representation *)
 
@@ -62,13 +87,6 @@ Instance Proper_eq_impl_eq_eq_postcond :
 Proof.
 Admitted.
 
-Fixpoint hprop_of_hpred pred :=
-  match pred with
-  | hsplit lhs rhs => (hprop_of_hpred lhs) \* (hprop_of_hpred rhs)
-  | hpts_to p v => p ~~> v
-  | hemp => \[]
-  end.
-
 Definition ens_state P h v := ens (fun res => \[res = v] \* \[P] \* (hprop_of_hpred h)).
 Definition ens_state_ P h := ens_state P h vunit.
 Definition ens_pure P := ens_state_ P hemp.
@@ -82,6 +100,13 @@ Lemma ens_state_void_is_ens_void : forall h P,
 Proof.
   intros. unfold ens_state_, ens_state, ens_. reflexivity.
 Qed.
+
+Lemma ens_state_is_ens : forall h P v,
+  bientails (ens_state P h v) (ens (fun r => \[r = v] \* \[P] \* (hprop_of_hpred h))).
+Proof.
+  intros. unfold ens_state. reflexivity.
+Qed.
+
 (* Rewrites all [ens_state]s present in the goal back to an [ens]. *)
   (* TODO [rew_state_to_hprop in H] *)
 Ltac rew_state_to_hprop := unfold ens_pure, ens_heap, ens_ret, ens_state, ens_state_, hprop_of_hpred; fold hprop_of_hpred.
@@ -183,13 +208,47 @@ Ltac fsolve_post_value :=
       ]
   end.
 
-(* Solves a goal of the form [postcond_reflect _ _ Q]. This is most useful when
-  the value, pure and heap states are evars, allowing to automatically derive the arguments to norm_split_ens.
-  With [rewrite norm_split_ens], this tactic forms a sort of inverse to [rew_state_to_hprop]. *)
-Ltac fsolve_post_reflect :=
-  match goal with
-  | [ |- postcond_reflect ?v ?P ?H ?Q ] => idtac v P H Q
-  end.
+Hint Rewrite and_True_r_eq and_True_l_eq : rew_simpl_pure.
+
+Ltac frewrite_ens_to_ens_state_one :=
+  setoid_rewrite norm_split_ens at 1;
+  try match goal with
+  | [ |- postcond_reflect _ _ _ _ ] => 
+      eapply postc_refl_val;
+      [ fsolve_post_value | fsolve_prec_reflect ]
+  end;
+  autorewrite with rew_simpl_pure.
+
+(* A hack to force Coq to only rewrite the right-hand side of an entailment. *)
+Definition entailsR a b := entails b a.
+
+Lemma entailsR_is_entails : forall a b, entailsR a b = entails b a.
+Proof. reflexivity. Qed.
+
+(* Hide the existing Proper instance for entails, since that lets Coq rewrite the
+  left-hand side of an entailsR *)
+Typeclasses Opaque entailsR.
+
+Instance Proper_entails_entailsR :
+  Proper (flip entails ====> eq ====> impl) entailsR.
+Proof.
+Admitted.
+
+Instance Proper_bientails_entailsR :
+  Proper (bientails ====> eq ====> iff) entailsR.
+Proof.
+Admitted.
+
+Ltac with_entailsR_base tac :=
+  rewrite <- entailsR_is_entails;
+  tac;
+  rewrite entailsR_is_entails.
+
+Tactic Notation "with_entailsR" tactic(tac) := with_entailsR_base ltac:(tac).
+
+Ltac rew_hprop_to_state :=
+  (with_entailsR (repeat frewrite_ens_to_ens_state_one));
+  (repeat frewrite_ens_to_ens_state_one).
 
 Lemma norm_seq_ens_ret_ens_pure : 
   forall P v, entails (ens_ret v ;; ens_pure P) (ens_pure P ;; ens_ret v).
@@ -250,8 +309,7 @@ Class Into (A : Type) (B : Type)  := {
   into : A -> B
 }.
 
-
-Instance Into_val_val : Into loc val := {
+Instance Into_val_val : Into val val := {
   into := id
 }.
 
@@ -276,14 +334,14 @@ Notation "'let\'' x '=' f1 'in' f2" :=
 #[global]
 Instance Proper_bind_t_entails_l : 
   forall A I,
-  Proper (entails ====> eq ====> entails) (@bind_t A I).
+  Proper (entails ====> (Morphisms.pointwise_relation _ entails) ====> entails) (@bind_t A I).
 Proof.
 Admitted.
 
 #[global]
-Instance Proper_bind_loc_body_entails_l :
+Instance Proper_bind_t_bientails_l : 
   forall A I,
-  Proper (eq ====> (Morphisms.pointwise_relation _ entails) ====> entails) (@bind_t A I).
+  Proper (bientails ====> (Morphisms.pointwise_relation _ bientails) ====> bientails) (@bind_t A I).
 Proof.
 Admitted.
 
@@ -560,23 +618,13 @@ Proof.
   xsimpl; auto.
 Qed.
 
-(* proving them again, but using ens_state *)
-
-(* should there be a Proper instance linking ens with [==>]? *)
-(*Theorem norms_bind_val : forall fk v, entails (bind (ens_state (Ps v (St True hemp))) fk) (fk v).*)
-(*Proof.*)
-(*  intros. rew_state_to_hprop.*)
-(*  unfold ens_state. autorewrite with rew_heap.*)
-(*  pose proof (entl_ens_single (fun res => \[res = v]) (fun res => \[res = v] \* \[True])) as hack_to_avoid_relying_on_functional_extensionality.*)
-(*  rewrite hack_to_avoid_relying_on_functional_extensionality by (xsimpl; auto).*)
-(*  apply norm_bind_val.*)
-(*Qed.*)
-
 (** TACTICS **)
 (* there is also a base case for req \[True], but
    here there is no way to represent a trailing [req] *)
 
 Ltac fempty := apply ent_ens_empty.
+
+Ltac fsolve_pure := auto.
 
 Ltac fsingle_ens :=
   (* operates on goals of the form 
@@ -589,7 +637,23 @@ Ltac fsingle_ens :=
      - use some magic to discharge the pure constraints
      look into: smtcoq, coqhammer, crush from CPDT
    *)
-  apply entl_ens_single; xsimpl; auto.
+  rewrite ens_state_is_ens; apply entl_ens_single; fsolve_pure.
+
+(* this should maybe be packaged with the hpred? *)
+(* maybe hpred should just be an Fmap? *)
+Definition distinct_locations : hpred -> Prop.
+Proof. Admitted.
+
+(* TODO *)
+
+Lemma entl_match_ens :
+  (* suppose biab h1 h2 returns antiframe (ap, ah) and frame (fp, fh): *)
+  forall P1 P2 h1 h2 ah ap fh fp f v,
+  (P1 /\ ap /\ distinct_locations h1 -> P2 /\ fp /\ distinct_locations h2) ->
+  hpred_biab ah h1 h2 fh ap ->
+  entails (req_state True ah f) (req_state True fh f) ->
+  entails (ens_state P1 h1 v ;; f) (ens_state P2 h2 v ;; f).
+
 
 Ltac fmatch_ens :=
   (* operates on goals of the form
@@ -600,7 +664,8 @@ Ltac fmatch_ens :=
      - turns goal into
      entails (req (antiframe) lnext) (req (frame) rnext)
    *)
-  idtac "TODO fmatch_ens".
+  eapply entl_match_ens;
+  [
 
 (* TODO: use Ltac2? *)
 
@@ -610,13 +675,23 @@ Ltac fmatch_ens :=
    - one representing heap constraints *)
 
 Check norm_rearrange_ens. 
+
+(* Splitting a single ens_state into ens_pure ens_heap and ret *)
+Lemma norms_split_ens : forall P h v, bientails (ens_state P h v) (ens_state P hemp vunit ;; ens_state True h vunit ;; ens_state True hemp v).
+Proof. Admitted.
+
+Lemma norms_remove_empty_void : forall f, bientails (ens_state True hemp vunit ;; f) f.
+Proof. Admitted.
+
+Lemma norms_remove_empty_ret : forall P h, bientails (ens_state P h vunit ;; ens_state True hemp vunit) (ens_state P h vunit).
+Proof. Admitted.
+
 Ltac fsplit_ens :=
-  (* split up all ensures clauses by applying things like norm_rearrange_ens *)
-  repeat (setoid_rewrite norm_rearrange_ens).
-  (* this isn't enough, it needs to account for cases where they're in a different order/not all present *)
+  setoid_rewrite norms_split_ens;
+  repeat (setoid_rewrite norms_remove_empty_void); repeat (setoid_rewrite norms_remove_empty_ret).
 
 Ltac fapply_one_norm_rule :=
-  idtac "TODO".
+  rewrite norms_bind_t_trivial.
 
 (* before normalizing, heifer first splits all ens into pure and
    heap components. *)
@@ -636,45 +711,31 @@ repeat (freduce_shrs; fnormalize).
   need to decide whether to use entails/entails_under,
    as this decides whether or not [fexists]/[fexists_old] will be used... *)
 
+
+(* this Opaque declaration is needed, otherwise
+   [frewrite_ens_to_ens_state_one] will attempt to rewrite an existing [ens_state] *)
+(* for more fine-grained control over this we may want to look into SSReflect's [lock] *)
+Opaque ens_state.
+
 (* this can be instantly discharged *)
 Example test10 : entails
   (ens (fun r => \[r = 0]))
   (ens (fun r => \[r = 0])).
 Proof.
+  rew_hprop_to_state.
   fsingle_ens.
 Qed.
 
 (* bind normalization *)
 Example test6 : entails
-  (bind (ens (fun r => \[r = 0])) (fun j => ens (fun r => \[r = j])))
+  (bind_t (ens (fun r => \[r = 0])) (fun j => ens (fun r => \[r = j])))
   (ens (fun r => \[r = 0])).
 Proof.
+  rew_hprop_to_state.
+
   fsimpl.
   fsingle_ens.
 Qed.
-
-(* existential handling *)
-Example test9 : entails
-  (bind (ens (fun r => \[r = 0])) (fun j => ens (fun r => \[r = j])))
-  (∃' r, ens (fun res => \[res = r])).
-Proof.
-  fexists 0.
-  fsimpl.
-  fsingle_ens.
-Qed.
-
-(* basic heap manipulation *)
-(*
-  note the use of separating conjunction instead of /\ (though in Heifer this is purely cosmetic)
-
-  also note the [vloc] constructor appearing whenever we need to treat a location
-  as a pure value
-
-  so we'll need to be able to tell if something's a reference during
-  theorem translation; use the type annotations for this?
-
-  also this detail will need to change if ever a shallow embedding of flow return
-  types are used*)
 
 #[global]
 Instance The_exact_Proper_instance_the_test4_proof_needs_to_work_as_intended : forall A,
@@ -702,43 +763,40 @@ Instance Me_when_the_setoid_rewrite_failed_UNDEFINED_EVARS:
 Proof.
 Admitted.
 
+(* existential handling *)
+Example test9 : entails
+  (bind_t (ens (fun r => \[r = 0])) (fun j => ens (fun r => \[r = j])))
+  (∃' r, ens (fun res => \[res = r])).
+Proof.
+  rew_hprop_to_state.
+  fexists 0.
+  fsimpl.
+  fsingle_ens.
+Qed.
 
+(* basic heap manipulation *)
+(*
+  note the use of separating conjunction instead of /\ (though in Heifer this is purely cosmetic)
+
+  also note the [vloc] constructor appearing whenever we need to treat a location
+  as a pure value
+
+  so we'll need to be able to tell if something's a reference during
+  theorem translation; use the type annotations for this?
+
+  also this detail will need to change if ever a shallow embedding of flow return
+  types are used*)
 Example test4 : entails
-  (∃' v56, bind_loc (ens (fun res => v56 ~~> 0 \* \[res = vloc v56])) (fun i => ens (fun res => \[res = vloc i])))
+  (∃' v56, bind_t (ens (fun res => v56 ~~> 0 \* \[res = vloc v56])) (fun i => ens (fun res => \[res = vloc i])))
   (∃' i, ens (fun res => \[res = vloc i] \* i ~~> 0)).
 Proof.
-  (* heifer applies norm_bind_trivial to the state here, 
-     simplifying the LHS under the binder to just ens (res = v56 /\ v56 -> 0) *)
-  (* look into ssreflect's [lock] to set Opaque and Transparent on the fly *)
+  rew_hprop_to_state.
   fsimpl.
-
-  setoid_rewrite norm_split_ens at 1.
-  2: {
-    eapply postc_refl_val. fsolve_post_value.
-    fsolve_prec_reflect.
-  } 
-
-  setoid_rewrite norm_split_ens at 1.
-  2: {
-    eapply postc_refl_val. fsolve_post_value.
-    fsolve_prec_reflect.
-  } 
-
-  setoid_rewrite norm_split_ens at 1.
-  2: {
-    eapply postc_refl_val. fsolve_post_value.
-    fsolve_prec_reflect.
-  } 
-  rewrite !and_True_r_eq.
-  setoid_rewrite norm_seq_ens_pure_true at 1.
-  setoid_rewrite norm_seq_ens_pure_true at 1.
-  setoid_rewrite norm_seq_ens_pure_true at 1.
-
   fdestruct v.
   fexists v.
+  fsimpl.
+  fsingle_ens.
 
-  rewrite ?norm_seq_ens_heap_emp.
-  rewrite ?norm_seq_ens_pure_ens_ret_unit.
 
  (* this should also split the ens r. Q \* \[P r] 
      into the heap and pure parts. what rule does that?
