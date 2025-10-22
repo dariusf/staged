@@ -101,6 +101,12 @@ Proof.
   intros. unfold ens_state_, ens_state, ens_. reflexivity.
 Qed.
 
+Lemma ens_state_vunit_is_ens_state_void : forall h P,
+  bientails (ens_state P h vunit) (ens_state_ P h).
+Proof.
+  unfold ens_state_. reflexivity.
+Qed.
+
 Lemma ens_state_is_ens : forall h P v,
   bientails (ens_state P h v) (ens (fun r => \[r = v] \* \[P] \* (hprop_of_hpred h))).
 Proof.
@@ -109,7 +115,17 @@ Qed.
 
 (* Rewrites all [ens_state]s present in the goal back to an [ens]. *)
   (* TODO [rew_state_to_hprop in H] *)
-Ltac rew_state_to_hprop := unfold ens_pure, ens_heap, ens_ret, ens_state, ens_state_, hprop_of_hpred; fold hprop_of_hpred.
+Ltac rew_state_to_hprop := 
+  unfold ens_pure, ens_heap, ens_ret;
+  rewrite ?ens_state_vunit_is_ens_state_void;
+  rewrite ?ens_state_void_is_ens_void;
+  unfold ens_state, hprop_of_hpred;
+  (* clean up the postconditions *)
+  rewrite <- ?hempty_eq_hpure_true;
+  autorewrite with rew_heap;
+  (*rewrite <- hempty_eq_hpure_true;*)
+  (*repeat (rewrite hstar_hempty_r, hstar_hempty_l);*)
+  fold hprop_of_hpred.
 
 (* now we can write a rewriting lemma *)
 
@@ -127,9 +143,42 @@ Proof.
 Qed.
 
 #[global]
+Instance Proper_pointwise_himpl_ens : Proper (Morphisms.pointwise_relation val himpl ====> entails) ens.
+Proof.
+  unfold Proper, respectful, Morphisms.pointwise_relation, entails. intros.
+  inverts H0.
+  destruct H7 as (v&h3&P&Q&S&T). subst. apply s_ens.
+  eexists. eexists.
+  intuition.
+  apply H.
+  auto.
+Qed.
+
+#[global]
+Instance Proper_hstar_himpl : Proper (himpl ====> himpl ====> himpl) hstar.
+Proof.
+  unfold Proper, respectful, Morphisms.pointwise_relation, flip. intros.
+  apply (@himpl_trans (y \* x0)); xsimpl; auto.
+Qed.
+
+#[global]
 Instance Proper_qimpl_ens : Proper ((@qimpl val) ====> entails) ens.
 Proof.
-Admitted.
+  unfold Proper, respectful, entails. intros * Hqimpl * Hens.
+  inverts Hens. destr H5. subst. constructor. eexists. eexists. intuition. 
+  unfold qimpl, himpl in Hqimpl. auto.
+Qed.
+
+#[global]
+Instance Proper_himpl_ens_void : Proper (himpl ====> entails) ens_.
+Proof.
+  unfold Proper, respectful, entails. intros * Hhimpl * Hens.
+  inverts Hens. destr H5. hinv H0. hinv H0. subst. constructor. eexists. eexists. intuition.
+  hintro.
+  - apply hpure_intro. auto.
+  - apply Hhimpl. auto.
+  - auto.
+Qed.
 
 Lemma ens_duplicate_pure : forall P,
   bientails (ens (fun r => \[P r])) (ens (fun r => \[P r]) ;; ens (fun r => \[P r])).
@@ -156,7 +205,6 @@ Proof.
   (* induct on the derivation of precond_reflect *)
   intros * Hrefl.
   induction Hrefl; rew_state_to_hprop.
-  (*rew_state_to_hprop; rewrite <- norm_ens_ens_void.*)
   - fentailment. xsimpl; intros; intuition.
   - fentailment. xsimpl; intros; intuition.
   - rewrite norm_ens_ens_void.
@@ -626,6 +674,8 @@ Ltac fempty := apply ent_ens_empty.
 
 Ltac fsolve_pure := auto.
 
+Ltac fsolve_heap := xsimpl.
+
 Ltac fsingle_ens :=
   (* operates on goals of the form 
      entails (ens ?lhs) (ens ?rhs)
@@ -646,14 +696,169 @@ Proof. Admitted.
 
 (* TODO *)
 
-Lemma entl_match_ens :
-  (* suppose biab h1 h2 returns antiframe (ap, ah) and frame (fp, fh): *)
-  forall P1 P2 h1 h2 ah ap fh fp f v,
-  (P1 /\ ap /\ distinct_locations h1 -> P2 /\ fp /\ distinct_locations h2) ->
-  hpred_biab ah h1 h2 fh ap ->
-  entails (req_state True ah f) (req_state True fh f) ->
-  entails (ens_state P1 h1 v ;; f) (ens_state P2 h2 v ;; f).
+Definition is_valid_hprop (hp : hprop) := exists (h : heap), hp h.
 
+Lemma is_valid_hprop_star_exists_disj :
+  forall H1 H2,
+  is_valid_hprop (H1 \* H2) -> (forall h2, H2 h2 -> exists h1, H1 h1 /\ Fmap.disjoint h1 h2).
+Proof.
+Admitted.
+
+Lemma biab_implies_himpl : forall Ha H1 H2 Hf,
+  biab Ha H1 H2 Hf -> Ha \* H1 ==> H2 \* Hf.
+Proof.
+Admitted.
+
+(* this already suffices for the simple cases,
+  but the rule heifer uses is the general one involving biabduction *)
+Lemma entl_ens_ens : forall f1 f2 H1 H2,
+  H1 ==> H2 -> entails f1 f2 -> entails (ens_ H1 ;; f1) (ens_ H2 ;; f2).
+Proof.
+  intros * Hhimpl Hentails.
+  rewrite Hentails.
+  rewrite Hhimpl.
+  reflexivity.
+Qed.
+
+Lemma entl_ens_req_cancel : forall H1 H2 f,
+  entails (ens_ (H1 \* H2) ;; req H1 f) (ens_ H2 ;; f).
+Proof.
+  unfold entails. intros * Hensreq.
+  inverts Hensreq. 2: { no_shift. }
+  inverts H8. destr H7. inverts H. inverts H9.
+  hinv H0. hinv H. hinv H0. subst.
+  Check s_seq.
+  apply (@s_seq s3 (h1 \u x2) vunit).
+  - constructor. eexists. eexists. intuition. rewrite hstar_hpure_l. intuition.
+  - apply (@H12 x1 (h1 \u x2)); intuition.
+Qed.
+
+(* fairly certain the [is_valid_hprop] is a technical restriction of the proof
+  that can be worked around... *)
+Lemma entl_ens_req_create : forall H1 H2 f,
+  is_valid_hprop (H1 \* H2) ->
+  entails (ens_ H2 ;; f) (ens_ (H1 \* H2) ;; req H1 f).
+(* i don't think this is true.. if the heap state already contains H1
+   this entailment will not proceed *)
+Proof.
+  intros * Hvalid. unfold entails. intros * Hens.
+  lets Hexists_disj: is_valid_hprop_star_exists_disj H1 H2 Hvalid.
+  inverts Hens. 2: { no_shift. }
+  inverts H8. destr H7. inverts H. hinv H0. hinv H. subst.
+  rewrite union_empty_l in H5. 
+  lets Hheap1: Hexists_disj x0 H0.
+  destr Hheap1.
+  eapply (@s_seq s3 (h1 \u h0 \u x0) vunit).
+  - constructor. exists vunit. exists (h0 \u x0). intuition.
+    + rewrite hstar_hpure_l. intuition. hintro; intuition.
+    (*+ auto. disjoint. Search (Fmap.disjoint _ (_ \u _)).*)
+Abort.
+
+Lemma req_req_iff_ens_ens_biab :
+  forall Ha H1 H2 Hf f1 f2,
+  biab Ha H1 H2 Hf ->
+  entails (req Ha f1) (req Hf f2) -> entails (ens_ H1 ;; f1) (ens_ H2 ;; f2).
+Proof.
+  intros * Hbiab Hreq.
+  lets Himpl: biab_implies_himpl Ha H1 H2 Hf Hbiab.
+  induction Hbiab.
+  - apply entl_ens_ens.
+    + apply himpl_refl.
+    + rewrite !norm_seq_req_emp in Hreq.
+      auto.
+  - rewrite !norm_seq_req_emp in Hreq.
+    rewrite norm_seq_ens_empty.
+    rewrite Hreq.
+    rewrite <- (hstar_hempty_r Hf) at 1.
+    rewrite (entl_ens_req_cancel Hf \[] f2).
+    rewrite norm_seq_ens_empty.
+    reflexivity.
+  - rewrite norm_req_req in Hreq.
+    admit.
+  - (* this seems easy enough *) admit.
+  - (* see transpose_pts_diff for reference ... *) admit.
+Admitted.
+    
+(* i will ask but i am 99% sure this is unsound.
+  consider f1 = f2 = (ens_ (loc ~~> val)). *)
+Lemma req_lhs_becomes_ens : forall loc val f1 f2, entails (req (loc ~~> val) f1) f2 -> entails f1 (ens_ (loc ~~> val) ;; f2).
+Proof. 
+  intros * Hreq.
+  unfold entails.
+  intros * Hf1.
+  unfold entails in Hreq.
+  eapply (@s_seq s1 h1 vunit).
+  2: {
+    apply Hreq.
+    constructor.
+    intros. 
+    hinv H. subst.
+    admit.
+  }
+Abort.
+
+Lemma ens_lhs_becomes_req : forall H f1 f2, entails (ens_ H ;; f1) f2 -> entails f1 (req H f2).
+Proof.
+  intros * Hens.
+  unfold entails.
+  intros * Hf1.
+  constructor.
+  intros.
+  (* now we want to use Hens *)
+  unfold entails in Hens.
+  apply Hens.
+  apply (@s_seq s1 h1 vunit).
+  - constructor. eexists. eexists. intuition.
+    hintro. intuition.
+  - auto.
+Qed.
+
+(* more general version that directly uses [himpl] instead of the inductively defined [biab] *)
+Lemma req_req_iff_ens_ens :
+  forall Ha H1 H2 Hf f1 f2,
+  Ha \* H1 ==> H2 \* Hf ->
+  (entails (req Ha f1) (req Hf f2) -> entails (ens_ H1 ;; f1) (ens_ H2 ;; f2)).
+Proof.
+  intros * Hbiab.
+  - intros Hreq.
+    apply (entl_ens_ens _ _ _ _ Hbiab) in Hreq.
+    rewrite hstar_comm in Hreq.
+    (*rewrite entl_ens_req_cancel in Hreq at 1.*)
+    (* intuitively, this should be true because if the entail hypothesis holds,
+       any heap pre-state in a heap pre-post pair must contain both Ha and Hf *)
+Abort.
+
+(* [entl_req_req] is a corollary of this! *)
+
+(*Lemma entl_match_ens_state :*)
+(*  (* suppose biab h1 h2 returns antiframe (ap, ah) and frame (fp, fh): *)*)
+(*  forall P1 P2 h1 h2 ah ap fh fp f v,*)
+(*  (P1 /\ ap /\ distinct_locations h1 -> P2 /\ fp /\ distinct_locations h2) ->*)
+(*  hpred_biab ah h1 h2 fh ap ->*)
+(*  entails (req_state True ah f) (req_state True fh f) ->*)
+(*  entails (ens_state P1 h1 v ;; f) (ens_state P2 h2 v ;; f).*)
+(*Proof. Admitted.*)
+
+Ltac fsolve_biabduction := idtac "TODO".
+
+Lemma entl_state_ens_ens : forall P1 h1 v1 P2 h2 v2 f1 f2,
+  (\[P1] \* hprop_of_hpred h1 ==> \[P2] \* hprop_of_hpred h2) ->
+  v1 = v2 ->
+  entails f1 f2 ->
+  entails (ens_state P1 h1 v1 ;; f1) (ens_state P2 h2 v2 ;; f2).
+Proof.
+  intros * Hhimpl Hval Hent.
+  subst.
+  rew_state_to_hprop.
+  rewrite Hent.
+  rewrite <- norm_ens_ens_void_l.
+  with_entailsR (rewrite <- norm_ens_ens_void_l).
+  rewrite <- norm_seq_assoc_sf by shiftfree.
+  with_entailsR (rewrite <- norm_seq_assoc_sf by shiftfree).
+  apply entl_ens_ens.
+  - auto.
+  - reflexivity.
+Qed.
 
 Ltac fmatch_ens :=
   (* operates on goals of the form
@@ -664,8 +869,7 @@ Ltac fmatch_ens :=
      - turns goal into
      entails (req (antiframe) lnext) (req (frame) rnext)
    *)
-  eapply entl_match_ens;
-  [
+  apply entl_state_ens_ens; [unfold hprop_of_hpred; fsolve_heap; try fsolve_pure | fsolve_pure | ].
 
 (* TODO: use Ltac2? *)
 
@@ -706,6 +910,9 @@ Ltac fsimpl :=
 repeat (freduce_shrs; fnormalize).
 
 (*** NO GUARANTEE EVERYTHING FROM THIS POINT COMPILES *)
+
+(* IDEA: ens_t, similar to [bind_t] that allows for the [res] to be any type
+  we can convert to val *)
 
 (* [fexists] corresponds to the "exists on the right" step
   need to decide whether to use entails/entails_under,
@@ -795,20 +1002,21 @@ Proof.
   fdestruct v.
   fexists v.
   fsimpl.
+  fmatch_ens.
   fsingle_ens.
+Qed.
 
 
  (* this should also split the ens r. Q \* \[P r] 
      into the heap and pure parts. what rule does that?
 
      do we need to implement [split_ens_aux] as a tactic? *)
-  fsimpl.
-  fdestruct v.
-  fexists v.
-  fsimpl.
-  fmatch_ens.
-  fsingle_ens.
-Qed.
+  (*fsimpl.*)
+  (*fdestruct v.*)
+  (*fexists v.*)
+  (*fsimpl.*)
+  (*fmatch_ens.*)
+  (*fsingle_ens.*)
 
 (* heap dereference *)
 (* note the use of an existential to match the location (which needs to have type [loc])
