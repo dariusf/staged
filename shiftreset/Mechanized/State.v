@@ -227,6 +227,30 @@ Ltac fsolve_post_value :=
 
 Hint Rewrite and_True_r_eq and_True_l_eq : rew_simpl_pure.
 
+(* ssreflect lock from taobao *)
+
+(* abstract out Lock with this module type
+  to prevent downstream modules from automatically unfolding lock.
+  this has the same effect as [Opaque lock.] *)
+Module Type LOCK.
+  Parameter locked : forall A, A -> A.
+  Parameter lock : forall A x, x = (locked _ x) :> A.
+End LOCK.
+
+Module Lock : LOCK.
+Lemma master_key : unit. Proof. exact tt. Qed.
+Definition locked A := let tt := master_key in fun x : A => x.
+Lemma lock A x : x = (locked _ x) :> A.
+Proof.
+  intros.
+  unfold locked.
+  reflexivity.
+Qed.
+
+End Lock.
+
+Definition lock := Lock.lock.
+
 Ltac frewrite_ens_to_ens_state_one :=
   setoid_rewrite norm_split_ens at 1;
   try match goal with
@@ -234,7 +258,14 @@ Ltac frewrite_ens_to_ens_state_one :=
       eapply postc_refl_val;
       [ fsolve_post_value | fsolve_prec_reflect ]
   end;
-  autorewrite with rew_simpl_pure.
+  autorewrite with rew_simpl_pure;
+  (* unlock all ens_state *)
+  try rewrite <- (lock _ ens_state);
+  (* lock all ens_states, including the one we just rewrote *)
+  (* this is to prevent the setoid_rewrite from rewriting this state,
+     since it is also just an ens_ in the background *)
+  rewrite (lock _ ens_state).
+
 
 (* A hack to force Coq to only rewrite the right-hand side of an entailment. *)
 Definition entailsR a b := entails b a.
@@ -264,8 +295,9 @@ Ltac with_entailsR_base tac :=
 Tactic Notation "with_entailsR" tactic(tac) := with_entailsR_base ltac:(tac).
 
 Ltac rew_hprop_to_state :=
-  (with_entailsR (repeat frewrite_ens_to_ens_state_one));
-  (repeat frewrite_ens_to_ens_state_one).
+  (* unlock all the ens_states once we are done *)
+  (with_entailsR (repeat frewrite_ens_to_ens_state_one; rewrite <- ?(lock _ ens_state)));
+  (repeat frewrite_ens_to_ens_state_one; rewrite <- ?(lock _ ens_state)).
 
 Lemma norm_seq_ens_ret_ens_pure : 
   forall P v, entails (ens_ret v ;; ens_pure P) (ens_pure P ;; ens_ret v).
@@ -346,4 +378,3 @@ Instance Proper_bind_t_bientails_l :
   Proper (bientails ====> (Morphisms.pointwise_relation _ bientails) ====> bientails) (@bind_t A I).
 Proof.
 Admitted.
-

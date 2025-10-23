@@ -10,12 +10,6 @@ Definition vplus (a b:val) : val :=
   | _, _ => vunit
   end.
 
-
-(* this Opaque declaration is needed, otherwise
-   [frewrite_ens_to_ens_state_one] will attempt to rewrite an existing [ens_state] *)
-(* for more fine-grained control over this we may want to look into SSReflect's [lock] *)
-Opaque ens_state.
-
 (* this can be instantly discharged *)
 Example test10 : entails
   (ens (fun r => \[r = 0]))
@@ -31,7 +25,6 @@ Example test6 : entails
   (ens (fun r => \[r = 0])).
 Proof.
   rew_hprop_to_state.
-
   fsimpl.
   fsingle_ens.
 Qed.
