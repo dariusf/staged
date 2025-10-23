@@ -222,6 +222,16 @@ Check norm_rearrange_ens.
 Lemma norms_split_ens : forall P h v, bientails (ens_state P h v) (ens_state P hemp vunit ;; ens_state True h vunit ;; ens_state True hemp v).
 Proof. Admitted.
 
+Corollary norms_split_ens_locked : 
+  forall P h v, bientails (ens_state P h v)
+  ((locked _ ens_state) P hemp vunit ;;
+   (locked _ ens_state) True h vunit ;;
+   (locked _ ens_state) True hemp v).
+Proof.
+  rewrite <- (lock _ _).
+  apply norms_split_ens.
+Qed.
+
 Lemma norms_remove_empty_void : forall f, bientails (ens_state True hemp vunit ;; f) f.
 Proof. Admitted.
 
@@ -229,8 +239,10 @@ Lemma norms_remove_empty_ret : forall P h, bientails (ens_state P h vunit ;; ens
 Proof. Admitted.
 
 Ltac fsplit_ens :=
-  setoid_rewrite norms_split_ens;
-  repeat (setoid_rewrite norms_remove_empty_void); repeat (setoid_rewrite norms_remove_empty_ret).
+  repeat (setoid_rewrite norms_split_ens_locked at 1);
+  rewrite <- (lock _ _);
+  repeat (setoid_rewrite norms_remove_empty_void at 1);
+  repeat (setoid_rewrite norms_remove_empty_ret at 1).
 
 Ltac fapply_one_norm_rule :=
   rewrite norms_bind_t_trivial.

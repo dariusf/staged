@@ -1,6 +1,7 @@
 
 (* Helper definitions to more closely reflect Heifer's definitions. *)
 
+From Stdlib Require Import Classes.RelationClasses.
 From ShiftReset Require Import Logic Automation Entl Norm Propriety.
 
 Inductive hpred :=
@@ -250,6 +251,7 @@ Qed.
 End Lock.
 
 Definition lock := Lock.lock.
+Definition locked := Lock.locked.
 
 Ltac frewrite_ens_to_ens_state_one :=
   setoid_rewrite norm_split_ens at 1;
@@ -365,16 +367,151 @@ Notation "'let\'' x '=' f1 'in' f2" :=
   (bind_t f1 (fun x => f2))
   (at level 38, x binder, right associativity, only printing) : flow_scope.
 
+(* some more Proper instances that should really be in Propriety *)
+
+Lemma bientails_iff_entails : forall f1 f2,
+  bientails f1 f2 <-> (entails f1 f2 /\ entails f2 f1).
+Proof.
+  unfold bientails, entails.
+  intros. split; intuition; apply H; auto.
+Qed.
+
+#[global]
+Instance Proper_pointwise_entails_fex : forall A,
+  Proper (Morphisms.pointwise_relation A entails ====> entails)
+  (@fex A).
+Proof.
+  unfold Proper, respectful, Morphisms.pointwise_relation.
+  intros * Hpointwise.
+  fdestruct xn.
+  fexists xn.
+  auto.
+Qed.
+
+(*#[global]*)
+(*Instance It_might_need_this_one_too : forall A,*)
+(*  Proper (flip (Morphisms.pointwise_relation A entails) ====> flip entails)*)
+(*  (@fex A).*)
+(*Proof.*)
+(*Admitted.*)
+
+#[global]
+Instance ShiftFree_locked_ens : forall P h v,
+  ShiftFree ((Lock.locked _ ens_state) P h v).
+Proof.
+  intros.
+  rewrite <- (lock _ _).
+  constructor.
+  unfold ens_state. shiftfree.
+Qed.
+
+#[global]
+Instance bient_ent_subrelation : subrelation bientails entails.
+Proof.
+  unfold subrelation.
+  setoid_rewrite bientails_iff_entails.
+  intros. intuition.
+Qed.
+
+#[global]
+Instance bient_flip_ent_subrelation : subrelation bientails (flip entails).
+Proof.
+  unfold subrelation, flip.
+  setoid_rewrite bientails_iff_entails.
+  intros. intuition.
+Qed.
+
+#[global]
+Instance ent_ent_under_subrelation : forall env, subrelation entails (entails_under env).
+Proof.
+  unfold subrelation, entails, entails_under.
+  intros. intuition.
+Qed.
+
+#[global]
+Instance Proper_bind_entails_l : forall f,
+  ShiftFree f ->
+  Proper ((Morphisms.pointwise_relation val entails) ====> entails) (bind f).
+Proof.
+  unfold Proper, respectful, Morphisms.pointwise_relation, entails.
+  intros * Hent * Hpointwise * Hbind. subst.
+  inverts Hbind.
+  - applys* s_bind.
+  - no_shift.
+Qed.
+
 #[global]
 Instance Proper_bind_t_entails_l : 
   forall A I,
-  Proper (entails ====> (Morphisms.pointwise_relation _ entails) ====> entails) (@bind_t A I).
+  Proper (entails ====> eq ====> entails) (@bind_t A I).
 Proof.
-Admitted.
+  unfold Proper, respectful, Morphisms.pointwise_relation, bind_t.
+  intros * Hent * Hpointwise.
+  rewrite Hpointwise.
+  rewrite Hent.
+  reflexivity.
+Qed.
+
+#[global]
+Instance Proper_bind_t_entails_r :
+  forall A I f, ShiftFree f ->
+  Proper ((Morphisms.pointwise_relation _ entails) ====> entails) (@bind_t A I f).
+Proof.
+  unfold Proper, respectful, Morphisms.pointwise_relation, bind_t.
+  intros * Hent * Hpointwise.
+  setoid_rewrite Hpointwise.
+  reflexivity.
+Qed.
+
 
 #[global]
 Instance Proper_bind_t_bientails_l : 
   forall A I,
-  Proper (bientails ====> (Morphisms.pointwise_relation _ bientails) ====> bientails) (@bind_t A I).
+  Proper (bientails ====> eq ====> bientails) (@bind_t A I).
 Proof.
-Admitted.
+  unfold Proper, respectful, Morphisms.pointwise_relation, bind_t.
+  intros * Hbient * Hpointwise_bient.
+  apply bientails_iff_entails.
+  apply bientails_iff_entails in Hbient.
+  destruct Hbient as [Hxy Hyx].
+  subst.
+  split.
+  - setoid_rewrite Hxy. reflexivity.
+  - setoid_rewrite Hyx. reflexivity.
+Qed.
+
+#[global]
+Instance Proper_bind_t_bientails_r :
+  forall A I f,
+  ShiftFree f ->
+  Proper ((Morphisms.pointwise_relation _ bientails) ====> bientails) (@bind_t A I f).
+Proof.
+  unfold Proper, respectful, Morphisms.pointwise_relation, bind_t.
+  intros * Hsf * Hpointwise_bient.
+  apply bientails_iff_entails.
+  setoid_rewrite bientails_iff_entails in Hpointwise_bient.
+  apply forall_conj_inv_1 in Hpointwise_bient.
+  destruct Hpointwise_bient as [Hxy Hyx].
+  split.
+  - Search (bind _ (fun _ => fex _)).
+    rewrite norm_bind_ex_r. 2: { exact shift_free_pf. }
+    fdestruct v_typed.
+
+    rewrite <- entailsR_is_entails.
+    rewrite norm_bind_ex_r. 2: { exact shift_free_pf. }
+    rewrite entailsR_is_entails.
+    fexists v_typed.
+    
+    setoid_rewrite Hxy.
+    reflexivity.
+  - rewrite norm_bind_ex_r. 2: { exact shift_free_pf. }
+    fdestruct v_typed.
+
+    rewrite <- entailsR_is_entails.
+    rewrite norm_bind_ex_r. 2: { exact shift_free_pf. }
+    rewrite entailsR_is_entails.
+    fexists v_typed.
+    
+    setoid_rewrite Hyx.
+    reflexivity.
+Qed.

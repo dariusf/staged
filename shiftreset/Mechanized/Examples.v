@@ -1,6 +1,7 @@
 
-From ShiftReset Require Import Logic Automation Entl Norm Propriety.
+From ShiftReset Require Import Logic Entl Automation Norm Propriety.
 From ShiftReset Require ExamplesEnt.
+
 From ShiftReset.Mechanized Require Import State Normalization Entail_tactics.
 Local Open Scope string_scope.
 
@@ -19,6 +20,32 @@ Proof.
   fsingle_ens.
 Qed.
 
+From Stdlib Require Import Classes.RelationClasses.
+
+#[global]
+Instance bient_ent_subrelation : subrelation bientails entails.
+Proof.
+  unfold subrelation.
+  setoid_rewrite bientails_iff_entails.
+  intros. intuition.
+Qed.
+
+#[global]
+Instance bient_flip_ent_subrelation : subrelation bientails (flip entails).
+Proof.
+  unfold subrelation, flip.
+  setoid_rewrite bientails_iff_entails.
+  intros. intuition.
+Qed.
+
+(*#[global]*)
+(*Instance Proper_this_fixes_it_right : *)
+(*forall A I, *)
+(*  Proper (entails ====> (Morphisms.pointwise_relation _ entails) ====> entails) (@bind_t A I).*)
+(**)
+(*Proof.*)
+(*Admitted.*)
+
 (* bind normalization *)
 Example test6 : entails
   (bind_t (ens (fun r => \[r = 0])) (fun j => ens (fun r => \[r = j])))
@@ -29,31 +56,31 @@ Proof.
   fsingle_ens.
 Qed.
 
-#[global]
-Instance The_exact_Proper_instance_the_test4_proof_needs_to_work_as_intended : forall A,
-  Proper (respectful (flip (Morphisms.pointwise_relation A entails)) (flip eq))
-  (@fex A).
-Proof.
-Admitted.
-
-#[global]
-Instance It_might_need_this_one_too : forall A,
-  Proper (respectful (flip (Morphisms.pointwise_relation A eq)) (flip eq))
-  (@fex A).
-Proof.
-Admitted.
-
-#[global]
-Instance And_this_one_I_guess:
-  Proper (respectful eq (respectful entails eq)) seq.
-Proof.
-Admitted.
-
-#[global]
-Instance Me_when_the_setoid_rewrite_failed_UNDEFINED_EVARS:
-  Proper (respectful (flip eq) (respectful (flip entails) (flip eq))) seq.
-Proof.
-Admitted.
+(*#[global]*)
+(*Instance The_exact_Proper_instance_the_test4_proof_needs_to_work_as_intended : forall A,*)
+(*  Proper (respectful (flip (Morphisms.pointwise_relation A entails)) (flip eq))*)
+(*  (@fex A).*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*#[global]*)
+(*Instance It_might_need_this_one_too : forall A,*)
+(*  Proper (respectful (flip (Morphisms.pointwise_relation A eq)) (flip eq))*)
+(*  (@fex A).*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*#[global]*)
+(*Instance And_this_one_I_guess:*)
+(*  Proper (respectful eq (respectful entails eq)) seq.*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*#[global]*)
+(*Instance Me_when_the_setoid_rewrite_failed_UNDEFINED_EVARS:*)
+(*  Proper (respectful (flip eq) (respectful (flip entails) (flip eq))) seq.*)
+(*Proof.*)
+(*Admitted.*)
 
 (* existential handling *)
 Example test9 : entails
