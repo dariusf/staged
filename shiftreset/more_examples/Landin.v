@@ -572,4 +572,4 @@ Proof.
   intuition.
   auto.
 Qed.
-
+End Attempt2.
