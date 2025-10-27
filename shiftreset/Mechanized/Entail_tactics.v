@@ -245,7 +245,17 @@ Ltac fsplit_ens :=
   repeat (setoid_rewrite norms_remove_empty_ret at 1).
 
 Ltac fapply_one_norm_rule :=
-  rewrite norms_bind_t_trivial.
+  first [
+    setoid_rewrite norms_bind_t_trivial at 1 |
+    setoid_rewrite norm_bind_t_ex_l at 1 |
+    setoid_rewrite norm_bind_t_all_l at 1 |
+    setoid_rewrite norms_bind_seq_ens at 1 |
+    setoid_rewrite norms_bind_t_val at 1 |
+    setoid_rewrite norm_bind_t_req at 1 |
+    setoid_rewrite norms_bind_seq_ens at 1 |
+    setoid_rewrite norms_seq_ens_all at 1 |
+    setoid_rewrite norms_bind_t_val at 1
+  ].
 
 (* before normalizing, heifer first splits all ens into pure and
    heap components. *)
@@ -258,6 +268,12 @@ Ltac freduce_shrs :=
 
 Ltac fsimpl :=
 repeat (freduce_shrs; fnormalize).
+
+Ltac feinst_and_biab :=
+  apply entl_all_l; eexists;
+  rew_state_to_hprop;
+  fbiabduction;
+  rew_hprop_to_state.
 
 (*** NO GUARANTEE EVERYTHING FROM THIS POINT COMPILES *)
 

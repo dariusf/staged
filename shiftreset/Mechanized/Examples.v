@@ -3,7 +3,11 @@ From ShiftReset Require Import Logic Entl Automation Norm Propriety.
 From ShiftReset Require ExamplesEnt.
 
 From ShiftReset.Mechanized Require Import State Normalization Entail_tactics.
-Local Open Scope string_scope.
+
+#[global]
+Instance RewritableBinder_anything : forall f, RewritableBinder f.
+Proof.
+Admitted.
 
 Definition vplus (a b:val) : val :=
   match a, b with
@@ -20,67 +24,6 @@ Proof.
   fsingle_ens.
 Qed.
 
-From Stdlib Require Import Classes.RelationClasses.
-
-#[global]
-Instance bient_ent_subrelation : subrelation bientails entails.
-Proof.
-  unfold subrelation.
-  setoid_rewrite bientails_iff_entails.
-  intros. intuition.
-Qed.
-
-#[global]
-Instance bient_flip_ent_subrelation : subrelation bientails (flip entails).
-Proof.
-  unfold subrelation, flip.
-  setoid_rewrite bientails_iff_entails.
-  intros. intuition.
-Qed.
-
-(*#[global]*)
-(*Instance Proper_this_fixes_it_right : *)
-(*forall A I, *)
-(*  Proper (entails ====> (Morphisms.pointwise_relation _ entails) ====> entails) (@bind_t A I).*)
-(**)
-(*Proof.*)
-(*Admitted.*)
-
-(* bind normalization *)
-Example test6 : entails
-  (bind_t (ens (fun r => \[r = 0])) (fun j => ens (fun r => \[r = j])))
-  (ens (fun r => \[r = 0])).
-Proof.
-  rew_hprop_to_state.
-  fsimpl.
-  fsingle_ens.
-Qed.
-
-(*#[global]*)
-(*Instance The_exact_Proper_instance_the_test4_proof_needs_to_work_as_intended : forall A,*)
-(*  Proper (respectful (flip (Morphisms.pointwise_relation A entails)) (flip eq))*)
-(*  (@fex A).*)
-(*Proof.*)
-(*Admitted.*)
-(**)
-(*#[global]*)
-(*Instance It_might_need_this_one_too : forall A,*)
-(*  Proper (respectful (flip (Morphisms.pointwise_relation A eq)) (flip eq))*)
-(*  (@fex A).*)
-(*Proof.*)
-(*Admitted.*)
-(**)
-(*#[global]*)
-(*Instance And_this_one_I_guess:*)
-(*  Proper (respectful eq (respectful entails eq)) seq.*)
-(*Proof.*)
-(*Admitted.*)
-(**)
-(*#[global]*)
-(*Instance Me_when_the_setoid_rewrite_failed_UNDEFINED_EVARS:*)
-(*  Proper (respectful (flip eq) (respectful (flip entails) (flip eq))) seq.*)
-(*Proof.*)
-(*Admitted.*)
 
 (* existential handling *)
 Example test9 : entails
@@ -141,28 +84,88 @@ Qed.
    this forms a nontrivial difference between coq and heifer specs...
    the tactics need to transparently adjust for this
    *)
-(*
-Example test5 : entails
-  (∃' v72, bind (ens (fun res => \[res = vloc v72] \* v72 ~~> 0))
-  (fun ival =>
-  ∃' i, ens_ \[ival = vloc i] ;; ∀' v73, req (i ~~> v73) (ens (fun res => \[res = v73] \* i ~~> v73))))
-  (∃' i, ens (fun res => \[res = vloc i] \* i ~~> 0)).
-Proof.
-  fsimpl.
-  (* this should also bring out v73 to the toplevel,
-     but this fails because of the vloc existential... 
-      the vloc existential can also be lifted to the toplevel...?*)
-  fdestruct v72.
-  fsimpl.
-  rewrite norm_bind_ex_l.
-  (* THIS SHOULD WORK *)
-  Fail fbiabduction.
-  (*fexists v72.*)
-  (*fsimpl.*)
-  (*fmatch_ens.*)
-  (*fsingle_ens.*)
-Abort.
 
+#[global]
+Instance ShiftFree_fex : forall A (f : A -> flow),
+  (forall v, ShiftFree (f v)) -> ShiftFree (fex f).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_pointwise_entails_fall : forall A,
+  Proper (Morphisms.pointwise_relation A entails ====> entails)
+  (@fall A).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_pointwise_bientails_fall : forall A,
+  Proper (Morphisms.pointwise_relation A bientails ====> bientails)
+  (@fall A).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_entails_req_state :
+  Proper (eq ====> eq ====> entails ====> entails) req_state.
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_bientails_req_state :
+  Proper (eq ====> eq ====> entails ====> entails) req_state.
+Proof.
+Admitted.
+
+#[global]
+Instance ShiftFree_fall : forall A (f : A -> flow),
+  (forall v, ShiftFree (f v)) -> ShiftFree (fall f).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_bind_pointwise_entails_bind :
+  forall A I H f,
+  ShiftFree f ->
+  Proper ((Morphisms.pointwise_relation _ entails) ====> entails) (@bind_t A I (req H f)).
+Proof.
+Admitted.
+
+Ltac rew_state_to_hprop := 
+  unfold ens_pure, ens_heap, ens_ret;
+  rewrite ?ens_state_vunit_is_ens_state_void;
+  rewrite ?ens_state_void_is_ens_void;
+  unfold ens_state, req_state, hprop_of_hpred;
+  (* clean up the postconditions *)
+  rewrite ?ens_vunit_is_ens_void;
+  rewrite <- ?hempty_eq_hpure_true;
+  autorewrite with rew_heap;
+  (*rewrite <- hempty_eq_hpure_true;*)
+  (*repeat (rewrite hstar_hempty_r, hstar_hempty_l);*)
+  fold hprop_of_hpred.
+
+Example test5 : entails
+  (*(∃' v72, bind (ens (fun res => \[res = vloc v72] \* v72 ~~> 0))*)
+  (*(fun ival =>*)
+  (*∃' i, ens_ \[ival = vloc i] ;; ∀' v73, req (i ~~> v73) (ens (fun res => \[res = v73] \* i ~~> v73))))*)
+  (*(∃' i, ens (fun res => \[res = vloc i] \* i ~~> 0)).*)
+  (bind_t (∃' v72, ens (fun res => \[res = into v72] \* v72 ~~> 0))
+  (fun i =>
+  bind_t (∀' v73, req (i ~~> v73) (ens (fun res => \[res = into v73] \* i ~~> v73)))
+    (fun v70 => ens (fun res => \[res = vplus v70 (vint 1)]))))
+  (∃' i, (ens (fun res => \[res = 1] \* i ~~> 0))).
+Proof.
+  rew_hprop_to_state.
+  fsimpl.
+  fdestruct v72.
+  feinst_and_biab.
+  rew_hprop_to_state.
+  fexists v72.
+  fmatch_ens.
+  fsingle_ens.
+Qed.
+
+(*
 (* writing to the heap *)
 Example test61 : entails
   (bind (∃' v88, ens (fun res => \[res = vloc v88] \* v88 ~~> 0))
@@ -176,5 +179,4 @@ Example test61 : entails
   (∃' i, ens (fun res => \[res = 1] \* i ~~> 1)).
 Proof.
   (* let me work out the other simplifications first *)
-Admitted.
- *)
+*)
