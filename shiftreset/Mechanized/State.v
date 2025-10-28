@@ -4,6 +4,42 @@
 From Stdlib Require Import Classes.RelationClasses.
 From ShiftReset Require Import Logic Automation Entl Norm Propriety.
 
+(* ssreflect lock from taobao *)
+
+(* abstract out Lock with this module type
+  to prevent downstream modules from automatically unfolding lock.
+  this has the same effect as [Opaque lock.] *)
+Module Type LOCK.
+  Parameter locked : forall A, A -> A.
+  Parameter lock : forall A x, x = (locked _ x) :> A.
+  Parameter marked : forall (n : nat) A, A -> A.
+  Parameter mark : forall n A x, x = (marked n A x) :> A.
+End LOCK.
+
+Module Lock : LOCK.
+Lemma master_key : unit. Proof. exact tt. Qed.
+
+Definition marked (n : nat) A := let tt := master_key in fun x : A => x.
+Definition mark n A x : x = (marked n A x) :> A.
+Proof.
+  intros. unfold marked. reflexivity.
+Qed.
+Definition locked A := marked 0 A.
+Lemma lock : forall A x, x = (locked _ x) :> A.
+Proof.
+  intros.
+  unfold locked, marked.
+  reflexivity.
+Qed.
+
+End Lock.
+
+Definition lock := Lock.lock.
+Definition locked := Lock.locked.
+
+Definition mark := Lock.mark.
+Definition marked := Lock.marked.
+
 #[global]
 Instance Proper_pointwise_eq_ens : Proper (Morphisms.pointwise_relation val eq ====> entails) ens.
 Proof.
@@ -216,16 +252,53 @@ Proof.
   unfold ens_. intros. reflexivity.
 Qed.
 
+Lemma hpred_simpl_split_hemp_l : 
+  forall h P v,
+  bientails (ens_state P (hsplit hemp h) v) (ens_state P h v).
+Proof.
+Admitted.
+
+Lemma bient_reflexive :
+  forall h P v,
+  bientails (ens_state P h v) (ens_state P h v).
+Proof.
+  intros. reflexivity.
+Qed.
+
+Fixpoint simplify_hpred hp :=
+  match hp with
+  | hsplit hemp lhs => simplify_hpred lhs
+  | hsplit rhs hemp => simplify_hpred rhs
+  | hp => hp
+  end.
+
+Lemma hpred_eq_simplify_hpred : forall hp,
+  hprop_of_hpred hp = hprop_of_hpred (simplify_hpred hp).
+Proof.
+  intros.
+  induction hp; try solve [reflexivity].
+  simpl.
+  rewrite IHhp1. rewrite IHhp2.
+  destruct hp1 eqn:H1, hp2 eqn:H2;
+  solve [
+    rewrite <- ?IHhp1;
+    rewrite <- ?IHhp2;
+    rewrite ?hstar_hempty_r;
+    rewrite ?hstar_hempty_l;
+    simpl;
+    reflexivity
+  ].
+Qed.
 
 (* Rewrites all [ens_state]s present in the goal back to an [ens]. *)
   (* TODO [rew_state_to_hprop in H] *)
 Ltac rew_state_to_hprop := 
   unfold ens_pure, ens_heap, ens_ret;
-  rewrite ?ens_state_vunit_is_ens_state_void;
+  repeat (rewrite ens_state_vunit_is_ens_state_void at 1);
+  repeat (rewrite ens_state_void_is_ens_void at 1);
   rewrite ?ens_state_void_is_ens_void;
-  unfold ens_state, req_state, hprop_of_hpred;
+  unfold ens_state_, ens_state, req_state, hprop_of_hpred;
   (* clean up the postconditions *)
-  rewrite ?ens_vunit_is_ens_void;
   rewrite <- ?hempty_eq_hpure_true;
   autorewrite with rew_heap;
   (*rewrite <- hempty_eq_hpure_true;*)
@@ -369,8 +442,66 @@ Proof.
   - apply norm_combine_req_void. exact Hrefl.
 Qed.
 
-(* Solves a goal of the form [precond_reflect _ _ Q]. This is most useful when
-   the pure and heap states are evars, allowing to automatically derive the arguments to norm_split_ens_void. *)
+Lemma norm_heap_simplify_ens_state : forall v P h,
+  bientails (ens_state P h v) (ens_state P (simplify_hpred h) v).
+Proof.
+  intros *.
+  rew_state_to_hprop.
+  rewrite hpred_eq_simplify_hpred.
+  reflexivity.
+Qed.
+
+Lemma norm_heap_simplify_req_state : forall P h f,
+  bientails (req_state P h f) (req_state P (simplify_hpred h) f).
+Proof.
+  intros *.
+  rew_state_to_hprop.
+  rewrite hpred_eq_simplify_hpred.
+  reflexivity.
+Qed.
+
+Lemma rew_rule_mark_all_ens_state : forall v P h,
+  bientails (ens_state P h v) ((marked 1 _ ens_state) P h v).
+Proof.
+  intros *.
+  rewrite <- (mark 1).
+  reflexivity.
+Qed.
+
+Lemma rew_rule_mark_all_req_state : forall P h f,
+  bientails (req_state P h f) ((marked 1 _ req_state) P h f).
+Proof.
+  intros *.
+  rewrite <- (mark 1).
+  reflexivity.
+Qed.
+
+Lemma norm_heap_simplify_ens_state_mark : forall v P h,
+  bientails ((marked 1 _ ens_state) P h v) ((marked 2 _ ens_state) P (simplify_hpred h) v).
+Proof.
+  intros *.
+  rewrite <- (mark 1).
+  rewrite <- (mark 2).
+  apply norm_heap_simplify_ens_state.
+Qed.
+
+Lemma norm_heap_simplify_req_state_mark : forall P h f,
+  bientails ((marked 1 _ req_state) P h f) ((marked 2 _ req_state) P (simplify_hpred h) f).
+Proof.
+  intros *.
+  rewrite <- (mark 1).
+  rewrite <- (mark 2).
+  apply norm_heap_simplify_req_state.
+Qed.
+
+Ltac fsimpl_heap :=
+  repeat (setoid_rewrite rew_rule_mark_all_ens_state at 1);
+  repeat (setoid_rewrite norm_heap_simplify_ens_state_mark at 1);
+  repeat (setoid_rewrite rew_rule_mark_all_req_state at 1);
+  repeat (setoid_rewrite norm_heap_simplify_req_state_mark at 1);
+  repeat (rewrite <- (mark 2));
+  simpl.
+
 Ltac fsolve_prec_reflect :=
   match goal with
   | [ |- precond_reflect _ _ (_ ~~> _) ] => apply prec_refl_loc
@@ -390,31 +521,6 @@ Ltac fsolve_post_value :=
   end.
 
 Hint Rewrite and_True_r_eq and_True_l_eq : rew_simpl_pure.
-
-(* ssreflect lock from taobao *)
-
-(* abstract out Lock with this module type
-  to prevent downstream modules from automatically unfolding lock.
-  this has the same effect as [Opaque lock.] *)
-Module Type LOCK.
-  Parameter locked : forall A, A -> A.
-  Parameter lock : forall A x, x = (locked _ x) :> A.
-End LOCK.
-
-Module Lock : LOCK.
-Lemma master_key : unit. Proof. exact tt. Qed.
-Definition locked A := let tt := master_key in fun x : A => x.
-Lemma lock A x : x = (locked _ x) :> A.
-Proof.
-  intros.
-  unfold locked.
-  reflexivity.
-Qed.
-
-End Lock.
-
-Definition lock := Lock.lock.
-Definition locked := Lock.locked.
 
 Ltac relock_ens_state := 
   (* lock all ens_states, including the one we just rewrote *)
@@ -488,7 +594,8 @@ Ltac rew_hprop_to_state :=
   (repeat frewrite_ens_to_ens_state_one);
   rewrite <- ?(lock _ ens_state);
   (repeat frewrite_req_to_req_state_one);
-  rewrite <- ?(lock _ req_state).
+  rewrite <- ?(lock _ req_state);
+  fsimpl_heap.
 
 Lemma norm_seq_ens_ret_ens_pure : 
   forall P v, entails (ens_ret v ;; ens_pure P) (ens_pure P ;; ens_ret v).

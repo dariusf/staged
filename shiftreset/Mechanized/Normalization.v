@@ -12,6 +12,10 @@ Corollary norms_bind_t_val : forall A I fk v, entails (@bind_t A I (ens_state Tr
 Proof.
 Admitted.
 
+Corollary norms_bind_t_val2 : forall fk (v : val), entails (bind_t (ens_state True hemp v) fk) (fk v).
+Proof.
+Admitted.
+
 (* we have norm_bind_trivial but only for shiftfree specs *)
 Check norm_bind_trivial_sf.
 
@@ -234,6 +238,12 @@ Admitted.
 
 (* we have norm_seq_assoc for shift-free formulas *)
 Check norm_seq_assoc_sf.
+
+(* COQ-ONLY NORMALIZATION RULE *)
+Theorem norms_seq_assoc_req : forall P H f1 f2,
+  bientails (req_state P H f1 ;; f2) (req_state P H (f1 ;; f2)).
+Proof.
+Admitted.
 
 Theorem norms_seq_ens_emp : forall f,
   entails (ens_pure True ;; f) f.

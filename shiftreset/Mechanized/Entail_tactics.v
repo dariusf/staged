@@ -30,7 +30,10 @@ Ltac fsingle_ens :=
      - use some magic to discharge the pure constraints
      look into: smtcoq, coqhammer, crush from CPDT
    *)
-  rewrite ens_state_is_ens; apply entl_ens_single; fsolve_pure.
+  match goal with
+  |  [ |- entails (ens_state _ _ _) (ens_state _ _ _) ] =>
+    rewrite ens_state_is_ens; apply entl_ens_single; fsolve_pure
+  end.
 
 (* this should maybe be packaged with the hpred? *)
 (* maybe hpred should just be an Fmap? *)
@@ -177,8 +180,6 @@ Qed.
 
 (* TODO is the converse true? *)
 
-Ltac fsolve_biabduction := idtac "TODO".
-
 Lemma entl_state_ens_ens : forall P1 h1 v1 P2 h2 v2 f1 f2,
   (\[P1] \* hprop_of_hpred h1 ==> \[P2] \* hprop_of_hpred h2) ->
   v1 = v2 ->
@@ -207,7 +208,10 @@ Ltac fmatch_ens :=
      - turns goal into
      entails (req (antiframe) lnext) (req (frame) rnext)
    *)
-  apply entl_state_ens_ens; [unfold hprop_of_hpred; fsolve_heap; try fsolve_pure | fsolve_pure | ].
+  match goal with
+  | [ |- entails ((ens_state _ _ _) ;; _) ((ens_state _ _ _) ;; _)] =>
+    apply entl_state_ens_ens; [unfold hprop_of_hpred; fsolve_heap; try fsolve_pure | fsolve_pure | ]
+  end.
 
 (* TODO: use Ltac2? *)
 
@@ -252,9 +256,16 @@ Ltac fapply_one_norm_rule :=
     setoid_rewrite norms_bind_seq_ens at 1 |
     setoid_rewrite norms_bind_t_val at 1 |
     setoid_rewrite norm_bind_t_req at 1 |
+    setoid_rewrite norms_bind_t_assoc_ens at 1 |
     setoid_rewrite norms_bind_seq_ens at 1 |
     setoid_rewrite norms_seq_ens_all at 1 |
-    setoid_rewrite norms_bind_t_val at 1
+    setoid_rewrite norms_bind_t_val at 1 |
+    setoid_rewrite norms_bind_t_val2 at 1 |
+    setoid_rewrite norms_seq_ens_all at 1 |
+    setoid_rewrite norms_seq_ens_seq_all at 1 |
+    setoid_rewrite norm_seq_all at 1 |
+    setoid_rewrite <- norm_seq_assoc_sf at 1; [ | rew_state_to_hprop; shiftfree ] |
+    setoid_rewrite norms_seq_assoc_req
   ].
 
 (* before normalizing, heifer first splits all ens into pure and
@@ -264,23 +275,27 @@ Ltac fnormalize :=
   repeat fapply_one_norm_rule.
 
 Ltac freduce_shrs :=
-  idtac "TODO".
+  idtac "shift/reset TODO".
 
 Ltac fsimpl :=
-repeat (freduce_shrs; fnormalize).
+  repeat (fsimpl_heap; freduce_shrs; fnormalize).
 
-Ltac feinst_and_biab :=
-  apply entl_all_l; eexists;
+Ltac fbiab_state := 
   rew_state_to_hprop;
-  fbiabduction;
+  (* fbiabduction, but only on the first ens-req pair *)
+  rewrite norm_ens_req_transpose at 1; [ | applys b_pts_single ];
+  rewrite norm_req_pure_l; [ | reflexivity ];
+  rewrite norm_seq_ens_empty;
   rew_hprop_to_state.
+
+Ltac finst_lhs_all c :=
+  apply entl_all_l; exists c.
+
+Ltac finst_and_biab c :=
+  finst_lhs_all c; fbiab_state.
 
 (*** NO GUARANTEE EVERYTHING FROM THIS POINT COMPILES *)
 
 (* IDEA: ens_t, similar to [bind_t] that allows for the [res] to be any type
   we can convert to val *)
-
-(* [fexists] corresponds to the "exists on the right" step
-  need to decide whether to use entails/entails_under,
-   as this decides whether or not [fexists]/[fexists_old] will be used... *)
 

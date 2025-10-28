@@ -4,6 +4,9 @@ From ShiftReset Require ExamplesEnt.
 
 From ShiftReset.Mechanized Require Import State Normalization Entail_tactics.
 
+(* Try not to use evars for return values, some of the rewrite rules look for vunit return values
+   and this may trigger undesired unification. *)
+
 #[global]
 Instance RewritableBinder_anything : forall f, RewritableBinder f.
 Proof.
@@ -106,18 +109,6 @@ Proof.
 Admitted.
 
 #[global]
-Instance Proper_entails_req_state :
-  Proper (eq ====> eq ====> entails ====> entails) req_state.
-Proof.
-Admitted.
-
-#[global]
-Instance Proper_bientails_req_state :
-  Proper (eq ====> eq ====> entails ====> entails) req_state.
-Proof.
-Admitted.
-
-#[global]
 Instance ShiftFree_fall : forall A (f : A -> flow),
   (forall v, ShiftFree (f v)) -> ShiftFree (fall f).
 Proof.
@@ -131,18 +122,39 @@ Instance Proper_bind_pointwise_entails_bind :
 Proof.
 Admitted.
 
-Ltac rew_state_to_hprop := 
-  unfold ens_pure, ens_heap, ens_ret;
-  rewrite ?ens_state_vunit_is_ens_state_void;
-  rewrite ?ens_state_void_is_ens_void;
-  unfold ens_state, req_state, hprop_of_hpred;
-  (* clean up the postconditions *)
-  rewrite ?ens_vunit_is_ens_void;
-  rewrite <- ?hempty_eq_hpure_true;
-  autorewrite with rew_heap;
-  (*rewrite <- hempty_eq_hpure_true;*)
-  (*repeat (rewrite hstar_hempty_r, hstar_hempty_l);*)
-  fold hprop_of_hpred.
+#[global]
+Instance Proper_req_state :
+  forall P H,
+  Proper (entails ====> entails) (req_state P H).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_req_locked_state :
+  forall P H,
+  Proper (entails ====> entails) ((locked _ req_state) P H).
+Proof.
+Admitted.
+
+(*#[global]*)
+(*Instance Proper_locked_seq :*)
+(*  forall H,*)
+(*  Proper (entails ====> entails) (Lock.locked).*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*Ltac rew_state_to_hprop := *)
+(*  unfold ens_pure, ens_heap, ens_ret;*)
+(*  rewrite ?ens_state_vunit_is_ens_state_void;*)
+(*  rewrite ?ens_state_void_is_ens_void;*)
+(*  unfold ens_state, req_state, hprop_of_hpred;*)
+(*  (* clean up the postconditions *)*)
+(*  rewrite ?ens_vunit_is_ens_void;*)
+(*  rewrite <- ?hempty_eq_hpure_true;*)
+(*  autorewrite with rew_heap;*)
+(*  (*rewrite <- hempty_eq_hpure_true;*)*)
+(*  (*repeat (rewrite hstar_hempty_r, hstar_hempty_l);*)*)
+(*  fold hprop_of_hpred.*)
 
 Example test5 : entails
   (*(∃' v72, bind (ens (fun res => \[res = vloc v72] \* v72 ~~> 0))*)
@@ -157,26 +169,46 @@ Example test5 : entails
 Proof.
   rew_hprop_to_state.
   fsimpl.
+  (*Set Typeclasses Debug.*)
+  (*setoid_rewrite norms_split_ens_locked at 2.*)
+  (*rewrite <- (lock _ _);*)
+  (*repeat (setoid_rewrite norms_remove_empty_void at 1);*)
+  (*repeat (setoid_rewrite norms_remove_empty_ret at 1).*)
   fdestruct v72.
-  feinst_and_biab.
-  rew_hprop_to_state.
+  finst_and_biab 0.
   fexists v72.
   fmatch_ens.
   fsingle_ens.
 Qed.
 
-(*
 (* writing to the heap *)
 Example test61 : entails
-  (bind (∃' v88, ens (fun res => \[res = vloc v88] \* v88 ~~> 0))
-  (fun i_val =>
-    ∃' i, ens_ \[i_val = vloc i] ;;
-    bind (bind (∀' v89, req (i ~~> v89) (ens (fun res => \[res = v89] \* i ~~> v89)))
-    (fun v85 => ens (fun res => \[res = vplus v85 1])))
-    (fun v86 => 
-      (∀' v90, req (i ~~> v90) (ens_ (i ~~> v86))) ;;
-      ∀' v91, req (i ~~> v91) (ens (fun res => \[res = v91] \* i ~~> v91)))))
+  (*(bind (∃' v88, ens (fun res => \[res = vloc v88] \* v88 ~~> 0))*)
+  (*(fun i_val =>*)
+  (*  ∃' i, ens_ \[i_val = vloc i] ;;*)
+  (*  bind (bind (∀' v89, req (i ~~> v89) (ens (fun res => \[res = v89] \* i ~~> v89)))*)
+  (*  (fun v85 => ens (fun res => \[res = vplus v85 1])))*)
+  (*  (fun v86 => *)
+  (*    (∀' v90, req (i ~~> v90) (ens_ (i ~~> v86))) ;;*)
+  (*    ∀' v91, req (i ~~> v91) (ens (fun res => \[res = v91] \* i ~~> v91)))))*)
+  (*(∃' i, ens (fun res => \[res = 1] \* i ~~> 1)).*)
+  (bind_t (∃' v88, ens (fun res => \[res = into v88] \* v88 ~~> 0)) (fun i =>
+  (bind_t (
+    (bind_t (∀' v89, req (i ~~> v89) (ens (fun res => \[res = v89] \* i ~~> v89))) (fun v85 =>
+    ens (fun res => \[res = vplus v85 1])))
+  ) (fun v86 =>
+  (∀' v90, req (i ~~> v90) (ens_ (i ~~> v86))) ;;
+  ∀' v91, req (i ~~> v91) (ens (fun res => \[res = v91] \* i ~~> v91))
+  ))))
   (∃' i, ens (fun res => \[res = 1] \* i ~~> 1)).
 Proof.
-  (* let me work out the other simplifications first *)
-*)
+  rew_hprop_to_state.
+  fsimpl.
+  fdestruct v88.
+  finst_and_biab 0.
+  finst_and_biab 0.
+  finst_and_biab (vplus 0 1).
+  fexists v88.
+  fmatch_ens.
+  fsingle_ens.
+Qed.
