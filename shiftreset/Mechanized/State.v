@@ -130,15 +130,6 @@ Fixpoint hprop_of_hpred pred :=
   | hemp => \[]
   end.
 
-Definition hpred_biab (antiframe h1 h2 frame : hpred) (obligations : Prop) : Prop :=
-  obligations -> (hprop_of_hpred antiframe \* hprop_of_hpred h1 ==> hprop_of_hpred h2 \* hprop_of_hpred frame).
-
-Definition hpred_solve_biab (h1 : hpred) (h2 : hpred)
-  : exists antiframe_p antiframe_h frame_h,
-    hpred_biab antiframe_h h1 h2 frame_h antiframe_p.
-Proof. Admitted.
-
-
 (* because a lot of existing lemmas and tactics are written in terms of the shallowly-embedded
   [ens] though, it's useful to reflect the common structure of [hprop]s into our representation *)
 
@@ -199,15 +190,25 @@ Definition postcond_value {A : Type} (v : A) H Q :=
   /\ ((fun res => \[res = v] \* H) ===> Q).
 
 Lemma postcond_pure : forall (v : val), postcond_value v \[] (fun res => \[res = v]).
-Proof. Admitted.
+Proof.
+  intros. unfold postcond_value. split; xsimpl; auto.
+Qed.
 
 Lemma postcond_value_split_l : forall (v : val) H1 H2 Q, 
   postcond_value v H1 Q -> postcond_value v (H1 \* H2) (fun r => Q r \* H2). 
-Proof. Admitted.
+Proof.
+  unfold postcond_value. intros. destruct H as [HQ HQr]. unfold qimpl in HQ, HQr. unfold qimpl.
+  split; intros; rewrite <- hstar_assoc; apply himpl_frame_l; auto.
+Qed.
 
 Lemma postcond_value_split_r : forall (v : val) H1 H2 Q, 
   postcond_value v H2 Q -> postcond_value v (H1 \* H2) (fun r => H1 \* Q r).
-Proof. Admitted.
+Proof. 
+  unfold postcond_value. intros. destruct H as [HQ HQr]. unfold qimpl in HQ, HQr. unfold qimpl.
+  split; intros; rewrite <- hstar_assoc. 
+  - rewrite (hstar_comm _ H1). rewrite hstar_assoc. apply himpl_frame_r; auto.
+  - rewrite (hstar_comm _ H1). rewrite hstar_assoc. apply himpl_frame_r; auto.
+Qed.
 
 Inductive postcond_reflect : val -> Prop -> hpred -> postcond -> Prop :=
   | postc_refl_val v P hpred HP Q
@@ -215,11 +216,11 @@ Inductive postcond_reflect : val -> Prop -> hpred -> postcond -> Prop :=
       (Hprecond: precond_reflect P hpred HP)
       : postcond_reflect v P hpred Q.
 
-#[global]
-Instance Proper_eq_impl_eq_eq_postcond :
-  Proper (eq ====> impl ====> eq ====> (Morphisms.pointwise_relation val eq) ====> impl) postcond_reflect.
-Proof.
-Admitted.
+(*#[global]*)
+(*Instance Proper_eq_impl_eq_eq_postcond :*)
+(*  Proper (eq ====> impl ====> eq ====> (Morphisms.pointwise_relation val eq) ====> impl) postcond_reflect.*)
+(*Proof.*)
+(*Admitted.*)
 
 Definition ens_state P h v := ens (fun res => \[res = v] \* \[P] \* (hprop_of_hpred h)).
 Definition ens_state_ P h := ens_state P h vunit.
@@ -250,19 +251,6 @@ Qed.
 Lemma ens_vunit_is_ens_void : forall H, ens (fun res => \[res = vunit] \* H) = ens_ H.
 Proof.
   unfold ens_. intros. reflexivity.
-Qed.
-
-Lemma hpred_simpl_split_hemp_l : 
-  forall h P v,
-  bientails (ens_state P (hsplit hemp h) v) (ens_state P h v).
-Proof.
-Admitted.
-
-Lemma bient_reflexive :
-  forall h P v,
-  bientails (ens_state P h v) (ens_state P h v).
-Proof.
-  intros. reflexivity.
 Qed.
 
 Fixpoint simplify_hpred hp :=
@@ -597,61 +585,82 @@ Ltac rew_hprop_to_state :=
   rewrite <- ?(lock _ req_state);
   fsimpl_heap.
 
-Lemma norm_seq_ens_ret_ens_pure : 
-  forall P v, entails (ens_ret v ;; ens_pure P) (ens_pure P ;; ens_ret v).
-Proof.
-Admitted.
+(*Lemma norm_seq_ens_ret_ens_pure : *)
+(*  forall P v, entails (ens_ret v ;; ens_pure P) (ens_pure P ;; ens_ret v).*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*Lemma norm_seq_ens_ret_ens_heap :*)
+(*  forall H v, entails (ens_ret v ;; ens_heap H) (ens_heap H ;; ens_ret v).*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*Lemma norm_seq_ens_ret_combine :*)
+(*  forall v, entails (ens_ret v ;; ens_ret v) (ens_ret v).*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*Lemma norm_seq_seq_ens_ret_ens_pure : *)
+(*  forall P v fk, entails (ens_ret v ;; ens_pure P ;; fk) (ens_pure P ;; ens_ret v ;; fk).*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*Lemma norm_seq_seq_ens_ret_ens_heap :*)
+(*  forall H v fk, entails (ens_ret v ;; ens_heap H ;; fk) (ens_heap H ;; ens_ret v ;; fk).*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*Lemma norm_seq_seq_ens_ret_combine :*)
+(*  forall v fk, entails (ens_ret v ;; ens_ret v ;; fk) (ens_ret v ;; fk).*)
+(*Proof.*)
+(*Admitted.*)
+(**)
+(*Hint Rewrite*)
+(*  norm_seq_ens_ret_ens_pure*)
+(*  norm_seq_ens_ret_ens_heap*)
+(*  norm_seq_ens_ret_combine*)
+(*  norm_seq_seq_ens_ret_ens_pure*)
+(*  norm_seq_seq_ens_ret_ens_heap*)
+(*  norm_seq_seq_ens_ret_combine*)
+(*  : rew_reorder_ens.*)
+(**)
 
-Lemma norm_seq_ens_ret_ens_heap :
-  forall H v, entails (ens_ret v ;; ens_heap H) (ens_heap H ;; ens_ret v).
-Proof.
-Admitted.
-
-Lemma norm_seq_ens_ret_combine :
-  forall v, entails (ens_ret v ;; ens_ret v) (ens_ret v).
-Proof.
-Admitted.
-
-Lemma norm_seq_seq_ens_ret_ens_pure : 
-  forall P v fk, entails (ens_ret v ;; ens_pure P ;; fk) (ens_pure P ;; ens_ret v ;; fk).
-Proof.
-Admitted.
-
-Lemma norm_seq_seq_ens_ret_ens_heap :
-  forall H v fk, entails (ens_ret v ;; ens_heap H ;; fk) (ens_heap H ;; ens_ret v ;; fk).
-Proof.
-Admitted.
-
-Lemma norm_seq_seq_ens_ret_combine :
-  forall v fk, entails (ens_ret v ;; ens_ret v ;; fk) (ens_ret v ;; fk).
-Proof.
-Admitted.
-
-Hint Rewrite
-  norm_seq_ens_ret_ens_pure
-  norm_seq_ens_ret_ens_heap
-  norm_seq_ens_ret_combine
-  norm_seq_seq_ens_ret_ens_pure
-  norm_seq_seq_ens_ret_ens_heap
-  norm_seq_seq_ens_ret_combine
-  : rew_reorder_ens.
-
-
-Class Into (A : Type) (B : Type)  := {
-  into : A -> B
+Class Into (A : Type) (B : Type) : Type := {
+  into : A -> B;
+  into_inj : forall a b, into a = into b -> a = b
 }.
 
-Instance Into_val_val : Into val val := {
-  into := id
-}.
+Instance Into_val_val : Into val val.
+Proof.
+  refine ({|
+    into := id;
+    into_inj := _
+  |}). 
+  unfold id.
+  intuition.
+Defined.
 
-Instance Into_loc_val : Into loc val := {
-  into := vloc
-}.
+Instance Into_loc_val : Into loc val.
+Proof.
+  refine ({|
+    into := vloc;
+    into_inj := _
+  |}). 
+  intros.
+  inverts H.
+  reflexivity.
+Defined.
 
-Instance Into_int_val : Into int val := {
-  into := vint
-}.
+Instance Into_int_val : Into int val.
+Proof.
+  refine ({|
+    into := vint;
+    into_inj := _
+  |}). 
+  intros.
+  inverts H.
+  reflexivity.
+Defined.
 
 (* It may be useful to work with bound values with other types than [val].
   This implements support for [bind]ing like this, as long as there is some injection
@@ -737,24 +746,63 @@ Class RewritableBinder (f : flow) : Prop := {
 Instance Proper_binder_rewrite : forall f,RewritableBinder f ->
   Proper (Morphisms.pointwise_relation _ entails ====> entails) (bind f).
 Proof.
-Admitted.
+  unfold Proper, respectful, Morphisms.pointwise_relation.
+  intros * Hbind * Ha.
+  inverts Hbind.
+  apply rewritable_binder_proof0.
+  assumption.
+Qed.
+
+#[global]
+Instance Proper_binder_rewrite_bient : forall f,RewritableBinder f ->
+  Proper (Morphisms.pointwise_relation _ bientails ====> bientails) (bind f).
+Proof.
+  unfold Proper, respectful, Morphisms.pointwise_relation.
+  intros * Hbind * Ha.
+  inverts Hbind.
+  apply bientails_iff_entails. split.
+  - apply rewritable_binder_proof0.
+    intros. lets Hv: Ha v.
+    apply bientails_iff_entails in Hv.
+    intuition.
+  - apply rewritable_binder_proof0.
+    intros. lets Hv: Ha v.
+    apply bientails_iff_entails in Hv.
+    intuition.
+Qed.
 
 #[global]
 Instance Proper_binder_rewrite_seq : forall f,RewritableBinder f ->
   Proper (entails ====> entails) (seq f).
 Proof.
-Admitted.
+  unfold Proper, respectful.
+  intros * Hbind * H.
+  unfold seq.
+  setoid_rewrite H.
+  reflexivity.
+Qed.
 
 #[global]
 Instance Proper_binder_rewrite_bient_seq : forall f,RewritableBinder f ->
   Proper (bientails ====> bientails) (seq f).
 Proof.
-Admitted.
+  unfold Proper, respectful.
+  intros * Hbind * H.
+  unfold seq.
+  setoid_rewrite H.
+  reflexivity.
+Qed.
 
 #[global]
 Instance Rewrite_binder_sf : forall f, ShiftFree f -> RewritableBinder f.
 Proof.
-Admitted.
+  intros. inverts H. constructor. intros. unfold entails. intros.
+  inverts H0. 2: { no_shift. }
+  applys* s_bind.
+  unfold entails in H.
+  apply H.
+  assumption.
+Qed.
 
 #[global]
 Instance Rewrite_locked_ens_state : forall P h v, RewritableBinder ((Lock.locked _ ens_state) P h v).

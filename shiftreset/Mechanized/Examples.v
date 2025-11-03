@@ -39,18 +39,6 @@ Proof.
   fsingle_ens.
 Qed.
 
-(* basic heap manipulation *)
-(*
-  note the use of separating conjunction instead of /\ (though in Heifer this is purely cosmetic)
-
-  also note the [vloc] constructor appearing whenever we need to treat a location
-  as a pure value
-
-  so we'll need to be able to tell if something's a reference during
-  theorem translation; use the type annotations for this?
-
-  also this detail will need to change if ever a shallow embedding of flow return
-  types are used*)
 Example test4 : entails
   (∃' v56, bind_t (ens (fun res => v56 ~~> 0 \* \[res = vloc v56])) (fun i => ens (fun res => \[res = vloc i])))
   (∃' i, ens (fun res => \[res = vloc i] \* i ~~> 0)).
@@ -63,30 +51,6 @@ Proof.
   fmatch_ens.
   fsingle_ens.
 Qed.
-
-
- (* this should also split the ens r. Q \* \[P r] 
-     into the heap and pure parts. what rule does that?
-
-     do we need to implement [split_ens_aux] as a tactic? *)
-  (*fsimpl.*)
-  (*fdestruct v.*)
-  (*fexists v.*)
-  (*fsimpl.*)
-  (*fmatch_ens.*)
-  (*fsingle_ens.*)
-
-(* heap dereference *)
-(* note the use of an existential to match the location (which needs to have type [loc])
-  with the bound value (which needs to have type [val])
-
-  maybe we can uniformly apply this to all types...
-   again, this may change depending on the embedding of types
-   and we won't always have "all types"
-
-   this forms a nontrivial difference between coq and heifer specs...
-   the tactics need to transparently adjust for this
-   *)
 
 #[global]
 Instance ShiftFree_fex : forall A (f : A -> flow),
@@ -136,31 +100,7 @@ Instance Proper_req_locked_state :
 Proof.
 Admitted.
 
-(*#[global]*)
-(*Instance Proper_locked_seq :*)
-(*  forall H,*)
-(*  Proper (entails ====> entails) (Lock.locked).*)
-(*Proof.*)
-(*Admitted.*)
-(**)
-(*Ltac rew_state_to_hprop := *)
-(*  unfold ens_pure, ens_heap, ens_ret;*)
-(*  rewrite ?ens_state_vunit_is_ens_state_void;*)
-(*  rewrite ?ens_state_void_is_ens_void;*)
-(*  unfold ens_state, req_state, hprop_of_hpred;*)
-(*  (* clean up the postconditions *)*)
-(*  rewrite ?ens_vunit_is_ens_void;*)
-(*  rewrite <- ?hempty_eq_hpure_true;*)
-(*  autorewrite with rew_heap;*)
-(*  (*rewrite <- hempty_eq_hpure_true;*)*)
-(*  (*repeat (rewrite hstar_hempty_r, hstar_hempty_l);*)*)
-(*  fold hprop_of_hpred.*)
-
 Example test5 : entails
-  (*(∃' v72, bind (ens (fun res => \[res = vloc v72] \* v72 ~~> 0))*)
-  (*(fun ival =>*)
-  (*∃' i, ens_ \[ival = vloc i] ;; ∀' v73, req (i ~~> v73) (ens (fun res => \[res = v73] \* i ~~> v73))))*)
-  (*(∃' i, ens (fun res => \[res = vloc i] \* i ~~> 0)).*)
   (bind_t (∃' v72, ens (fun res => \[res = into v72] \* v72 ~~> 0))
   (fun i =>
   bind_t (∀' v73, req (i ~~> v73) (ens (fun res => \[res = into v73] \* i ~~> v73)))
@@ -169,11 +109,6 @@ Example test5 : entails
 Proof.
   rew_hprop_to_state.
   fsimpl.
-  (*Set Typeclasses Debug.*)
-  (*setoid_rewrite norms_split_ens_locked at 2.*)
-  (*rewrite <- (lock _ _);*)
-  (*repeat (setoid_rewrite norms_remove_empty_void at 1);*)
-  (*repeat (setoid_rewrite norms_remove_empty_ret at 1).*)
   fdestruct v72.
   finst_and_biab 0.
   fexists v72.
@@ -183,15 +118,6 @@ Qed.
 
 (* writing to the heap *)
 Example test61 : entails
-  (*(bind (∃' v88, ens (fun res => \[res = vloc v88] \* v88 ~~> 0))*)
-  (*(fun i_val =>*)
-  (*  ∃' i, ens_ \[i_val = vloc i] ;;*)
-  (*  bind (bind (∀' v89, req (i ~~> v89) (ens (fun res => \[res = v89] \* i ~~> v89)))*)
-  (*  (fun v85 => ens (fun res => \[res = vplus v85 1])))*)
-  (*  (fun v86 => *)
-  (*    (∀' v90, req (i ~~> v90) (ens_ (i ~~> v86))) ;;*)
-  (*    ∀' v91, req (i ~~> v91) (ens (fun res => \[res = v91] \* i ~~> v91)))))*)
-  (*(∃' i, ens (fun res => \[res = 1] \* i ~~> 1)).*)
   (bind_t (∃' v88, ens (fun res => \[res = into v88] \* v88 ~~> 0)) (fun i =>
   (bind_t (
     (bind_t (∀' v89, req (i ~~> v89) (ens (fun res => \[res = v89] \* i ~~> v89))) (fun v85 =>
@@ -212,3 +138,4 @@ Proof.
   fmatch_ens.
   fsingle_ens.
 Qed.
+

@@ -1,7 +1,7 @@
 
 (* Porting over normalization rules.
    Some are largely unchanged from Norm; aside from the use of bind_t instead of bind. *)
-From ShiftReset Require Import Logic Automation Entl Norm Propriety.
+From ShiftReset Require Import Logic Automation Entl Norm Propriety Norm.
 From ShiftReset.Mechanized Require Import State.
 
 (* TODO apply these on more than one side? *)
@@ -10,17 +10,85 @@ Check norm_bind_val.
 
 Corollary norms_bind_t_val : forall A I fk v, entails (@bind_t A I (ens_state True hemp (into v)) fk) (fk v).
 Proof.
-Admitted.
+  intros.
+  unfold bind_t.
+  rew_state_to_hprop.
+  rewrite norm_bind_val.
+  fdestruct v_typed.
+  rewrite ens_vunit_is_ens_void.
+  rewrite hstar_hempty_r.
+  fentailment.
+  intros H.
+  apply into_inj in H.
+  subst.
+  reflexivity.
+Qed.
 
 Corollary norms_bind_t_val2 : forall fk (v : val), entails (bind_t (ens_state True hemp v) fk) (fk v).
 Proof.
-Admitted.
+  apply norms_bind_t_val.
+Qed.
 
 (* we have norm_bind_trivial but only for shiftfree specs *)
 Check norm_bind_trivial_sf.
 
+
+#[global]
+Instance ShiftFree_fex : forall A (f : A -> flow),
+  (forall v, ShiftFree (f v)) -> ShiftFree (fex f).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_pointwise_entails_fall : forall A,
+  Proper (Morphisms.pointwise_relation A entails ====> entails)
+  (@fall A).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_pointwise_bientails_fall : forall A,
+  Proper (Morphisms.pointwise_relation A bientails ====> bientails)
+  (@fall A).
+Proof.
+Admitted.
+
+#[global]
+Instance ShiftFree_fall : forall A (f : A -> flow),
+  (forall v, ShiftFree (f v)) -> ShiftFree (fall f).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_bind_pointwise_entails_bind :
+  forall A I H f,
+  ShiftFree f ->
+  Proper ((Morphisms.pointwise_relation _ entails) ====> entails) (@bind_t A I (req H f)).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_req_state :
+  forall P H,
+  Proper (entails ====> entails) (req_state P H).
+Proof.
+Admitted.
+
+#[global]
+Instance Proper_req_locked_state :
+  forall P H,
+  Proper (entails ====> entails) ((locked _ req_state) P H).
+Proof.
+Admitted.
+
+(*Lemma norm_bind_ex_r : forall A f (fkk : A -> val -> flow),*)
+(*  entails (bind f (fun x => fex (fun v => fkk v x)))*)
+(*    (fex (fun v => (bind f (fun x => fkk v x)))).*)
+(*Proof.*)
+(*Admitted.*)
+
 Corollary norms_bind_t_trivial : forall A I f1,
-  entails (@bind_t A I f1 (fun res => ens_state True hemp (into res))) f1.
+  shift_free f1 -> entails (@bind_t A I f1 (fun res => ens_state True hemp (into res))) f1.
 Proof.
 Admitted.
 
@@ -28,9 +96,13 @@ Check norm_bind_disj.
  
 Corollary norm_bind_t_disj : forall A I f1 f2 fk,
   entails (@bind_t A I (disj f1 f2) fk)
-  (disj (bind_t f1 fk) (bind_t f1 fk)).
+  (disj (bind_t f1 fk) (bind_t f2 fk)).
 Proof.
-Admitted.
+  intros. unfold bind_t. rewrite norm_bind_disj.
+  apply entl_disj_l.
+  - apply entl_disj_r_l. reflexivity.
+  - apply entl_disj_r_r. reflexivity.
+Qed.
 
 (* this rule is norm_seq_disj_r, specialized for ens *)
 Theorem norm_seq_ens_disj : forall Q f1 f2,
@@ -43,7 +115,10 @@ Corollary norms_seq_ens_disj : forall p h v f1 f2,
   entails (ens_state p h v ;; (disj f1 f2))
   (disj (ens_state p h v ;; f1) (ens_state p h v ;; f2)).
 Proof.
-Admitted.
+  intros. rew_state_to_hprop.
+  apply norm_seq_disj_r.
+  shiftfree.
+Qed.
 
 Check norm_bind_req.
 
@@ -52,7 +127,10 @@ Corollary norm_bind_t_req : forall A I P h f fk,
   (@bind_t A I (req_state P h f) fk)
   (req_state P h (bind_t f fk)).
 Proof.
-Admitted.
+  intros. rew_state_to_hprop. unfold bind_t.
+  rewrite norm_bind_req.
+  reflexivity.
+Qed.
 
 (* we have norm_bind_ex, but only in one direction *)
 Check norm_bind_ex_l.
@@ -60,7 +138,10 @@ Check norm_bind_ex_l.
 Corollary norm_bind_t_ex_l : forall A I AEx (f : AEx -> flow) (fk : A -> flow),
   entails (@bind_t A I (∃' b, f b) fk) (∃' b, (bind_t (f b) fk)).
 Proof.
-Admitted.
+  intros. rew_state_to_hprop. unfold bind_t.
+  rewrite norm_bind_ex_l.
+  reflexivity.
+Qed.
 
 (* we also have norm_bind_all, but only in one direction *)
 Check norm_bind_all_l.
@@ -68,21 +149,32 @@ Check norm_bind_all_l.
 Corollary norm_bind_t_all_l : forall A I AEx (f : AEx -> flow) (fk : A -> flow),
   entails (@bind_t A I (∀' b, f b) fk) (∀' b, (bind_t (f b) fk)).
 Proof.
-Admitted.
+  intros. rew_state_to_hprop. unfold bind_t.
+  rewrite norm_bind_all_l.
+  reflexivity.
+Qed.
 
 (* norm_bind_assoc_sf specialized for ens *)
 (* there is also norm_bind_assoc_sf_equiv, which is a bientailment *)
 Theorem norm_bind_assoc_ens : forall Q f1 f2,
   entails (bind (bind (ens Q) f1) f2) (bind (ens Q) (fun y => (bind (f1 y) f2))).
 Proof.
-  intros. apply norm_bind_assoc_sf. shiftfree.
+  intros. 
+  rewrite norm_bind_assoc_sf.
+  - reflexivity.
+  - shiftfree.
 Qed.
 
 Corollary norms_bind_t_assoc_ens : forall A1 I1 A2 I2 P h v f1 f2,
   entails (@bind_t A1 I1 (@bind_t A2 I2 (ens_state P h v) f1) f2)
     (bind_t (ens_state P h v) (fun y => (bind_t (f1 y) f2))).
 Proof.
-Admitted.
+  intros. rew_state_to_hprop. unfold bind_t.
+  rewrite norm_bind_assoc_ens.
+  setoid_rewrite norm_bind_ex_l.
+  setoid_rewrite norm_reassoc_ens_void.
+  reflexivity.
+Qed.
 
 Theorem norm_seq_val : forall v f,
   entails (ens (fun res => \[res = v]) ;; f) f.
@@ -90,10 +182,11 @@ Proof.
   intros. apply norm_seq_pure_l.
 Qed.
 
-Corollary norms_seq_val : forall v P h f,
-  entails (ens_state P h v ;; f) f.
+Corollary norms_seq_val : forall v f,
+  entails (ens_state True hemp v ;; f) f.
 Proof.
-Admitted.
+  intros. rew_state_to_hprop. apply norm_seq_val.
+Qed.
 
 Theorem norm_seq_ens_ex : forall A Q (f : A -> flow),
   entails (ens Q ;; fex (fun x => f x)) (fex (fun x => ens Q ;; f x)).
@@ -104,7 +197,8 @@ Qed.
 Corollary norms_seq_ens_ex : forall A P h v (f : A -> flow),
   entails (ens_state P h v ;; fex f) (fex (fun x => ens_state P h v  ;; f x)).
 Proof.
-Admitted.
+  intros. rew_state_to_hprop. rewrite norm_seq_ens_ex. reflexivity.
+Qed.
 
 Theorem norm_seq_ens_all : forall A Q (f : A -> flow),
   entails (ens Q ;; fall (fun x => f x)) (fall (fun x => ens Q ;; f x)).
@@ -115,7 +209,8 @@ Qed.
 Corollary norms_seq_ens_all : forall A P h v (f : A -> flow),
   entails (ens_state P h v ;; fall f) (fall (fun x => ens_state P h v  ;; f x)).
 Proof.
-Admitted.
+  intros. rew_state_to_hprop. rewrite norm_seq_ens_all. reflexivity.
+Qed.
 
 (* a with-trailing versoin of norm_seq_ens_all *)
 Theorem norm_seq_ens_seq_all : forall A Q (f : A -> flow) fk,
@@ -133,9 +228,11 @@ Proof.
 Qed.
 
 Theorem norms_seq_ens_seq_all : forall A P h v (f : A -> flow) fk,
-  entails (ens_state P h v  ;; fall (fun x => f x) ;; fk) (fall (fun x => ens_state P h v  ;; f x) ;; fk).
+  entails (ens_state P h v  ;; fall (fun x => f x) ;; fk) (fall (fun x => ens_state P h v  ;; f x ;; fk)).
 Proof.
-Admitted.
+  intros. rew_state_to_hprop. rewrite norm_seq_ens_seq_all.
+  reflexivity.
+Qed.
 
 (* specialization of norm_bind_seq_assoc for ens *)
 Theorem norm_bind_seq_ens : forall Q f fk,
@@ -149,7 +246,9 @@ Qed.
 Corollary norms_bind_seq_ens : forall A I P h v f fk,
   entails (@bind_t A I (ens_state P h v ;; f) fk) (ens_state P h v ;; bind_t f fk).
 Proof.
-Admitted.
+  intros. unfold bind_t. rew_state_to_hprop. rewrite norm_bind_seq_ens.
+  reflexivity.
+Qed.
 
 Check norm_ens_ens_void.
 
@@ -171,7 +270,8 @@ Corollary norms_ens_heap_ens_pure : forall h P,
   entails 
   (ens_heap h ;; ens_pure P) (ens_pure P ;; ens_heap h).
 Proof.
-Admitted.
+  intros. rew_state_to_hprop. apply norm_ens_heap_ens_pure.
+Qed.
 
 (* the with-trailing version of norm_ens_heap_ens_pure *)
 Theorem norm_seq_ens_heap_ens_pure : forall Q P f,
