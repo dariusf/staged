@@ -13,27 +13,15 @@ Qed.
 (* there is also a base case for req \[True], but
    here there is no way to represent a trailing [req] *)
 
-Ltac fempty := apply ent_ens_empty.
+Ltac fempty :=
+  match goal with
+  | [ |- entails (req_state True hemp empty) (req_state True hemp empty) ] => reflexivity
+  | [ |- entails (ens_state True hemp vunit) (ens_state True hemp vunit) ] => reflexivity
+  end.
 
 Ltac fsolve_pure := auto.
 
 Ltac fsolve_heap := xsimpl.
-
-Ltac fsingle_ens :=
-  (* operates on goals of the form 
-     entails (ens ?lhs) (ens ?rhs)
-     entails_under _ (ens ?lhs) (ens ?rhs)
-
-     has to
-     - use biabduction to discharge the heap constraints
-     we need to model the addition of the xpure constraints somehow...?
-     - use some magic to discharge the pure constraints
-     look into: smtcoq, coqhammer, crush from CPDT
-   *)
-  match goal with
-  |  [ |- entails (ens_state _ _ _) (ens_state _ _ _) ] =>
-    rewrite ens_state_is_ens; apply entl_ens_single; fsolve_pure
-  end.
 
 (* this should maybe be packaged with the hpred? *)
 (* maybe hpred should just be an Fmap? *)
@@ -180,7 +168,7 @@ Qed.
 
 (* TODO is the converse true? *)
 
-Lemma entl_state_ens_ens : forall P1 h1 v1 P2 h2 v2 f1 f2,
+Lemma entl_state_ens_ens_f : forall P1 h1 v1 P2 h2 v2 f1 f2,
   (\[P1] \* hprop_of_hpred h1 ==> \[P2] \* hprop_of_hpred h2) ->
   v1 = v2 ->
   entails f1 f2 ->
@@ -199,6 +187,53 @@ Proof.
   - reflexivity.
 Qed.
 
+Lemma entl_state_req_req_f : forall P1 h1 P2 h2 f1 f2,
+  (\[P2] \* hprop_of_hpred h2) ==> (\[P1] \* hprop_of_hpred h1) ->
+  entails f1 f2 ->
+  entails (req_state P1 h1 f1) (req_state P2 h2 f2).
+Proof.
+  intros * Hhimpl Hent.
+  rew_state_to_hprop.
+  rewrite Hent.
+  rewrite Hhimpl.
+  reflexivity.
+Qed.
+
+Lemma entl_state_ens_ens : forall P1 P2 hp1 hp2 v1 v2,
+  (* Heifer's rule here is a full biabduction, but I'm pretty sure it's incorrect... *)
+  (\[P1] \* hprop_of_hpred hp1)  ==> \[P2] \* (hprop_of_hpred hp2)
+  -> v1 = v2
+  (* Technically, this subgoal is not needed, but this is what Heifer reduces the ens-ens entailment to... *)
+  -> entails (req_state True hemp empty) (req_state True hemp empty)
+  -> entails (ens_state P1 hp1 v1) (ens_state P2 hp2 v2).
+Proof.
+  intros * Hhimpl Hsubst Hreq.
+  subst.
+  rew_state_to_hprop.
+  rewrite <- norm_ens_ens_void_l.
+  with_entailsR (rewrite <- norm_ens_ens_void_l).
+  apply entl_ens_ens.
+  - exact Hhimpl.
+  - reflexivity. 
+Qed.
+
+Ltac fsingle_ens :=
+  (* operates on goals of the form 
+     entails (ens ?lhs) (ens ?rhs)
+     entails_under _ (ens ?lhs) (ens ?rhs)
+
+     has to
+     - use biabduction to discharge the heap constraints
+     we need to model the addition of the xpure constraints somehow...?
+     - use some magic to discharge the pure constraints
+     look into: smtcoq, coqhammer, crush from CPDT
+   *)
+  match goal with
+  |  [ |- entails (ens_state _ _ _) (ens_state _ _ _) ] =>
+    apply entl_state_ens_ens; [unfold hprop_of_hpred; fsolve_heap; try fsolve_pure | fsolve_pure | ]
+  end.
+
+
 Ltac fmatch_ens :=
   (* operates on goals of the form
      entails (ens ?lhs ;; ?lnext) (ens ?rhs ;; ?rnext)
@@ -210,7 +245,9 @@ Ltac fmatch_ens :=
    *)
   match goal with
   | [ |- entails ((ens_state _ _ _) ;; _) ((ens_state _ _ _) ;; _)] =>
-    apply entl_state_ens_ens; [unfold hprop_of_hpred; fsolve_heap; try fsolve_pure | fsolve_pure | ]
+    apply entl_state_ens_ens_f; [unfold hprop_of_hpred; fsolve_heap; try fsolve_pure | fsolve_pure | ]
+  | [ |- entails (req_state _ _ _) (req_state _ _ _) ] =>
+    apply entl_state_req_req_f; [unfold hprop_of_hpred; fsolve_heap; try fsolve_pure | ]
   end.
 
 (* TODO: use Ltac2? *)
@@ -250,7 +287,7 @@ Ltac fsplit_ens :=
 
 Ltac fapply_one_norm_rule :=
   first [
-    setoid_rewrite norms_bind_t_trivial at 1 |
+    setoid_rewrite norms_bind_t_trivial at 1; [ | rew_state_to_hprop; shiftfree ] |
     setoid_rewrite norm_bind_t_ex_l at 1 |
     setoid_rewrite norm_bind_t_all_l at 1 |
     setoid_rewrite norms_bind_seq_ens at 1 |
@@ -264,6 +301,11 @@ Ltac fapply_one_norm_rule :=
     setoid_rewrite norms_seq_ens_all at 1 |
     setoid_rewrite norms_seq_ens_seq_all at 1 |
     setoid_rewrite norm_seq_all at 1 |
+    setoid_rewrite norms_ens_heap_ens_heap at 1 |
+    setoid_rewrite norms_seq_ens_heap_ens_heap at 1 |
+    setoid_rewrite norms_ens_pure_ens_pure at 1 |
+    setoid_rewrite norms_seq_ens_pure_ens_pure at 1 |
+    setoid_rewrite norms_seq_ens_ex at 1 |
     setoid_rewrite <- norm_seq_assoc_sf at 1; [ | rew_state_to_hprop; shiftfree ] |
     setoid_rewrite norms_seq_assoc_req
   ].

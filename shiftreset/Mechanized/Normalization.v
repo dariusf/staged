@@ -68,11 +68,19 @@ Proof.
 Admitted.
 
 #[global]
-Instance Proper_req_state :
+Instance Proper_req_state_ent :
   forall P H,
   Proper (entails ====> entails) (req_state P H).
 Proof.
 Admitted.
+
+#[global]
+Instance Proper_req_state_bient :
+  forall P H,
+  Proper (bientails ====> bientails) (req_state P H).
+Proof.
+Admitted.
+
 
 #[global]
 Instance Proper_req_locked_state :
@@ -120,6 +128,25 @@ Proof.
   shiftfree.
 Qed.
 
+Lemma norm_seq_req_empty_req : forall Q f,
+  bientails (req_ Q ;; f) (req Q f).
+Proof.
+  intros. rewrite bientails_iff_entails. split.
+  - unfold entails. intros * Hreq.
+    inverts Hreq. 2: { inverts H5.
+      applys* s_req.
+      intros.
+      lets asdf: (H7 hp hr H H0 H1).
+      inverts asdf. destr H9. discriminate H2. }
+    applys* s_req.
+    intros.
+    inverts H6.
+    lets Hhp: (H11 hp hr H H0 H1).
+    inverts Hhp. destr H9. inverts H2. hinv H3. hinv H2. hinv H3. subst.
+    rewrite !union_empty_r in H7. exact H7.
+  - unfold entails. intros * Hreq. 
+    (* the semantics of req just do not play nice here... *)
+Abort.
 Check norm_bind_req.
 
 Corollary norm_bind_t_req : forall A I P h f fk,

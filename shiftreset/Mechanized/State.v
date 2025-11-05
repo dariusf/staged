@@ -224,9 +224,14 @@ Inductive postcond_reflect : val -> Prop -> hpred -> postcond -> Prop :=
 
 Definition ens_state P h v := ens (fun res => \[res = v] \* \[P] \* (hprop_of_hpred h)).
 Definition ens_state_ P h := ens_state P h vunit.
-Definition ens_pure P := ens_state_ P hemp.
-Definition ens_heap hp := ens_state_ True hp.
-Definition ens_ret v := ens_state True hemp v.
+
+Notation "'ens_pure' P" := (ens_state P hemp vunit) (at level 30).
+Notation "'ens_heap' h" := (ens_state True h vunit) (at level 30).
+Notation "'ens_ret' v" := (ens_state True hemp v) (at level 30).
+
+(*Definition ens_pure P := ens_state_ P hemp.*)
+(*Definition ens_heap hp := ens_state_ True hp.*)
+(*Definition ens_ret v := ens_state True hemp v.*)
 
 Definition req_state P h f := req (\[P] \* (hprop_of_hpred h)) f.
 
@@ -281,7 +286,7 @@ Qed.
 (* Rewrites all [ens_state]s present in the goal back to an [ens]. *)
   (* TODO [rew_state_to_hprop in H] *)
 Ltac rew_state_to_hprop := 
-  unfold ens_pure, ens_heap, ens_ret;
+  (*unfold ens_pure, ens_heap, ens_ret;*)
   repeat (rewrite ens_state_vunit_is_ens_state_void at 1);
   repeat (rewrite ens_state_void_is_ens_void at 1);
   rewrite ?ens_state_void_is_ens_void;
@@ -943,4 +948,3 @@ Qed.
 (**)
 (*    setoid_rewrite Hyx.*)
 (*    reflexivity.*)
-(*Qed.*)
