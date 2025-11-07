@@ -466,20 +466,182 @@ Proof.
     { assumption. } }
 Qed.
 
-(* Lemma rel_v_compat_lam {V : Set} (e1 e2 : expr (inc V)) n :
-  n ⊨ E_rel e1 e2 →
-  n ⊨ rel_v (v_lam e1) (v_lam e2).
+Lemma subst_closed X e x es : closed X e → x ∉ X → subst x es e = e.
 Proof.
-  intro He;
-  iintros γ1 γ2 Hγ; term_simpl.
-  apply V_rel_intro; iintros u1 u2 Hu.
-  eapply R_rel_red_both; [ auto_red | auto_red | ]; later_shift; term_simpl.
-  unfold subst; repeat rewrite bind_bind_comp'.
-  iapply He.
-  iintro x; destruct x as [ | x ]; term_simpl.
-  + assumption.
-  + iapply Hγ.
+Admitted.
+  (* induction e in X |-*; simpl; rewrite ?bool_decide_spec, ?andb_True; intros ??;
+    repeat case_decide; simplify_eq; simpl; f_equal; intuition eauto with set_solver.
 Qed. *)
+
+Lemma subst_closed_nil e x es : closed [] e → subst x es e = e.
+Proof.
+(* intros. apply subst_closed with []; set_solver. Qed. *)
+Admitted.
+
+Lemma closed_subst_map γ x:
+  closed [] (subst_map γ (var x)) →
+  ∃ v, γ !! x = Some v ∧ subst_map γ (var x) = ret v ∧ closed [] v.
+Proof.
+Admitted.
+
+Lemma compat_var (x : string) n :
+  n ⊨ E_rel_o (var x) (var x).
+Proof.
+  iintros γ₁ γ₂ Hγ.
+  (* Check E_rel_elim. *)
+  unfold E_rel. iintros Hc1 Hc2 E1 E2 HK.
+
+
+
+  (* simpl. *)
+  (* applys V. *)
+
+  (* unfold G_rel in Hγ. *)
+  (* simpl in Hc1. *)
+  (* simpl in *. *)
+  (* apply G_rel_elim in Hγ. *)
+
+  (* auto. *)
+  idestruct Hc1.
+  apply closed_subst_map in Hc1.
+  destruct Hc1 as (v1&Hg1&?&?).
+
+  idestruct Hc2.
+  apply closed_subst_map in Hc2.
+  destruct Hc2 as (v2&Hg2&?&?).
+
+  unfold G_rel in Hγ.
+  ispecialize Hγ x.
+  ispecialize Hγ v1.
+  ispecialize Hγ v2.
+  (* Search ((_)ᵢ). *)
+  apply I_prop_intro with (w:=n) in Hg1.
+  apply I_prop_intro with (w:=n) in Hg2.
+
+  (* iintro Hg1. *)
+  (* ispecialize Hγ Hg1. *)
+
+  iapply Hγ in Hg1. (* ? *)
+
+  iapply Hg1 in Hg2.
+  apply I_prop_intro with (w:=n) in H0.
+  apply I_prop_intro with (w:=n) in H2.
+
+  pose proof H0.
+  pose proof H2.
+
+  iapply Hg2 in H0.
+  iapply H0 in H2.
+
+  rewrite H.
+  rewrite H1.
+
+  apply K_rel_elim; auto.
+Qed.
+
+Lemma R_rel_red_both (e₁ e₁' e₂ e₂' : expr) n :
+  (* contextual_step e₁ e₁' → contextual_step e₂ e₂' → *)
+  base_step e₁ e₁' → base_step e₂ e₂' →
+  n ⊨ ▷ E_rel e₁' e₂' →
+  n ⊨ R_rel e₁ e₂.
+Proof.
+  (* intros Hred₁ Hred₂ He; iintros E₁ E₂ HE.
+  eapply Obs_red_both.
+  + apply red_in_ectx; eassumption.
+  + apply red_in_ectx; eassumption.
+  + later_shift; iapply He; assumption. *)
+(* Qed. *)
+Admitted.
+
+Definition subst_is_closed (X : list string) (map : sub) :=
+  ∀ x e, map !! x = Some e → closed X (ret e).
+
+Lemma sem_context_rel_closed γ1 γ2 n:
+  n ⊨ G_rel γ1 γ2 →
+  subst_is_closed [] γ1 ∧ subst_is_closed [] γ2.
+Proof.
+  intros H.
+  unfold G_rel in H.
+  unfold subst_is_closed.
+  split.
+  {
+    intros.
+    ispecialize H x.
+    admit.
+  }
+  (* iintros x. *)
+
+admit.
+  (* induction 1.
+  - done.
+  - intros y e. rewrite lookup_insert_Some.
+    intros [[-> <-]|[Hne Hlook]].
+    + by eapply val_rel_closed.
+    + eapply IHsem_context_rel; last done. *)
+(* Qed. *)
+Abort.
+
+
+Lemma subst_subst_map : ∀ (x : binder) (es : val) (map : sub) e,
+  subst_is_closed [] map
+  → subst' x es (subst_map (binder_delete x map) e) =
+    (* subst_map (<[x:=es]> map) e. *)
+    subst_map (binder_insert x es map) e.
+Proof.
+Admitted.
+
+Lemma subst_map_closed X e xs :
+  closed X e →
+  (∀ x : string, x ∈ dom xs → x ∉ X) →
+  subst_map xs e = e.
+Proof.
+Admitted.
+
+Lemma sem_context_rel_insert x v1 v2 γ1 γ2 n:
+  n ⊨ V_rel v1 v2 →
+  n ⊨ G_rel γ1 γ2 →
+  n ⊨ G_rel (<[x := v1]> γ1) (<[x := v2]> γ2).
+Proof.
+Admitted.
+
+Lemma rel_v_compat_lam (e1 e2 : expr) n x :
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ V_rel_o (vlambda x e1) (vlambda x e2).
+Proof.
+  intro He.
+  unfold V_rel_o. iintros γ1 γ2 Hγ.
+  apply V_rel_intro. iintros Hce1 Hce2 u1 u2 Hcu1 Hcu2 Hv.
+  simpl in *.
+  idestruct Hce1.
+  idestruct Hce2.
+  idestruct Hcu1.
+  idestruct Hcu2.
+
+  eapply R_rel_red_both.
+  - constructor.
+    simpl. constructor.
+    reflexivity.
+  - constructor.
+    simpl. constructor.
+    reflexivity.
+  - later_shift.
+    rewrite subst_subst_map.
+    2: {
+      (* unfold G_rel in Hγ. *)
+      admit. }
+    rewrite subst_subst_map.
+    2: { admit. }
+
+    iapply He.
+    destruct x.
+    { (* anon case *)
+      simpl in *.
+      assumption. }
+    { simpl in *.
+      apply sem_context_rel_insert.
+      assumption.
+      assumption. }
+Abort.
 
 (* Fixpoint fundamental_property_e {V : Set} (e : expr V) n :
   n ⊨ E_rel e e
