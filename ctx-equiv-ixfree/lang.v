@@ -1,22 +1,14 @@
 
-From CtxEquivIris Require Import persistent_pred.
-
 From IxFree Require Import Lib Nat.
-
-(* From iris.prelude Require Import options.
-From iris.base_logic Require Import invariants bi algebra.
-From iris.heap_lang Require Import proofmode. *)
 From stdpp Require Export binders.
 From stdpp Require Export gmap.
 
 Definition loc : Set := nat.
 
 Inductive expr :=
-  (* | ret (v : val) *)
   (* | eint (z : Z) *)
   (* | eunit *)
-  | evalue (v:val)
-
+  | ret (v:val)
   (* | ens (H : hprop) *)
   (* | ensp (P : prop) *)
   (* | var (x : binder) *)
@@ -35,7 +27,7 @@ with val :=
 
 Definition to_val (e : expr) : option val :=
   match e with
-  | evalue v => Some v
+  | ret v => Some v
   (* | abs x e => Some (vlambda x e) *)
   | _ => None
   end.
@@ -56,8 +48,7 @@ Fixpoint subst_val (x : string) (es : expr) (v : val)  : val :=
 
 with subst (x : string) (es : expr) (e : expr)  : expr :=
   match e with
-  (* | eunit => eunit *)
-  | evalue v => evalue (subst_val x es v)
+  | ret v => ret (subst_val x es v)
   (* The function [decide] can be used to decide propositions.
     [decide P] is of type {P} + {¬ P}.
     It can only be applied to propositions for which, by type class inference,
@@ -74,7 +65,7 @@ Definition subst' (mx : binder) (es : expr) : expr → expr :=
 
 Definition is_val (e : expr) : Prop :=
   match e with
-  | evalue v => True
+  | ret v => True
   (* | abs x e => True *)
   | _ => False
   end.
@@ -86,14 +77,14 @@ Definition is_val (e : expr) : Prop :=
   | vlambda x e => abs x e
   end. *)
 
-Notation of_val := evalue.
-Coercion evalue : val >-> expr.
+Notation of_val := ret.
+Coercion ret : val >-> expr.
 
 Inductive base_step : expr → expr → Prop :=
   | BetaS x e1 e2 e' :
      is_val e2 →
      e' = subst' x e2 e1 →
-     base_step (app (evalue (vlambda x e1)) e2) e'
+     base_step (app (ret (vlambda x e1)) e2) e'
   (* | PlusS e1 e2 (n1 n2 n3 : Z):
      e1 = (eint n1) →
      e2 = (eint n2) →
@@ -102,71 +93,30 @@ Inductive base_step : expr → expr → Prop :=
   .
 
 (* inside-out contexts *)
-(* https://www.williamjbowman.com/teaching/2020/w1/cpsc509/resources/05-reduction.pdf *)
 Inductive ectx :=
-| ectx_hole   : ectx
-| ectx_app1   : ectx → expr → ectx
-| ectx_app2   : val → ectx → ectx
-.
+  | ectx_hole : ectx
+  | ectx_app1 : ectx → expr → ectx
+  | ectx_app2 : val → ectx → ectx.
 
 Fixpoint plug (E : ectx) (e : expr) : expr :=
   match E with
-  | ectx_hole       => e
-  | ectx_app1 E1 e1  => plug E1 (app e e1)
-  | ectx_app2 v E1   => plug E1 (app v e)
+  | ectx_hole => e
+  | ectx_app1 E1 e1 => plug E1 (app e e1)
+  | ectx_app2 v E1 => plug E1 (app v e)
   end.
 
 (** Outside-in evaluation contexts *)
 Inductive rctx :=
-| rctx_hole   : rctx
-| rctx_app1   : rctx → expr → rctx
-| rctx_app2   : val → rctx → rctx
-.
+  | rctx_hole : rctx
+  | rctx_app1 : rctx → expr → rctx
+  | rctx_app2 : val → rctx → rctx.
 
 Fixpoint rplug (E : rctx) (e : expr) : expr :=
   match E with
-  | rctx_hole       => e
-  | rctx_app1 E1 e1  => app (rplug E1 e) e1
-  | rctx_app2 v E1   => app v (rplug E1 e)
+  | rctx_hole => e
+  | rctx_app1 E1 e1 => app (rplug E1 e) e1
+  | rctx_app2 v E1 => app v (rplug E1 e)
   end.
-
-
-(* these behave the same *)
-Compute plug ectx_hole vunit.
-Compute plug (ectx_app1 ectx_hole (vint 2)) (vint 1).
-
-(*
-  assuming 2 is the innermost application, ((1 2) 3),
-
-  // outside-in contexts
-
-    □[□ 3][□ 2]
-  = (□ 3)[□ 2]
-  = ((□ 2) 3)
-
-  rplug ((□ 2) 3) 1
-  = ((rplug (□ 2) 1) 3)
-  = (((rplug □ 1) 2) 3)
-  = ((1 2) 3)
-
-  // inside-out contexts.
-  // hole args are the surrounding context,
-  // and the topmost term is the innermost context.
-  // the syntax is the same
-
-  E ::= □ | E e | v E
-
-  plug ((□ 3) 2) 1
-  = plug (□ 3) (1 2)
-  = plug □ ((1 2) 3)
-  = ((1 2) 3)
-*)
-
-Compute plug (ectx_app1 (ectx_app1 ectx_hole (vint 3)) (vint 2))
-  (evalue (vint 1)).
-
-Compute rplug (rctx_app1 (rctx_app1 rctx_hole (vint 3)) (vint 2))
-  (evalue (vint 1)).
 
 Notation fill := plug.
 
@@ -204,7 +154,7 @@ Fixpoint subst_map_val (xs : sub) (v : val) : val :=
 
 with subst_map (xs : sub) (e : expr) : expr :=
   match e with
-  | evalue v => evalue (subst_map_val xs v)
+  | ret v => ret (subst_map_val xs v)
   (* | eunit => eunit *)
   | var y => match xs !! y with Some es => of_val es | _ =>  var y end
   | app e1 e2 => app (subst_map xs e1) (subst_map xs e2)
@@ -215,8 +165,8 @@ with subst_map (xs : sub) (e : expr) : expr :=
 Fixpoint is_closed (X : list string) (e : expr) : bool :=
   match e with
   | var x => bool_decide (x ∈ X)
-  | evalue vunit | evalue (vint _) => true
-  | evalue (vlambda x e) => is_closed (x :b: X) e
+  | ret vunit | ret (vint _) => true
+  | ret (vlambda x e) => is_closed (x :b: X) e
   | app e1 e2
   (* | eplus e1 e2 *)
   => is_closed X e1 && is_closed X e2
@@ -247,11 +197,12 @@ Record cexpr_rel := mk_cexpr_rel {
   cexpr_rel_closed e1 e2 : cexpr_rel_car e1 e2 → is_closed [] e1 ∧ is_closed [] e2;
 }. *)
 
+(* Relations *)
+
 Definition expr_rel := expr ⇒ᵢ expr ⇒ᵢ IRel.
 Definition val_rel := val ⇒ᵢ val ⇒ᵢ IRel.
 Definition sub_rel := sub ⇒ᵢ sub ⇒ᵢ IRel.
 Definition ctx_rel := ectx ⇒ᵢ ectx ⇒ᵢ IRel.
-(* Definition Obs_sig := expr ⇒ᵢ expr ⇒ᵢ IRel. *)
 
 Definition L_rel_pre (L_rel:expr_rel) : expr_rel :=
   λ e1 e2,
@@ -266,11 +217,8 @@ Qed.
 
 Definition L_rel_fix := I_fix L_rel_pre.
 Definition L_rel := L_rel_pre L_rel_fix.
-(* Definition L_rel := I_fix L_rel_pre. *)
 
 Definition O_rel e1 e2 := L_rel e1 e2 ∧ᵢ L_rel e2 e1.
-
-(* ========================================================================= *)
 
 Lemma L_rel_roll p1 p2 n :
   n ⊨ L_rel p1 p2 → n ⊨ L_rel_fix p1 p2.
@@ -310,8 +258,7 @@ Definition E_rel (e1 e2 : expr) : IProp :=
   ∀ᵢ E1 E2 : ectx, K_rel E1 E2 →ᵢ
     O_rel (fill E1 e1) (fill E2 e2).
 
-(* ========================================================================= *)
-(* Open relations *)
+(* Relations for open terms *)
 
 Definition G_rel (γ1 γ2 : sub) : IProp :=
   ∀ᵢ x v1 v2,
@@ -325,11 +272,7 @@ Definition E_rel_o (e1 e2 : expr) : IProp :=
 Definition V_rel_o (v1 v2 : val) : IProp :=
   ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2).
 
-(* Definition rel_p (p1 p2 : expr) : IProp :=
-  ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ O_rel (bind γ1 p1) (bind γ2 p2). *)
-
-(* ========================================================================= *)
-(* Contractiveness and urolling fixpoint *)
+(* Contractiveness and unrolling fixpoint *)
 
 Lemma V_rel_pre_contractive : contractive V_rel_pre.
 Proof.
@@ -403,7 +346,7 @@ Proof.
   intros He HE; iapply He; assumption.
 Qed.
 
-(* this is a special case of the bind rule *)
+(* this and K_rel together seem like the bind rule *)
 Lemma E_rel_elim (e1 e2 : expr) E1 E2 n :
   n ⊨ E_rel e1 e2 →
   n ⊨ (closed [] e1)ᵢ →
@@ -424,14 +367,12 @@ Lemma V_rel_elimE (v1 v2 u1 u2 : val) n :
   n ⊨ E_rel (app v1 u1) (app v2 u2).
 Proof.
   intros Hv Hcv1 Hcv2 Hcu1 Hcu2 Hu. iintros Hc1 Hc2 E1 E2 HE.
-  (* idestruct Hc1. *)
-  (* idestruct Hc2. *)
   apply R_rel_elim. 2: { later_shift; assumption. }
   apply V_rel_elim; auto.
   later_shift; assumption.
 Qed.
 
-(* val inclusion *)
+(* aka val inclusion *)
 Lemma compat_val (v1 v2 : val) n :
   n ⊨ V_rel_o v1 v2 →
   n ⊨ E_rel_o v1 v2.
@@ -525,58 +466,7 @@ Proof.
     { assumption. } }
 Qed.
 
-Lemma rel_e_compat_app {V : Set} (e1 e2 e1' e2' : expr V) n :
-  n ⊨ rel_e e1 e2 →
-  n ⊨ rel_e e1' e2' →
-  n ⊨ rel_e (e_app e1 e1') (e_app e2 e2').
-Proof.
-  intros He He'.
-  iintros γ1 γ2 Hγ E1 E2 HE; term_simpl.
-  (* apply RelE_elim. *)
-  apply RelE_elim with (E1 := ectx_app1 _ _) (E2 := ectx_app1 _ _).
-    - iapply He; assumption.
-    -
-  apply RelK_intro; iintros v1 v2 Hv.
-  apply RelE_elim with (E1 := ectx_app2 _ _) (E2 := ectx_app2 _ _);
-    [ iapply He'; assumption | ].
-  apply RelK_intro; iintros u1 u2 Hu; simpl.
-  iapply RelV_elimE; assumption.
-Qed.
-
-(* Lemma rel_e_compat_callcc {V : Set} (e1 e2 : expr (inc V)) n :
-  n ⊨ E_rel e1 e2 →
-  n ⊨ E_rel (e_callcc e1) (e_callcc e2).
-Proof.
-  intro He.
-  iintros γ1 γ2 Hγ E1 E2 HE; term_simpl.
-  eapply Obs_red_both; [ auto_red | auto_red | ]; later_shift.
-  unfold subst; repeat rewrite bind_bind_comp'.
-  iapply He; [ | eassumption ].
-  iintro x; destruct x as [ | x ]; term_simpl; [ | iapply Hγ ].
-  apply V_rel_intro; iintros u1 u2 Hu F1 F2 HF.
-  eapply Obs_red_both; [ auto_red | auto_red | ]; later_shift; term_simpl.
-  eapply Obs_red_both; [ auto_red | auto_red | ]; later_shift; term_simpl.
-  apply K_rel_elim; assumption.
-Qed.
-
-Lemma rel_e_compat_abort {V : Set} (p1 p2 : program V) n :
-  n ⊨ rel_p p1 p2 →
-  n ⊨ E_rel (e_abort p1) (e_abort p2).
-Proof.
-  intro Hp.
-  iintros γ1 γ2 Hγ E1 E2 HE; term_simpl.
-  eapply Obs_red_both; [ auto_red | auto_red | ]; later_shift; term_simpl.
-  iapply Hp; assumption.
-Qed. *)
-
-
-Lemma rel_v_compat_var {V : Set} (x : V) n :
-  n ⊨ rel_v (v_var x) (v_var x).
-Proof.
-  iintros γ1 γ2 Hγ; iapply Hγ.
-Qed.
-
-Lemma rel_v_compat_lam {V : Set} (e1 e2 : expr (inc V)) n :
+(* Lemma rel_v_compat_lam {V : Set} (e1 e2 : expr (inc V)) n :
   n ⊨ E_rel e1 e2 →
   n ⊨ rel_v (v_lam e1) (v_lam e2).
 Proof.
@@ -589,28 +479,12 @@ Proof.
   iintro x; destruct x as [ | x ]; term_simpl.
   + assumption.
   + iapply Hγ.
-Qed.
+Qed. *)
 
-(* ========================================================================= *)
-(* programs *)
-
-Lemma rel_p_compat_expr {V : Set} (e1 e2 : expr V) n :
-  n ⊨ E_rel e1 e2 →
-  n ⊨ rel_p e1 e2.
-Proof.
-  intro He.
-  iintros γ1 γ2 Hγ; term_simpl.
-  apply E_rel_elim with (E1 := ectx_hole) (E2 := ectx_hole).
-  + iapply He; assumption.
-  + apply K_rel_intro; iintros v1 v2 Hv; apply Obs_value.
-Qed.
-
-Fixpoint fundamental_property_e {V : Set} (e : expr V) n :
+(* Fixpoint fundamental_property_e {V : Set} (e : expr V) n :
   n ⊨ E_rel e e
 with fundamental_property_v {V : Set} (v : value V) n :
-  n ⊨ rel_v v v
-with fundamental_property_p {V : Set} (p : program V) n :
-  n ⊨ rel_p p p.
+  n ⊨ rel_v v v.
 Proof.
 + destruct e.
   - apply rel_e_compat_value, fundamental_property_v.
@@ -622,4 +496,4 @@ Proof.
   - apply rel_v_compat_lam, fundamental_property_e.
 + destruct p.
   - apply rel_p_compat_expr, fundamental_property_e.
-Qed.
+Qed. *)
