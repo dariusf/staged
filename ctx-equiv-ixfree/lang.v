@@ -600,6 +600,12 @@ Admitted.
 Definition subst_is_closed (X : list string) (map : sub) :=
   ∀ x e, map !! x = Some e → closed X (ret e).
 
+Lemma subst_is_closed_subseteq: ∀ (X : list string) (map1 map2 : sub),
+  map1 ⊆ map2 → subst_is_closed X map2 → subst_is_closed X map1.
+Proof.
+  intros X map1 map2 Hsub Hclosed2 x e Hl. eapply Hclosed2, map_subseteq_spec; done.
+Qed.
+
 Lemma sem_context_rel_closed γ1 γ2 n:
   n ⊨ G_rel γ1 γ2 →
   subst_is_closed [] γ1 ∧ subst_is_closed [] γ2.
@@ -636,63 +642,46 @@ with subst_subst_map_val : ∀ (v:val) (x : string) (es : val) (map : sub),
   → subst x es (subst_map_val (delete x map) v) =
     subst_map_val (insert x es map) v.
 Proof.
-{
-  intros e. induction e; intros.
-  {
-    intros.
-    simpl.
-    apply (subst_subst_map_val _ _ _ _ H).
-  }
-  {
-    intros. simpl.
-    (* unfold subst_is_closed in H. *)
-    destruct (decide (x0=x)) as [->|Hne].
-    -
-    (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-    rewrite lookup_delete_eq with (m:=map).
-    rewrite lookup_insert_eq with (m:=map).
-    simpl.
-    by rewrite decide_True.
-    (* // lookup_insert_eq //. simpl. *)
-    -
-    (* destruct x0. *)
-    (* + *)
-    (* x0 is anon *)
-    (* simpl. *)
-    (* reflexivity. *)
-    (* + *)
-    rewrite lookup_delete_ne with (m:=map).
-      2: {
-        (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-        (* simplify_eq. *)
-        (* inj *)
-        (* discriminate . *)
-        (* Search (not (eq (_ _) (_ _))). *)
-
-        (* injection Hne. apply Hne. *)
-        admit.
-      }
-      rewrite lookup_insert_ne with (m:=map).
-      simpl.
-
-        admit.
-      (* reflexivity. *)
-
-admit.
-  }
-  {
-  admit.
-  }
-
-}
-{
-  intros v. induction v; intros.
-  admit.
-  admit.
-  admit.
-}
-
-Admitted.
+  { intros e. induction e; intros; simpl.
+    { apply (subst_subst_map_val _ _ _ _ H). }
+    { (* the variable case *)
+      destruct (decide (x0=x)) as [->|Hne].
+      { rewrite lookup_delete_eq with (m:=map).
+        rewrite lookup_insert_eq with (m:=map).
+        simpl.
+        by rewrite decide_True. }
+      { rewrite lookup_delete_ne with (m:=map). 2: { assumption. }
+        rewrite lookup_insert_ne with (m:=map). 2: { assumption. }
+        destruct (map !! x) as [v1|] eqn:Hkey.
+        { Fail rewrite Hkey. (* why does regular rewrite not work? *)
+          setoid_rewrite Hkey.
+          simpl.
+          rewrite (subst_val_closed _ [] _ _).
+          - reflexivity.
+          - apply (H _ _ Hkey).
+          - set_solver. }
+      { setoid_rewrite Hkey.
+        simpl.
+        by rewrite decide_False. } } }
+    { simpl. f_equal.
+      apply IHe1. assumption.
+      apply IHe2. assumption. } }
+  { intros v. induction v; intros.
+    { reflexivity. }
+    { (* the lambda case *)
+      simpl. f_equal. f_equal.
+      case_decide.
+      { subst.
+        rewrite delete_delete_eq with (m:=map).
+        rewrite delete_insert_eq with (m:=map). done. }
+      { rewrite delete_insert_ne with (m:=map). 2: { congruence. }
+        rewrite delete_delete with (m:=map).
+        apply subst_subst_map.
+        apply (subst_is_closed_subseteq _ _ map).
+        apply delete_subseteq.
+        assumption. } }
+    { reflexivity. } }
+Qed.
 
 (* Lemma subst_map_closed X e xs :
   closed X e →
