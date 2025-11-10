@@ -509,14 +509,23 @@ Qed.
 
 Lemma subst_closed_nil e x es : closed [] e → subst x es e = e.
 Proof.
-(* intros. apply subst_closed with []; set_solver. Qed. *)
-Admitted.
+  intros. apply subst_closed with []; set_solver.
+Qed.
 
 Lemma closed_subst_map γ x:
   closed [] (subst_map γ (var x)) →
   ∃ v, γ !! x = Some v ∧ subst_map γ (var x) = ret v ∧ closed [] v.
 Proof.
-Admitted.
+  intros.
+  unfold closed in H.
+  unfold subst_map in H.
+  destruct (γ !! x) eqn:H1. 2: { simpl in H. inversion H. }
+  exists v.
+  split; [ | split ].
+  - reflexivity.
+  - simpl. rewrite H1. reflexivity.
+  - unfold closed. assumption.
+Qed.
 
 Lemma compat_var (x : string) n :
   n ⊨ E_rel_o (var x) (var x).
