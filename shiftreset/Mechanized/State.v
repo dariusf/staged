@@ -118,6 +118,15 @@ Proof.
   split; fdestruct v; fexists v; lets H: Hbient v; apply bientails_iff_entails in H; intuition.
 Qed.
 
+#[global]
+Instance Proper_disj : Proper (entails ====> entails ====> entails) disj.
+Proof. 
+  unfold Proper, respectful. intros * HentL * HentR.
+  apply entl_disj_l.
+  - fleft. exact HentL.
+  - fright. exact HentR.
+Qed.
+
 Inductive hpred :=
   | hsplit (lhs : hpred) (rhs : hpred)
   | hpts_to (p : loc) (v : val)

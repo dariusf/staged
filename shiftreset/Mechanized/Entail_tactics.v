@@ -19,7 +19,7 @@ Ltac fempty :=
   | [ |- entails (ens_state True hemp vunit) (ens_state True hemp vunit) ] => reflexivity
   end.
 
-Ltac fsolve_pure := auto.
+Ltac fsolve_pure := subst; auto.
 
 Ltac fsolve_heap := xsimpl.
 
@@ -310,6 +310,15 @@ Ltac fapply_one_norm_rule :=
     setoid_rewrite norms_seq_assoc_req
   ].
 
+Ltac funfold_from_ctx_one :=
+  match goal with 
+  | [H : forall p, entails (unk ?fname p) _ |- context [unk ?fname _]] => setoid_rewrite H at 1
+  end;
+  (* the context lemmas may be using ens instead of ens_state; round-trip to fix this *)
+  rew_state_to_hprop; rew_hprop_to_state.
+
+Ltac funfold_from_ctx := repeat funfold_from_ctx_one.
+
 (* before normalizing, heifer first splits all ens into pure and
    heap components. *)
 Ltac fnormalize :=
@@ -336,8 +345,40 @@ Ltac finst_lhs_all c :=
 Ltac finst_and_biab c :=
   finst_lhs_all c; fbiab_state.
 
-(*** NO GUARANTEE EVERYTHING FROM THIS POINT COMPILES *)
+Lemma entl_seq_ens_pure_l :  forall P f f1,
+  (P -> entails f f1) -> entails (ens_pure P ;; f) f1.
+Proof.
+  intros * Hent.
+  rew_state_to_hprop.
+  apply entl_seq_ens_void_pure_l.
+  exact Hent.
+Qed.
 
-(* IDEA: ens_t, similar to [bind_t] that allows for the [res] to be any type
-  we can convert to val *)
+Ltac fpure_assumption :=
+  match goal with
+  | [ |- entails (ens_pure _ ;; _) _ ] =>
+    rew_state_to_hprop;
+    fentailment;
+    rew_hprop_to_state;
+    intros
+    (* we learn nothing here, do not do anything *)
+  | [ |- entails _ (req_state True hemp empty) ] => idtac
+  | [ |- entails _ (req_state _ hemp _) ] => 
+    rew_state_to_hprop;
+    fentailment;
+    rew_hprop_to_state;
+    intros
+  | _ => idtac
+  end.
 
+Ltac fsplit_disj := apply entl_disj_l.
+
+Ltac fdisj_left_state := 
+  rew_state_to_hprop;
+  fleft;
+  rew_hprop_to_state.
+
+Ltac fdisj_right_state :=
+  rew_state_to_hprop;
+  fright;
+  rew_hprop_to_state.
