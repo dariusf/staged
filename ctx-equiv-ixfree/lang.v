@@ -653,19 +653,29 @@ Proof.
     { reflexivity. } }
 Qed.
 
-(* Lemma subst_map_closed X e xs :
-  closed X e →
-  (∀ x : string, x ∈ dom xs → x ∉ X) →
-  subst_map xs e = e.
-Proof.
-Admitted. *)
-
 Lemma sem_context_rel_insert x v1 v2 γ1 γ2 n:
   n ⊨ V_rel v1 v2 →
   n ⊨ G_rel γ1 γ2 →
   n ⊨ G_rel (<[x := v1]> γ1) (<[x := v2]> γ2).
 Proof.
-Admitted.
+  intros.
+  unfold G_rel.
+  iintros x0 v0 v3 H1 H2.
+  destruct (decide (x=x0)).
+  { subst.
+    rewrite lookup_insert_eq with (m:=γ2) in H2. idestruct H2. injection H2 as ->.
+    rewrite lookup_insert_eq with (m:=γ1) in H1. idestruct H1. injection H1 as ->.
+    assumption. }
+  { rewrite lookup_insert_ne with (m:=γ2) in H2. idestruct H2. 2: { assumption. }
+    rewrite lookup_insert_ne with (m:=γ1) in H1. idestruct H1. 2: { assumption. }
+    unfold G_rel in H0.
+    ispecialize H0 x0.
+    ispecialize H0 v0.
+    ispecialize H0 v3.
+    iapply H0.
+    - iintro. apply H1.
+    - iintro. apply H2. }
+Qed.
 
 Lemma rel_v_compat_lam (e1 e2 : expr) n x :
   n ⊨ E_rel_o e1 e2 →
