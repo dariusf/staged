@@ -24,7 +24,7 @@ Ltac ispec H H1 :=
     refine ((fun H2 => _) (I_arrow_elim _ _ H H1));
     clear H;
     rename H2 into H
-  | _ => idtac "no match"
+  (* | _ => idtac "no match" *)
   end.
 
 Example test_ispec2 P R Q n :
