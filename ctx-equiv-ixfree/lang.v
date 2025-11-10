@@ -622,7 +622,8 @@ admit.
     + by eapply val_rel_closed.
     + eapply IHsem_context_rel; last done. *)
 (* Qed. *)
-Abort.
+(* Abort. *)
+Admitted.
 
 
 Lemma subst_subst_map : ∀ (x : binder) (es : val) (map : sub) e,
@@ -668,17 +669,11 @@ Proof.
     simpl. constructor.
     reflexivity.
   - later_shift.
-    rewrite subst_subst_map.
-    2: {
-      (* unfold G_rel in Hγ. *)
-      admit. }
-    rewrite subst_subst_map.
-    2: { admit. }
-
+    rewrite subst_subst_map. 2: { apply (sem_context_rel_closed _ _ _ Hγ). }
+    rewrite subst_subst_map. 2: { apply (sem_context_rel_closed _ _ _ Hγ). }
     iapply He.
     destruct x.
-    { (* anon case *)
-      simpl in *.
+    { simpl in *.
       assumption. }
     { simpl in *.
       apply sem_context_rel_insert.
