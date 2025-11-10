@@ -1,7 +1,8 @@
 
 From IxFree Require Import Lib Nat.
-From stdpp Require Export binders.
+(* From stdpp Require Export binders. *)
 From stdpp Require Export gmap.
+From stdpp Require Export strings.
 
 Definition loc : Set := nat.
 
@@ -20,7 +21,7 @@ Inductive expr :=
 
 with val :=
   | vint (z : Z)
-  | vlambda (x : binder) (e: expr)
+  | vlambda (x : string) (e: expr)
   (* | vbool (b : bool) *)
   (* | vloc (l : loc) *)
   | vunit.
@@ -42,7 +43,7 @@ Fixpoint subst_val (x : string) (es : expr) (v : val)  : val :=
   | vunit => vunit
   | vint n => vint n
   | vlambda y e =>
-      vlambda y $ if decide (BNamed x = y) then e else
+      vlambda y $ if decide (x = y) then e else
         (subst x es e)
   end
 
@@ -60,8 +61,8 @@ with subst (x : string) (es : expr) (e : expr)  : expr :=
   (* | eplus e1 e2 => eplus (subst x es e1) (subst x es e2) *)
   end.
 
-Definition subst' (mx : binder) (es : expr) : expr → expr :=
-  match mx with BNamed x => subst x es | BAnon => id end.
+(* Definition subst' (mx : binder) (es : expr) : expr → expr :=
+  match mx with BNamed x => subst x es | BAnon => id end. *)
 
 Definition is_val (e : expr) : Prop :=
   match e with
@@ -83,7 +84,7 @@ Coercion ret : val >-> expr.
 Inductive base_step : expr → expr → Prop :=
   | BetaS x e1 e2 e' :
      is_val e2 →
-     e' = subst' x e2 e1 →
+     e' = subst x e2 e1 →
      base_step (app (ret (vlambda x e1)) e2) e'
   (* | PlusS e1 e2 (n1 n2 n3 : Z):
      e1 = (eint n1) →
@@ -149,7 +150,7 @@ Fixpoint subst_map_val (xs : sub) (v : val) : val :=
   match v with
   | vunit => vunit
   | vint n => vint n
-  | vlambda x e => vlambda x (subst_map (binder_delete x xs) e)
+  | vlambda x e => vlambda x (subst_map (delete x xs) e)
   end
 
 with subst_map (xs : sub) (e : expr) : expr :=
@@ -166,7 +167,7 @@ Fixpoint is_closed (X : list string) (e : expr) : bool :=
   match e with
   | var x => bool_decide (x ∈ X)
   | ret vunit | ret (vint _) => true
-  | ret (vlambda x e) => is_closed (x :b: X) e
+  | ret (vlambda x e) => is_closed (x :: X) e
   | app e1 e2
   (* | eplus e1 e2 *)
   => is_closed X e1 && is_closed X e2
@@ -466,7 +467,7 @@ Proof.
     { assumption. } }
 Qed.
 
-Lemma closed_lambda e X x : closed X (vlambda x e) → closed (x :b: X) e.
+Lemma closed_lambda e X x : closed X (vlambda x e) → closed (x :: X) e.
 Proof.
   simpl.
   unfold closed. simpl.
@@ -626,17 +627,16 @@ admit.
 Admitted.
 
 
-Lemma subst_subst_map : ∀ (e:expr) (x : binder) (es : val) (map : sub),
+Lemma subst_subst_map : ∀ (e:expr) (x : string) (es : val) (map : sub),
   subst_is_closed [] map
-  → subst' x es (subst_map (binder_delete x map) e) =
-    subst_map (binder_insert x es map) e
-with subst_subst_map_val : ∀ (v:val) (x : binder) (es : val) (map : sub),
+  → subst x es (subst_map (delete x map) e) =
+    subst_map (insert x es map) e
+with subst_subst_map_val : ∀ (v:val) (x : string) (es : val) (map : sub),
   subst_is_closed [] map
-  → subst' x es (subst_map_val (binder_delete x map) v) =
-    subst_map_val (binder_insert x es map) v.
+  → subst x es (subst_map_val (delete x map) v) =
+    subst_map_val (insert x es map) v.
 Proof.
 {
-  unfold binder_delete, binder_insert.
   intros e. induction e; intros.
   {
     intros.
@@ -655,12 +655,13 @@ Proof.
     by rewrite decide_True.
     (* // lookup_insert_eq //. simpl. *)
     -
-    destruct x0.
-    +
+    (* destruct x0. *)
+    (* + *)
     (* x0 is anon *)
-    simpl.
-    reflexivity.
-    + rewrite lookup_delete_ne with (m:=map).
+    (* simpl. *)
+    (* reflexivity. *)
+    (* + *)
+    rewrite lookup_delete_ne with (m:=map).
       2: {
         (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
         (* simplify_eq. *)
@@ -732,8 +733,8 @@ Proof.
     rewrite subst_subst_map. 2: { apply (sem_context_rel_closed _ _ _ Hγ). }
     iapply He.
     destruct x.
-    { simpl in *.
-      assumption. }
+    (* { simpl in *.
+      assumption. } *)
     { simpl in *.
       apply sem_context_rel_insert.
       assumption.
