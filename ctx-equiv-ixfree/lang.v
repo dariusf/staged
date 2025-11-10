@@ -1,5 +1,6 @@
 
 From IxFree Require Import Lib Nat.
+From CtxEquivIxFree Require Import ixfree_tactics.
 (* From stdpp Require Export binders. *)
 From stdpp Require Export gmap.
 From stdpp Require Export strings.
