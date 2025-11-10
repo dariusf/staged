@@ -532,55 +532,25 @@ Lemma compat_var (x : string) n :
   n ⊨ E_rel_o (var x) (var x).
 Proof.
   iintros γ₁ γ₂ Hγ.
-  (* Check E_rel_elim. *)
   unfold E_rel. iintros Hc1 Hc2 E1 E2 HK.
-
-
-
-  (* simpl. *)
-  (* applys V. *)
-
-  (* unfold G_rel in Hγ. *)
-  (* simpl in Hc1. *)
-  (* simpl in *. *)
-  (* apply G_rel_elim in Hγ. *)
-
-  (* auto. *)
-  idestruct Hc1.
-  apply closed_subst_map in Hc1.
-  destruct Hc1 as (v1&Hg1&?&?).
-
-  idestruct Hc2.
-  apply closed_subst_map in Hc2.
-  destruct Hc2 as (v2&Hg2&?&?).
+  idestruct Hc1. apply closed_subst_map in Hc1. destruct Hc1 as (v1&Hg1&Hs1&Hcv1).
+  idestruct Hc2. apply closed_subst_map in Hc2. destruct Hc2 as (v2&Hg2&Hs2&Hcv2).
 
   unfold G_rel in Hγ.
   ispecialize Hγ x.
   ispecialize Hγ v1.
   ispecialize Hγ v2.
-  (* Search ((_)ᵢ). *)
-  apply I_prop_intro with (w:=n) in Hg1.
-  apply I_prop_intro with (w:=n) in Hg2.
+  assert (n ⊨ V_rel v1 v2) as HV.
+  { iapply Hγ.
+    iintro. apply Hg1.
+    iintro. apply Hg2. }
 
-  (* iintro Hg1. *)
-  (* ispecialize Hγ Hg1. *)
+  rewrite Hs1.
+  rewrite Hs2.
 
-  iapply Hγ in Hg1. (* ? *)
-
-  iapply Hg1 in Hg2.
-  apply I_prop_intro with (w:=n) in H0.
-  apply I_prop_intro with (w:=n) in H2.
-
-  pose proof H0.
-  pose proof H2.
-
-  iapply Hg2 in H0.
-  iapply H0 in H2.
-
-  rewrite H.
-  rewrite H1.
-
-  apply K_rel_elim; auto.
+  apply I_prop_intro with (w:=n) in Hcv1.
+  apply I_prop_intro with (w:=n) in Hcv2.
+  apply (K_rel_elim _ _ _ _ _ HK Hcv1 Hcv2 HV).
 Qed.
 
 Lemma R_rel_red_both (e₁ e₁' e₂ e₂' : expr) n :
@@ -711,23 +681,17 @@ Proof.
   idestruct Hcu2.
 
   eapply R_rel_red_both.
-  - constructor.
+  { constructor.
     simpl. constructor.
-    reflexivity.
-  - constructor.
+    reflexivity. }
+  { constructor.
     simpl. constructor.
-    reflexivity.
-  - later_shift.
+    reflexivity. }
+  { later_shift.
     rewrite subst_subst_map. 2: { apply (sem_context_rel_closed _ _ _ Hγ). }
     rewrite subst_subst_map. 2: { apply (sem_context_rel_closed _ _ _ Hγ). }
     iapply He.
-    destruct x.
-    (* { simpl in *.
-      assumption. } *)
-    { simpl in *.
-      apply sem_context_rel_insert.
-      assumption.
-      assumption. }
+    apply (sem_context_rel_insert _ _ _ _ _ _ Hv Hγ). }
 Abort.
 
 (* Fixpoint fundamental_property_e {V : Set} (e : expr V) n :
