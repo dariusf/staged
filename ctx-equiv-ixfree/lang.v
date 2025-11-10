@@ -626,20 +626,79 @@ admit.
 Admitted.
 
 
-Lemma subst_subst_map : ∀ (x : binder) (es : val) (map : sub) e,
+Lemma subst_subst_map : ∀ (e:expr) (x : binder) (es : val) (map : sub),
   subst_is_closed [] map
   → subst' x es (subst_map (binder_delete x map) e) =
-    (* subst_map (<[x:=es]> map) e. *)
-    subst_map (binder_insert x es map) e.
+    subst_map (binder_insert x es map) e
+with subst_subst_map_val : ∀ (v:val) (x : binder) (es : val) (map : sub),
+  subst_is_closed [] map
+  → subst' x es (subst_map_val (binder_delete x map) v) =
+    subst_map_val (binder_insert x es map) v.
 Proof.
+{
+  unfold binder_delete, binder_insert.
+  intros e. induction e; intros.
+  {
+    intros.
+    simpl.
+    apply (subst_subst_map_val _ _ _ _ H).
+  }
+  {
+    intros. simpl.
+    (* unfold subst_is_closed in H. *)
+    destruct (decide (x0=x)) as [->|Hne].
+    -
+    (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+    rewrite lookup_delete_eq with (m:=map).
+    rewrite lookup_insert_eq with (m:=map).
+    simpl.
+    by rewrite decide_True.
+    (* // lookup_insert_eq //. simpl. *)
+    -
+    destruct x0.
+    +
+    (* x0 is anon *)
+    simpl.
+    reflexivity.
+    + rewrite lookup_delete_ne with (m:=map).
+      2: {
+        (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+        (* simplify_eq. *)
+        (* inj *)
+        (* discriminate . *)
+        (* Search (not (eq (_ _) (_ _))). *)
+
+        (* injection Hne. apply Hne. *)
+        admit.
+      }
+      rewrite lookup_insert_ne with (m:=map).
+      simpl.
+
+        admit.
+      (* reflexivity. *)
+
+admit.
+  }
+  {
+  admit.
+  }
+
+}
+{
+  intros v. induction v; intros.
+  admit.
+  admit.
+  admit.
+}
+
 Admitted.
 
-Lemma subst_map_closed X e xs :
+(* Lemma subst_map_closed X e xs :
   closed X e →
   (∀ x : string, x ∈ dom xs → x ∉ X) →
   subst_map xs e = e.
 Proof.
-Admitted.
+Admitted. *)
 
 Lemma sem_context_rel_insert x v1 v2 γ1 γ2 n:
   n ⊨ V_rel v1 v2 →
