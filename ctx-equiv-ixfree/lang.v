@@ -508,10 +508,10 @@ Proof.
       - assumption. } }
 Qed.
 
-Lemma subst_closed_nil e x es : closed [] e → subst x es e = e.
+(* Lemma subst_closed_nil e x es : closed [] e → subst x es e = e.
 Proof.
   intros. apply subst_closed with []; set_solver.
-Qed.
+Qed. *)
 
 Lemma closed_subst_map γ x:
   closed [] (subst_map γ (var x)) →
