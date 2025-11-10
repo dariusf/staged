@@ -1,5 +1,6 @@
 
 From IxFree Require Import Lib Nat.
+From CtxEquivIxFree Require Import ixfree_tactics.
 (* From stdpp Require Export binders. *)
 From stdpp Require Export gmap.
 From stdpp Require Export strings.
@@ -597,55 +598,25 @@ Lemma compat_var (x : string) n :
   n ⊨ E_rel_o (var x) (var x).
 Proof.
   iintros γ₁ γ₂ Hγ.
-  (* Check E_rel_elim. *)
   unfold E_rel. iintros Hc1 Hc2 E1 E2 HK.
-
-
-
-  (* simpl. *)
-  (* applys V. *)
-
-  (* unfold G_rel in Hγ. *)
-  (* simpl in Hc1. *)
-  (* simpl in *. *)
-  (* apply G_rel_elim in Hγ. *)
-
-  (* auto. *)
-  idestruct Hc1.
-  apply closed_subst_map in Hc1.
-  destruct Hc1 as (v1&Hg1&?&?).
-
-  idestruct Hc2.
-  apply closed_subst_map in Hc2.
-  destruct Hc2 as (v2&Hg2&?&?).
+  idestruct Hc1. apply closed_subst_map in Hc1. destruct Hc1 as (v1&Hg1&Hs1&Hcv1).
+  idestruct Hc2. apply closed_subst_map in Hc2. destruct Hc2 as (v2&Hg2&Hs2&Hcv2).
 
   unfold G_rel in Hγ.
   ispecialize Hγ x.
   ispecialize Hγ v1.
   ispecialize Hγ v2.
-  (* Search ((_)ᵢ). *)
-  apply I_prop_intro with (w:=n) in Hg1.
-  apply I_prop_intro with (w:=n) in Hg2.
+  assert (n ⊨ V_rel v1 v2) as HV.
+  { iapply Hγ.
+    iintro. apply Hg1.
+    iintro. apply Hg2. }
 
-  (* iintro Hg1. *)
-  (* ispecialize Hγ Hg1. *)
+  rewrite Hs1.
+  rewrite Hs2.
 
-  iapply Hγ in Hg1. (* ? *)
-
-  iapply Hg1 in Hg2.
-  apply I_prop_intro with (w:=n) in H0.
-  apply I_prop_intro with (w:=n) in H2.
-
-  pose proof H0.
-  pose proof H2.
-
-  iapply Hg2 in H0.
-  iapply H0 in H2.
-
-  rewrite H.
-  rewrite H1.
-
-  apply K_rel_elim; auto.
+  apply I_prop_intro with (w:=n) in Hcv1.
+  apply I_prop_intro with (w:=n) in Hcv2.
+  apply (K_rel_elim _ _ _ _ _ HK Hcv1 Hcv2 HV).
 Qed.
 
 Lemma R_rel_red_both (e₁ e₁' e₂ e₂' : expr) n :
@@ -664,6 +635,12 @@ Admitted.
 
 Definition subst_is_closed (X : list string) (map : sub) :=
   ∀ x e, map !! x = Some e → closed X (ret e).
+
+Lemma subst_is_closed_subseteq: ∀ (X : list string) (map1 map2 : sub),
+  map1 ⊆ map2 → subst_is_closed X map2 → subst_is_closed X map1.
+Proof.
+  intros X map1 map2 Hsub Hclosed2 x e Hl. eapply Hclosed2, map_subseteq_spec; done.
+Qed.
 
 Lemma sem_context_rel_closed γ1 γ2 n:
   n ⊨ G_rel γ1 γ2 →
@@ -694,77 +671,70 @@ with subst_subst_map_val : ∀ (v:val) (x : string) (es : val) (map : sub),
   subst x es (subst_map_val (delete x map) v) =
   subst_map_val (insert x es map) v.
 Proof.
-{
-  intros e. induction e; intros.
-  {
-    intros.
-    simpl.
-    apply (subst_subst_map_val _ _ _ _ H).
-  }
-  {
-    intros. simpl.
-    (* unfold subst_is_closed in H. *)
-    destruct (decide (x0=x)) as [->|Hne].
-    -
-    (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-    rewrite lookup_delete_eq with (m:=map).
-    rewrite lookup_insert_eq with (m:=map).
-    simpl.
-    by rewrite decide_True.
-    (* // lookup_insert_eq //. simpl. *)
-    -
-    (* destruct x0. *)
-    (* + *)
-    (* x0 is anon *)
-    (* simpl. *)
-    (* reflexivity. *)
-    (* + *)
-    rewrite lookup_delete_ne with (m:=map).
-      2: {
-        (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
-        (* simplify_eq. *)
-        (* inj *)
-        (* discriminate . *)
-        (* Search (not (eq (_ _) (_ _))). *)
-
-        (* injection Hne. apply Hne. *)
-        admit.
-      }
-      rewrite lookup_insert_ne with (m:=map).
-      simpl.
-
-        admit.
-      (* reflexivity. *)
-
-admit.
-  }
-  {
-  admit.
-  }
-
-}
-{
-  intros v. induction v; intros.
-  admit.
-  admit.
-  admit.
-}
-
-Admitted.
-
-(* Lemma subst_map_closed X e xs :
-  closed X e →
-  (∀ x : string, x ∈ dom xs → x ∉ X) →
-  subst_map xs e = e.
-Proof.
-Admitted. *)
+  { intros e. induction e; intros; simpl.
+    { apply (subst_subst_map_val _ _ _ _ H). }
+    { (* the variable case *)
+      destruct (decide (x0=x)) as [->|Hne].
+      { rewrite lookup_delete_eq with (m:=map).
+        rewrite lookup_insert_eq with (m:=map).
+        simpl.
+        by rewrite decide_True. }
+      { rewrite lookup_delete_ne with (m:=map). 2: { assumption. }
+        rewrite lookup_insert_ne with (m:=map). 2: { assumption. }
+        destruct (map !! x) as [v1|] eqn:Hkey.
+        { Fail rewrite Hkey. (* why does regular rewrite not work? *)
+          setoid_rewrite Hkey.
+          simpl.
+          rewrite (subst_val_closed _ [] _ _).
+          - reflexivity.
+          - apply (H _ _ Hkey).
+          - set_solver. }
+      { setoid_rewrite Hkey.
+        simpl.
+        by rewrite decide_False. } } }
+    { simpl. f_equal.
+      apply IHe1. assumption.
+      apply IHe2. assumption. } }
+  { intros v. induction v; intros.
+    { reflexivity. }
+    { (* the lambda case *)
+      simpl. f_equal. f_equal.
+      case_decide.
+      { subst.
+        rewrite delete_delete_eq with (m:=map).
+        rewrite delete_insert_eq with (m:=map). done. }
+      { rewrite delete_insert_ne with (m:=map). 2: { congruence. }
+        rewrite delete_delete with (m:=map).
+        apply subst_subst_map.
+        apply (subst_is_closed_subseteq _ _ map).
+        apply delete_subseteq.
+        assumption. } }
+    { reflexivity. } }
+Qed.
 
 Lemma sem_context_rel_insert x v1 v2 γ1 γ2 n:
   n ⊨ V_rel v1 v2 →
   n ⊨ G_rel γ1 γ2 →
   n ⊨ G_rel (<[x := v1]> γ1) (<[x := v2]> γ2).
 Proof.
-Admitted.
+  intros.
+  unfold G_rel.
+  iintros x0 v0 v3 H1 H2.
+  destruct (decide (x=x0)).
+  { subst.
+    rewrite lookup_insert_eq with (m:=γ2) in H2. idestruct H2. injection H2 as ->.
+    rewrite lookup_insert_eq with (m:=γ1) in H1. idestruct H1. injection H1 as ->.
+    assumption. }
+  { rewrite lookup_insert_ne with (m:=γ2) in H2. idestruct H2. 2: { assumption. }
+    rewrite lookup_insert_ne with (m:=γ1) in H1. idestruct H1. 2: { assumption. }
+    unfold G_rel in H0.
+    ispecialize H0 x0.
+    ispecialize H0 v0.
+    ispecialize H0 v3.
+    iapply H0.
+    - iintro. apply H1.
+    - iintro. apply H2. }
+Qed.
 
 Lemma rel_v_compat_lam (e1 e2 : expr) n x :
   n ⊨ E_rel_o e1 e2 →
@@ -779,21 +749,17 @@ Proof.
   idestruct Hcu1.
   idestruct Hcu2.
   eapply R_rel_red_both.
-  - constructor.
+  { constructor.
     simpl. constructor.
-    reflexivity.
-  - constructor.
+    reflexivity. }
+  { constructor.
     simpl. constructor.
-    reflexivity.
-  - later_shift.
-    (*rewrite subst_subst_map. 2: { admit. (*apply (sem_context_rel_closed _ _ _ Hγ).*) }*)
-    (*rewrite subst_subst_map. 2: { admit. (*apply (sem_context_rel_closed _ _ _ Hγ).*) }*)
+    reflexivity. }
+  { later_shift.
+    rewrite subst_subst_map. 2: { apply (sem_context_rel_closed _ _ _ Hγ). }
+    rewrite subst_subst_map. 2: { apply (sem_context_rel_closed _ _ _ Hγ). }
     iapply He.
-    (* { simpl in *.
-      assumption. } *)
-    apply sem_context_rel_insert.
-    assumption.
-    assumption.
+    apply (sem_context_rel_insert _ _ _ _ _ _ Hv Hγ). }
 Abort.
 
 (* Fixpoint fundamental_property_e {V : Set} (e : expr V) n :
