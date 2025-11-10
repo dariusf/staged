@@ -16,6 +16,10 @@ Ltac ispec H H1 :=
     ispecialize H H1
   | I_valid_at _ (I_prop (forall _, forall _, _)) =>
     ispecialize H H1
+  | I_valid_at _ (I_arrow (I_prop _) _) =>
+    refine ((fun H2 => _) (I_arrow_elim _ _ H (I_prop_intro _ H1)));
+    clear H;
+    rename H2 into H
   | I_valid_at _ (I_arrow _ _) =>
     refine ((fun H2 => _) (I_arrow_elim _ _ H H1));
     clear H;
@@ -41,6 +45,15 @@ Abort.
 
 Example test_ispec3 P Q n :
   (n ⊨ P) → (n ⊨ P →ᵢ Q) → n ⊨ Q.
+Proof.
+  intros.
+  Fail ispecialize H0 H.
+  ispec H0 H.
+  assumption.
+Abort.
+
+Example test_ispec3 P Q n :
+  P → (n ⊨ (P)ᵢ →ᵢ Q) → n ⊨ Q.
 Proof.
   intros.
   Fail ispecialize H0 H.

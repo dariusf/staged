@@ -606,17 +606,15 @@ Proof.
   ispecialize Hγ x.
   ispecialize Hγ v1.
   ispecialize Hγ v2.
-  assert (n ⊨ V_rel v1 v2) as HV.
-  { iapply Hγ.
-    iintro. apply Hg1.
-    iintro. apply Hg2. }
+  ispec Hγ Hg1.
+  ispec Hγ Hg2.
 
   rewrite Hs1.
   rewrite Hs2.
 
   apply I_prop_intro with (w:=n) in Hcv1.
   apply I_prop_intro with (w:=n) in Hcv2.
-  apply (K_rel_elim _ _ _ _ _ HK Hcv1 Hcv2 HV).
+  apply (K_rel_elim _ _ _ _ _ HK Hcv1 Hcv2 Hγ).
 Qed.
 
 Lemma R_rel_red_both (e₁ e₁' e₂ e₂' : expr) n :
