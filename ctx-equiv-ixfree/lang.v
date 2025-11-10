@@ -466,12 +466,46 @@ Proof.
     { assumption. } }
 Qed.
 
-Lemma subst_closed X e x es : closed X e → x ∉ X → subst x es e = e.
+Lemma closed_lambda e X x : closed X (vlambda x e) → closed (x :b: X) e.
 Proof.
-Admitted.
-  (* induction e in X |-*; simpl; rewrite ?bool_decide_spec, ?andb_True; intros ??;
-    repeat case_decide; simplify_eq; simpl; f_equal; intuition eauto with set_solver.
-Qed. *)
+  simpl.
+  unfold closed. simpl.
+  auto.
+Qed.
+
+Fixpoint subst_val_closed v X x es :
+  closed X (of_val v) → x ∉ X → subst_val x es v = v
+with subst_closed X e x es :
+  closed X e → x ∉ X → subst x es e = e.
+Proof.
+  { induction v.
+    { reflexivity. }
+    { simpl.
+      case_decide.
+      - reflexivity.
+      - intros.
+        f_equal.
+        apply closed_lambda in H0.
+        apply (subst_closed _ _ _ _ H0).
+        set_solver. }
+    { reflexivity. } }
+ { induction e; intros; simpl.
+    { f_equal.
+      eapply subst_val_closed.
+      apply H. assumption. }
+    { case_decide.
+      - subst.
+        unfold closed in H. simpl in H. apply bool_decide_unpack in H.
+        set_solver.
+      - reflexivity. }
+    { apply closed_app in H.
+      destruct H as (H1&H2).
+      specialize (IHe1 H1 H0).
+      specialize (IHe2 H2 H0).
+      f_equal.
+      - assumption.
+      - assumption. } }
+Qed.
 
 Lemma subst_closed_nil e x es : closed [] e → subst x es e = e.
 Proof.
