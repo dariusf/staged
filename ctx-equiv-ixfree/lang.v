@@ -1075,6 +1075,62 @@ Proof.
   congruence.
 Qed.
 
+(* lemma a2 erlang: scope weakening: Γ overapproximates the domain of γ? not sure if true *)
+(* Lemma scope_weakening Γ x X γ:
+  subst_is_closed Γ X γ →
+  subst_is_closed (x::Γ) X γ.
+Proof.
+  unfold subst_is_closed.
+  intros.
+  destruct (decide (x=x0)) as [->|Hne].
+  {
+  specialize (H x0).
+  }
+Admitted. *)
+
+Lemma closed_weaken e X Y:
+  closed X e → X ⊆ Y → closed Y e.
+Proof.
+  revert X Y.
+  induction e; intros.
+  - admit.
+  - unfold closed, is_closed in *.
+    apply bool_decide_unpack in H.
+    apply bool_decide_pack.
+    set_solver.
+  - unfold closed in *. simpl in *.
+    apply andb_prop_intro.
+    apply andb_prop_elim in H.
+    destruct H.
+    split.
+    apply (IHe1 _ _ H H0).
+    apply (IHe2 _ _ H1 H0).
+(* Qed. *)
+Admitted.
+
+(* Lemma subst_closed_weaken Γ X Y map1 map2 :
+  Y ⊆ X → map1 ⊆ map2 → subst_is_closed Γ Y map2 → subst_is_closed Γ X map1.
+Proof.
+  intros Hsub1 Hsub2 Hclosed2 x e Hl.
+  eapply closed_weaken. 1:eapply Hclosed2, map_subseteq_spec; done. done.
+Qed. *)
+
+(* Lemma subst_closed_weaken X Y map1 map2 :
+  Y ⊆ X → map1 ⊆ map2 → subst_closed Y map2 → subst_closed X map1.
+Proof.
+  intros Hsub1 Hsub2 Hclosed2 x e Hl.
+  eapply closed_weaken. 1:eapply Hclosed2, map_subseteq_spec; done. done.
+Qed. *)
+
+
+(* Lemma lambda_closed_under_subst Γ γ x e:
+  closed Γ (vlambda x e) →
+  subst_is_closed Γ [] γ →
+  closed [] (vlambda x (subst_map (delete x γ) e)).
+Proof.
+  (* intros. *)
+Admitted. *)
+
 Fixpoint subst_map_closed'_3 e Γ γ:
   closed Γ e ->
   subst_is_closed Γ [] γ ->
@@ -1095,7 +1151,16 @@ Proof.
   { induction v; intros Hs Hsc.
     { constructor. }
     { simpl.
-      apply (subst_map_closed'_3 _ _ _ Hs Hsc). }
+      rename subst_map_closed'_3 into IHe.
+
+      rewrite closed_lambda in Hs.
+      specialize (IHe e (x::Γ) γ Hs).
+
+      (* apply (lambda_closed_under_subst _ _ _ _ Hs Hsc). *)
+      (* rename *)
+      (* Guarded. *)
+      admit.
+      }
     { constructor. }
   }
 (* Qed. *)
