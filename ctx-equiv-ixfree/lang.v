@@ -251,9 +251,13 @@ Definition G_rel (Γ: list string) (γ1 γ2 : sub) : IProp :=
     V_rel v1 v2.
 
 Definition E_rel_o (Γ: list string) (e1 e2 : expr) : IProp :=
+  (closed Γ e1)ᵢ ∧ᵢ
+  (closed Γ e2)ᵢ ∧ᵢ
   ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ E_rel (subst_map γ1 e1) (subst_map γ2 e2).
 
 Definition V_rel_o (Γ: list string) (v1 v2 : val) : IProp :=
+  (closed Γ v1)ᵢ ∧ᵢ
+  (closed Γ v2)ᵢ ∧ᵢ
   ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2).
 
 (** Contractiveness and unrolling fixpoint *)
