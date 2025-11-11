@@ -1076,37 +1076,46 @@ Proof.
 Qed.
 
 (* lemma a2 erlang: scope weakening: Γ overapproximates the domain of γ? not sure if true *)
-(* Lemma scope_weakening Γ x X γ:
+Lemma scope_weakening Γ x X γ:
   subst_is_closed Γ X γ →
   subst_is_closed (x::Γ) X γ.
 Proof.
   unfold subst_is_closed.
   intros.
   destruct (decide (x=x0)) as [->|Hne].
-  {
+  (* {
   specialize (H x0).
-  }
-Admitted. *)
+  } *)
+Admitted.
 
 Lemma closed_weaken e X Y:
-  closed X e → X ⊆ Y → closed Y e.
+  closed X e → X ⊆ Y → closed Y e
+with closed_weaken_val (v:val) X Y:
+  closed X v → X ⊆ Y → closed Y v.
 Proof.
-  revert X Y.
-  induction e; intros.
-  - admit.
-  - unfold closed, is_closed in *.
-    apply bool_decide_unpack in H.
-    apply bool_decide_pack.
-    set_solver.
-  - unfold closed in *. simpl in *.
-    apply andb_prop_intro.
-    apply andb_prop_elim in H.
-    destruct H.
-    split.
-    apply (IHe1 _ _ H H0).
-    apply (IHe2 _ _ H1 H0).
-(* Qed. *)
-Admitted.
+  { revert X Y.
+    induction e; intros.
+    - apply (closed_weaken_val _ _ _ H H0).
+    - unfold closed, is_closed in *.
+      apply bool_decide_unpack in H.
+      apply bool_decide_pack.
+      set_solver.
+    - unfold closed in *. simpl in *.
+      apply andb_prop_intro.
+      apply andb_prop_elim in H.
+      destruct H.
+      split.
+      apply (IHe1 _ _ H H0).
+      apply (IHe2 _ _ H1 H0). }
+  { revert X Y.
+    induction v; intros.
+    - constructor.
+    - rewrite closed_lambda in H.
+      rewrite closed_lambda.
+      apply (closed_weaken _ _ _ H).
+      set_solver.
+    - constructor. }
+Qed.
 
 (* Lemma subst_closed_weaken Γ X Y map1 map2 :
   Y ⊆ X → map1 ⊆ map2 → subst_is_closed Γ Y map2 → subst_is_closed Γ X map1.
@@ -1131,7 +1140,46 @@ Proof.
   (* intros. *)
 Admitted. *)
 
-Fixpoint subst_map_closed'_3 e Γ γ:
+  (* closed (elements (dom (<[x:=A]> Γ))) e →
+  𝒢 Γ θ →
+  closed [] (Lam x (subst_map (delete x θ) e)). *)
+
+Lemma closed_subst_extension (e:expr): ∀ Γ γ x,
+  closed Γ (subst_map γ e) →
+  closed (x::Γ) (subst_map (delete x γ) e)
+with closed_subst_extension_val (v:val): ∀ Γ γ x,
+  closed Γ (subst_map_val γ v) →
+  closed (x::Γ) (subst_map_val (delete x γ) v).
+Proof.
+  {
+  induction e; intros.
+  - apply (closed_subst_extension_val _ _ _ _ H).
+  -
+  simpl in H.
+    simpl.
+    admit.
+  - admit.
+  }
+  {
+    induction v; intros.
+    admit.
+    admit.
+    admit.
+  }
+Admitted.
+
+Lemma closed_subst_extension_lambda γ e x:
+  closed [] (subst_map γ e) →
+  closed [] (vlambda x (subst_map (delete x γ) e)).
+Proof.
+  intros.
+  pose proof (closed_subst_extension _ [] _ x H).
+  unfold closed in *.
+  simpl in *.
+  assumption.
+Qed.
+
+Lemma subst_map_closed'_3 e Γ γ:
   closed Γ e ->
   subst_is_closed Γ [] γ ->
   closed [] (subst_map γ e)
@@ -1147,24 +1195,26 @@ Proof.
       destruct (γ !! x) eqn:H.
       { apply (closed_var_in_subst _ _ _ _ Hc Hsc H). }
       { apply (closed_var_not_in_subst _ _ _ Hc Hsc H). } }
-    { eauto. } }
+    { simpl.
+      rewrite closed_app.
+      rewrite closed_app in Hc.
+      destruct Hc.
+      split.
+      apply (IHe1 H Hsc).
+      apply (IHe2 H0 Hsc). } }
   { induction v; intros Hs Hsc.
     { constructor. }
     { simpl.
       rename subst_map_closed'_3 into IHe.
 
       rewrite closed_lambda in Hs.
-      specialize (IHe e (x::Γ) γ Hs).
-
-      (* apply (lambda_closed_under_subst _ _ _ _ Hs Hsc). *)
-      (* rename *)
-      (* Guarded. *)
-      admit.
+      apply (scope_weakening _ x _ _) in Hsc.
+      specialize (IHe e (x::Γ) γ Hs Hsc).
+      apply (closed_subst_extension_lambda _ _ _ IHe).
       }
     { constructor. }
   }
-(* Qed. *)
-Admitted.
+Qed.
 
 Lemma compat_lam Γ (e1 e2 : expr) n x :
   n ⊨ E_rel_o (x::Γ) e1 e2 →
@@ -1228,7 +1278,7 @@ Proof.
     apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). }
 Qed.
 
-Fixpoint fundamental_property_e Γ (e : expr) n :
+Lemma fundamental_property_e Γ (e : expr) n :
   closed Γ e →
   n ⊨ E_rel_o Γ e e
 with fundamental_property_v Γ (v : val) n :
@@ -1245,5 +1295,5 @@ Proof.
     induction v.
     - admit.
     - apply compat_lam. apply fundamental_property_e. rewrite <- closed_lambda. assumption.
-    - admit. } Guarded.
+    - admit. }
 Admitted.
