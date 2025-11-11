@@ -653,6 +653,11 @@ Proof.
   by apply K_rel_elim.
 Qed.
 
+Lemma G_sub_closed Γ γ1 γ2 n :
+  n ⊨ G_rel Γ γ1 γ2 →
+  subst_is_closed Γ [] γ1 ∧ subst_is_closed Γ [] γ2.
+Proof. intros Hγ. apply G_rel_elim in Hγ. easy. Qed.
+
 Lemma closed_lambda e X x : closed X (vlambda x e) ↔ closed (x :: X) e.
 Proof. split. auto. auto. Qed.
 
