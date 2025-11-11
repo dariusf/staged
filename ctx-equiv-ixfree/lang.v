@@ -179,11 +179,18 @@ Definition subst_is_closed (dom : list string) (free : list string) (sub : sub) 
   ∀ x, x ∈ dom →
     ∃ v, sub !! x = Some v ∧ closed free (ret v).
 
-(* Lemma subst_is_closed_subseteq: ∀ (X : list string) (map1 map2 : sub),
-  map1 ⊆ map2 → subst_is_closed X map2 → subst_is_closed X map1.
+(* this is reversed compared to the normal statement? *)
+Lemma subst_is_closed_subseteq: ∀ Γ (X : list string) (γ1 γ2: sub),
+  γ1 ⊆ γ2 → subst_is_closed Γ X γ1 → subst_is_closed Γ X γ2.
 Proof.
-  intros X map1 map2 Hsub Hclosed2 x e Hl. eapply Hclosed2, map_subseteq_spec; done.
-Qed. *)
+  intros * Hsub Hclosed2. intros x Hl.
+  unfold subst_is_closed in Hclosed2.
+  specialize (Hclosed2 x Hl) as (v&?&?).
+  exists v.
+  rewrite (map_subseteq_spec γ1 γ2) in Hsub.
+  specialize (Hsub x v H).
+  split; done.
+Qed.
 
 (* Relations *)
 
@@ -630,36 +637,39 @@ Proof.
 (* Qed. *)
 Admitted.
 
-Lemma sem_context_rel_closed Γ γ1 γ2 n:
+(* Lemma sem_context_rel_closed Γ γ1 γ2 n:
   n ⊨ G_rel Γ γ1 γ2 →
   ∀ x (v1 v2 : val),
     γ1 !! x = Some v1 →
     γ2 !! x = Some v2 →
     closed [] v1 ∧ closed [] v2.
 Proof.
-  unfold G_rel.
+  (* unfold G_rel.
   intros Hg x v1 v2 H_lookup1 H_lookup2.
-  apply I_prop_intro with (w := n) in H_lookup1.
-  apply I_prop_intro with (w := n) in H_lookup2.
+  (* apply I_prop_intro with (w := n) in H_lookup1. *)
+  (* apply I_prop_intro with (w := n) in H_lookup2. *)
+  (* ispec Hg H_lookup1.
   ispecialize Hg x.
   ispecialize Hg v1.
-  ispecialize Hg v2.
+  ispecialize Hg v2. *)
   iapply Hg in H_lookup1.
   iapply H_lookup1 in H_lookup2.
   unfold V_rel in H_lookup2.
-  unfold V_rel_pre in H_lookup2.
-Admitted.
+  unfold V_rel_pre in H_lookup2. *)
+Admitted. *)
 
-Lemma subst_subst_map : ∀ (e:expr) (x : string) (es : val) (map : sub),
-  subst_is_closed [] map →
+Lemma subst_subst_map : ∀ Γ (e:expr) (x : string) (es : val) (map : sub),
+  subst_is_closed Γ [] map →
   subst x es (subst_map (delete x map) e) =
   subst_map (insert x es map) e
-with subst_subst_map_val : ∀ (v:val) (x : string) (es : val) (map : sub),
-  subst_is_closed [] map →
+with subst_subst_map_val : ∀ Γ (v:val) (x : string) (es : val) (map : sub),
+  subst_is_closed Γ [] map →
   subst x es (subst_map_val (delete x map) v) =
   subst_map_val (insert x es map) v.
 Proof.
-  { intros e. induction e; intros; simpl.
+Admitted.
+
+  (* { intros e. induction e; intros; simpl.
     { apply (subst_subst_map_val _ _ _ _ H). }
     { (* the variable case *)
       destruct (decide (x0=x)) as [->|Hne].
@@ -698,16 +708,42 @@ Proof.
         apply delete_subseteq.
         assumption. } }
     { reflexivity. } }
-Qed.
+Qed. *)
 
-Lemma sem_context_rel_insert x v1 v2 γ1 γ2 n:
+Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
   n ⊨ V_rel v1 v2 →
-  n ⊨ G_rel γ1 γ2 →
-  n ⊨ G_rel (<[x := v1]> γ1) (<[x := v2]> γ2).
+  n ⊨ G_rel Γ γ1 γ2 →
+  n ⊨ G_rel (x :: Γ) (<[x := v1]> γ1) (<[x := v2]> γ2).
 Proof.
-  intros.
+(* Admitted. *)
+Abort.
+
+  (* intros.
   unfold G_rel.
-  iintros x0 v0 v3 H1 H2.
+  isplit; [ | isplit ].
+  { apply G_sub_closed in H0 as [? ?].
+    iintro.
+    pose proof (subst_is_closed_subseteq Γ [] γ1 (insert x v1 γ1)).
+    apply H2.
+    Search (_ ⊆ insert _ _ _).
+    apply insert_subseteq.
+    (* set_solver. *)
+
+    }
+  (* { apply G_sub_closed in H0 as [? ?].
+    iintro.
+    pose proof (subst_is_closed_subseteq Γ [] γ1 (insert x v1 γ1)).
+    apply H2.
+    set_solver.
+    assumption. } *)
+  {
+    admit.
+  }
+  {
+    admit.
+  } *)
+
+  (* iintros x0 v0 v3 H1 H2.
   destruct (decide (x=x0)).
   { subst.
     rewrite lookup_insert_eq with (m:=γ2) in H2. idestruct H2. injection H2 as ->.
@@ -721,19 +757,30 @@ Proof.
     ispecialize H0 v3.
     iapply H0.
     - iintro. apply H1.
-    - iintro. apply H2. }
-Qed.
+    - iintro. apply H2. } *)
+(* Qed. *)
 
-Lemma rel_v_compat_lam (e1 e2 : expr) n x :
-  n ⊨ E_rel_o e1 e2 →
-  n ⊨ V_rel_o (vlambda x e1) (vlambda x e2).
+Lemma rel_v_compat_lam Γ (e1 e2 : expr) n x :
+  n ⊨ E_rel_o Γ e1 e2 →
+  n ⊨ V_rel_o Γ (vlambda x e1) (vlambda x e2).
 Proof.
   intro He.
   unfold V_rel_o. iintros γ1 γ2 Hγ.
-  apply V_rel_intro. iintros Hce1 Hce2 u1 u2 Hcu1 Hcu2 Hv.
-  simpl in *.
-  idestruct Hce1.
-  idestruct Hce2.
+  apply V_rel_intro.
+
+  simpl.
+  (* Search (closed). *)
+
+  (* { apply G_sub_closed in Hγ as [Hc1 Hc2].
+    apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc1). } *)
+  { admit. }
+  { admit. }
+
+  iintros u1 u2 Hcu1 Hcu2 Hv.
+  simpl.
+  (* simpl in *. *)
+  (* idestruct Hce1. *)
+  (* idestruct Hce2. *)
   idestruct Hcu1.
   idestruct Hcu2.
   eapply R_rel_red_both.
@@ -744,10 +791,12 @@ Proof.
     simpl. constructor.
     reflexivity. }
   { later_shift.
-    rewrite subst_subst_map. 2: { apply (sem_context_rel_closed _ _ _ Hγ). }
-    rewrite subst_subst_map. 2: { apply (sem_context_rel_closed _ _ _ Hγ). }
+    rewrite subst_subst_map with (Γ:=Γ).
+    2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [? _]. assumption. }
+    rewrite subst_subst_map with (Γ:=Γ).
+    2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [_ ?]. assumption. }
     iapply He.
-    apply (sem_context_rel_insert _ _ _ _ _ _ Hv Hγ). }
+    (* apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). } *)
 Abort.
 
 (* Fixpoint fundamental_property_e {V : Set} (e : expr V) n :
