@@ -633,8 +633,8 @@ Proof.
   + apply red_in_ectx; eassumption.
   + later_shift; iapply He; assumption. *)
 (* Qed. *)
-(* Admitted. *)
-Abort.
+Admitted.
+(* Abort. *)
 
 (* Lemma sem_context_rel_closed Γ γ1 γ2 n:
   n ⊨ G_rel Γ γ1 γ2 →
@@ -657,7 +657,7 @@ Proof.
   unfold V_rel_pre in H_lookup2. *)
 Admitted. *)
 
-(* Lemma subst_subst_map : ∀ Γ (e:expr) (x : string) (es : val) (map : sub),
+Lemma subst_subst_map : ∀ Γ (e:expr) (x : string) (es : val) (map : sub),
   subst_is_closed Γ [] map →
   subst x es (subst_map (delete x map) e) =
   subst_map (insert x es map) e
@@ -666,7 +666,7 @@ with subst_subst_map_val : ∀ Γ (v:val) (x : string) (es : val) (map : sub),
   subst x es (subst_map_val (delete x map) v) =
   subst_map_val (insert x es map) v.
 Proof.
-Admitted. *)
+Admitted.
 
   (* { intros e. induction e; intros; simpl.
     { apply (subst_subst_map_val _ _ _ _ H). }
@@ -714,8 +714,8 @@ Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
   n ⊨ G_rel Γ γ1 γ2 →
   n ⊨ G_rel (x :: Γ) (<[x := v1]> γ1) (<[x := v2]> γ2).
 Proof.
-(* Admitted. *)
-Abort.
+Admitted.
+(* Abort. *)
 
   (* intros.
   unfold G_rel.
@@ -777,62 +777,60 @@ Lemma rel_v_compat_lam Γ (e1 e2 : expr) n x :
   n ⊨ V_rel_o Γ (vlambda x e1) (vlambda x e2).
 Proof.
   intro He.
-  unfold V_rel_o. iintros γ1 γ2 Hγ.
+  unfold V_rel_o.
+  isplit; [ | isplit ].
+  { iintro.
+    unfold E_rel_o in He. idestruct He as Hc1 He.
+    idestruct Hc1.
+    rewrite closed_lambda.
+    assumption. }
+  { iintro.
+    unfold E_rel_o in He. idestruct He as _ He. idestruct He as Hc2 He.
+    idestruct Hc2.
+    rewrite closed_lambda.
+    assumption. }
+
+  iintros γ1 γ2 Hγ.
   apply V_rel_intro.
 
-    (* pose proof (closed_subst_weaken Γ (vlambda x e1) γ1 (x::Γ) []). *)
-    (* pose proof (subst_map_closed'_2 Γ [] γ1 (vlambda x e1)). *)
-    pose proof (subst_map_closed'_3 Γ γ1 (vlambda x e1)).
+  { apply (subst_map_closed'_3 Γ γ1 (vlambda x e1)).
+    { (* this part of the proof is repeated from before *)
+      unfold E_rel_o in He. idestruct He as Hc1 _.
+      idestruct Hc1.
+      rewrite closed_lambda.
+      assumption. }
+    { unfold G_rel in Hγ.
+      idestruct Hγ as Hcg1 Hγ. idestruct Hcg1.
+      assumption. } }
 
-    apply H.
+  { apply (subst_map_closed'_3 Γ γ2 (vlambda x e2)).
+    { (* more repetition *)
+      unfold E_rel_o in He. idestruct He as _ He. idestruct He as Hc2 _. idestruct Hc2.
+      rewrite closed_lambda.
+      assumption. }
+    { unfold G_rel in Hγ.
+      idestruct Hγ as Hcg1 Hγ. idestruct Hγ as Hcg2 Hγ. idestruct Hcg1. idestruct Hcg2.
+      assumption. } }
 
-  (* simpl. *)
-  {
-    simpl.
+  (* we now have the arguments *)
+  iintros u1 u2 Hu1 Hu2 Hv.
 
-    unfold E_rel_o in He.
-    (* idestruct . *)
-    (* ispec He γ1 γ2. *)
-
-    admit.
-  }
-  {
-    (* unfold E_rel_o in He. *)
-    (* ispec He γ1 γ2. *)
-    (* apply E_rel_elim in He as (Hc1&Hc2&?). *)
-    unfold G_rel in Hγ.
-    idestruct Hγ as Hcg1 Hγ. idestruct Hγ as Hcg2 Hγ. idestruct Hcg1. idestruct Hcg2.
-    assumption.
-    (* apply (closed_subst_map_lambda _ _ _ Hc1). *)
-    (* pose proof (subst_map_closed). *)
-    (* admit. *)
-  }
-  { admit. }
-
-  unfold E_rel_o in He.
-
-  iintros u1 u2 Hcu1 Hcu2 Hv.
-  simpl.
-  (* simpl in *. *)
-  (* idestruct Hce1. *)
-  (* idestruct Hce2. *)
-  idestruct Hcu1.
-  idestruct Hcu2.
   eapply R_rel_red_both.
-  { constructor.
+  { simpl. constructor.
     simpl. constructor.
     reflexivity. }
-  { constructor.
+  { simpl. constructor.
     simpl. constructor.
     reflexivity. }
   { later_shift.
+
     rewrite subst_subst_map with (Γ:=Γ).
     2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [? _]. assumption. }
     rewrite subst_subst_map with (Γ:=Γ).
     2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [_ ?]. assumption. }
     iapply He.
-    (* apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). } *)
-Abort.
+    apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). }
+Qed.
 
 (* Fixpoint fundamental_property_e {V : Set} (e : expr V) n :
   n ⊨ E_rel e e
