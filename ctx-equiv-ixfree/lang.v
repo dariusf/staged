@@ -586,9 +586,14 @@ Lemma compat_var Γ (x : string) n :
   x ∈ Γ →
   n ⊨ E_rel_o Γ (var x) (var x).
 Proof.
-Abort.
-  (* intros Hdom.
-  iintros γ₁ γ₂ Hγ.
+(* Abort. *)
+  intros Hdom.
+  unfold E_rel_o.
+  isplit; [ | isplit ].
+  { iintro. unfold closed. simpl. apply bool_decide_pack. assumption. }
+  { iintro. unfold closed. simpl. apply bool_decide_pack. assumption. }
+
+  iintros γ1 γ2 Hγ.
   apply E_rel_intro.
   { apply G_sub_closed in Hγ as [Hc1 Hc2].
     apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc1). }
@@ -614,7 +619,7 @@ Abort.
   apply K_rel_elim.
   assumption.
   assumption.
-Qed. *)
+Qed.
 
 Lemma R_rel_red_both (e₁ e₁' e₂ e₂' : expr) n :
   (* contextual_step e₁ e₁' → contextual_step e₂ e₂' → *)
