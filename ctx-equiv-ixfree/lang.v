@@ -719,6 +719,14 @@ Lemma scope_extend x Γ X v γ:
 Proof.
 Abort.
 
+Lemma elem_of_cons_r {A} (x0 x:A) Γ:
+  x0 ∈ x :: Γ → x0 ≠ x → x0 ∈ Γ.
+Proof.
+  intros Hd Hne.
+  pose proof (elem_of_cons Γ x0 x) as [H1 _].
+  specialize (H1 Hd). destruct H1. congruence. assumption.
+Qed.
+
 (** special case of [scope_extend] *)
 Lemma scope_extend1 Γ x (v:val) (γ:sub):
   closed [] v →
@@ -732,11 +740,12 @@ Proof.
   - exists v. rewrite lookup_insert_eq with (m:=γ).
     split; done.
   - unfold subst_is_closed in Hsc.
-    pose proof (elem_of_cons Γ x0 x) as [H _]; specialize (H Hd); destruct H; [ congruence | ].
+    apply not_eq_sym in Hne.
+    pose proof (elem_of_cons_r _ _ _ Hd Hne) as H.
     specialize (Hsc x0 H).
     destruct Hsc as (v0&?&?).
     exists v0.
-    rewrite lookup_insert_ne with (m:=γ); [ | assumption ].
+    rewrite lookup_insert_ne with (m:=γ); [ | congruence ].
     split; done.
 Qed.
 
