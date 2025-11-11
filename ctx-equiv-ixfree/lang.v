@@ -175,9 +175,9 @@ Fixpoint is_closed (X : list string) (e : expr) : bool :=
   end.
 Definition closed (X : list string) (e : expr) : Prop := Is_true (is_closed X e).
 
-Definition subst_is_closed (free : list string) (X : list string) (sub : sub) :=
-  ∀ x, x ∈ free →
-    ∃ v, sub !! x = Some v ∧ closed X (ret v).
+Definition subst_is_closed (dom : list string) (free : list string) (sub : sub) :=
+  ∀ x, x ∈ dom →
+    ∃ v, sub !! x = Some v ∧ closed free (ret v).
 
 (* Lemma subst_is_closed_subseteq: ∀ (X : list string) (map1 map2 : sub),
   map1 ⊆ map2 → subst_is_closed X map2 → subst_is_closed X map1.
@@ -592,28 +592,28 @@ Proof.
   apply E_rel_intro.
   { apply G_sub_closed in Hγ as [Hc1 Hc2].
     apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc1). }
-  { admit. }
-  unfold G_rel in Hγ.
+  { apply G_sub_closed in Hγ as [Hc1 Hc2].
+    apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc2). }
+
+  (* TODO use an elim principle for G_rel *)
   iintros E1 E2 HE. simpl.
-  apply E_rel_elimO.
-
-  iintros Hc1 Hc2 E1 E2 HK.
-  idestruct Hc1. apply closed_subst_map in Hc1. destruct Hc1 as (v1&Hg1&Hs1&Hcv1).
-  idestruct Hc2. apply closed_subst_map in Hc2. destruct Hc2 as (v2&Hg2&Hs2&Hcv2).
-
   unfold G_rel in Hγ.
-  ispecialize Hγ x.
-  ispecialize Hγ v1.
-  ispecialize Hγ v2.
-  ispec Hγ Hg1.
-  ispec Hγ Hg2.
+  idestruct Hγ as Hc1 Hγ.
+  idestruct Hγ as Hc2 H.
+  idestruct Hc1.
+  idestruct Hc2.
+  unfold subst_is_closed in Hc1.
+  specialize (Hc1 x Hdom).
+  destruct Hc1 as (v&?&?).
+  specialize (Hc2 x Hdom).
+  destruct Hc2 as (v0&?&?).
+  rewrite H0. rewrite H2.
 
-  rewrite Hs1.
-  rewrite Hs2.
+  ispec H x v v0 H0 H4.
 
-  apply I_prop_intro with (w:=n) in Hcv1.
-  apply I_prop_intro with (w:=n) in Hcv2.
-  apply (K_rel_elim _ _ _ _ _ HK Hcv1 Hcv2 Hγ).
+  apply K_rel_elim.
+  assumption.
+  assumption.
 Qed.
 
 Lemma R_rel_red_both (e₁ e₁' e₂ e₂' : expr) n :
