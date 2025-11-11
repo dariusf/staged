@@ -709,40 +709,55 @@ Admitted.
     { reflexivity. } }
 Qed. *)
 
+(** lemma a1 from erlang. scoping of extended substitutions: given a closed substitution,
+  we can add a closed value to it *)
+Lemma scope_extend x Γ X v γ:
+  closed X (ret v) →
+  subst_is_closed Γ X γ →
+  x ∉ Γ →
+  subst_is_closed (x::Γ) X (<[x := v]> γ).
+Proof.
+Abort.
+
+(** special case of [scope_extend] *)
+Lemma scope_extend1 Γ x (v:val) (γ:sub):
+  closed [] v →
+  subst_is_closed Γ [] γ →
+  subst_is_closed (x::Γ) [] (<[x := v]> γ).
+Proof.
+  intros Hc Hsc.
+  unfold subst_is_closed.
+  intros x0 Hd.
+  destruct (decide (x=x0)) as [->|Hne].
+  - exists v. rewrite lookup_insert_eq with (m:=γ).
+    split; done.
+  - unfold subst_is_closed in Hsc.
+    pose proof (elem_of_cons Γ x0 x) as [H _]; specialize (H Hd); destruct H; [ congruence | ].
+    specialize (Hsc x0 H).
+    destruct Hsc as (v0&?&?).
+    exists v0.
+    rewrite lookup_insert_ne with (m:=γ); [ | assumption ].
+    split; done.
+Qed.
+
 Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
   n ⊨ V_rel v1 v2 →
   n ⊨ G_rel Γ γ1 γ2 →
   n ⊨ G_rel (x :: Γ) (<[x := v1]> γ1) (<[x := v2]> γ2).
 Proof.
-Admitted.
-(* Abort. *)
-
-  (* intros.
+  intros.
   unfold G_rel.
   isplit; [ | isplit ].
-  { apply G_sub_closed in H0 as [? ?].
-    iintro.
-    pose proof (subst_is_closed_subseteq Γ [] γ1 (insert x v1 γ1)).
-    apply H2.
-    Search (_ ⊆ insert _ _ _).
-    apply insert_subseteq.
-    (* set_solver. *)
+  { iintro.
+    apply V_rel_elim in H as (Hcv1&_).
+    apply G_sub_closed in H0 as [H _].
+    apply (scope_extend1 _ x _ _ Hcv1 H). }
+  { iintro.
+    apply V_rel_elim in H as (_&Hcv2&_).
+    apply G_sub_closed in H0 as [_ H].
+    apply (scope_extend1 _ x _ _ Hcv2 H). }
 
-    }
-  (* { apply G_sub_closed in H0 as [? ?].
-    iintro.
-    pose proof (subst_is_closed_subseteq Γ [] γ1 (insert x v1 γ1)).
-    apply H2.
-    set_solver.
-    assumption. } *)
-  {
-    admit.
-  }
-  {
-    admit.
-  } *)
-
-  (* iintros x0 v0 v3 H1 H2.
+  iintros x0 v0 v3 H1 H2.
   destruct (decide (x=x0)).
   { subst.
     rewrite lookup_insert_eq with (m:=γ2) in H2. idestruct H2. injection H2 as ->.
@@ -750,27 +765,58 @@ Admitted.
     assumption. }
   { rewrite lookup_insert_ne with (m:=γ2) in H2. idestruct H2. 2: { assumption. }
     rewrite lookup_insert_ne with (m:=γ1) in H1. idestruct H1. 2: { assumption. }
-    unfold G_rel in H0.
-    ispecialize H0 x0.
-    ispecialize H0 v0.
-    ispecialize H0 v3.
+
+    apply V_rel_elim in H as (Hcv1&Hcv2&?).
+    ispec H v1 v2 Hcv1 Hcv2.
     iapply H0.
     - iintro. apply H1.
-    - iintro. apply H2. } *)
-(* Qed. *)
+    - iintro. apply H3. }
+Qed.
+
+(* Lemma subst_map_closed' X Y Θ e:
+  closed Y e →
+  (∀ x, x ∈ Y → if Θ !! x is (Some e') then closed X e' else x ∈ X) →
+  closed X (subst_map Θ e).
+Proof.
+  induction e in X, Θ, Y |-*; simpl.
+  - intros Hel%bool_decide_unpack Hcl.
+    eapply Hcl in Hel.
+    destruct (Θ !! x); first done.
+    simpl. by eapply bool_decide_pack.
+  - intros Hcl Hcl'. destruct x as [|x]; simpl; first naive_solver.
+    eapply IHe; first done.
+    intros y [|]%elem_of_cons.
+    + subst. rewrite lookup_delete_eq. set_solver.
+    + destruct (decide (x = y)); first by subst; rewrite lookup_delete_eq; set_solver.
+      rewrite lookup_delete_ne //=. eapply Hcl' in H.
+      destruct lookup; last set_solver.
+      eapply closed_weaken; eauto with set_solver.
+  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto.
+  - auto.
+  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto.
+Qed. *)
 
 Lemma subst_map_closed'_2 Γ X γ e:
   closed (X ++ Γ) e ->
   subst_is_closed Γ X γ ->
   closed X (subst_map γ e).
+Proof.
+  (* intros Hcl Hsubst.
+  eapply subst_map_closed'; first eassumption.
+  intros x Hx.
+  destruct (Θ !! x) as [e'|] eqn:Heq.
+  - eauto.
+  - by eapply elem_of_app in Hx as [H|H%elem_of_elements%not_elem_of_dom].
+Qed. *)
 Admitted.
 
 Lemma subst_map_closed'_3 Γ γ e:
   closed Γ e ->
   subst_is_closed Γ [] γ ->
   closed [] (subst_map γ e).
-Admitted.
-
+Proof.
+  intros. by eapply (subst_map_closed'_2 _ []).
+Qed.
 
 Lemma rel_v_compat_lam Γ (e1 e2 : expr) n x :
   n ⊨ E_rel_o (x::Γ) e1 e2 →
