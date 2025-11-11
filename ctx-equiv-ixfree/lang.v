@@ -205,7 +205,7 @@ Definition L_rel_pre (L_rel : expr_rel) : expr_rel :=
     (closed [] e1)ᵢ ∧ᵢ
     (closed [] e2)ᵢ ∧ᵢ
     (∀ v1 : val, e1 = v1 → terminates e2)ᵢ ∧ᵢ
-    ∀ᵢ e1' : expr, (base_step e1 e1')ᵢ →ᵢ ▷ L_rel e1' e2.
+    ∀ᵢ e1' : expr, (contextual_step e1 e1')ᵢ →ᵢ ▷ L_rel e1' e2.
 
 Definition L_rel_fix := I_fix L_rel_pre.
 Definition L_rel := L_rel_pre L_rel_fix.
@@ -701,19 +701,163 @@ Proof.
   intros. apply subst_closed with []; set_solver.
 Qed. *)
 
-Lemma R_rel_red_both (e₁ e₁' e₂ e₂' : expr) n :
-  (* contextual_step e₁ e₁' → contextual_step e₂ e₂' → *)
-  base_step e₁ e₁' → base_step e₂ e₂' →
-  n ⊨ ▷ E_rel e₁' e₂' →
-  n ⊨ R_rel e₁ e₂.
+Lemma L_rel_red_l (e1 e1' e2 : expr) n :
+  closed [] e1 →
+  closed [] e2 →
+  contextual_step e1 e1' →
+  n ⊨ ▷ L_rel e1' e2 →
+  n ⊨ L_rel e1 e2.
 Proof.
-  (* intros Hred₁ Hred₂ He; iintros E₁ E₂ HE.
-  eapply Obs_red_both.
-  + apply red_in_ectx; eassumption.
-  + apply red_in_ectx; eassumption.
-  + later_shift; iapply He; assumption. *)
-(* Qed. *)
+  intros Hc1 Hc2 Hred HL.
+  unfold L_rel. unfold L_rel_pre.
+  repeat isplit.
+  - iintro. assumption.
+  - iintro. assumption.
+  - iintro.
+    intros v1 H_eq.
+    rewrite -> H_eq in Hred.
+    (* absurd *)
+    admit.
+  - iintros e1'' Hred'.
+    idestruct Hred'.
+    replace e1'' with e1' by admit. (* deterministic *)
+    later_shift. apply L_rel_roll.
+    exact HL.
 Admitted.
+
+Lemma L_rel_red_r (e2 e2' : expr) n :
+  (*closed [] e1 →*)
+  closed [] e2 →
+  contextual_step e2 e2' →
+  n ⊨ (∀ᵢ e1, L_rel e1 e2' →ᵢ L_rel e1 e2).
+Proof.
+  intros Hc2 Hred.
+  loeb_induction.
+  iintros e1 HL.
+  unfold L_rel in HL.
+  unfold L_rel_pre in HL.
+  idestruct HL as Hc1 HL.
+  idestruct HL as Hc2' HL.
+  idestruct HL as HL1 HL2.
+  repeat isplit.
+  - assumption.
+  - iintro. assumption.
+  - iintro. intros v1 H_eq.
+    idestruct HL1.
+    specialize (HL1 v1 H_eq).
+    unfold terminates in *.
+    unfold bigstep in *.
+    admit.
+  - iintros e1' Hred'.
+    ispec HL2 e1' Hred'.
+    later_shift.
+    apply L_rel_unroll in HL2.
+    apply L_rel_roll.
+    iapply IH. exact HL2.
+Admitted.
+
+Lemma O_rel_red_l (e1 e1' e2 : expr) n :
+  closed [] e1 →
+  closed [] e2 →
+  contextual_step e1 e1' →
+  n ⊨ O_rel e1' e2 →
+  n ⊨ O_rel e1 e2.
+Proof.
+  intros Hc1 Hc2 Hred HO.
+  unfold O_rel in *.
+  idestruct HO as HL1 HL2.
+  isplit.
+  - eapply L_rel_red_l.
+    + exact Hc1.
+    + exact Hc2.
+    + exact Hred.
+    + later_shift. exact HL1.
+  - iapply L_rel_red_r.
+    + exact Hc1.
+    + exact Hred.
+    + exact HL2.
+Qed.
+
+Lemma O_rel_red_r (e1 e2 e2' : expr) n :
+  (* contextual_step e1 e1' → contextual_step e2 e2' → *)
+  closed [] e1 →
+  closed [] e2 →
+  contextual_step e2 e2' →
+  n ⊨ O_rel e1 e2' →
+  n ⊨ O_rel e1 e2.
+Proof.
+  intros Hc1 Hc2 Hred HO.
+  unfold O_rel in *.
+  idestruct HO as HL1 HL2.
+  isplit.
+  - iapply L_rel_red_r.
+    + exact Hc2.
+    + exact Hred.
+    + exact HL1.
+  - iapply L_rel_red_l.
+    + exact Hc2.
+    + exact Hc1.
+    + exact Hred.
+    + later_shift. exact HL2.
+Qed.
+
+Lemma O_rel_red_both (e1 e1' e2 e2' : expr) n :
+  closed [] e1 →
+  closed [] e2 →
+  contextual_step e1 e1' →
+  contextual_step e2 e2' →
+  n ⊨ ▷ O_rel e1' e2' →
+  n ⊨ O_rel e1 e2.
+Proof.
+  intros Hc1 Hc2 Hred1 Hred2 HO.
+  unfold O_rel in *.
+  apply I_conj_later_down in HO.
+  idestruct HO as HL1 HL2.
+  isplit.
+  - iapply L_rel_red_r.
+    { exact Hc2. }
+    { exact Hred2. }
+    iapply L_rel_red_l.
+    { exact Hc1. }
+    { admit. }
+    { exact Hred1. }
+    { later_shift. exact HL1. }
+  - iapply L_rel_red_r.
+    { exact Hc1. }
+    { exact Hred1. }
+    iapply L_rel_red_l.
+    { exact Hc2. }
+    { admit. }
+    { exact Hred2. }
+    { later_shift. exact HL2. }
+Admitted.
+
+(* Observation: later_shift is significant in O_rel_red_both,
+   but is not significant in O_rel_red_l and O_rel_red_r. We
+   hypothesize that O_rel_red_l and O_rel_red_r are stronger
+   property:
+   - O_rel_red_both → O_rel_red_l ∧ O_rel_red_r
+   - But not: O_rel_red_l ∧ O_rel_red_r → O_rel_red_both *)
+
+Lemma R_rel_red_both (e1 e1' e2 e2' : expr) n :
+  contextual_step e1 e1' →
+  contextual_step e2 e2' →
+  n ⊨ ▷ E_rel e1' e2' →
+  n ⊨ R_rel e1 e2.
+Proof.
+  intros Hred1 Hred2 He.
+  apply R_rel_intro.
+  iintros E1 E2 HE.
+  eapply O_rel_red_both.
+  { admit. } (* need: closed-ness for context *)
+  { admit. }
+  { admit. }
+  { admit. }
+  { later_shift. apply E_rel_elimO.
+    - exact He.
+    - exact HE. }
+Admitted.
+
 (* Abort. *)
 
 (* Lemma sem_context_rel_closed Γ γ1 γ2 n:
@@ -957,7 +1101,7 @@ Proof.
 (* Qed. *)
 Admitted.
 
-Lemma rel_v_compat_lam Γ (e1 e2 : expr) n x :
+Lemma compat_lam Γ (e1 e2 : expr) n x :
   n ⊨ E_rel_o (x::Γ) e1 e2 →
   n ⊨ V_rel_o Γ (vlambda x e1) (vlambda x e2).
 Proof.
@@ -1001,10 +1145,12 @@ Proof.
   iintros u1 u2 Hu1 Hu2 Hv.
 
   eapply R_rel_red_both.
-  { simpl. constructor.
+  { simpl. eapply (Ectx_step _ _ ectx_hole _ _ eq_refl eq_refl).
+    simpl. constructor.
     simpl. constructor.
     reflexivity. }
-  { simpl. constructor.
+  { simpl. eapply (Ectx_step _ _ ectx_hole _ _ eq_refl eq_refl).
+    simpl. constructor.
     simpl. constructor.
     reflexivity. }
   { later_shift.
@@ -1017,19 +1163,22 @@ Proof.
     apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). }
 Qed.
 
-(* Fixpoint fundamental_property_e {V : Set} (e : expr V) n :
-  n ⊨ E_rel e e
-with fundamental_property_v {V : Set} (v : value V) n :
-  n ⊨ rel_v v v.
+Fixpoint fundamental_property_e Γ (e : expr) n :
+  closed Γ e →
+  n ⊨ E_rel_o Γ e e
+with fundamental_property_v Γ (v : val) n :
+  closed Γ v →
+  n ⊨ V_rel_o Γ v v.
 Proof.
-+ destruct e.
-  - apply rel_e_compat_value, fundamental_property_v.
-  - apply compat_app; apply fundamental_property_e.
-  - apply rel_e_compat_callcc, fundamental_property_e.
-  -  apply rel_e_compat_abort, fundamental_property_p.
-+ destruct v.
-  - apply rel_v_compat_var.
-  - apply rel_v_compat_lam, fundamental_property_e.
-+ destruct p.
-  - apply rel_p_compat_expr, fundamental_property_e.
-Qed. *)
+  { intros H_closed.
+    induction e.
+    - apply compat_val. apply fundamental_property_v. assumption.
+    - apply compat_var. rewrite closed_var. assumption.
+    - rewrite closed_app in H_closed. destruct H_closed.
+      apply compat_app; auto. }
+  { intros H_closed.
+    induction v.
+    - admit.
+    - apply compat_lam. apply fundamental_property_e. rewrite <- closed_lambda. assumption.
+    - admit. } Guarded.
+Admitted.
