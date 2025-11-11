@@ -175,6 +175,16 @@ Fixpoint is_closed (X : list string) (e : expr) : bool :=
   end.
 Definition closed (X : list string) (e : expr) : Prop := Is_true (is_closed X e).
 
+Definition subst_is_closed (free : list string) (X : list string) (sub : sub) :=
+  ∀ x, x ∈ free →
+    ∃ v, sub !! x = Some v ∧ closed X (ret v).
+
+(* Lemma subst_is_closed_subseteq: ∀ (X : list string) (map1 map2 : sub),
+  map1 ⊆ map2 → subst_is_closed X map2 → subst_is_closed X map1.
+Proof.
+  intros X map1 map2 Hsub Hclosed2 x e Hl. eapply Hclosed2, map_subseteq_spec; done.
+Qed. *)
+
 (* Relations *)
 
 Definition expr_rel := expr ⇒ᵢ expr ⇒ᵢ IRel.
@@ -225,17 +235,19 @@ Definition E_rel : expr_rel :=
 
 (* Relations for open terms *)
 
-Definition G_rel (γ1 γ2 : sub) : IProp :=
+Definition G_rel (Γ: list string) (γ1 γ2 : sub) : IProp :=
+  (subst_is_closed Γ [] γ1)ᵢ ∧ᵢ
+  (subst_is_closed Γ [] γ2)ᵢ ∧ᵢ
   ∀ᵢ x v1 v2,
     (γ1 !! x = Some v1)ᵢ →ᵢ
     (γ2 !! x = Some v2)ᵢ →ᵢ
     V_rel v1 v2.
 
-Definition E_rel_o (e1 e2 : expr) : IProp :=
-  ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ E_rel (subst_map γ1 e1) (subst_map γ2 e2).
+Definition E_rel_o (Γ: list string) (e1 e2 : expr) : IProp :=
+  ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ E_rel (subst_map γ1 e1) (subst_map γ2 e2).
 
-Definition V_rel_o (v1 v2 : val) : IProp :=
-  ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2).
+Definition V_rel_o (Γ: list string) (v1 v2 : val) : IProp :=
+  ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2).
 
 (** Contractiveness and unrolling fixpoint *)
 
@@ -418,9 +430,9 @@ Proof.
 Qed.
 
 (* aka val inclusion *)
-Lemma compat_val (v1 v2 : val) n :
-  n ⊨ V_rel_o v1 v2 →
-  n ⊨ E_rel_o v1 v2.
+Lemma compat_val (Γ : list string) (v1 v2 : val) n :
+  n ⊨ V_rel_o Γ v1 v2 →
+  n ⊨ E_rel_o Γ v1 v2.
 Proof.
   unfold V_rel_o, E_rel_o. simpl.
   intro Hv.
@@ -443,10 +455,10 @@ Lemma closed_app xs e1 e2:
   closed xs e1 ∧ closed xs e2.
 Proof. unfold closed. simpl. by rewrite -> andb_True. Qed.
 
-Lemma compat_app (e1 e2 e1' e2' : expr) n :
-  n ⊨ E_rel_o e1 e2 →
-  n ⊨ E_rel_o e1' e2' →
-  n ⊨ E_rel_o (app e1 e1') (app e2 e2').
+Lemma compat_app (Γ:list string) (e1 e2 e1' e2' : expr) n :
+  n ⊨ E_rel_o Γ e1 e2 →
+  n ⊨ E_rel_o Γ e1' e2' →
+  n ⊨ E_rel_o Γ (app e1 e1') (app e2 e2').
 Proof.
   unfold E_rel_o. simpl.
   intros He He'. iintros γ1 γ2 Hγ.
@@ -523,6 +535,34 @@ Proof.
       - assumption. } }
 Qed.
 
+Lemma G_sub_closed n Γ γ1 γ2:
+  n ⊨ G_rel Γ γ1 γ2 →
+  subst_is_closed Γ [] γ1 ∧ subst_is_closed Γ [] γ2.
+Proof.
+  unfold G_rel. intros.
+  split.
+  - unfold subst_is_closed. intros x Hdom.
+    idestruct H as Hc1 _. idestruct Hc1.
+    unfold subst_is_closed in Hc1.
+    apply (Hc1 x Hdom).
+  - unfold subst_is_closed. intros x Hdom.
+    idestruct H as _ H. idestruct H as Hc2 _. idestruct Hc2.
+    unfold subst_is_closed in Hc2.
+    apply (Hc2 x Hdom).
+Qed.
+
+Lemma subst_is_closed_closed_subst_map Γ γ x:
+  x ∈ Γ →
+  subst_is_closed Γ [] γ →
+  closed [] (subst_map γ (var x)).
+Proof.
+  unfold subst_is_closed, closed. intros Hd Hs.
+  simpl.
+  destruct (γ !! x) eqn:He.
+  - specialize (Hs x Hd). destruct Hs as (v0&H1&H2). congruence.
+  - specialize (Hs x Hd). destruct Hs as (v0&H1&H2). congruence.
+Qed.
+
 (* Lemma subst_closed_nil e x es : closed [] e → subst x es e = e.
 Proof.
   intros. apply subst_closed with []; set_solver.
@@ -543,12 +583,15 @@ Proof.
   - unfold closed. assumption.
 Qed.
 
-Lemma compat_var (x : string) n :
-  n ⊨ E_rel_o (var x) (var x).
+Lemma compat_var Γ (x : string) n :
+  x ∈ Γ →
+  n ⊨ E_rel_o Γ (var x) (var x).
 Proof.
+  intros Hdom.
   iintros γ₁ γ₂ Hγ.
   apply E_rel_intro.
-  { admit. }
+  { apply G_sub_closed in Hγ as [Hc1 Hc2].
+    apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc1). }
   { admit. }
   unfold G_rel in Hγ.
   iintros E1 E2 HE. simpl.
@@ -587,17 +630,8 @@ Proof.
 (* Qed. *)
 Admitted.
 
-Definition subst_is_closed (X : list string) (map : sub) :=
-  ∀ x e, map !! x = Some e → closed X (ret e).
-
-Lemma subst_is_closed_subseteq: ∀ (X : list string) (map1 map2 : sub),
-  map1 ⊆ map2 → subst_is_closed X map2 → subst_is_closed X map1.
-Proof.
-  intros X map1 map2 Hsub Hclosed2 x e Hl. eapply Hclosed2, map_subseteq_spec; done.
-Qed.
-
-Lemma sem_context_rel_closed γ1 γ2 n:
-  n ⊨ G_rel γ1 γ2 →
+Lemma sem_context_rel_closed Γ γ1 γ2 n:
+  n ⊨ G_rel Γ γ1 γ2 →
   ∀ x (v1 v2 : val),
     γ1 !! x = Some v1 →
     γ2 !! x = Some v2 →
