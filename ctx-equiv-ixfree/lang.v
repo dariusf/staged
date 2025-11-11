@@ -615,8 +615,9 @@ Proof.
   exact HE.
 Qed.
 
-Lemma closed_var Γ x : x ∈ Γ → closed Γ (var x).
-Proof. unfold closed. simpl. by apply bool_decide_pack. Qed.
+Lemma closed_var Γ x : x ∈ Γ ↔ closed Γ (var x).
+Proof.
+  unfold closed. simpl. by rewrite bool_decide_spec. Qed.
 
 Lemma subst_is_closed_closed_subst_map Γ γ x:
   x ∈ Γ →
@@ -861,13 +862,18 @@ Proof.
     - iintro. apply H3. }
 Qed.
 
-(* Lemma subst_map_closed' X Y Θ e:
+Lemma subst_map_closed' e X Y (Θ:sub):
   closed Y e →
-  (∀ x, x ∈ Y → if Θ !! x is (Some e') then closed X e' else x ∈ X) →
+  (∀ x, x ∈ Y → match Θ !! x with Some e' => closed X (ret e') | None => x ∈ X end) →
   closed X (subst_map Θ e).
 Proof.
-  induction e in X, Θ, Y |-*; simpl.
-  - intros Hel%bool_decide_unpack Hcl.
+  (* induction e; intros. *)
+Abort.
+ (* in X, Θ, Y |-*; simpl. *)
+  (* - *)
+
+
+  (* - intros Hel%bool_decide_unpack Hcl.
     eapply Hcl in Hel.
     destruct (Θ !! x); first done.
     simpl. by eapply bool_decide_pack.
@@ -881,8 +887,8 @@ Proof.
       eapply closed_weaken; eauto with set_solver.
   - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto.
   - auto.
-  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto.
-Qed. *)
+  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto. *)
+(* Qed. *)
 
 Lemma subst_map_closed'_2 Γ X γ e:
   closed (X ++ Γ) e ->
@@ -898,19 +904,64 @@ Proof.
 Qed. *)
 Admitted.
 
-Lemma subst_map_closed'_3 Γ γ e:
+Lemma closed_var_in_subst (v:val) x Γ (γ:sub):
+  closed Γ (var x) →
+  subst_is_closed Γ [] γ →
+  γ !! x = Some v →
+  closed [] v.
+Proof.
+  intros Hc%closed_var Hsc Hg.
+  unfold subst_is_closed in Hsc.
+  specialize (Hsc x Hc).
+  destruct Hsc as (v0&?&?).
+  rewrite H in Hg. injection Hg. intros. subst.
+  assumption.
+Qed.
+
+Lemma closed_var_not_in_subst x Γ (γ:sub):
+  closed Γ (var x) →
+  subst_is_closed Γ [] γ →
+  γ !! x = None →
+  False.
+Proof.
+  intros Hc%closed_var Hsc Hg.
+  unfold subst_is_closed in Hsc.
+  specialize (Hsc x Hc).
+  destruct Hsc as (v0&?&?).
+  congruence.
+Qed.
+
+Fixpoint subst_map_closed'_3 e Γ γ:
   closed Γ e ->
   subst_is_closed Γ [] γ ->
-  closed [] (subst_map γ e).
+  closed [] (subst_map γ e)
+with subst_map_closed'_3_val (v:val) Γ γ:
+  closed Γ v ->
+  subst_is_closed Γ [] γ ->
+  closed [] (subst_map_val γ v).
 Proof.
-  intros. by eapply (subst_map_closed'_2 _ []).
-Qed.
+  { induction e;
+    intros Hc Hsc.
+    { simpl. by apply subst_map_closed'_3_val with (Γ:=Γ). }
+    { simpl.
+      destruct (γ !! x) eqn:H.
+      { apply (closed_var_in_subst _ _ _ _ Hc Hsc H). }
+      { apply (closed_var_not_in_subst _ _ _ Hc Hsc H). } }
+    { eauto. } }
+  { induction v; intros Hs Hsc.
+    { constructor. }
+    { simpl.
+      apply (subst_map_closed'_3 _ _ _ Hs Hsc). }
+    { constructor. }
+  }
+(* Qed. *)
+Admitted.
 
 Lemma rel_v_compat_lam Γ (e1 e2 : expr) n x :
   n ⊨ E_rel_o (x::Γ) e1 e2 →
   n ⊨ V_rel_o Γ (vlambda x e1) (vlambda x e2).
 Proof.
-  intro He.
+  intros He.
   unfold V_rel_o.
   isplit; [ | isplit ].
   { iintro.
@@ -927,7 +978,7 @@ Proof.
   iintros γ1 γ2 Hγ.
   apply V_rel_intro.
 
-  { apply (subst_map_closed'_3 Γ γ1 (vlambda x e1)).
+  { apply (subst_map_closed'_3 (vlambda x e1) Γ γ1).
     { (* this part of the proof is repeated from before *)
       unfold E_rel_o in He. idestruct He as Hc1 _.
       idestruct Hc1.
@@ -937,7 +988,7 @@ Proof.
       idestruct Hγ as Hcg1 Hγ. idestruct Hcg1.
       assumption. } }
 
-  { apply (subst_map_closed'_3 Γ γ2 (vlambda x e2)).
+  { apply (subst_map_closed'_3 (vlambda x e2) Γ γ2).
     { (* more repetition *)
       unfold E_rel_o in He. idestruct He as _ He. idestruct He as Hc2 _. idestruct Hc2.
       rewrite closed_lambda.
