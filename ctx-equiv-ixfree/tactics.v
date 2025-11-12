@@ -50,3 +50,37 @@ Proof.
   intros Hp H.
   specialise H Hp.
 Abort.
+
+Tactic Notation "pose_proof" hyp(H) uconstr(t1) :=
+  pose proof H; specialise H t1.
+
+Tactic Notation "pose_proof" hyp(H) uconstr(t1) "as" uconstr(name) :=
+  pose proof H as name; specialise H t1.
+
+Tactic Notation "app" hyp(H) uconstr(t1) :=
+  let H1 := fresh in
+  pose_proof H t1 as H1; eapply H1; clear H1.
+
+Example some_lemma b : b = true → b = true.
+Proof. auto. Qed.
+
+Example ex3_pose b : b = true → True.
+Proof.
+  Search andb.
+  (* pose proof andb_true_intro as H0. *)
+  intros H.
+  pose proof some_lemma as H1.
+
+  let n := fresh in
+  evar (n : bool);
+  specialize (H1 n);
+  (* specialise_one H H1 k; *)
+
+  specialize (H1 H).
+  (* clear n. *)
+
+  (* specialise H1 H. *)
+  (* pose_proof andb_true_intro H. *)
+  (* intros Hp H. *)
+  (* specialise H Hp. *)
+Abort.
