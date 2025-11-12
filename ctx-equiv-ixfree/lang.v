@@ -133,7 +133,7 @@ Definition contextual_reducible (e : expr) :=
   ∃ e', contextual_step e e'.
 
 Definition bigstep e1 (v:val) :=
-  ∃ e2, rtc contextual_step e1 e2 /\ ∃ v, Some v = to_val e2.
+  ∃ e2, rtc contextual_step e1 e2 /\ to_val e2 = Some v.
 
 Definition terminates e := ∃ v, bigstep e v.
 
@@ -255,12 +255,16 @@ Proof.
       + simpl in *.
         apply closed_subst.
         eapply closed_weaken.
-        exact H_closed1.
-        set_solver.
+        exact H_closed1. set_solver.
         exact H_closed2.
     - simpl in *. auto.
   }
 Qed.
+
+Lemma closed_app xs e1 e2:
+  closed xs (app e1 e2) ↔
+  closed xs e1 ∧ closed xs e2.
+Proof. unfold closed. simpl. by rewrite andb_True. Qed.
 
 Lemma base_step_preserve_closedness :
   ∀ e1 e1',
@@ -275,6 +279,40 @@ Proof.
   exact (closed_subst ∅ x e0 e2 Hc1 Hc2).
 Qed.
 
+Lemma closed_decompose :
+  ∀ E e,
+    closed ∅ (fill E e) →
+    ectx_is_closed ∅ E ∧ closed ∅ e.
+Proof.
+  unfold ectx_is_closed.
+  intros E.
+  induction E; intros e' H_closed.
+  - simpl in *. auto.
+  - simpl in *.
+    apply IHE in H_closed as [H_fill H_closed].
+    apply closed_app in H_closed as [H_closed1 H_closed2].
+    split.
+    + intros e'' H_closed3.
+      apply H_fill.
+      apply closed_app. auto.
+    + auto.
+  - simpl in *.
+    apply IHE in H_closed as [H_fill H_closed].
+    apply closed_app in H_closed as [H_closed1 H_closed2].
+    split.
+    + intros e'' H_closed3.
+      apply H_fill.
+      apply closed_app. auto.
+    + auto.
+Qed.
+
+Lemma closed_compose :
+  ∀ E e,
+    ectx_is_closed ∅ E →
+    closed ∅ e →
+    closed ∅ (fill E e).
+Proof. unfold ectx_is_closed. auto. Qed.
+
 Lemma contextual_step_preserve_closedness :
   ∀ e1 e1',
     contextual_step e1 e1' →
@@ -283,13 +321,11 @@ Lemma contextual_step_preserve_closedness :
 Proof.
   unfold closed.
   intros e1 e1' Hred H_closed.
-  inversion Hred. subst. simpl in *.
-  clear Hred.
-  induction K; simpl in *.
-  - by eapply base_step_preserve_closedness.
-  - admit.
-  - admit.
-Admitted.
+  inversion Hred. subst. simpl in *. clear Hred.
+  apply closed_decompose in H_closed as [H_closed1 H_closed2].
+  apply (base_step_preserve_closedness _ _ H1) in H_closed2.
+  apply closed_compose; auto.
+Qed.
 
 (* this definition is for total maps *)
 (* Definition subscoped (Γ free : list string) (γ : sub) : Prop :=
@@ -686,11 +722,6 @@ Proof.
   { exact Hv. }
 Qed.
 
-Lemma closed_app xs e1 e2:
-  closed xs (app e1 e2) ↔
-  closed xs e1 ∧ closed xs e2.
-Proof. unfold closed. simpl. by rewrite andb_True. Qed.
-
 Lemma compat_app (Γ:scope) (e1 e2 e1' e2' : expr) n :
   n ⊨ E_rel_o Γ e1 e2 →
   n ⊨ E_rel_o Γ e1' e2' →
@@ -739,8 +770,7 @@ Proof.
 Qed.
 
 Lemma closed_var Γ x : x ∈ Γ ↔ closed Γ (var x).
-Proof.
-  unfold closed. simpl. by rewrite bool_decide_spec. Qed.
+Proof. unfold closed. simpl. by rewrite bool_decide_spec. Qed.
 
 Lemma subst_is_closed_elim_closed Γ (γ:sub) x X (v:val):
   subst_is_closed Γ X γ →
@@ -840,11 +870,6 @@ Proof.
       - assumption. } }
 Qed.
 
-(* Lemma subst_closed_nil e x es : closed [] e → subst x es e = e.
-Proof.
-  intros. apply subst_closed with []; set_solver.
-Qed. *)
-
 Lemma L_rel_red_l (e1 e1' e2 : expr) n :
   closed ∅ e1 →
   closed ∅ e2 →
@@ -890,15 +915,19 @@ Proof.
     idestruct HL1.
     specialize (HL1 v1 H_eq).
     unfold terminates in *.
+    Print bigstep.
     unfold bigstep in *.
-    admit.
+    destruct HL1 as (v & e3 & Hrtc & H_terminates).
+    exists v, e3. split.
+    + eapply rtc_l. exact Hred. exact Hrtc.
+    + exact H_terminates.
   - iintros e1' Hred'.
     ispec HL2 e1' Hred'.
     later_shift.
     apply L_rel_unroll in HL2.
     apply L_rel_roll.
     iapply IH. exact HL2.
-Admitted.
+Qed.
 
 Lemma O_rel_red_l (e1 e1' e2 : expr) n :
   closed ∅ e1 →
@@ -963,7 +992,7 @@ Proof.
     { exact Hred2. }
     iapply L_rel_red_l.
     { exact Hc1. }
-    { admit. }
+    { by eapply contextual_step_preserve_closedness. }
     { exact Hred1. }
     { later_shift. exact HL1. }
   - iapply L_rel_red_r.
@@ -971,10 +1000,10 @@ Proof.
     { exact Hred1. }
     iapply L_rel_red_l.
     { exact Hc2. }
-    { admit. }
+    { by eapply contextual_step_preserve_closedness. }
     { exact Hred2. }
     { later_shift. exact HL2. }
-Admitted.
+Qed.
 
 (* Observation: later_shift is significant in O_rel_red_both,
    but is not significant in O_rel_red_l and O_rel_red_r. We
