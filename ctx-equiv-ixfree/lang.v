@@ -176,6 +176,120 @@ Fixpoint is_closed (X : list string) (e : expr) : bool :=
 
 Definition closed (X : list string) (e : expr) : Prop := Is_true (is_closed X e).
 
+Definition ectx_is_closed (X : list string) (E : ectx) :=
+  ∀ e, closed [] e → closed X (fill E e).
+
+Lemma closed_weaken e X Y:
+  closed X e → X ⊆ Y → closed Y e
+with closed_weaken_val (v:val) X Y:
+  closed X v → X ⊆ Y → closed Y v.
+Proof.
+  { revert X Y.
+    induction e; intros.
+    - apply (closed_weaken_val _ _ _ H H0).
+    - unfold closed, is_closed in *.
+      apply bool_decide_unpack in H.
+      apply bool_decide_pack.
+      set_solver.
+    - unfold closed in *. simpl in *.
+      apply andb_prop_intro.
+      apply andb_prop_elim in H.
+      destruct H.
+      split.
+      apply (IHe1 _ _ H H0).
+      apply (IHe2 _ _ H1 H0). }
+  { revert X Y.
+    induction v; intros.
+    - constructor.
+    - unfold closed in *.
+      simpl in *.
+      apply (closed_weaken e _ _ H).
+      set_solver.
+    - constructor. }
+Qed.
+
+Lemma closed_subst :
+  ∀ Γ x e1 e2,
+    closed (x :: Γ) e1 →
+    closed [] e2 →
+    closed Γ (subst x e2 e1)
+with closed_subst_val :
+  ∀ Γ x (v : val) e,
+    closed (x :: Γ) v →
+    closed [] e →
+    closed Γ (subst_val x e v).
+Proof.
+  {
+    unfold closed in *.
+    intros Γ x e1 e2 H_closed1 H_closed2.
+    induction e1.
+    - simpl in *. auto.
+    - simpl in *.
+      rewrite -> decide_bool_decide.
+      destruct (bool_decide_reflect (x = x0)) as [H_eq | H_neq].
+      + eapply closed_weaken.
+        exact H_closed2.
+        set_solver.
+      + simpl in *.
+        apply bool_decide_unpack in H_closed1.
+        apply bool_decide_pack.
+        set_solver.
+    - simpl in *.
+      apply andb_prop_elim in H_closed1 as [Hc1 Hc2].
+      apply andb_prop_intro. split.
+      + exact (IHe1_1 Hc1).
+      + exact (IHe1_2 Hc2).
+  }
+  {
+    unfold closed in *.
+    intros Γ x v e H_closed1 H_closed2.
+    induction v.
+    - simpl in *. auto.
+    - simpl in *.
+      rewrite -> decide_bool_decide.
+      destruct (bool_decide_reflect (x = x0)) as [H_eq | H_neq].
+      + rewrite -> H_eq in H_closed1.
+        eapply closed_weaken.
+        exact H_closed1. set_solver.
+      + simpl in *.
+        apply closed_subst.
+        eapply closed_weaken.
+        exact H_closed1.
+        set_solver.
+        exact H_closed2.
+    - simpl in *. auto.
+  }
+Qed.
+
+Lemma base_step_preserve_closedness :
+  ∀ e1 e1',
+    base_step e1 e1' →
+    closed [] e1 →
+    closed [] e1'.
+Proof.
+  unfold closed.
+  intros e1 e1' Hred H_closed.
+  inversion Hred. subst. simpl in *.
+  apply andb_prop_elim in H_closed as [Hc1 Hc2].
+  exact (closed_subst [] x e0 e2 Hc1 Hc2).
+Qed.
+
+Lemma contextual_step_preserve_closedness :
+  ∀ e1 e1',
+    contextual_step e1 e1' →
+    closed [] e1 →
+    closed [] e1'.
+Proof.
+  unfold closed.
+  intros e1 e1' Hred H_closed.
+  inversion Hred. subst. simpl in *.
+  clear Hred.
+  induction K; simpl in *.
+  - by eapply base_step_preserve_closedness.
+  - admit.
+  - admit.
+Admitted.
+
 (* this definition is for total maps *)
 (* Definition subscoped (Γ free : list string) (γ : sub) : Prop :=
   forall x, x ∈ Γ -> (match γ !! x with
@@ -691,7 +805,7 @@ Lemma G_sub_closed Γ γ1 γ2 n :
 Proof. intros Hγ. apply G_rel_elim in Hγ. easy. Qed.
 
 Lemma closed_lambda e X x : closed X (vlambda x e) ↔ closed (x :: X) e.
-Proof. split. auto. auto. Qed.
+Proof. unfold closed. simpl. auto. Qed.
 
 Lemma subst_val_closed v X x es :
   closed X (of_val v) → x ∉ X → subst_val x es v = v
@@ -1062,35 +1176,6 @@ Qed.
   closed X (subst_map Θ e).
 Proof.
 Admitted. *)
-
-Lemma closed_weaken e X Y:
-  closed X e → X ⊆ Y → closed Y e
-with closed_weaken_val (v:val) X Y:
-  closed X v → X ⊆ Y → closed Y v.
-Proof.
-  { revert X Y.
-    induction e; intros.
-    - apply (closed_weaken_val _ _ _ H H0).
-    - unfold closed, is_closed in *.
-      apply bool_decide_unpack in H.
-      apply bool_decide_pack.
-      set_solver.
-    - unfold closed in *. simpl in *.
-      apply andb_prop_intro.
-      apply andb_prop_elim in H.
-      destruct H.
-      split.
-      apply (IHe1 _ _ H H0).
-      apply (IHe2 _ _ H1 H0). }
-  { revert X Y.
-    induction v; intros.
-    - constructor.
-    - rewrite closed_lambda in H.
-      rewrite closed_lambda.
-      apply (closed_weaken _ _ _ H).
-      set_solver.
-    - constructor. }
-Qed.
 
 (* if e is closed under Y, we can split the variables in Y between X and γ *)
 Lemma subst_map_closed' e X Y (γ:sub):
