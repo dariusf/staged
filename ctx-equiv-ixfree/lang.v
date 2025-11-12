@@ -145,7 +145,8 @@ Definition obs_eqv e1 e2 :=
 Infix "≈" := equiterminate (at level 80, right associativity, only printing).
 Infix "≡obs" := obs_eqv (at level 80, right associativity, only printing).
 
-Definition sub := gmap string val.
+Definition sub : Set := gmap string val.
+Definition scope : Set := gset string.
 
 Fixpoint subst_map_val (xs : sub) (v : val) : val :=
   match v with
@@ -164,20 +165,20 @@ with subst_map (xs : sub) (e : expr) : expr :=
   (* | eplus e1 e2 => eplus (subst_map xs e1) (subst_map xs e2) *)
   end.
 
-Fixpoint is_closed (X : list string) (e : expr) : bool :=
+Fixpoint is_closed (X : scope) (e : expr) : bool :=
   match e with
   | var x => bool_decide (x ∈ X)
   | ret vunit | ret (vint _) => true
-  | ret (vlambda x e) => is_closed (x :: X) e
+  | ret (vlambda x e) => is_closed (X ∪ {[x]}) e
   | app e1 e2
   (* | eplus e1 e2 *)
   => is_closed X e1 && is_closed X e2
   end.
 
-Definition closed (X : list string) (e : expr) : Prop := Is_true (is_closed X e).
+Definition closed (X : scope) (e : expr) : Prop := Is_true (is_closed X e).
 
-Definition ectx_is_closed (X : list string) (E : ectx) :=
-  ∀ e, closed [] e → closed X (fill E e).
+Definition ectx_is_closed (X : scope) (E : ectx) :=
+  ∀ e, closed ∅ e → closed X (fill E e).
 
 Lemma closed_weaken e X Y:
   closed X e → X ⊆ Y → closed Y e
@@ -210,13 +211,13 @@ Qed.
 
 Lemma closed_subst :
   ∀ Γ x e1 e2,
-    closed (x :: Γ) e1 →
-    closed [] e2 →
+    closed (Γ ∪ {[x]}) e1 →
+    closed ∅ e2 →
     closed Γ (subst x e2 e1)
 with closed_subst_val :
   ∀ Γ x (v : val) e,
-    closed (x :: Γ) v →
-    closed [] e →
+    closed (Γ ∪ {[x]}) v →
+    closed ∅ e →
     closed Γ (subst_val x e v).
 Proof.
   {
@@ -264,21 +265,21 @@ Qed.
 Lemma base_step_preserve_closedness :
   ∀ e1 e1',
     base_step e1 e1' →
-    closed [] e1 →
-    closed [] e1'.
+    closed ∅ e1 →
+    closed ∅ e1'.
 Proof.
   unfold closed.
   intros e1 e1' Hred H_closed.
   inversion Hred. subst. simpl in *.
   apply andb_prop_elim in H_closed as [Hc1 Hc2].
-  exact (closed_subst [] x e0 e2 Hc1 Hc2).
+  exact (closed_subst ∅ x e0 e2 Hc1 Hc2).
 Qed.
 
 Lemma contextual_step_preserve_closedness :
   ∀ e1 e1',
     contextual_step e1 e1' →
-    closed [] e1 →
-    closed [] e1'.
+    closed ∅ e1 →
+    closed ∅ e1'.
 Proof.
   unfold closed.
   intros e1 e1' Hred H_closed.
@@ -297,8 +298,8 @@ Admitted.
                       | None => x ∈ free
                       end). *)
 
-Definition subst_is_closed (Γ free : list string) (sub : sub) :=
-  list_to_set Γ = dom sub ∧
+Definition subst_is_closed (Γ free : scope) (sub : sub) :=
+  Γ = dom sub ∧
   ∀ x, x ∈ Γ →
     ∃ v, sub !! x = Some v ∧ closed free (ret v).
 
@@ -324,8 +325,8 @@ Definition ctx_rel := ectx ⇒ᵢ ectx ⇒ᵢ IRel.
 
 Definition L_rel_pre (L_rel : expr_rel) : expr_rel :=
   λ e1 e2,
-    (closed [] e1)ᵢ ∧ᵢ
-    (closed [] e2)ᵢ ∧ᵢ
+    (closed ∅ e1)ᵢ ∧ᵢ
+    (closed ∅ e2)ᵢ ∧ᵢ
     (∀ v1 : val, e1 = v1 → terminates e2)ᵢ ∧ᵢ
     ∀ᵢ e1' : expr, (contextual_step e1 e1')ᵢ →ᵢ ▷ L_rel e1' e2.
 
@@ -343,11 +344,11 @@ Definition R_rel_pre (V_rel : val_rel) (e1 e2 : expr) :=
 
 Definition V_rel_pre (V_rel : val_rel) : val_rel :=
   λ v1 v2,
-    (closed [] v1)ᵢ ∧ᵢ
-    (closed [] v2)ᵢ ∧ᵢ
+    (closed ∅ v1)ᵢ ∧ᵢ
+    (closed ∅ v2)ᵢ ∧ᵢ
     ∀ᵢ (u1 u2 : val),
-      (closed [] u1)ᵢ →ᵢ
-      (closed [] u2)ᵢ →ᵢ
+      (closed ∅ u1)ᵢ →ᵢ
+      (closed ∅ u2)ᵢ →ᵢ
       ▷ V_rel u1 u2 →ᵢ
       R_rel_pre V_rel (app v1 u1) (app v2 u2).
 
@@ -359,26 +360,26 @@ Definition K_rel := K_rel_pre V_rel_fix.
 
 Definition E_rel : expr_rel :=
   λ e1 e2,
-    (closed [] e1)ᵢ ∧ᵢ
-    (closed [] e2)ᵢ ∧ᵢ
+    (closed ∅ e1)ᵢ ∧ᵢ
+    (closed ∅ e2)ᵢ ∧ᵢ
     ∀ᵢ E1 E2 : ectx, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2).
 
 (* Relations for open terms *)
 
-Definition G_rel (Γ: list string) (γ1 γ2 : sub) : IProp :=
-  (subst_is_closed Γ [] γ1)ᵢ ∧ᵢ
-  (subst_is_closed Γ [] γ2)ᵢ ∧ᵢ
+Definition G_rel (Γ: scope) (γ1 γ2 : sub) : IProp :=
+  (subst_is_closed Γ ∅ γ1)ᵢ ∧ᵢ
+  (subst_is_closed Γ ∅ γ2)ᵢ ∧ᵢ
   ∀ᵢ x v1 v2,
     (γ1 !! x = Some v1)ᵢ →ᵢ
     (γ2 !! x = Some v2)ᵢ →ᵢ
     V_rel v1 v2.
 
-Definition E_rel_o (Γ: list string) (e1 e2 : expr) : IProp :=
+Definition E_rel_o (Γ: scope) (e1 e2 : expr) : IProp :=
   (closed Γ e1)ᵢ ∧ᵢ
   (closed Γ e2)ᵢ ∧ᵢ
   ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ E_rel (subst_map γ1 e1) (subst_map γ2 e2).
 
-Definition V_rel_o (Γ: list string) (v1 v2 : val) : IProp :=
+Definition V_rel_o (Γ: scope) (v1 v2 : val) : IProp :=
   (closed Γ v1)ᵢ ∧ᵢ
   (closed Γ v2)ᵢ ∧ᵢ
   ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2).
@@ -426,11 +427,11 @@ Qed.
 (** introduction and elimination lemmas *)
 
 Lemma V_rel_intro (v1 v2 : val) n :
-  closed [] v1 →
-  closed [] v2 →
+  closed ∅ v1 →
+  closed ∅ v2 →
   (n ⊨ ∀ᵢ (u1 u2:val),
-        (closed [] u1)ᵢ →ᵢ
-        (closed [] u2)ᵢ →ᵢ
+        (closed ∅ u1)ᵢ →ᵢ
+        (closed ∅ u2)ᵢ →ᵢ
         ▷ V_rel u1 u2 →ᵢ
         R_rel (app v1 u1) (app v2 u2)) →
   n ⊨ V_rel v1 v2.
@@ -452,11 +453,11 @@ Qed.
 
 Lemma V_rel_elim (v1 v2 : val) n :
   n ⊨ V_rel v1 v2 →
-  closed [] v1 ∧
-  closed [] v2 ∧
+  closed ∅ v1 ∧
+  closed ∅ v2 ∧
   (n ⊨ (∀ᵢ (u1 u2 : val),
-         (closed [] u1)ᵢ →ᵢ
-         (closed [] u2)ᵢ →ᵢ
+         (closed ∅ u1)ᵢ →ᵢ
+         (closed ∅ u2)ᵢ →ᵢ
          ▷ V_rel u1 u2 →ᵢ
          R_rel (app v1 u1) (app v2 u2))).
 Proof.
@@ -506,8 +507,8 @@ Proof.
 Qed.
 
 Lemma E_rel_intro (e1 e2 : expr) n :
-  closed [] e1 →
-  closed [] e2 →
+  closed ∅ e1 →
+  closed ∅ e2 →
   (n ⊨ ∀ᵢ E1 E2, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)) ->
   n ⊨ E_rel e1 e2.
 Proof.
@@ -521,8 +522,8 @@ Qed.
 
 Lemma E_rel_elim (e1 e2 : expr) n :
   n ⊨ E_rel e1 e2 →
-  closed [] e1 ∧
-  closed [] e2 ∧
+  closed ∅ e1 ∧
+  closed ∅ e2 ∧
   (n ⊨ ∀ᵢ E1 E2, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)).
 Proof.
   intros He.
@@ -564,8 +565,8 @@ Proof.
 Qed.
 
 Lemma G_rel_intro Γ γ1 γ2 n :
-  subst_is_closed Γ [] γ1 →
-  subst_is_closed Γ [] γ2 →
+  subst_is_closed Γ ∅ γ1 →
+  subst_is_closed Γ ∅ γ2 →
   n ⊨
     (∀ᵢ x v1 v2,
        (γ1 !! x = Some v1)ᵢ →ᵢ
@@ -583,8 +584,8 @@ Qed.
 
 Lemma G_rel_elim Γ γ1 γ2 n :
   n ⊨ G_rel Γ γ1 γ2 →
-  subst_is_closed Γ [] γ1 ∧
-  subst_is_closed Γ [] γ2 ∧
+  subst_is_closed Γ ∅ γ1 ∧
+  subst_is_closed Γ ∅ γ2 ∧
   (n ⊨
      ∀ᵢ x v1 v2,
        (γ1 !! x = Some v1)ᵢ →ᵢ
@@ -661,7 +662,7 @@ Qed.
 (** compatibility lemma *)
 
 (* aka val inclusion *)
-Lemma compat_val (Γ : list string) (v1 v2 : val) n :
+Lemma compat_val (Γ : scope) (v1 v2 : val) n :
   n ⊨ V_rel_o Γ v1 v2 →
   n ⊨ E_rel_o Γ v1 v2.
 Proof.
@@ -690,7 +691,7 @@ Lemma closed_app xs e1 e2:
   closed xs e1 ∧ closed xs e2.
 Proof. unfold closed. simpl. by rewrite andb_True. Qed.
 
-Lemma compat_app (Γ:list string) (e1 e2 e1' e2' : expr) n :
+Lemma compat_app (Γ:scope) (e1 e2 e1' e2' : expr) n :
   n ⊨ E_rel_o Γ e1 e2 →
   n ⊨ E_rel_o Γ e1' e2' →
   n ⊨ E_rel_o Γ (app e1 e1') (app e2 e2').
@@ -748,7 +749,6 @@ Lemma subst_is_closed_elim_closed Γ (γ:sub) x X (v:val):
 Proof.
   intros [Hdom Hsc] He.
   pose proof (elem_of_dom_2 _ _ _ He).
-  setoid_rewrite <- Hdom in H.
   assert (x ∈ Γ). set_solver.
   specialize (Hsc x H0).
   destruct Hsc as (v0&?&?).
@@ -758,8 +758,8 @@ Qed.
 
 Lemma subst_is_closed_closed_subst_map Γ γ x:
   x ∈ Γ →
-  subst_is_closed Γ [] γ →
-  closed [] (subst_map γ (var x)).
+  subst_is_closed Γ ∅ γ →
+  closed ∅ (subst_map γ (var x)).
 Proof.
   intros Hxg Hsc.
   pose proof Hsc.
@@ -771,7 +771,6 @@ Proof.
   - (* absurd *)
     destruct H.
     pose proof (not_elem_of_dom_2 _ _ He).
-    setoid_rewrite <- H in H1.
     set_solver.
 Qed.
 
@@ -801,11 +800,11 @@ Qed.
 
 Lemma G_sub_closed Γ γ1 γ2 n :
   n ⊨ G_rel Γ γ1 γ2 →
-  subst_is_closed Γ [] γ1 ∧ subst_is_closed Γ [] γ2.
+  subst_is_closed Γ ∅ γ1 ∧ subst_is_closed Γ ∅ γ2.
 Proof. intros Hγ. apply G_rel_elim in Hγ. easy. Qed.
 
-Lemma closed_lambda e X x : closed X (vlambda x e) ↔ closed (x :: X) e.
-Proof. unfold closed. simpl. auto. Qed.
+Lemma closed_lambda e X x : closed X (vlambda x e) ↔ closed (X ∪ {[x]}) e.
+Proof. split. auto. auto. Qed.
 
 Lemma subst_val_closed v X x es :
   closed X (of_val v) → x ∉ X → subst_val x es v = v
@@ -847,8 +846,8 @@ Proof.
 Qed. *)
 
 Lemma L_rel_red_l (e1 e1' e2 : expr) n :
-  closed [] e1 →
-  closed [] e2 →
+  closed ∅ e1 →
+  closed ∅ e2 →
   contextual_step e1 e1' →
   n ⊨ ▷ L_rel e1' e2 →
   n ⊨ L_rel e1 e2.
@@ -872,7 +871,7 @@ Admitted.
 
 Lemma L_rel_red_r (e2 e2' : expr) n :
   (*closed [] e1 →*)
-  closed [] e2 →
+  closed ∅ e2 →
   contextual_step e2 e2' →
   n ⊨ (∀ᵢ e1, L_rel e1 e2' →ᵢ L_rel e1 e2).
 Proof.
@@ -902,8 +901,8 @@ Proof.
 Admitted.
 
 Lemma O_rel_red_l (e1 e1' e2 : expr) n :
-  closed [] e1 →
-  closed [] e2 →
+  closed ∅ e1 →
+  closed ∅ e2 →
   contextual_step e1 e1' →
   n ⊨ O_rel e1' e2 →
   n ⊨ O_rel e1 e2.
@@ -925,8 +924,8 @@ Qed.
 
 Lemma O_rel_red_r (e1 e2 e2' : expr) n :
   (* contextual_step e1 e1' → contextual_step e2 e2' → *)
-  closed [] e1 →
-  closed [] e2 →
+  closed ∅ e1 →
+  closed ∅ e2 →
   contextual_step e2 e2' →
   n ⊨ O_rel e1 e2' →
   n ⊨ O_rel e1 e2.
@@ -947,8 +946,8 @@ Proof.
 Qed.
 
 Lemma O_rel_red_both (e1 e1' e2 e2' : expr) n :
-  closed [] e1 →
-  closed [] e2 →
+  closed ∅ e1 →
+  closed ∅ e2 →
   contextual_step e1 e1' →
   contextual_step e2 e2' →
   n ⊨ ▷ O_rel e1' e2' →
@@ -1028,12 +1027,12 @@ Admitted. *)
 
 Lemma subst_subst_map : ∀ (e:expr) Γ (x : string) (es : val) (map : sub),
   (* x ∉ Γ → *)
-  subst_is_closed Γ [] map →
+  subst_is_closed Γ ∅ map →
   subst x es (subst_map (delete x map) e) =
   subst_map (insert x es map) e
 with subst_subst_map_val : ∀ (v:val) Γ (x : string) (es : val) (map : sub),
   (* x ∉ Γ → *)
-  subst_is_closed Γ [] map →
+  subst_is_closed Γ ∅ map →
   subst x es (subst_map_val (delete x map) v) =
   subst_map_val (insert x es map) v.
 Proof.
@@ -1055,9 +1054,10 @@ Proof.
         { Fail rewrite Hkey. (* why does regular rewrite not work? *)
           setoid_rewrite Hkey.
           simpl.
-          rewrite (subst_val_closed _ [] _ _).
+          rewrite (subst_val_closed _ ∅ _ _).
           - reflexivity.
           -
+
           (* TODO we don't know anything about gamma *)
           (* to be able to use H, we need to know that x ∈ Γ *)
             (* unfold subst_is_closed in H. *)
@@ -1101,7 +1101,7 @@ Lemma scope_extend x Γ X v γ:
   closed X (ret v) →
   subst_is_closed Γ X γ →
   x ∉ Γ →
-  subst_is_closed (x::Γ) X (<[x := v]> γ).
+  subst_is_closed (Γ ∪ {[x]}) X (<[x := v]> γ).
 Proof.
 Abort.
 
@@ -1113,34 +1113,49 @@ Proof.
   specialize (H1 Hd). destruct H1. congruence. assumption.
 Qed.
 
+(* Lemma sub_elements_dom x (γ:sub) v:
+  x :: elements (dom γ) = elements (dom (<[x:=v]> γ)).
+Proof.
+  Search (dom (insert _ _ _)).
+  Locate "≡".
+  Search equiv.
+  (* unfold equiv. *)
+  (* pose proof (dom_insert _ _ val). *)
+
+  (* setoid_rewrite dom_insert with (m:=γ). *)
+  simpl. *)
+
 (** special case of [scope_extend] *)
 Lemma scope_extend1 Γ x (v:val) (γ:sub):
-  closed [] v →
-  subst_is_closed Γ [] γ →
-  subst_is_closed (x::Γ) [] (<[x := v]> γ).
+  closed ∅ v →
+  subst_is_closed Γ ∅ γ →
+  subst_is_closed (Γ ∪ {[x]}) ∅ (<[x := v]> γ).
 Proof.
   intros Hc Hsc.
   unfold subst_is_closed.
   split.
-  { destruct Hsc. set_solver. }
+  (* Search (elements (dom _)). *)
+  (* { destruct Hsc. rewrite H.  set_solver. } *)
+  { destruct Hsc.  set_solver. }
   intros x0 Hd.
   destruct (decide (x=x0)) as [->|Hne].
   - exists v. rewrite lookup_insert_eq with (m:=γ).
     split; done.
   - destruct Hsc as [_ Hsc].
     apply not_eq_sym in Hne.
-    pose proof (elem_of_cons_r _ _ _ Hd Hne) as H.
+    (* pose proof (elem_of_cons_r _ _ _ Hd Hne) as H.
     specialize (Hsc x0 H).
     destruct Hsc as (v0&?&?).
     exists v0.
     rewrite lookup_insert_ne with (m:=γ); [ | congruence ].
-    split; done.
-Qed.
+    split; done. *)
+    Admitted.
+(* Qed. *)
 
 Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
   n ⊨ V_rel v1 v2 →
   n ⊨ G_rel Γ γ1 γ2 →
-  n ⊨ G_rel (x :: Γ) (<[x := v1]> γ1) (<[x := v2]> γ2).
+  n ⊨ G_rel (Γ ∪ {[x]}) (<[x := v1]> γ1) (<[x := v2]> γ2).
 Proof.
   intros.
   unfold G_rel.
@@ -1217,7 +1232,7 @@ Proof.
     { unfold closed. simpl.
       intros * Hce H.
       eapply subst_map_closed'. eassumption.
-      intros y [|]%elem_of_cons.
+      (* intros y [|]%elem_of_cons.
       { subst. rewrite lookup_delete_eq with (m:=γ). set_solver. }
       { destruct (decide (x = y)).
         { by subst; rewrite lookup_delete_eq with (m:=γ); set_solver. }
@@ -1225,29 +1240,12 @@ Proof.
         eapply H in H0.
         destruct lookup; last set_solver.
         eapply closed_weaken; eauto with set_solver. } }
-    { intros. assumption. } }
-Qed.
-
-
-  (* - intros Hel%bool_decide_unpack Hcl.
-    eapply Hcl in Hel.
-    destruct (Θ !! x); first done.
-    simpl. by eapply bool_decide_pack.
-  - intros Hcl Hcl'. destruct x as [|x]; simpl; first naive_solver.
-    eapply IHe; first done.
-    intros y [|]%elem_of_cons.
-    + subst. rewrite lookup_delete_eq. set_solver.
-    + destruct (decide (x = y)); first by subst; rewrite lookup_delete_eq; set_solver.
-      rewrite lookup_delete_ne //=. eapply Hcl' in H.
-      destruct lookup; last set_solver.
-      eapply closed_weaken; eauto with set_solver.
-  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto.
-  - auto.
-  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto. *)
-(* Qed. *)
+    { intros. assumption. } } *)
+    admit.
+Admitted.
 
 Lemma subst_map_closed'_2 Γ X γ (v:val):
-  closed (X ++ (elements (dom γ))) v ->
+  closed (X ∪ (dom γ)) v ->
   subst_is_closed Γ X γ ->
   closed X (subst_map γ v).
 Proof.
@@ -1256,14 +1254,15 @@ Proof.
   intros x Hx.
   destruct (γ !! x) as [e'|] eqn:Heq.
   - apply (subst_is_closed_elim_closed _ _ _ _ _ Hsubst Heq).
-  - by eapply elem_of_app in Hx as [H|H%elem_of_elements%not_elem_of_dom].
-Qed.
+  (* - by eapply elem_of_app in Hx as [H|H%elem_of_elements%not_elem_of_dom]. *)
+  Admitted.
+(* Qed. *)
 
 Lemma closed_var_in_subst (v:val) x Γ (γ:sub):
   closed Γ (var x) →
-  subst_is_closed Γ [] γ →
+  subst_is_closed Γ ∅ γ →
   γ !! x = Some v →
-  closed [] v.
+  closed ∅ v.
 Proof.
   intros Hc%closed_var Hsc Hg.
   destruct Hsc as [_ Hsc].
@@ -1275,7 +1274,7 @@ Qed.
 
 Lemma closed_var_not_in_subst x Γ (γ:sub):
   closed Γ (var x) →
-  subst_is_closed Γ [] γ →
+  subst_is_closed Γ ∅ γ →
   γ !! x = None →
   False.
 Proof.
@@ -1287,7 +1286,7 @@ Proof.
 Qed.
 
 (* lemma a2 erlang: scope weakening: Γ overapproximates the domain of γ? not sure if true *)
-Lemma scope_weakening Γ x X γ:
+(* Lemma scope_weakening Γ x X γ:
   subst_is_closed Γ X γ →
   subst_is_closed (x::Γ) X γ.
 Proof.
@@ -1300,9 +1299,9 @@ Proof.
   (* {
   specialize (H x0).
   } *)
-Admitted.
+Admitted. *)
 
-Lemma scope_weakening1 Γ Γ1 X γ:
+(* Lemma scope_weakening1 Γ Γ1 X γ:
   Γ1 ⊆ Γ →
   subst_is_closed Γ X γ →
   subst_is_closed Γ1 X γ.
@@ -1317,7 +1316,7 @@ Proof.
   apply Hsub.
   specialize (H H0).
   assumption. *)
-Abort.
+Abort. *)
 
 (* Lemma subst_closed_weaken Γ X Y map1 map2 :
   Y ⊆ X → map1 ⊆ map2 → subst_is_closed Γ Y map2 → subst_is_closed Γ X map1.
@@ -1348,10 +1347,10 @@ Admitted. *)
 
 Lemma closed_subst_extension (e:expr): ∀ Γ γ x,
   closed Γ (subst_map γ e) →
-  closed (x::Γ) (subst_map (delete x γ) e)
+  closed (Γ ∪ {[x]}) (subst_map (delete x γ) e)
 with closed_subst_extension_val (v:val): ∀ Γ γ x,
   closed Γ (subst_map_val γ v) →
-  closed (x::Γ) (subst_map_val (delete x γ) v).
+  closed (Γ ∪ {[x]}) (subst_map_val (delete x γ) v).
 Proof.
   {
   induction e; intros.
@@ -1371,17 +1370,46 @@ Proof.
 Admitted.
 
 Lemma closed_subst_extension_lambda γ e x:
-  closed [] (subst_map γ e) →
-  closed [] (vlambda x (subst_map (delete x γ) e)).
+  closed ∅ (subst_map γ e) →
+  closed ∅ (vlambda x (subst_map (delete x γ) e)).
 Proof.
   intros.
-  pose proof (closed_subst_extension _ [] _ x H).
+  pose proof (closed_subst_extension _ ∅ _ x H).
   unfold closed in *.
   simpl in *.
   assumption.
 Qed.
 
 Lemma subst_map_closed'_3 e Γ γ:
+  closed Γ e ->
+  subst_is_closed Γ ∅ γ ->
+  closed ∅ (subst_map γ e)
+with subst_map_closed'_3_val (v:val) Γ γ:
+  closed Γ v ->
+  subst_is_closed Γ ∅ γ ->
+  closed ∅ (subst_map_val γ v).
+Proof.
+  pose proof (subst_map_closed'_2 Γ ∅ γ).
+  simpl in H.
+  intros.
+Abort.
+
+Lemma subst_map_closed'_3 (v:val) Γ γ:
+  closed Γ v ->
+  subst_is_closed Γ ∅ γ ->
+  closed ∅ (subst_map γ v).
+Proof.
+  pose proof (subst_map_closed'_2 Γ ∅ γ v).
+  simpl in H.
+  intros.
+  apply H. 2: { assumption. }
+  destruct H1 as [? _].
+  rewrite <- H1.
+  replace (∅ ∪ Γ) with Γ. assumption.
+  set_solver.
+Qed.
+
+(* Lemma subst_map_closed'_3 e Γ γ:
   closed Γ e ->
   subst_is_closed Γ [] γ ->
   closed [] (subst_map γ e)
@@ -1415,10 +1443,10 @@ Proof.
       }
     { constructor. }
   }
-Qed.
+Qed. *)
 
 Lemma compat_lambda Γ (e1 e2 : expr) n x :
-  n ⊨ E_rel_o (x::Γ) e1 e2 →
+  n ⊨ E_rel_o (Γ ∪ {[x]}) e1 e2 →
   n ⊨ V_rel_o Γ (vlambda x e1) (vlambda x e2).
 Proof.
   intros He.
