@@ -662,7 +662,7 @@ Proof. intros Hγ. apply G_rel_elim in Hγ. easy. Qed.
 Lemma closed_lambda e X x : closed X (vlambda x e) ↔ closed (x :: X) e.
 Proof. split. auto. auto. Qed.
 
-Fixpoint subst_val_closed v X x es :
+Lemma subst_val_closed v X x es :
   closed X (of_val v) → x ∉ X → subst_val x es v = v
 with subst_closed X e x es :
   closed X e → x ∉ X → subst x es e = e.
@@ -881,41 +881,55 @@ Proof.
   unfold V_rel_pre in H_lookup2. *)
 Admitted. *)
 
-Lemma subst_subst_map : ∀ Γ (e:expr) (x : string) (es : val) (map : sub),
+Lemma subst_subst_map : ∀ (e:expr) Γ (x : string) (es : val) (map : sub),
+  (* x ∉ Γ → *)
   subst_is_closed Γ [] map →
   subst x es (subst_map (delete x map) e) =
   subst_map (insert x es map) e
-with subst_subst_map_val : ∀ Γ (v:val) (x : string) (es : val) (map : sub),
+with subst_subst_map_val : ∀ (v:val) Γ (x : string) (es : val) (map : sub),
+  (* x ∉ Γ → *)
   subst_is_closed Γ [] map →
   subst x es (subst_map_val (delete x map) v) =
   subst_map_val (insert x es map) v.
 Proof.
-Admitted.
-
-  (* { intros e. induction e; intros; simpl.
-    { apply (subst_subst_map_val _ _ _ _ H). }
-    { (* the variable case *)
-      destruct (decide (x0=x)) as [->|Hne].
-      { rewrite lookup_delete_eq with (m:=map).
+(* Admitted. *)
+  { intros e. induction e.
+    { intros. apply (subst_subst_map_val _ _ _ _ _ H). }
+    { (* e is a variable x *)
+      intros. simpl. destruct (decide (x0=x)) as [->|Hne].
+      { (* if x=x0, we'll end up substituting es into x *)
+        rewrite lookup_delete_eq with (m:=map).
         rewrite lookup_insert_eq with (m:=map).
         simpl.
         by rewrite decide_True. }
-      { rewrite lookup_delete_ne with (m:=map). 2: { assumption. }
+      { (* if not equal, the deletion and insertion will have no effect *)
+        rewrite lookup_delete_ne with (m:=map). 2: { assumption. }
         rewrite lookup_insert_ne with (m:=map). 2: { assumption. }
+        (* we then need to see if x is in the map to begin with *)
         destruct (map !! x) as [v1|] eqn:Hkey.
         { Fail rewrite Hkey. (* why does regular rewrite not work? *)
           setoid_rewrite Hkey.
           simpl.
           rewrite (subst_val_closed _ [] _ _).
           - reflexivity.
-          - apply (H _ _ Hkey).
+          -
+          (* TODO we don't know anything about gamma *)
+          (* to be able to use H, we need to know that x ∈ Γ *)
+            unfold subst_is_closed in H.
+            specialize (H x).
+
+          (* apply (H _ _ Hkey). *)
+          admit.
           - set_solver. }
       { setoid_rewrite Hkey.
         simpl.
         by rewrite decide_False. } } }
-    { simpl. f_equal.
-      apply IHe1. assumption.
-      apply IHe2. assumption. } }
+    { intros. simpl. f_equal.
+    admit.
+    admit.
+      (* apply IHe1. assumption. *)
+      (* apply IHe2. assumption. *)
+      } }
   { intros v. induction v; intros.
     { reflexivity. }
     { (* the lambda case *)
@@ -926,12 +940,15 @@ Admitted.
         rewrite delete_insert_eq with (m:=map). done. }
       { rewrite delete_insert_ne with (m:=map). 2: { congruence. }
         rewrite delete_delete with (m:=map).
-        apply subst_subst_map.
-        apply (subst_is_closed_subseteq _ _ map).
-        apply delete_subseteq.
-        assumption. } }
+        admit.
+        (* apply subst_subst_map. *)
+        (* apply (subst_is_closed_subseteq _ _ map). *)
+        (* apply delete_subseteq. *)
+        (* assumption. *)
+        } }
     { reflexivity. } }
-Qed. *)
+(* Qed. *)
+Admitted.
 
 (** lemma a1 from erlang. scoping of extended substitutions: given a closed substitution,
   we can add a closed value to it *)
@@ -1084,9 +1101,29 @@ Proof.
   intros.
   destruct (decide (x=x0)) as [->|Hne].
   (* {
+
+  } *)
+  (* {
   specialize (H x0).
   } *)
 Admitted.
+
+Lemma scope_weakening1 Γ Γ1 X γ:
+  Γ1 ⊆ Γ →
+  subst_is_closed Γ X γ →
+  subst_is_closed Γ1 X γ.
+  (* closed X e → X ⊆ Y → closed Y e *)
+Proof.
+  unfold subst_is_closed.
+  intros Hsub H. intros x Hd.
+  specialize (H x).
+  assert (x ∈ Γ).
+  eapply elem_of_weaken.
+  apply Hd.
+  apply Hsub.
+  specialize (H H0).
+  assumption.
+Abort.
 
 Lemma closed_weaken e X Y:
   closed X e → X ⊆ Y → closed Y e
@@ -1206,7 +1243,6 @@ Proof.
     { constructor. }
     { simpl.
       rename subst_map_closed'_3 into IHe.
-
       rewrite closed_lambda in Hs.
       apply (scope_weakening _ x _ _) in Hsc.
       specialize (IHe e (x::Γ) γ Hs Hsc).
@@ -1277,6 +1313,13 @@ Proof.
     iapply He.
     apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). }
 Qed.
+
+(* R_rel_red_both *)
+(* scope_weakening *)
+(* subst_subst_map *)
+(* closed_subst_extension *)
+Print Assumptions compat_lam.
+Print Assumptions subst_map_closed'_3.
 
 Lemma fundamental_property_e Γ (e : expr) n :
   closed Γ e →
