@@ -340,18 +340,58 @@ Definition subst_is_closed (Γ free : scope) (sub : sub) :=
   ∀ x, x ∈ Γ →
     ∃ v, sub !! x = Some v ∧ closed free (ret v).
 
-(* this is reversed compared to the normal statement? *)
-(* Lemma subst_is_closed_subseteq: ∀ Γ (X : list string) (γ1 γ2: sub),
-  γ1 ⊆ γ2 → subst_is_closed Γ X γ1 → subst_is_closed Γ X γ2.
+(* Lemma subst_closed_subseteq Γ1 Γ2 X γ1 γ2 :
+  Γ1 ⊆ Γ2 → γ1 ⊆ γ2 → subst_is_closed Γ2 X γ2 → subst_is_closed Γ1 X γ1.
 Proof.
-  intros * Hsub Hclosed2. intros x Hl.
-  unfold subst_is_closed in Hclosed2.
-  specialize (Hclosed2 x Hl) as (v&?&?).
+  intros HΓ Hγ [? Hclosed2].
+
+  split.
+  admit.
+  intros x Hl.
+  specialize (Hclosed2 x).
+
+  pose proof (map_subseteq_spec γ1 γ2).
+  rewrite H0 in Hγ.
+  clear H0.
+
+  assert (x ∈ Γ2). set_solver.
+  specialize (Hclosed2 H0).
+  destruct Hclosed2 as (v&?&?).
   exists v.
-  rewrite (map_subseteq_spec γ1 γ2) in Hsub.
-  specialize (Hsub x v H).
+  specialize (Hγ x v ).
+
   split; done.
+
+
+  (* apply map_subseteq_spec in HΓ. *)
+  Check map_subseteq_spec.
+  (* eapply Hclosed2, map_subseteq_spec; done. *)
+
+  (* set_solver. *)
 Qed. *)
+
+(* this is reversed compared to the normal statement? *)
+Lemma subst_is_closed_subseteq: ∀ (Γ1 Γ2 X : scope) (γ1 γ2: sub),
+  γ1 ⊆ γ2 → Γ1 ⊆ Γ2 → subst_is_closed Γ2 X γ2 → subst_is_closed Γ1 X γ1.
+Proof.
+  intros * Hγ HΓ Hclosed2.
+  destruct Hclosed2 as [Hd2 Hc2].
+  split.
+  {
+    admit.
+  }
+  {
+    intros x Hl.
+    specialize (Hc2 x).
+    (* specialize (Hc2 x Hl) as (v&?&?). *)
+    (* exists v. *)
+    rewrite (map_subseteq_spec γ1 γ2) in Hγ.
+    (* specialize (Hγ _ _ H). *)
+    admit.
+    (* split; done. *)
+  }
+(* Qed. *)
+Admitted.
 
 (* Relations *)
 
@@ -1164,25 +1204,12 @@ Proof.
           simpl.
           rewrite (subst_val_closed _ ∅ _ _).
           - reflexivity.
-          -
-
-          (* TODO we don't know anything about gamma *)
-          (* to be able to use H, we need to know that x ∈ Γ *)
-            (* unfold subst_is_closed in H. *)
-            (* specialize (H x). *)
-
-          (* apply (H _ _ Hkey). *)
-          admit.
+          - apply (subst_is_closed_elim_closed _ _ x _ _ H Hkey).
           - set_solver. }
       { setoid_rewrite Hkey.
         simpl.
         by rewrite decide_False. } } }
-    { intros. simpl. f_equal.
-    admit.
-    admit.
-      (* apply IHe1. assumption. *)
-      (* apply IHe2. assumption. *)
-      } }
+    { intros. simpl. f_equal; eauto. } }
   { intros v. induction v; intros.
     { reflexivity. }
     { (* the lambda case *)
@@ -1193,12 +1220,11 @@ Proof.
         rewrite delete_insert_eq with (m:=map). done. }
       { rewrite delete_insert_ne with (m:=map). 2: { congruence. }
         rewrite delete_delete with (m:=map).
-        admit.
-        (* apply subst_subst_map. *)
-        (* apply (subst_is_closed_subseteq _ _ map). *)
-        (* apply delete_subseteq. *)
-        (* assumption. *)
-        } }
+        eapply subst_subst_map.
+        apply (subst_is_closed_subseteq (Γ ∖ {[x]}) Γ _ (delete x map) map).
+        apply delete_subseteq.
+        set_solver.
+        assumption. } }
     { reflexivity. } }
 (* Qed. *)
 Admitted.
@@ -1452,7 +1478,7 @@ Admitted. *)
   𝒢 Γ θ →
   closed [] (Lam x (subst_map (delete x θ) e)). *)
 
-Lemma closed_subst_extension (e:expr): ∀ Γ γ x,
+(* Lemma closed_subst_extension (e:expr): ∀ Γ γ x,
   closed Γ (subst_map γ e) →
   closed (Γ ∪ {[x]}) (subst_map (delete x γ) e)
 with closed_subst_extension_val (v:val): ∀ Γ γ x,
@@ -1485,21 +1511,7 @@ Proof.
   unfold closed in *.
   simpl in *.
   assumption.
-Qed.
-
-Lemma subst_map_closed'_3 e Γ γ:
-  closed Γ e ->
-  subst_is_closed Γ ∅ γ ->
-  closed ∅ (subst_map γ e)
-with subst_map_closed'_3_val (v:val) Γ γ:
-  closed Γ v ->
-  subst_is_closed Γ ∅ γ ->
-  closed ∅ (subst_map_val γ v).
-Proof.
-  pose proof (subst_map_closed'_2 Γ ∅ γ).
-  simpl in H.
-  intros.
-Abort.
+Qed. *)
 
 Lemma subst_map_closed'_3 (v:val) Γ γ:
   closed Γ v ->
@@ -1617,10 +1629,7 @@ Proof.
 Admitted.
 
 (*
-  - closure requires _3, see semantics proof
-  - scope_weakening: cannot be proved, inverted
   - subst_subst_map: cannot be proved. we don't know about gamma. case?
-  - closed_subst_extension: have not started
   - R_rel_red_both: pending
 *)
 
