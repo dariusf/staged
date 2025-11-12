@@ -66,7 +66,7 @@ Proof. auto. Qed.
 
 Example ex3_pose b : b = true → True.
 Proof.
-  Search andb.
+  (* Search andb. *)
   (* pose proof andb_true_intro as H0. *)
   intros H.
   pose proof some_lemma as H1.

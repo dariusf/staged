@@ -370,28 +370,19 @@ Proof.
   (* set_solver. *)
 Qed. *)
 
-(* this is reversed compared to the normal statement? *)
 Lemma subst_is_closed_subseteq: ∀ (Γ1 Γ2 X : scope) (γ1 γ2: sub),
+  Γ1 = dom γ1 →
   γ1 ⊆ γ2 → Γ1 ⊆ Γ2 → subst_is_closed Γ2 X γ2 → subst_is_closed Γ1 X γ1.
 Proof.
-  intros * Hγ HΓ Hclosed2.
+  intros * Hd Hγ HΓ Hclosed2.
   destruct Hclosed2 as [Hd2 Hc2].
   split.
-  {
-    admit.
-  }
-  {
-    intros x Hl.
-    specialize (Hc2 x).
-    (* specialize (Hc2 x Hl) as (v&?&?). *)
-    (* exists v. *)
-    rewrite (map_subseteq_spec γ1 γ2) in Hγ.
-    (* specialize (Hγ _ _ H). *)
-    admit.
-    (* split; done. *)
-  }
-(* Qed. *)
-Admitted.
+  assumption.
+  intros x Hl v Hs.
+  rewrite (map_subseteq_spec γ1 γ2) in Hγ.
+  specialize (Hγ _ _ Hs).
+  apply (Hc2 x ltac:(set_solver) _ Hγ).
+Qed.
 
 (* Relations *)
 
@@ -1186,12 +1177,10 @@ Proof.
 Admitted. *)
 
 Lemma subst_subst_map : ∀ (e:expr) Γ (x : string) (es : val) (map : sub),
-  (* x ∉ Γ → *)
   subst_is_closed Γ ∅ map →
   subst x es (subst_map (delete x map) e) =
   subst_map (insert x es map) e
 with subst_subst_map_val : ∀ (v:val) Γ (x : string) (es : val) (map : sub),
-  (* x ∉ Γ → *)
   subst_is_closed Γ ∅ map →
   subst x es (subst_map_val (delete x map) v) =
   subst_map_val (insert x es map) v.
@@ -1233,12 +1222,14 @@ Proof.
         rewrite delete_delete with (m:=map).
         eapply subst_subst_map.
         apply (subst_is_closed_subseteq (Γ ∖ {[x]}) Γ _ (delete x map) map).
+        destruct H as [H1 H2].
+        rewrite H1.
+        set_solver.
         apply delete_subseteq.
         set_solver.
         assumption. } }
     { reflexivity. } }
-(* Qed. *)
-Admitted.
+Qed.
 
 (** lemma a1 from erlang. scoping of extended substitutions: given a closed substitution,
   we can add a closed value to it *)
@@ -1636,13 +1627,7 @@ Proof.
     apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). }
 Admitted.
 
-(*
-  - subst_subst_map: cannot be proved. we don't know about gamma. case?
-  - R_rel_red_both: pending
-*)
-
 (* Print Assumptions compat_lambda. *)
-(* Print Assumptions subst_map_closed'_3. *)
 
 Lemma fundamental_property_e Γ (e : expr) n :
   closed Γ e →
