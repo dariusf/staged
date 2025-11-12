@@ -145,8 +145,9 @@ Definition obs_eqv e1 e2 :=
 Infix "≈" := equiterminate (at level 80, right associativity, only printing).
 Infix "≡obs" := obs_eqv (at level 80, right associativity, only printing).
 
-Definition sub : Set := gmap string val.
-Definition scope : Set := gset string.
+Notation name := string.
+Definition sub : Set := gmap name val.
+Definition scope : Set := gset name.
 
 Fixpoint subst_map_val (xs : sub) (v : val) : val :=
   match v with
@@ -1036,7 +1037,6 @@ with subst_subst_map_val : ∀ (v:val) Γ (x : string) (es : val) (map : sub),
   subst x es (subst_map_val (delete x map) v) =
   subst_map_val (insert x es map) v.
 Proof.
-(* Admitted. *)
   { intros e. induction e.
     { intros. apply (subst_subst_map_val _ _ _ _ _ H). }
     { (* e is a variable x *)
@@ -1105,12 +1105,11 @@ Lemma scope_extend x Γ X v γ:
 Proof.
 Abort.
 
-Lemma elem_of_cons_r {A} (x0 x:A) Γ:
-  x0 ∈ x :: Γ → x0 ≠ x → x0 ∈ Γ.
+Lemma elem_of_union_r_ne (x0 x:name) (Γ:scope):
+  x0 ∈ Γ ∪ {[x]} → x0 ≠ x → x0 ∈ Γ.
 Proof.
   intros Hd Hne.
-  pose proof (elem_of_cons Γ x0 x) as [H1 _].
-  specialize (H1 Hd). destruct H1. congruence. assumption.
+  set_solver.
 Qed.
 
 (* Lemma sub_elements_dom x (γ:sub) v:
@@ -1143,14 +1142,13 @@ Proof.
     split; done.
   - destruct Hsc as [_ Hsc].
     apply not_eq_sym in Hne.
-    (* pose proof (elem_of_cons_r _ _ _ Hd Hne) as H.
+    pose proof (elem_of_union_r_ne _ _ _ Hd Hne) as H.
     specialize (Hsc x0 H).
     destruct Hsc as (v0&?&?).
     exists v0.
     rewrite lookup_insert_ne with (m:=γ); [ | congruence ].
-    split; done. *)
-    Admitted.
-(* Qed. *)
+    split; done.
+Qed.
 
 Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
   n ⊨ V_rel v1 v2 →
@@ -1232,17 +1230,18 @@ Proof.
     { unfold closed. simpl.
       intros * Hce H.
       eapply subst_map_closed'. eassumption.
-      (* intros y [|]%elem_of_cons.
-      { subst. rewrite lookup_delete_eq with (m:=γ). set_solver. }
+      intros y [|]%elem_of_union.
       { destruct (decide (x = y)).
         { by subst; rewrite lookup_delete_eq with (m:=γ); set_solver. }
         rewrite lookup_delete_ne with (m:=γ). 2: { assumption. }
         eapply H in H0.
         destruct lookup; last set_solver.
-        eapply closed_weaken; eauto with set_solver. } }
-    { intros. assumption. } } *)
-    admit.
-Admitted.
+        eapply closed_weaken; eauto with set_solver. }
+      { rewrite elem_of_singleton in H0.
+        subst. rewrite lookup_delete_eq with (m:=γ). set_solver. }
+    }
+    { intros. assumption. } }
+Qed.
 
 Lemma subst_map_closed'_2 Γ X γ (v:val):
   closed (X ∪ (dom γ)) v ->
@@ -1254,9 +1253,9 @@ Proof.
   intros x Hx.
   destruct (γ !! x) as [e'|] eqn:Heq.
   - apply (subst_is_closed_elim_closed _ _ _ _ _ Hsubst Heq).
-  (* - by eapply elem_of_app in Hx as [H|H%elem_of_elements%not_elem_of_dom]. *)
-  Admitted.
-(* Qed. *)
+  - apply not_elem_of_dom in Heq.
+    set_solver.
+Qed.
 
 Lemma closed_var_in_subst (v:val) x Γ (γ:sub):
   closed Γ (var x) →
