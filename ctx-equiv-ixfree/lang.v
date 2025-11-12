@@ -176,12 +176,20 @@ Fixpoint is_closed (X : list string) (e : expr) : bool :=
 
 Definition closed (X : list string) (e : expr) : Prop := Is_true (is_closed X e).
 
-Definition subst_is_closed (dom : list string) (free : list string) (sub : sub) :=
-  ∀ x, x ∈ dom →
+(* this definition is for total maps *)
+(* Definition subscoped (Γ free : list string) (γ : sub) : Prop :=
+  forall x, x ∈ Γ -> (match γ !! x with
+                      | Some exp => closed free (ret exp)
+                      | None => x ∈ free
+                      end). *)
+
+Definition subst_is_closed (Γ free : list string) (sub : sub) :=
+  list_to_set Γ = dom sub ∧
+  ∀ x, x ∈ Γ →
     ∃ v, sub !! x = Some v ∧ closed free (ret v).
 
 (* this is reversed compared to the normal statement? *)
-Lemma subst_is_closed_subseteq: ∀ Γ (X : list string) (γ1 γ2: sub),
+(* Lemma subst_is_closed_subseteq: ∀ Γ (X : list string) (γ1 γ2: sub),
   γ1 ⊆ γ2 → subst_is_closed Γ X γ1 → subst_is_closed Γ X γ2.
 Proof.
   intros * Hsub Hclosed2. intros x Hl.
@@ -191,7 +199,7 @@ Proof.
   rewrite (map_subseteq_spec γ1 γ2) in Hsub.
   specialize (Hsub x v H).
   split; done.
-Qed.
+Qed. *)
 
 (* Relations *)
 
@@ -619,16 +627,38 @@ Lemma closed_var Γ x : x ∈ Γ ↔ closed Γ (var x).
 Proof.
   unfold closed. simpl. by rewrite bool_decide_spec. Qed.
 
+Lemma subst_is_closed_elim_closed Γ (γ:sub) x X (v:val):
+  subst_is_closed Γ X γ →
+  γ !! x = Some v →
+  closed X v.
+Proof.
+  intros [Hdom Hsc] He.
+  pose proof (elem_of_dom_2 _ _ _ He).
+  setoid_rewrite <- Hdom in H.
+  assert (x ∈ Γ). set_solver.
+  specialize (Hsc x H0).
+  destruct Hsc as (v0&?&?).
+  assert (v0 = v). congruence. subst.
+  assumption.
+Qed.
+
 Lemma subst_is_closed_closed_subst_map Γ γ x:
   x ∈ Γ →
   subst_is_closed Γ [] γ →
   closed [] (subst_map γ (var x)).
 Proof.
-  unfold subst_is_closed, closed. intros Hd Hs.
+  intros Hxg Hsc.
+  pose proof Hsc.
+  unfold subst_is_closed, closed in H.
   simpl.
   destruct (γ !! x) eqn:He.
-  - specialize (Hs x Hd). destruct Hs as (v0&H1&H2). congruence.
-  - specialize (Hs x Hd). destruct Hs as (v0&H1&H2). congruence.
+  - (* if x is in γ, it must be closed according to the premise *)
+    apply (subst_is_closed_elim_closed _ _ _ _ _ Hsc He).
+  - (* absurd *)
+    destruct H.
+    pose proof (not_elem_of_dom_2 _ _ He).
+    setoid_rewrite <- H in H1.
+    set_solver.
 Qed.
 
 Lemma compat_var Γ (x : string) n :
@@ -645,7 +675,8 @@ Proof.
   { apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc1). }
   { apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc2). }
   iintros E1 E2 HE. simpl.
-  unfold subst_is_closed in *.
+  destruct Hc1 as [_ Hc1].
+  destruct Hc2 as [_ Hc2].
   specialize (Hc1 x Hdom) as (v1 & H_lookup1 & Hc1).
   specialize (Hc2 x Hdom) as (v2 & H_lookup2 & Hc2).
   ispec Hγ x v1 v2 H_lookup1 H_lookup2.
@@ -915,8 +946,8 @@ Proof.
           -
           (* TODO we don't know anything about gamma *)
           (* to be able to use H, we need to know that x ∈ Γ *)
-            unfold subst_is_closed in H.
-            specialize (H x).
+            (* unfold subst_is_closed in H. *)
+            (* specialize (H x). *)
 
           (* apply (H _ _ Hkey). *)
           admit.
@@ -976,11 +1007,13 @@ Lemma scope_extend1 Γ x (v:val) (γ:sub):
 Proof.
   intros Hc Hsc.
   unfold subst_is_closed.
+  split.
+  { destruct Hsc. set_solver. }
   intros x0 Hd.
   destruct (decide (x=x0)) as [->|Hne].
   - exists v. rewrite lookup_insert_eq with (m:=γ).
     split; done.
-  - unfold subst_is_closed in Hsc.
+  - destruct Hsc as [_ Hsc].
     apply not_eq_sym in Hne.
     pose proof (elem_of_cons_r _ _ _ Hd Hne) as H.
     specialize (Hsc x0 H).
@@ -1023,107 +1056,12 @@ Proof.
     - iintro. apply H3. }
 Qed.
 
-Lemma subst_map_closed' e X Y (Θ:sub):
+(* Lemma subst_map_closed'1 X Y (Θ:sub) e:
   closed Y e →
-  (∀ x, x ∈ Y → match Θ !! x with Some e' => closed X (ret e') | None => x ∈ X end) →
+  (∀ x, x ∈ Y → match Θ !! x with | Some e' => closed X e' | None => x ∈ X end) →
   closed X (subst_map Θ e).
 Proof.
-  (* induction e; intros. *)
-Abort.
- (* in X, Θ, Y |-*; simpl. *)
-  (* - *)
-
-
-  (* - intros Hel%bool_decide_unpack Hcl.
-    eapply Hcl in Hel.
-    destruct (Θ !! x); first done.
-    simpl. by eapply bool_decide_pack.
-  - intros Hcl Hcl'. destruct x as [|x]; simpl; first naive_solver.
-    eapply IHe; first done.
-    intros y [|]%elem_of_cons.
-    + subst. rewrite lookup_delete_eq. set_solver.
-    + destruct (decide (x = y)); first by subst; rewrite lookup_delete_eq; set_solver.
-      rewrite lookup_delete_ne //=. eapply Hcl' in H.
-      destruct lookup; last set_solver.
-      eapply closed_weaken; eauto with set_solver.
-  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto.
-  - auto.
-  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto. *)
-(* Qed. *)
-
-Lemma subst_map_closed'_2 Γ X γ e:
-  closed (X ++ Γ) e ->
-  subst_is_closed Γ X γ ->
-  closed X (subst_map γ e).
-Proof.
-  (* intros Hcl Hsubst.
-  eapply subst_map_closed'; first eassumption.
-  intros x Hx.
-  destruct (Θ !! x) as [e'|] eqn:Heq.
-  - eauto.
-  - by eapply elem_of_app in Hx as [H|H%elem_of_elements%not_elem_of_dom].
-Qed. *)
-Admitted.
-
-Lemma closed_var_in_subst (v:val) x Γ (γ:sub):
-  closed Γ (var x) →
-  subst_is_closed Γ [] γ →
-  γ !! x = Some v →
-  closed [] v.
-Proof.
-  intros Hc%closed_var Hsc Hg.
-  unfold subst_is_closed in Hsc.
-  specialize (Hsc x Hc).
-  destruct Hsc as (v0&?&?).
-  rewrite H in Hg. injection Hg. intros. subst.
-  assumption.
-Qed.
-
-Lemma closed_var_not_in_subst x Γ (γ:sub):
-  closed Γ (var x) →
-  subst_is_closed Γ [] γ →
-  γ !! x = None →
-  False.
-Proof.
-  intros Hc%closed_var Hsc Hg.
-  unfold subst_is_closed in Hsc.
-  specialize (Hsc x Hc).
-  destruct Hsc as (v0&?&?).
-  congruence.
-Qed.
-
-(* lemma a2 erlang: scope weakening: Γ overapproximates the domain of γ? not sure if true *)
-Lemma scope_weakening Γ x X γ:
-  subst_is_closed Γ X γ →
-  subst_is_closed (x::Γ) X γ.
-Proof.
-  unfold subst_is_closed.
-  intros.
-  destruct (decide (x=x0)) as [->|Hne].
-  (* {
-
-  } *)
-  (* {
-  specialize (H x0).
-  } *)
-Admitted.
-
-Lemma scope_weakening1 Γ Γ1 X γ:
-  Γ1 ⊆ Γ →
-  subst_is_closed Γ X γ →
-  subst_is_closed Γ1 X γ.
-  (* closed X e → X ⊆ Y → closed Y e *)
-Proof.
-  unfold subst_is_closed.
-  intros Hsub H. intros x Hd.
-  specialize (H x).
-  assert (x ∈ Γ).
-  eapply elem_of_weaken.
-  apply Hd.
-  apply Hsub.
-  specialize (H H0).
-  assumption.
-Abort.
+Admitted. *)
 
 Lemma closed_weaken e X Y:
   closed X e → X ⊆ Y → closed Y e
@@ -1153,6 +1091,148 @@ Proof.
       set_solver.
     - constructor. }
 Qed.
+
+(* if e is closed under Y, we can split the variables in Y between X and γ *)
+Lemma subst_map_closed' e X Y (γ:sub):
+
+  closed Y e →
+
+  (∀ x, x ∈ Y → match γ !! x with Some v0 => closed X (ret v0) | None => x ∈ X end) →
+
+  closed X (subst_map γ e)
+
+with subst_map_closed'_val v X Y (γ:sub):
+  closed Y (ret v) →
+  (∀ x, x ∈ Y → match γ !! x with Some v0 => closed X (ret v0) | None => x ∈ X end) →
+  closed X (subst_map_val γ v).
+Proof.
+  {
+    revert X Y γ. induction e.
+    { eapply subst_map_closed'_val; eauto. }
+    { intros * Hc H.
+      (* e is a variable x *)
+      unfold closed in Hc; simpl in Hc; apply bool_decide_unpack in Hc.
+      specialize (H x Hc).
+      (* it is closed, so we can use H *)
+      (* TODO H looks suspiciously like subst_is_closed from erlang *)
+      simpl.
+      destruct (γ !! x) eqn:He.
+      - assumption.
+      - unfold closed; simpl; apply bool_decide_pack. assumption.
+    }
+    { intros *.
+      unfold closed. simpl.
+      rewrite !andb_True. intros [? ?] **.
+      split.
+      by eapply IHe1.
+      by eapply IHe2. }
+  }
+  { revert X Y γ. induction v.
+    { intros. assumption. }
+    { unfold closed. simpl.
+      intros * Hce H.
+      eapply subst_map_closed'. eassumption.
+      intros y [|]%elem_of_cons.
+      { subst. rewrite lookup_delete_eq with (m:=γ). set_solver. }
+      { destruct (decide (x = y)).
+        { by subst; rewrite lookup_delete_eq with (m:=γ); set_solver. }
+        rewrite lookup_delete_ne with (m:=γ). 2: { assumption. }
+        eapply H in H0.
+        destruct lookup; last set_solver.
+        eapply closed_weaken; eauto with set_solver. } }
+    { intros. assumption. } }
+Qed.
+
+
+  (* - intros Hel%bool_decide_unpack Hcl.
+    eapply Hcl in Hel.
+    destruct (Θ !! x); first done.
+    simpl. by eapply bool_decide_pack.
+  - intros Hcl Hcl'. destruct x as [|x]; simpl; first naive_solver.
+    eapply IHe; first done.
+    intros y [|]%elem_of_cons.
+    + subst. rewrite lookup_delete_eq. set_solver.
+    + destruct (decide (x = y)); first by subst; rewrite lookup_delete_eq; set_solver.
+      rewrite lookup_delete_ne //=. eapply Hcl' in H.
+      destruct lookup; last set_solver.
+      eapply closed_weaken; eauto with set_solver.
+  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto.
+  - auto.
+  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto. *)
+(* Qed. *)
+
+Lemma subst_map_closed'_2 Γ X γ (v:val):
+  closed (X ++ (elements (dom γ))) v ->
+  subst_is_closed Γ X γ ->
+  closed X (subst_map γ v).
+Proof.
+  intros Hcl Hsubst.
+  eapply subst_map_closed'; first eassumption.
+  intros x Hx.
+  destruct (γ !! x) as [e'|] eqn:Heq.
+  - apply (subst_is_closed_elim_closed _ _ _ _ _ Hsubst Heq).
+  - by eapply elem_of_app in Hx as [H|H%elem_of_elements%not_elem_of_dom].
+Qed.
+
+Lemma closed_var_in_subst (v:val) x Γ (γ:sub):
+  closed Γ (var x) →
+  subst_is_closed Γ [] γ →
+  γ !! x = Some v →
+  closed [] v.
+Proof.
+  intros Hc%closed_var Hsc Hg.
+  destruct Hsc as [_ Hsc].
+  specialize (Hsc x Hc).
+  destruct Hsc as (v0&?&?).
+  rewrite H in Hg. injection Hg. intros. subst.
+  assumption.
+Qed.
+
+Lemma closed_var_not_in_subst x Γ (γ:sub):
+  closed Γ (var x) →
+  subst_is_closed Γ [] γ →
+  γ !! x = None →
+  False.
+Proof.
+  intros Hc%closed_var Hsc Hg.
+  destruct Hsc as [_ Hsc].
+  specialize (Hsc x Hc).
+  destruct Hsc as (v0&?&?).
+  congruence.
+Qed.
+
+(* lemma a2 erlang: scope weakening: Γ overapproximates the domain of γ? not sure if true *)
+Lemma scope_weakening Γ x X γ:
+  subst_is_closed Γ X γ →
+  subst_is_closed (x::Γ) X γ.
+Proof.
+  unfold subst_is_closed.
+  intros.
+  (* destruct (decide (x=x0)) as [->|Hne]. *)
+  (* {
+
+  } *)
+  (* {
+  specialize (H x0).
+  } *)
+Admitted.
+
+Lemma scope_weakening1 Γ Γ1 X γ:
+  Γ1 ⊆ Γ →
+  subst_is_closed Γ X γ →
+  subst_is_closed Γ1 X γ.
+  (* closed X e → X ⊆ Y → closed Y e *)
+Proof.
+  (* unfold subst_is_closed.
+  intros Hsub H. intros x Hd.
+  specialize (H x).
+  assert (x ∈ Γ).
+  eapply elem_of_weaken.
+  apply Hd.
+  apply Hsub.
+  specialize (H H0).
+  assumption. *)
+Abort.
 
 (* Lemma subst_closed_weaken Γ X Y map1 map2 :
   Y ⊆ X → map1 ⊆ map2 → subst_is_closed Γ Y map2 → subst_is_closed Γ X map1.
@@ -1252,7 +1332,7 @@ Proof.
   }
 Qed.
 
-Lemma compat_lam Γ (e1 e2 : expr) n x :
+Lemma compat_lambda Γ (e1 e2 : expr) n x :
   n ⊨ E_rel_o (x::Γ) e1 e2 →
   n ⊨ V_rel_o Γ (vlambda x e1) (vlambda x e2).
 Proof.
@@ -1314,12 +1394,16 @@ Proof.
     apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). }
 Qed.
 
-(* R_rel_red_both *)
-(* scope_weakening *)
-(* subst_subst_map *)
-(* closed_subst_extension *)
-Print Assumptions compat_lam.
-Print Assumptions subst_map_closed'_3.
+(*
+  - closure requires _3, see semantics proof
+  - scope_weakening: cannot be proved, inverted
+  - subst_subst_map: cannot be proved. we don't know about gamma. case?
+  - closed_subst_extension: have not started
+  - R_rel_red_both: pending
+*)
+
+(* Print Assumptions compat_lambda. *)
+(* Print Assumptions subst_map_closed'_3. *)
 
 Lemma fundamental_property_e Γ (e : expr) n :
   closed Γ e →
@@ -1337,6 +1421,6 @@ Proof.
   { intros H_closed.
     induction v.
     - admit.
-    - apply compat_lam. apply fundamental_property_e. rewrite <- closed_lambda. assumption.
+    - apply compat_lambda. apply fundamental_property_e. rewrite <- closed_lambda. assumption.
     - admit. }
 Admitted.
