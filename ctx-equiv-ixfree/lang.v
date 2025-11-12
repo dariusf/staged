@@ -267,6 +267,12 @@ Lemma closed_app xs e1 e2:
   closed xs e1 ∧ closed xs e2.
 Proof. unfold closed. simpl. by rewrite andb_True. Qed.
 
+Lemma closed_lambda e X x : closed X (vlambda x e) ↔ closed (X ∪ {[x]}) e.
+Proof. split. auto. auto. Qed.
+
+Lemma closed_var Γ x : x ∈ Γ ↔ closed Γ (var x).
+Proof. unfold closed. simpl. by rewrite bool_decide_spec. Qed.
+
 Lemma base_step_preserve_closedness :
   ∀ e1 e1',
     base_step e1 e1' →
@@ -328,47 +334,11 @@ Proof.
   apply closed_compose; auto.
 Qed.
 
-(* this definition is for total maps *)
-(* Definition subscoped (Γ free : list string) (γ : sub) : Prop :=
-  forall x, x ∈ Γ -> (match γ !! x with
-                      | Some exp => closed free (ret exp)
-                      | None => x ∈ free
-                      end). *)
-
+(** subscoped from Erlang paper *)
 Definition subst_is_closed (Γ free : scope) (sub : sub) :=
   Γ = dom sub ∧
   ∀ x, x ∈ Γ →
     ∀ v, sub !! x = Some v → closed free (ret v).
-
-(* Lemma subst_closed_subseteq Γ1 Γ2 X γ1 γ2 :
-  Γ1 ⊆ Γ2 → γ1 ⊆ γ2 → subst_is_closed Γ2 X γ2 → subst_is_closed Γ1 X γ1.
-Proof.
-  intros HΓ Hγ [? Hclosed2].
-
-  split.
-  admit.
-  intros x Hl.
-  specialize (Hclosed2 x).
-
-  pose proof (map_subseteq_spec γ1 γ2).
-  rewrite H0 in Hγ.
-  clear H0.
-
-  assert (x ∈ Γ2). set_solver.
-  specialize (Hclosed2 H0).
-  destruct Hclosed2 as (v&?&?).
-  exists v.
-  specialize (Hγ x v ).
-
-  split; done.
-
-
-  (* apply map_subseteq_spec in HΓ. *)
-  Check map_subseteq_spec.
-  (* eapply Hclosed2, map_subseteq_spec; done. *)
-
-  (* set_solver. *)
-Qed. *)
 
 Lemma subst_is_closed_subseteq: ∀ (Γ1 Γ2 X : scope) (γ1 γ2: sub),
   Γ1 = dom γ1 →
@@ -878,9 +848,6 @@ Proof.
   exact HE.
 Qed.
 
-Lemma closed_var Γ x : x ∈ Γ ↔ closed Γ (var x).
-Proof. unfold closed. simpl. by rewrite bool_decide_spec. Qed.
-
 Lemma subst_is_closed_elim_closed Γ (γ:sub) x X (v:val):
   subst_is_closed Γ X γ →
   γ !! x = Some v →
@@ -952,9 +919,6 @@ Lemma G_sub_closed Γ γ1 γ2 n :
   n ⊨ G_rel Γ γ1 γ2 →
   subst_is_closed Γ ∅ γ1 ∧ subst_is_closed Γ ∅ γ2.
 Proof. intros Hγ. apply G_rel_elim in Hγ. easy. Qed.
-
-Lemma closed_lambda e X x : closed X (vlambda x e) ↔ closed (X ∪ {[x]}) e.
-Proof. split. auto. auto. Qed.
 
 Lemma subst_val_closed v X x es :
   closed X (of_val v) → x ∉ X → subst_val x es v = v
@@ -1153,29 +1117,6 @@ Proof.
     - exact HE. }
 Admitted.
 
-(* Abort. *)
-
-(* Lemma sem_context_rel_closed Γ γ1 γ2 n:
-  n ⊨ G_rel Γ γ1 γ2 →
-  ∀ x (v1 v2 : val),
-    γ1 !! x = Some v1 →
-    γ2 !! x = Some v2 →
-    closed [] v1 ∧ closed [] v2.
-Proof.
-  (* unfold G_rel.
-  intros Hg x v1 v2 H_lookup1 H_lookup2.
-  (* apply I_prop_intro with (w := n) in H_lookup1. *)
-  (* apply I_prop_intro with (w := n) in H_lookup2. *)
-  (* ispec Hg H_lookup1.
-  ispecialize Hg x.
-  ispecialize Hg v1.
-  ispecialize Hg v2. *)
-  iapply Hg in H_lookup1.
-  iapply H_lookup1 in H_lookup2.
-  unfold V_rel in H_lookup2.
-  unfold V_rel_pre in H_lookup2. *)
-Admitted. *)
-
 Lemma subst_subst_map : ∀ (e:expr) Γ (x : string) (es : val) (map : sub),
   subst_is_closed Γ ∅ map →
   subst x es (subst_map (delete x map) e) =
@@ -1231,36 +1172,9 @@ Proof.
     { reflexivity. } }
 Qed.
 
-(** lemma a1 from erlang. scoping of extended substitutions: given a closed substitution,
-  we can add a closed value to it *)
-Lemma scope_extend x Γ X v γ:
-  closed X (ret v) →
-  subst_is_closed Γ X γ →
-  x ∉ Γ →
-  subst_is_closed (Γ ∪ {[x]}) X (<[x := v]> γ).
-Proof.
-Abort.
-
-Lemma elem_of_union_r_ne (x0 x:name) (Γ:scope):
-  x0 ∈ Γ ∪ {[x]} → x0 ≠ x → x0 ∈ Γ.
-Proof.
-  intros Hd Hne.
-  set_solver.
-Qed.
-
-(* Lemma sub_elements_dom x (γ:sub) v:
-  x :: elements (dom γ) = elements (dom (<[x:=v]> γ)).
-Proof.
-  Search (dom (insert _ _ _)).
-  Locate "≡".
-  Search equiv.
-  (* unfold equiv. *)
-  (* pose proof (dom_insert _ _ val). *)
-
-  (* setoid_rewrite dom_insert with (m:=γ). *)
-  simpl. *)
-
-(** special case of [scope_extend] *)
+(** Special case of Theorem A.1 from Erlang paper:
+  scoping of extended substitutions.
+  Given a closed substitution, we can add a closed value to it. *)
 Lemma scope_extend1 Γ x (v:val) (γ:sub):
   closed ∅ v →
   subst_is_closed Γ ∅ γ →
@@ -1318,22 +1232,11 @@ Proof.
     - iintro. apply H3. }
 Qed.
 
-(* Lemma subst_map_closed'1 X Y (Θ:sub) e:
-  closed Y e →
-  (∀ x, x ∈ Y → match Θ !! x with | Some e' => closed X e' | None => x ∈ X end) →
-  closed X (subst_map Θ e).
-Proof.
-Admitted. *)
-
 (* if e is closed under Y, we can split the variables in Y between X and γ *)
 Lemma subst_map_closed' e X Y (γ:sub):
-
   closed Y e →
-
   (∀ x, x ∈ Y → match γ !! x with Some v0 => closed X (ret v0) | None => x ∈ X end) →
-
   closed X (subst_map γ e)
-
 with subst_map_closed'_val v X Y (γ:sub):
   closed Y (ret v) →
   (∀ x, x ∈ Y → match γ !! x with Some v0 => closed X (ret v0) | None => x ∈ X end) →
@@ -1347,7 +1250,6 @@ Proof.
       unfold closed in Hc; simpl in Hc; apply bool_decide_unpack in Hc.
       specialize (H x Hc).
       (* it is closed, so we can use H *)
-      (* TODO H looks suspiciously like subst_is_closed from erlang *)
       simpl.
       destruct (γ !! x) eqn:He.
       - assumption.
@@ -1392,126 +1294,6 @@ Proof.
     set_solver.
 Qed.
 
-Lemma closed_var_in_subst (v:val) x Γ (γ:sub):
-  closed Γ (var x) →
-  subst_is_closed Γ ∅ γ →
-  γ !! x = Some v →
-  closed ∅ v.
-Proof.
-  intros Hc%closed_var Hsc Hg.
-  destruct Hsc as [_ Hsc].
-  specialize (Hsc x Hc v Hg).
-  assumption.
-Qed.
-
-Lemma closed_var_not_in_subst x Γ (γ:sub):
-  closed Γ (var x) →
-  subst_is_closed Γ ∅ γ →
-  γ !! x = None →
-  False.
-Proof.
-  intros Hc%closed_var Hsc Hg.
-  destruct Hsc as [H _].
-  rewrite H in Hc.
-  pose proof (not_elem_of_dom_2 _ _ Hg).
-  set_solver.
-Qed.
-
-(* lemma a2 erlang: scope weakening: Γ overapproximates the domain of γ? not sure if true *)
-(* Lemma scope_weakening Γ x X γ:
-  subst_is_closed Γ X γ →
-  subst_is_closed (x::Γ) X γ.
-Proof.
-  unfold subst_is_closed.
-  intros.
-  (* destruct (decide (x=x0)) as [->|Hne]. *)
-  (* {
-
-  } *)
-  (* {
-  specialize (H x0).
-  } *)
-Admitted. *)
-
-(* Lemma scope_weakening1 Γ Γ1 X γ:
-  Γ1 ⊆ Γ →
-  subst_is_closed Γ X γ →
-  subst_is_closed Γ1 X γ.
-  (* closed X e → X ⊆ Y → closed Y e *)
-Proof.
-  (* unfold subst_is_closed.
-  intros Hsub H. intros x Hd.
-  specialize (H x).
-  assert (x ∈ Γ).
-  eapply elem_of_weaken.
-  apply Hd.
-  apply Hsub.
-  specialize (H H0).
-  assumption. *)
-Abort. *)
-
-(* Lemma subst_closed_weaken Γ X Y map1 map2 :
-  Y ⊆ X → map1 ⊆ map2 → subst_is_closed Γ Y map2 → subst_is_closed Γ X map1.
-Proof.
-  intros Hsub1 Hsub2 Hclosed2 x e Hl.
-  eapply closed_weaken. 1:eapply Hclosed2, map_subseteq_spec; done. done.
-Qed. *)
-
-(* Lemma subst_closed_weaken X Y map1 map2 :
-  Y ⊆ X → map1 ⊆ map2 → subst_closed Y map2 → subst_closed X map1.
-Proof.
-  intros Hsub1 Hsub2 Hclosed2 x e Hl.
-  eapply closed_weaken. 1:eapply Hclosed2, map_subseteq_spec; done. done.
-Qed. *)
-
-
-(* Lemma lambda_closed_under_subst Γ γ x e:
-  closed Γ (vlambda x e) →
-  subst_is_closed Γ [] γ →
-  closed [] (vlambda x (subst_map (delete x γ) e)).
-Proof.
-  (* intros. *)
-Admitted. *)
-
-  (* closed (elements (dom (<[x:=A]> Γ))) e →
-  𝒢 Γ θ →
-  closed [] (Lam x (subst_map (delete x θ) e)). *)
-
-(* Lemma closed_subst_extension (e:expr): ∀ Γ γ x,
-  closed Γ (subst_map γ e) →
-  closed (Γ ∪ {[x]}) (subst_map (delete x γ) e)
-with closed_subst_extension_val (v:val): ∀ Γ γ x,
-  closed Γ (subst_map_val γ v) →
-  closed (Γ ∪ {[x]}) (subst_map_val (delete x γ) v).
-Proof.
-  {
-  induction e; intros.
-  - apply (closed_subst_extension_val _ _ _ _ H).
-  -
-  simpl in H.
-    simpl.
-    admit.
-  - admit.
-  }
-  {
-    induction v; intros.
-    admit.
-    admit.
-    admit.
-  }
-Admitted.
-
-Lemma closed_subst_extension_lambda γ e x:
-  closed ∅ (subst_map γ e) →
-  closed ∅ (vlambda x (subst_map (delete x γ) e)).
-Proof.
-  intros.
-  pose proof (closed_subst_extension _ ∅ _ x H).
-  unfold closed in *.
-  simpl in *.
-  assumption.
-Qed. *)
-
 Lemma subst_map_closed'_3 (v:val) Γ γ:
   closed Γ v ->
   subst_is_closed Γ ∅ γ ->
@@ -1526,42 +1308,6 @@ Proof.
   replace (∅ ∪ Γ) with Γ. assumption.
   set_solver.
 Qed.
-
-(* Lemma subst_map_closed'_3 e Γ γ:
-  closed Γ e ->
-  subst_is_closed Γ [] γ ->
-  closed [] (subst_map γ e)
-with subst_map_closed'_3_val (v:val) Γ γ:
-  closed Γ v ->
-  subst_is_closed Γ [] γ ->
-  closed [] (subst_map_val γ v).
-Proof.
-  { induction e;
-    intros Hc Hsc.
-    { simpl. by apply subst_map_closed'_3_val with (Γ:=Γ). }
-    { simpl.
-      destruct (γ !! x) eqn:H.
-      { apply (closed_var_in_subst _ _ _ _ Hc Hsc H). }
-      { apply (closed_var_not_in_subst _ _ _ Hc Hsc H). } }
-    { simpl.
-      rewrite closed_app.
-      rewrite closed_app in Hc.
-      destruct Hc.
-      split.
-      apply (IHe1 H Hsc).
-      apply (IHe2 H0 Hsc). } }
-  { induction v; intros Hs Hsc.
-    { constructor. }
-    { simpl.
-      rename subst_map_closed'_3 into IHe.
-      rewrite closed_lambda in Hs.
-      apply (scope_weakening _ x _ _) in Hsc.
-      specialize (IHe e (x::Γ) γ Hs Hsc).
-      apply (closed_subst_extension_lambda _ _ _ IHe).
-      }
-    { constructor. }
-  }
-Qed. *)
 
 Lemma compat_lambda Γ (e1 e2 : expr) n x :
   n ⊨ E_rel_o (Γ ∪ {[x]}) e1 e2 →
