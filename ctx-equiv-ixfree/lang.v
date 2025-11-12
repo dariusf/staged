@@ -338,7 +338,7 @@ Qed.
 Definition subst_is_closed (Γ free : scope) (sub : sub) :=
   Γ = dom sub ∧
   ∀ x, x ∈ Γ →
-    ∃ v, sub !! x = Some v ∧ closed free (ret v).
+    ∀ v, sub !! x = Some v → closed free (ret v).
 
 (* Lemma subst_closed_subseteq Γ1 Γ2 X γ1 γ2 :
   Γ1 ⊆ Γ2 → γ1 ⊆ γ2 → subst_is_closed Γ2 X γ2 → subst_is_closed Γ1 X γ1.
@@ -898,9 +898,7 @@ Proof.
   intros [Hdom Hsc] He.
   pose proof (elem_of_dom_2 _ _ _ He).
   assert (x ∈ Γ). set_solver.
-  specialize (Hsc x H0).
-  destruct Hsc as (v0&?&?).
-  assert (v0 = v). congruence. subst.
+  specialize (Hsc x H0 v He).
   assumption.
 Qed.
 
@@ -922,6 +920,19 @@ Proof.
     set_solver.
 Qed.
 
+Lemma subset_is_closed_absurd x Γ γ:
+  x ∈ Γ →
+  subst_is_closed Γ ∅ γ →
+  γ !! x = None →
+  False.
+Proof.
+  intros Hx Hs He.
+  pose proof (not_elem_of_dom_2 _ _ He).
+  destruct Hs as [? _].
+  setoid_rewrite <- H0 in H.
+  set_solver.
+Qed.
+
 Lemma compat_var Γ (x : string) n :
   x ∈ Γ →
   n ⊨ E_rel_o Γ (var x) (var x).
@@ -936,13 +947,13 @@ Proof.
   { apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc1). }
   { apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc2). }
   iintros E1 E2 HE. simpl.
+  destruct (γ1 !! x) eqn:Hx1.
+  2: { destruct (subset_is_closed_absurd _ _ _ Hdom Hc1 Hx1). }
+  destruct (γ2 !! x) eqn:Hx2.
+  2: { destruct (subset_is_closed_absurd _ _ _ Hdom Hc2 Hx2). }
   destruct Hc1 as [_ Hc1].
   destruct Hc2 as [_ Hc2].
-  specialize (Hc1 x Hdom) as (v1 & H_lookup1 & Hc1).
-  specialize (Hc2 x Hdom) as (v2 & H_lookup2 & Hc2).
-  ispec Hγ x v1 v2 H_lookup1 H_lookup2.
-  rewrite H_lookup1.
-  rewrite H_lookup2.
+  ispec Hγ x v v0 Hx1 Hx2.
   by apply K_rel_elimO.
 Qed.
 
@@ -1265,23 +1276,22 @@ Lemma scope_extend1 Γ x (v:val) (γ:sub):
   subst_is_closed (Γ ∪ {[x]}) ∅ (<[x := v]> γ).
 Proof.
   intros Hc Hsc.
-  unfold subst_is_closed.
   split.
-  (* Search (elements (dom _)). *)
-  (* { destruct Hsc. rewrite H.  set_solver. } *)
-  { destruct Hsc.  set_solver. }
-  intros x0 Hd.
+  { destruct Hsc. rewrite H. set_solver. }
+  intros x0 Hd v0 Hs.
+  (* we have to prove that for an arbitrary binding x0 := v0 in γ, v0 is closed *)
   destruct (decide (x=x0)) as [->|Hne].
-  - exists v. rewrite lookup_insert_eq with (m:=γ).
-    split; done.
-  - destruct Hsc as [_ Hsc].
-    apply not_eq_sym in Hne.
-    pose proof (elem_of_union_r_ne _ _ _ Hd Hne) as H.
-    specialize (Hsc x0 H).
-    destruct Hsc as (v0&?&?).
-    exists v0.
-    rewrite lookup_insert_ne with (m:=γ); [ | congruence ].
-    split; done.
+  (* if x = x0, the premise tells us v0 is closed *)
+  { rewrite lookup_insert_eq with (m:=γ) in Hs.
+    injection Hs. intros. subst.
+    exact Hc. }
+  (* if they are not equal, we know x0 is in Γ and have to use the fact
+    that the subst_is_closed *)
+  { rewrite elem_of_union in Hd. destruct Hd. 2: { assert (x0 = x). set_solver. done. }
+    destruct Hsc as [_ Hsc].
+    rewrite lookup_insert_ne with (m:=γ) in Hs. 2: { assumption. }
+    specialize (Hsc x0 H v0 Hs).
+    assumption. }
 Qed.
 
 Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
@@ -1399,9 +1409,7 @@ Lemma closed_var_in_subst (v:val) x Γ (γ:sub):
 Proof.
   intros Hc%closed_var Hsc Hg.
   destruct Hsc as [_ Hsc].
-  specialize (Hsc x Hc).
-  destruct Hsc as (v0&?&?).
-  rewrite H in Hg. injection Hg. intros. subst.
+  specialize (Hsc x Hc v Hg).
   assumption.
 Qed.
 
@@ -1412,10 +1420,10 @@ Lemma closed_var_not_in_subst x Γ (γ:sub):
   False.
 Proof.
   intros Hc%closed_var Hsc Hg.
-  destruct Hsc as [_ Hsc].
-  specialize (Hsc x Hc).
-  destruct Hsc as (v0&?&?).
-  congruence.
+  destruct Hsc as [H _].
+  rewrite H in Hc.
+  pose proof (not_elem_of_dom_2 _ _ Hg).
+  set_solver.
 Qed.
 
 (* lemma a2 erlang: scope weakening: Γ overapproximates the domain of γ? not sure if true *)
