@@ -1143,24 +1143,6 @@ Proof.
     { intros. assumption. } }
 Qed.
 
-
-  (* - intros Hel%bool_decide_unpack Hcl.
-    eapply Hcl in Hel.
-    destruct (Θ !! x); first done.
-    simpl. by eapply bool_decide_pack.
-  - intros Hcl Hcl'. destruct x as [|x]; simpl; first naive_solver.
-    eapply IHe; first done.
-    intros y [|]%elem_of_cons.
-    + subst. rewrite lookup_delete_eq. set_solver.
-    + destruct (decide (x = y)); first by subst; rewrite lookup_delete_eq; set_solver.
-      rewrite lookup_delete_ne //=. eapply Hcl' in H.
-      destruct lookup; last set_solver.
-      eapply closed_weaken; eauto with set_solver.
-  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto.
-  - auto.
-  - rewrite !andb_True. intros [H1 H2] Hcl. split; eauto. *)
-(* Qed. *)
-
 Lemma subst_map_closed'_2 Γ X γ (v:val):
   closed (X ++ (elements (dom γ))) v ->
   subst_is_closed Γ X γ ->
@@ -1202,7 +1184,7 @@ Proof.
 Qed.
 
 (* lemma a2 erlang: scope weakening: Γ overapproximates the domain of γ? not sure if true *)
-Lemma scope_weakening Γ x X γ:
+(* Lemma scope_weakening Γ x X γ:
   subst_is_closed Γ X γ →
   subst_is_closed (x::Γ) X γ.
 Proof.
@@ -1215,9 +1197,9 @@ Proof.
   (* {
   specialize (H x0).
   } *)
-Admitted.
+Admitted. *)
 
-Lemma scope_weakening1 Γ Γ1 X γ:
+(* Lemma scope_weakening1 Γ Γ1 X γ:
   Γ1 ⊆ Γ →
   subst_is_closed Γ X γ →
   subst_is_closed Γ1 X γ.
@@ -1232,7 +1214,7 @@ Proof.
   apply Hsub.
   specialize (H H0).
   assumption. *)
-Abort.
+Abort. *)
 
 (* Lemma subst_closed_weaken Γ X Y map1 map2 :
   Y ⊆ X → map1 ⊆ map2 → subst_is_closed Γ Y map2 → subst_is_closed Γ X map1.
@@ -1305,6 +1287,37 @@ with subst_map_closed'_3_val (v:val) Γ γ:
   subst_is_closed Γ [] γ ->
   closed [] (subst_map_val γ v).
 Proof.
+  pose proof (subst_map_closed'_2 Γ [] γ).
+  simpl in H.
+  intros.
+Abort.
+
+Lemma subst_map_closed'_3 (v:val) Γ γ:
+  closed Γ v ->
+  subst_is_closed Γ [] γ ->
+  closed [] (subst_map γ v).
+Proof.
+  pose proof (subst_map_closed'_2 Γ [] γ v).
+  simpl in H.
+  intros.
+  apply H. 2: { assumption. }
+  destruct H1 as [? _].
+  rewrite <- H1 in H.
+  (* replace (elements (dom Γ)) with Γ. *)
+
+
+
+Abort.
+
+(* Lemma subst_map_closed'_3 e Γ γ:
+  closed Γ e ->
+  subst_is_closed Γ [] γ ->
+  closed [] (subst_map γ e)
+with subst_map_closed'_3_val (v:val) Γ γ:
+  closed Γ v ->
+  subst_is_closed Γ [] γ ->
+  closed [] (subst_map_val γ v).
+Proof.
   { induction e;
     intros Hc Hsc.
     { simpl. by apply subst_map_closed'_3_val with (Γ:=Γ). }
@@ -1330,7 +1343,7 @@ Proof.
       }
     { constructor. }
   }
-Qed.
+Qed. *)
 
 Lemma compat_lambda Γ (e1 e2 : expr) n x :
   n ⊨ E_rel_o (x::Γ) e1 e2 →
