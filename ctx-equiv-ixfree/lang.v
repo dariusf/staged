@@ -183,7 +183,12 @@ Definition closed (X : list string) (e : expr) : Prop := Is_true (is_closed X e)
                       | None => x ∈ free
                       end). *)
 
+(* Locate "⊆".
+Search subseteq.
+Search (_ ⊆ _ → _ ⊆ _ → _). *)
 Definition subst_is_closed (Γ free : list string) (sub : sub) :=
+  (* Γ = elements (dom sub) ∧ *)
+  (* list_to_set Γ ≡ dom sub ∧ *)
   list_to_set Γ = dom sub ∧
   ∀ x, x ∈ Γ →
     ∃ v, sub !! x = Some v ∧ closed free (ret v).
@@ -634,7 +639,6 @@ Lemma subst_is_closed_elim_closed Γ (γ:sub) x X (v:val):
 Proof.
   intros [Hdom Hsc] He.
   pose proof (elem_of_dom_2 _ _ _ He).
-  setoid_rewrite <- Hdom in H.
   assert (x ∈ Γ). set_solver.
   specialize (Hsc x H0).
   destruct Hsc as (v0&?&?).
@@ -657,7 +661,6 @@ Proof.
   - (* absurd *)
     destruct H.
     pose proof (not_elem_of_dom_2 _ _ He).
-    setoid_rewrite <- H in H1.
     set_solver.
 Qed.
 
@@ -999,6 +1002,18 @@ Proof.
   specialize (H1 Hd). destruct H1. congruence. assumption.
 Qed.
 
+(* Lemma sub_elements_dom x (γ:sub) v:
+  x :: elements (dom γ) = elements (dom (<[x:=v]> γ)).
+Proof.
+  Search (dom (insert _ _ _)).
+  Locate "≡".
+  Search equiv.
+  (* unfold equiv. *)
+  (* pose proof (dom_insert _ _ val). *)
+
+  (* setoid_rewrite dom_insert with (m:=γ). *)
+  simpl. *)
+
 (** special case of [scope_extend] *)
 Lemma scope_extend1 Γ x (v:val) (γ:sub):
   closed [] v →
@@ -1008,7 +1023,9 @@ Proof.
   intros Hc Hsc.
   unfold subst_is_closed.
   split.
-  { destruct Hsc. set_solver. }
+  (* Search (elements (dom _)). *)
+  (* { destruct Hsc. rewrite H.  set_solver. } *)
+  { destruct Hsc.  set_solver. }
   intros x0 Hd.
   destruct (decide (x=x0)) as [->|Hne].
   - exists v. rewrite lookup_insert_eq with (m:=γ).
@@ -1302,7 +1319,13 @@ Proof.
   intros.
   apply H. 2: { assumption. }
   destruct H1 as [? _].
-  rewrite <- H1 in H.
+  rewrite <- H1.
+  replace (elements (list_to_set Γ)) with Γ. assumption.
+
+  (* Locate "≡ₚ". *)
+  (* rewrite elements_list_to_set. *)
+  (* naive_solver. *)
+  (* Search (elements (list_to_set _)). *)
   (* replace (elements (dom Γ)) with Γ. *)
 
 
