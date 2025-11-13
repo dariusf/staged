@@ -5,29 +5,31 @@ From Ltac2 Require Import Ltac2 Printf Option.
 Import Constr.
 Import Unsafe.
 
+Ltac2 debug s := Message.print (Message.of_string s).
+
 Ltac2 inspect_kind (c:constr) :=
   match Constr.Unsafe.kind c with
-  | Rel _ => Message.print (Message.of_string "Rel")
-  | Var _ => Message.print (Message.of_string "Var")
-  | Meta _ => Message.print (Message.of_string "Meta")
-  | Evar _ _ => Message.print (Message.of_string "Evar")
-  | Sort _ => Message.print (Message.of_string "Sort")
-  | Cast _ _ _ => Message.print (Message.of_string "Cast")
-  | Prod _ _ => Message.print (Message.of_string "Prod")
-  | Lambda _ _ => Message.print (Message.of_string "Lambda")
-  | LetIn _ _ _ => Message.print (Message.of_string "LetIn")
-  | App _ _ => Message.print (Message.of_string "App")
-  | Constant _ _ => Message.print (Message.of_string "Constant")
-  | Ind _ _ => Message.print (Message.of_string "Ind")
-  | Constructor _ _ => Message.print (Message.of_string "Constructor")
-  | Case _ _ _ _ _ => Message.print (Message.of_string "Case")
-  | Fix _ _ _ _ => Message.print (Message.of_string "Fix")
-  | CoFix _ _ _ => Message.print (Message.of_string "CoFix")
-  | Proj _ _ _ => Message.print (Message.of_string "Proj")
-  | Uint63 _ => Message.print (Message.of_string "Uint63")
-  | Float _ => Message.print (Message.of_string "Float")
-  | String _ => Message.print (Message.of_string "String")
-  | Array _ _ _ _ => Message.print (Message.of_string "Array")
+  | Rel _ => debug "Rel"
+  | Var _ => debug "Var"
+  | Meta _ => debug "Meta"
+  | Evar _ _ => debug "Evar"
+  | Sort _ => debug "Sort"
+  | Cast _ _ _ => debug "Cast"
+  | Prod _ _ => debug "Prod"
+  | Lambda _ _ => debug "Lambda"
+  | LetIn _ _ _ => debug "LetIn"
+  | App _ _ => debug "App"
+  | Constant _ _ => debug "Constant"
+  | Ind _ _ => debug "Ind"
+  | Constructor _ _ => debug "Constructor"
+  | Case _ _ _ _ _ => debug "Case"
+  | Fix _ _ _ _ => debug "Fix"
+  | CoFix _ _ _ => debug "CoFix"
+  | Proj _ _ _ => debug "Proj"
+  | Uint63 _ => debug "Uint63"
+  | Float _ => debug "Float"
+  | String _ => debug "String"
+  | Array _ _ _ _ => debug "Array"
   end.
 
 Ltac2 print_goals0 () :=
@@ -69,11 +71,11 @@ Ltac2 fresh_goal_of_constr type :=
 Ltac2 rec specialise_many (h:ident) (hs:constr list) :=
   match hs with
   | [] =>
-    (* Message.print (Message.of_string "done"); *)
+    (* debug "done"; *)
     ()
   | h1 :: hs1 =>
     (* print_goals0 (); *)
-    (* Message.print (Message.of_string "working on arg"); *)
+    (* debug "working on arg"; *)
     (* Message.print (Message.of_ident h); *)
     let p := Control.hyp h in
     let np := h1 in
@@ -85,24 +87,24 @@ Ltac2 rec specialise_many (h:ident) (hs:constr list) :=
     Control.plus
       (fun () =>
         specialize ($p $np);
-        (* Message.print (Message.of_string "managed to specialise"); *)
+        (* debug "managed to specialise"; *)
         specialise_many h hs1 (* only here do we advance *)
         )
       (fun _ =>
-        (* Message.print (Message.of_string "placeholder case"); *)
+        (* debug "placeholder case"; *)
         match! Constr.type p with
         | ?a -> _  =>
-          (* Message.print (Message.of_string "type is"); *)
+          (* debug "type is"; *)
           (* Message.print (Message.of_constr a); *)
           match should_use_evar a with
           | true =>
-            (* Message.print (Message.of_string "generated evar"); *)
+            (* debug "generated evar"; *)
             let n := '(_ :> $a) in
             Std.specialize ('($p $n), Std.NoBindings) None;
             specialise_many h hs
           | false =>
             let n := fresh_goal_of_constr a in
-            (* Message.print (Message.of_string "generated goal"); *)
+            (* debug "generated goal"; *)
             (* exclude the newly-created goal *)
             Control.focus 1 (Int.sub (Control.numgoals ()) 1) (fun _ =>
               Std.specialize ('($p $n), Std.NoBindings) None;
@@ -110,35 +112,72 @@ Ltac2 rec specialise_many (h:ident) (hs:constr list) :=
             )
           end
         | _ =>
-          Message.print (Message.of_string "not a function");
+          debug "not a function";
           ()
         end)
   end.
 
-  (* Ltac2 fresh_goal_of_constr type :=
-    let t := '(_ :> $type) in
-    match Constr.Unsafe.kind t with
-    | Constr.Unsafe.Evar evar _ => Control.new_goal evar; t
-    | _ => Control.zero Match_failure
-    end. *)
+Ltac2 Notation "specialise" h(ident) args(list1(constr)) :=
+  specialise_many h args.
 
-   (* Ltac2 rec spec_by bfirst hyp :=
-    let hyp' := Control.hyp hyp in
-    lazy_match! Std.eval_hnf (Constr.type hyp') with
-    | ?x -> _ =>
-      let pf_term := fresh_goal_of_constr x in
-      Control.focus 1 (Int.sub (Control.numgoals ()) 1) (fun _ =>
-        Std.specialize ('($hyp' $pf_term), Std.NoBindings) None;
-        spec_by false hyp
-      )
-    | _ => if bfirst then Control.zero (Tactic_failure (Some (fprintf "Not a product")))
-           else ()
-    end.
+Ltac2 applyy0 (h:constr) (h1:constr list) :=
+  let x := Fresh.in_goal @H in
+  assert ($x := $h);
+  specialise_many x h1;
+  Control.focus 1 1 (fun () =>
+    let a := Control.hyp x in
+    eapply $a
+  );
+  clear $x.
 
-Ltac2 Notation "specialize_by" hyp(ident) := spec_by true hyp. *)
+Ltac2 Notation "applyy" h(constr) args(list0(constr)) := applyy0 h args.
 
+Ltac2 poseproof0 (h:constr) (hs:constr list) (name:ident option) :=
+  let x := match name with | Some n => n | None => Fresh.in_goal @H end in
+  assert ($x := $h);
+  specialise_many x hs.
 
-Ltac2 Notation "specialise" h(ident) args(list1(constr)) := specialise_many h args.
+Ltac2 Notation "have:" h(constr) args(list0(constr)) :=
+  poseproof0 h args None.
+
+Ltac2 Notation "have" n(ident) ":" h(constr) args(list0(constr)) :=
+  poseproof0 h args (Some n).
+
+(* TODO rotate the goals *)
+(* TODO ffi for apply *)
+(* TODO ffi for pose *)
+
+Example some_lemma b : b = true → b = true.
+Proof. auto. Qed.
+
+Example ex1_pose_proof : forall (P Q R:Prop), P → R → (P → R → Q) → Q.
+Proof.
+  intros * Hp Hr H.
+  assert (true = true) as H1. reflexivity.
+  have: some_lemma H1.
+  have H2: some_lemma true.
+  auto.
+Qed.
+
+Example ex1_applyy : forall (P Q R T:Prop),
+  P → R → T → (P → R → T → Q) → Q.
+Proof.
+  intros * Hp Hr Ht H.
+  applyy H Hr.
+  exact Ht.
+  exact Hp.
+Qed.
+
+Example ex2_applyy_external: True.
+Proof.
+  applyy I.
+Qed.
+
+Example ex3_applyy_external1 b: b = true → b = true.
+Proof.
+  intros H.
+  applyy some_lemma H.
+Qed.
 
 Example ex1_basics : forall (P Q R U T:Prop), U → T → R → P → (U → T → P → R → Q) → Q.
 Proof.
@@ -157,9 +196,6 @@ Proof.
 Qed.
 
 (* https://rocq-prover.zulipchat.com/#narrow/channel/278935-Ltac2/topic/pose.20proof.20.2F.20issues.20with.20ltac2.20in.20assert *)
-
-Example some_lemma b : b = true → b = true.
-Proof. auto. Qed.
 
 Example ex3_lemma : True.
 Proof.
