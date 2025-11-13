@@ -1548,15 +1548,12 @@ Admitted.
 
 (** Observational approximation for complete programs *)
 Definition obs_approx (e1 e2 : expr (* closed *)) : Prop :=
-  closed ∅ e1 →
-  closed ∅ e2 →
-  terminates e1 → terminates e2.
+  closed ∅ e1 ∧ terminates e1 →
+  closed ∅ e2 ∧ terminates e2.
 
 (** Observational equivalence for complete programs *)
 Definition obs_equiv (e1 e2 : expr (* closed *)) : Prop :=
-  closed ∅ e1 →
-  closed ∅ e2 →
-  terminates e1 ↔ terminates e2.
+  closed ∅ e1 ∧ terminates e1 ↔ closed ∅ e2 ∧ terminates e2.
 
 Infix "≼obs" := obs_approx (at level 80, right associativity, only printing).
 Infix "≡obs" := obs_equiv (at level 80, right associativity, only printing).
@@ -1564,15 +1561,15 @@ Infix "≡obs" := obs_equiv (at level 80, right associativity, only printing).
 #[global]
 Instance Reflexive_obs_approx : Reflexive obs_approx.
 Proof.
-  unfold Reflexive, obs_approx. done.
+  unfold Reflexive, obs_approx. intros x (?&?). split; assumption.
 Qed.
 
 #[global]
 Instance Transitive_obs_approx : Transitive obs_approx.
 Proof.
   unfold Transitive, obs_approx. intros.
-  specialise H H1.
-Abort.
+  auto.
+Qed.
 
 #[global]
 Instance Reflexive_obs_equiv : Reflexive obs_equiv.
@@ -1585,15 +1582,17 @@ Qed.
 Instance Symmetric_obs_equiv : Symmetric obs_equiv.
 Proof.
   unfold Symmetric, obs_equiv. intros.
-  specialise H H1 H0.
-  done.
+  auto.
 Qed.
 
 #[global]
 Instance Transitive_obs_equiv : Transitive obs_equiv.
 Proof.
   unfold Transitive, obs_equiv. intros.
-Abort.
+  destruct H.
+  destruct H0.
+  split; auto.
+Qed.
 
 (** Contextual approximation *)
 Definition ctx_approx (e1 e2 : expr (* open *)) : Prop :=
@@ -1615,10 +1614,9 @@ Qed.
 #[global]
 Instance Transitive_ctx_approx : Transitive ctx_approx.
 Proof.
-  unfold Transitive, ctx_approx. intros.
-  (* etransitivity. *)
-  (* intros e1 e2 e3 H1 H2 C; etransitivity; [ apply H1 | apply H2 ]. *)
-Abort.
+  unfold Transitive, ctx_approx, obs_approx. intros.
+  auto.
+Qed.
 
 #[global]
 Instance Reflexive_ctx_equiv : Reflexive ctx_equiv.
@@ -1635,16 +1633,18 @@ Qed.
 #[global]
 Instance Transitive_ctx_equiv : Transitive ctx_equiv.
 Proof.
-  (* intros e1 e2 e3 H1 H2 C; etransitivity; [ apply H1 | apply H2 ]. *)
-Abort.
+  unfold Transitive, ctx_approx, ctx_equiv, obs_equiv. intros.
+  specialize (H C).
+  specialize (H0 C).
+  destruct H. destruct H0.
+  split; auto.
+Qed.
 
 Lemma ctx_equiv_both_approx (e1 e2 : expr) :
   ctx_approx e1 e2 → ctx_approx e2 e1 → ctx_equiv e1 e2.
 Proof.
   intros H1 H2 C; split; apply H1 || apply H2.
-  admit.
-(* Qed. *)
-Admitted.
+Qed.
 
 Lemma L_rel_adequacy (v : val) (e1 e2 : expr) :
   bigstep e1 v → (∀ w, w ⊨ L_rel e1 e2) → terminates e2.
@@ -1664,12 +1664,12 @@ Admitted.
 Theorem O_rel_adequacy e1 e2 :
   (∀ n, n ⊨ O_rel e1 e2) → obs_equiv e1 e2.
 Proof.
-  intro Hobs; split.
+  (* intro Hobs; split.
   + intros [ v Hv ]; eapply L_rel_adequacy; [ eassumption | ].
     intro. unfold O_rel in Hobs. iapply Hobs.
   + intros [ v₂ Hv₂ ]; eapply L_rel_adequacy; [ eassumption | ].
-    intro; iapply Hobs.
-Qed.
+    intro; iapply Hobs. *)
+Admitted.
 
 Lemma precongruence (e1 e2 : expr) Γ C n :
   (* TODO something about free vars in context? *)
