@@ -105,8 +105,13 @@ Ltac2 rec specialise_many (h:ident) (hs:constr list) :=
           | false =>
             let n := fresh_goal_of_constr a in
             (* debug "generated goal"; *)
+            (* put the new goal first *)
+            (* this is not released yet... *)
+            (* Control.cycle -1; *)
+            ltac1:(cycle -1);
             (* exclude the newly-created goal *)
-            Control.focus 1 (Int.sub (Control.numgoals ()) 1) (fun _ =>
+            (* Control.focus 1 (Int.sub (Control.numgoals ()) 1) (fun _ => *)
+            Control.focus 2 (Control.numgoals ()) (fun _ =>
               Std.specialize ('($p $n), Std.NoBindings) None;
               specialise_many h hs
             )
@@ -122,9 +127,14 @@ Ltac2 Notation "specialise" h(ident) args(list1(constr)) :=
 
 Ltac2 applyy0 (h:constr) (h1:constr list) :=
   let x := Fresh.in_goal @H in
+  (* this assumes new goals get added to the front.
+    focus the goals that are after those, which should be
+    the ones we started with *)
+  let n := Control.numgoals () in
   assert ($x := $h);
   specialise_many x h1;
-  Control.focus 1 1 (fun () =>
+  let n1 := Int.sub (Control.numgoals ()) n in
+  Control.focus (Int.add 1 n1) (Control.numgoals ()) (fun () =>
     let a := Control.hyp x in
     eapply $a
   );
@@ -143,7 +153,6 @@ Ltac2 Notation "have:" h(constr) args(list0(constr)) :=
 Ltac2 Notation "have" n(ident) ":" h(constr) args(list0(constr)) :=
   poseproof0 h args (Some n).
 
-(* TODO rotate the goals *)
 (* TODO ffi for apply *)
 (* TODO ffi for pose *)
 
@@ -164,8 +173,8 @@ Example ex1_applyy : forall (P Q R T:Prop),
 Proof.
   intros * Hp Hr Ht H.
   applyy H Hr.
-  exact Ht.
   exact Hp.
+  exact Ht.
 Qed.
 
 Example ex2_applyy_external: True.
@@ -183,9 +192,9 @@ Example ex1_basics : forall (P Q R U T:Prop), U → T → R → P → (U → T �
 Proof.
   intros * Hu Ht Hr Hp H.
   specialise H Ht Hr.
-  assumption.
-  exact Hp.
   exact Hu.
+  exact Hp.
+  assumption.
 Qed.
 
 Example ex2_dependent A (y:A) P Q : P y → (∀ x, P x → Q) → Q.
