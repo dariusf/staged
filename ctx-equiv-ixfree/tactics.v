@@ -153,9 +153,6 @@ Ltac2 Notation "have:" h(constr) args(list0(constr)) :=
 Ltac2 Notation "have" n(ident) ":" h(constr) args(list0(constr)) :=
   poseproof0 h args (Some n).
 
-(* TODO ffi for apply *)
-(* TODO ffi for pose *)
-
 Example some_lemma b : b = true → b = true.
 Proof. auto. Qed.
 
@@ -274,3 +271,183 @@ Tactic Notation "specialise" ident(h) constr(t1) constr(t2) constr(t3) constr(t4
     (List.map (fun t => Option.get (Ltac1.to_constr t))
       [t1; t2; t3; t4; t5; t6; t7])) in
   tac h t1 t2 t3 t4 t5 t6 t7.
+
+(* applyy *)
+
+Tactic Notation "applyy" constr(h) :=
+  let tac := ltac2:(h t1 |-
+    applyy0
+      (Option.get (Ltac1.to_constr h))
+      (List.map (fun t => Option.get (Ltac1.to_constr t))
+        [t1])) in
+  tac h.
+
+Tactic Notation "applyy" constr(h) constr(t1) :=
+  let tac := ltac2:(h t1 |-
+    applyy0
+      (Option.get (Ltac1.to_constr h))
+      (List.map (fun t => Option.get (Ltac1.to_constr t))
+        [t1])) in
+  tac h t1.
+
+Tactic Notation "applyy" constr(h) constr(t1) constr(t2) :=
+  let tac := ltac2:(h t1 t2 |- applyy0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2])) in
+  tac h t1 t2.
+
+Tactic Notation "applyy" constr(h) constr(t1) constr(t2) constr(t3) :=
+  let tac := ltac2:(h t1 t2 t3 |- applyy0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3])) in
+  tac h t1 t2 t3.
+
+Tactic Notation "applyy" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) :=
+  let tac := ltac2:(h t1 t2 t3 t4 |- applyy0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4])) in
+  tac h t1 t2 t3 t4.
+
+Tactic Notation "applyy" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) constr(t5) :=
+  let tac := ltac2:(h t1 t2 t3 t4 t5 |- applyy0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4; t5])) in
+  tac h t1 t2 t3 t4 t5.
+
+Tactic Notation "applyy" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) constr(t5) constr(t6) :=
+  let tac := ltac2:(h t1 t2 t3 t4 t5 t6 |- applyy0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4; t5; t6])) in
+  tac h t1 t2 t3 t4 t5 t6.
+
+Tactic Notation "applyy" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) constr(t5) constr(t6) constr(t7) :=
+  let tac := ltac2:(h t1 t2 t3 t4 t5 t6 t7 |- applyy0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4; t5; t6; t7])) in
+  tac h t1 t2 t3 t4 t5 t6 t7.
+
+(* have: *)
+
+Tactic Notation "have:" constr(h) :=
+  let tac := ltac2:(h |-
+    poseproof0
+      (Option.get (Ltac1.to_constr h))
+      (List.map (fun t => Option.get (Ltac1.to_constr t))
+        []) None) in
+  tac h.
+
+Tactic Notation "have:" constr(h) constr(t1) :=
+  let tac := ltac2:(h t1 |-
+    poseproof0
+      (Option.get (Ltac1.to_constr h))
+      (List.map (fun t => Option.get (Ltac1.to_constr t))
+        [t1]) None) in
+  tac h t1.
+
+Tactic Notation "have:" constr(h) constr(t1) constr(t2) :=
+  let tac := ltac2:(h t1 t2 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2]) None) in
+  tac h t1 t2.
+
+Tactic Notation "have:" constr(h) constr(t1) constr(t2) constr(t3) :=
+  let tac := ltac2:(h t1 t2 t3 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3]) None) in
+  tac h t1 t2 t3.
+
+Tactic Notation "have:" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) :=
+  let tac := ltac2:(h t1 t2 t3 t4 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4]) None) in
+  tac h t1 t2 t3 t4.
+
+Tactic Notation "have:" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) constr(t5) :=
+  let tac := ltac2:(h t1 t2 t3 t4 t5 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4; t5]) None) in
+  tac h t1 t2 t3 t4 t5.
+
+Tactic Notation "have:" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) constr(t5) constr(t6) :=
+  let tac := ltac2:(h t1 t2 t3 t4 t5 t6 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4; t5; t6]) None) in
+  tac h t1 t2 t3 t4 t5 t6.
+
+Tactic Notation "have:" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) constr(t5) constr(t6) constr(t7) :=
+  let tac := ltac2:(h t1 t2 t3 t4 t5 t6 t7 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4; t5; t6; t7]) None) in
+  tac h t1 t2 t3 t4 t5 t6 t7.
+
+(* have H: ... *)
+
+Tactic Notation "have" ident(n) ":" constr(h) :=
+  let tac := ltac2:(n h |-
+    poseproof0
+      (Option.get (Ltac1.to_constr h))
+      (List.map (fun t => Option.get (Ltac1.to_constr t))
+        []) (Ltac1.to_ident n)) in
+  tac n h.
+
+Tactic Notation "have" ident(n) ":" constr(h) constr(t1) :=
+  let tac := ltac2:(n h t1 |-
+    poseproof0
+      (Option.get (Ltac1.to_constr h))
+      (List.map (fun t => Option.get (Ltac1.to_constr t))
+        [t1]) (Ltac1.to_ident n)) in
+  tac n h t1.
+
+Tactic Notation "have" ident(n) ":" constr(h) constr(t1) constr(t2) :=
+  let tac := ltac2:(n h t1 t2 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2]) (Ltac1.to_ident n)) in
+  tac n h t1 t2.
+
+Tactic Notation "have" ident(n) ":" constr(h) constr(t1) constr(t2) constr(t3) :=
+  let tac := ltac2:(n h t1 t2 t3 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3]) (Ltac1.to_ident n)) in
+  tac n h t1 t2 t3.
+
+Tactic Notation "have" ident(n) ":" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) :=
+  let tac := ltac2:(n h t1 t2 t3 t4 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4]) (Ltac1.to_ident n)) in
+  tac n h t1 t2 t3 t4.
+
+Tactic Notation "have" ident(n) ":" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) constr(t5) :=
+  let tac := ltac2:(n h t1 t2 t3 t4 t5 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4; t5]) (Ltac1.to_ident n)) in
+  tac n h t1 t2 t3 t4 t5.
+
+Tactic Notation "have" ident(n) ":" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) constr(t5) constr(t6) :=
+  let tac := ltac2:(n h t1 t2 t3 t4 t5 t6 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4; t5; t6]) (Ltac1.to_ident n)) in
+  tac n h t1 t2 t3 t4 t5 t6.
+
+Tactic Notation "have" ident(n) ":" constr(h) constr(t1) constr(t2) constr(t3) constr(t4) constr(t5) constr(t6) constr(t7) :=
+  let tac := ltac2:(n h t1 t2 t3 t4 t5 t6 t7 |- poseproof0
+    (Option.get (Ltac1.to_constr h))
+    (List.map (fun t => Option.get (Ltac1.to_constr t))
+      [t1; t2; t3; t4; t5; t6; t7]) (Ltac1.to_ident n)) in
+  tac n h t1 t2 t3 t4 t5 t6 t7.
