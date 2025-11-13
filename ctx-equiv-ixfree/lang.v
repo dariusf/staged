@@ -208,6 +208,7 @@ Fixpoint is_closed (X : scope) (e : expr) : bool :=
   => is_closed X e1 && is_closed X e2
   end.
 
+(* aka a scoping judgment, the untyped equivalent of a typing judgment *)
 Definition closed (X : scope) (e : expr) : Prop := Is_true (is_closed X e).
 
 Definition ectx_is_closed (X : scope) (E : ectx) :=
@@ -1191,6 +1192,8 @@ Proof.
   { later_shift. by apply E_rel_elimO. }
 Qed.
 
+(* composition of subst and subst_map,
+  where the variable to be substituted doesn't appear in the substitution *)
 Lemma subst_subst_map : ∀ (e:expr) Γ (x : string) (es : val) (map : sub),
   subst_is_closed Γ ∅ map →
   subst x es (subst_map (delete x map) e) =
@@ -1273,6 +1276,7 @@ Proof.
     assumption. }
 Qed.
 
+(* we can extend related substitutions with related values *)
 Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
   n ⊨ V_rel v1 v2 →
   n ⊨ G_rel Γ γ1 γ2 →
@@ -1354,7 +1358,9 @@ Proof.
     { intros. assumption. } }
 Qed.
 
-Lemma subst_map_closed'_2 Γ X γ e :
+(* simple corollary of [subst_map_closed'],
+  where we have split Y into X and dom γ upfront *)
+Corollary subst_map_closed'_2 Γ X γ e :
   closed (X ∪ (dom γ)) e ->
   subst_is_closed Γ X γ ->
   closed X (subst_map γ e).
@@ -1368,6 +1374,8 @@ Proof.
     set_solver.
 Qed.
 
+(* given a value and a substitution closed under the same scope,
+  applying the substitution gives us a completely closed value *)
 Lemma subst_map_closed'_3 (v:val) Γ γ:
   closed Γ v ->
   subst_is_closed Γ ∅ γ ->
