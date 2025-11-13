@@ -125,6 +125,7 @@ Ltac2 rec specialise_many (h:ident) (hs:constr list) :=
 Ltac2 Notation "specialise" h(ident) args(list1(constr)) :=
   specialise_many h args.
 
+(* TODO some lemmas can't be posed cleanly. build an app and pose it all at once? *)
 Ltac2 applyy0 (h:constr) (h1:constr list) :=
   let x := Fresh.in_goal @H in
   (* this assumes new goals get added to the front.

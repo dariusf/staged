@@ -890,6 +890,7 @@ Lemma subst_is_closed_elim_closed Γ (γ:sub) x X (v:val):
 Proof.
   intros [Hdom Hsc] He.
   assert (H := elem_of_dom_2 _ _ _ He).
+  (* have: elem_of_dom_2 He. *)
   (* pose proof (elem_of_dom_2 _ _ _ He). *)
   assert (x ∈ Γ). set_solver.
   apply (Hsc x H0 v He).
@@ -1500,11 +1501,13 @@ Proof.
   { later_shift.
 
     rewrite subst_subst_map with (Γ:=Γ).
-    2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [? _]. assumption. }
+    (* 2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [_ ?]. assumption. } *)
+    2: { have: G_sub_closed Hγ. done. }
     rewrite subst_subst_map with (Γ:=Γ).
     2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [_ ?]. assumption. }
     iapply He.
-    apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). }
+    (* apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). *)
+    applyy sem_context_rel_insert Hv Hγ. }
 Qed.
 
 (* Print Assumptions compat_lambda. *)
