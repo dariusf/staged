@@ -856,10 +856,10 @@ Lemma subst_is_closed_elim_closed Γ (γ:sub) x X (v:val):
   closed X v.
 Proof.
   intros [Hdom Hsc] He.
-  pose proof (elem_of_dom_2 _ _ _ He).
+  assert (H := elem_of_dom_2 _ _ _ He).
+  (* pose proof (elem_of_dom_2 _ _ _ He). *)
   assert (x ∈ Γ). set_solver.
-  specialize (Hsc x H0 v He).
-  assumption.
+  apply (Hsc x H0 v He).
 Qed.
 
 Lemma subst_is_closed_closed_subst_map Γ γ x:
