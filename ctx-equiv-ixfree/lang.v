@@ -1,6 +1,7 @@
 
 From IxFree Require Import Lib Nat.
 From CtxEquivIxFree Require Import ixfree_tactics.
+From CtxEquivIxFree Require Import tactics.
 (* From stdpp Require Export binders. *)
 From stdpp Require Export gmap.
 From stdpp Require Export strings.
@@ -350,7 +351,8 @@ Proof.
   assumption.
   intros x Hl v Hs.
   rewrite (map_subseteq_spec γ1 γ2) in Hγ.
-  specialize (Hγ _ _ Hs).
+  (* specialize (Hγ _ _ Hs). *)
+  specialise Hγ Hs.
   apply (Hc2 x ltac:(set_solver) _ Hγ).
 Qed.
 
