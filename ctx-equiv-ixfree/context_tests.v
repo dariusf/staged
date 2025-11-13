@@ -37,7 +37,7 @@ https://www.williamjbowman.com/teaching/2020/w1/cpsc509/resources/05-reduction.p
 *)
 
 (* for one level of nesting, both kinds of contexts behave the same *)
-Example ex_plug1:
+(* Example ex_plug1:
   plug ectx_hole (vint 1) = rplug rctx_hole (vint 1).
 Proof. reflexivity. Qed.
 
@@ -53,4 +53,4 @@ Proof. reflexivity. Qed.
 
 Example ex_rplug3: rplug (rctx_app1 (rctx_app1 rctx_hole (vint 3)) (vint 2))
   (ret (vint 1)) = app (app (vint 1) (vint 3)) (vint 2).
-Proof. reflexivity. Qed.
+Proof. reflexivity. Qed. *)

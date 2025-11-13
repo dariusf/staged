@@ -22,6 +22,7 @@ Inductive expr :=
   (* | eplus (e1 e2: expr) *)
 
 with val :=
+  (* TODO reenable context tests when this is restored *)
   (*| vint (z : Z) *)
   | vlambda (x : string) (e: expr)
   (* | vbool (b : bool) *)
