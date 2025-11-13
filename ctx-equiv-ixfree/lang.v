@@ -154,17 +154,13 @@ Definition contextual_reducible (e : expr) :=
   ∃ e', contextual_step e e'.
 
 Definition bigstep e1 (v:val) :=
-  ∃ e2, rtc contextual_step e1 e2 /\ to_val e2 = Some v.
+  ∃ e2, rtc contextual_step e1 e2 ∧ to_val e2 = Some v.
 
 Definition terminates e := ∃ v, bigstep e v.
 
-Definition equiterminate e1 e2 := terminates e1 <-> terminates e2.
-
-Definition obs_eqv e1 e2 :=
-  ∀ C, equiterminate (fill C e1) (fill C e2).
+Definition equiterminate e1 e2 := terminates e1 ↔ terminates e2.
 
 Infix "≈" := equiterminate (at level 80, right associativity, only printing).
-Infix "≡obs" := obs_eqv (at level 80, right associativity, only printing).
 
 Lemma contextual_step_comp :
   ∀ K e1 e2,
@@ -1529,3 +1525,179 @@ Proof.
     induction v.
     - apply compat_lambda. apply fundamental_property_e. rewrite <- closed_lambda. assumption. }
 Qed.
+
+(** Inside-out general contexts. *)
+Inductive ctx : Type :=
+| ctx_hole   : ctx (* note: closed *)
+| ctx_lam    : name → ctx → ctx
+| ctx_app1   : ctx → expr → ctx
+| ctx_app2   : expr → ctx → ctx.
+
+Fixpoint cplug (C : ctx) : expr → expr (* closed *) :=
+  match C with
+  | ctx_hole      => id
+  | ctx_lam x C    => λ e, cplug C (ret (vlambda x e))
+  | ctx_app1 C e2 => λ e, cplug C (app e e2)
+  | ctx_app2 e1 C => λ e, cplug C (app e1 e)
+  end.
+
+Lemma cplug_closed C e :
+  closed ∅ (cplug C e).
+Proof.
+Admitted.
+
+(** Observational approximation for complete programs *)
+Definition obs_approx (e1 e2 : expr (* closed *)) : Prop :=
+  closed ∅ e1 →
+  closed ∅ e2 →
+  terminates e1 → terminates e2.
+
+(** Observational equivalence for complete programs *)
+Definition obs_equiv (e1 e2 : expr (* closed *)) : Prop :=
+  closed ∅ e1 →
+  closed ∅ e2 →
+  terminates e1 ↔ terminates e2.
+
+Infix "≼obs" := obs_approx (at level 80, right associativity, only printing).
+Infix "≡obs" := obs_equiv (at level 80, right associativity, only printing).
+
+#[global]
+Instance Reflexive_obs_approx : Reflexive obs_approx.
+Proof.
+  unfold Reflexive, obs_approx. done.
+Qed.
+
+#[global]
+Instance Transitive_obs_approx : Transitive obs_approx.
+Proof.
+  unfold Transitive, obs_approx. intros.
+  specialise H H1.
+Abort.
+
+#[global]
+Instance Reflexive_obs_equiv : Reflexive obs_equiv.
+Proof.
+  unfold Reflexive, obs_equiv. intros.
+  reflexivity.
+Qed.
+
+#[global]
+Instance Symmetric_obs_equiv : Symmetric obs_equiv.
+Proof.
+  unfold Symmetric, obs_equiv. intros.
+  specialise H H1 H0.
+  done.
+Qed.
+
+#[global]
+Instance Transitive_obs_equiv : Transitive obs_equiv.
+Proof.
+  unfold Transitive, obs_equiv. intros.
+Abort.
+
+(** Contextual approximation *)
+Definition ctx_approx (e1 e2 : expr (* open *)) : Prop :=
+  ∀ C, obs_approx (cplug C e1) (cplug C e2).
+
+(** Contextual equivalence *)
+Definition ctx_equiv (e1 e2 : expr (* open *)) : Prop :=
+  ∀ C, obs_equiv (cplug C e1) (cplug C e2).
+
+Infix "≼ctx" := ctx_approx (at level 80, right associativity, only printing).
+Infix "≡ctx" := ctx_equiv (at level 80, right associativity, only printing).
+
+#[global]
+Instance Reflexive_ctx_approx : Reflexive ctx_approx.
+Proof.
+  intros e C; reflexivity.
+Qed.
+
+#[global]
+Instance Transitive_ctx_approx : Transitive ctx_approx.
+Proof.
+  unfold Transitive, ctx_approx. intros.
+  (* etransitivity. *)
+  (* intros e1 e2 e3 H1 H2 C; etransitivity; [ apply H1 | apply H2 ]. *)
+Abort.
+
+#[global]
+Instance Reflexive_ctx_equiv : Reflexive ctx_equiv.
+Proof.
+  intros e C; reflexivity.
+Qed.
+
+#[global]
+Instance Symmetric_ctx_equiv : Symmetric ctx_equiv.
+Proof.
+  intros e1 e2 H C; symmetry; apply H.
+Qed.
+
+#[global]
+Instance Transitive_ctx_equiv : Transitive ctx_equiv.
+Proof.
+  (* intros e1 e2 e3 H1 H2 C; etransitivity; [ apply H1 | apply H2 ]. *)
+Abort.
+
+Lemma ctx_equiv_both_approx (e1 e2 : expr) :
+  ctx_approx e1 e2 → ctx_approx e2 e1 → ctx_equiv e1 e2.
+Proof.
+  intros H1 H2 C; split; apply H1 || apply H2.
+  admit.
+(* Qed. *)
+Admitted.
+
+Lemma L_rel_adequacy (v : val) (e1 e2 : expr) :
+  bigstep e1 v → (∀ w, w ⊨ L_rel e1 e2) → terminates e2.
+Proof.
+  (* intro RED; remember v as p; revert RED Heqp.
+  induction 1; intros Hp Hobs.
+  + specialize (Hobs {| nw_index := 0 |}).
+    apply I_conj_elim1, I_prop_elim in Hobs.
+    eapply Hobs; eassumption.
+  + apply IHRED; [ assumption | ].
+    intro w; specialize (Hobs (world_lift w)).
+    apply L_rel_unroll, I_world_lift_later.
+    iapply Hobs; iintro; assumption.
+Qed. *)
+Admitted.
+
+Theorem O_rel_adequacy e1 e2 :
+  (∀ n, n ⊨ O_rel e1 e2) → obs_equiv e1 e2.
+Proof.
+  intro Hobs; split.
+  + intros [ v Hv ]; eapply L_rel_adequacy; [ eassumption | ].
+    intro. unfold O_rel in Hobs. iapply Hobs.
+  + intros [ v₂ Hv₂ ]; eapply L_rel_adequacy; [ eassumption | ].
+    intro; iapply Hobs.
+Qed.
+
+Lemma precongruence (e1 e2 : expr) Γ C n :
+  (* TODO something about free vars in context? *)
+  n ⊨ E_rel_o Γ e1 e2 → n ⊨ E_rel_o Γ (cplug C e1) (cplug C e2).
+Proof.
+  (* revert e1 e2 n; induction C; intros e1 e2 n He; simpl; try apply IHC.
+  - assumption.
+  (* Search (_ → E_rel _ _). *)
+  - apply compat_val, compat_lambda.
+    admit.
+  (* assumption. *)
+  - apply compat_app; [ assumption | ]; apply fundamental_property_e.
+    (* arguments need to be closed *)
+    admit.
+  - apply compat_app; [ | assumption ]; apply fundamental_property_e.
+    admit. *)
+Admitted.
+
+Theorem E_rel_o_soundness Γ (e1 e2 : expr) :
+  (∀ n, n ⊨ E_rel_o Γ e1 e2) → ctx_equiv e1 e2.
+Proof.
+  intros He C.
+  apply O_rel_adequacy; intro n.
+  (* rewrite <- (bind_pure' (cplug C e1)). *)
+  (* rewrite <- (bind_pure' (cplug C e2)). *)
+  (* iapply (precongruence _ _ C n (He n)).
+  iintro x; destruct x. *)
+(* Qed. *)
+Admitted.
+
+(* TODO proper *)
