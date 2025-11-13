@@ -108,7 +108,27 @@ Fixpoint plug (E : ectx) (e : expr) : expr :=
   | ectx_app2 v E1 => plug E1 (app v e)
   end.
 
+Fixpoint ectx_comp (E1 E2 : ectx) : ectx :=
+  match E1 with
+  | ectx_hole => E2
+  | ectx_app1 E1 e => ectx_app1 (ectx_comp E1 E2) e
+  | ectx_app2 v E1 => ectx_app2 v (ectx_comp E1 E2)
+  end.
+
+Notation fill := plug.
+
+Lemma ectx_comp_correct :
+  ∀ E1 E2 e, plug E1 (plug E2 e) = plug (ectx_comp E2 E1) e.
+Proof.
+  intros E1 E2.
+  induction E2; intros e'.
+  - simpl in *. reflexivity.
+  - simpl in *. rewrite (IHE2 (app e' e)). reflexivity.
+  - simpl in *. rewrite (IHE2 (app v e')). reflexivity.
+Qed.
+
 (** Outside-in evaluation contexts *)
+(*
 Inductive rctx :=
   | rctx_hole : rctx
   | rctx_app1 : rctx → expr → rctx
@@ -120,8 +140,7 @@ Fixpoint rplug (E : rctx) (e : expr) : expr :=
   | rctx_app1 E1 e1 => app (rplug E1 e) e1
   | rctx_app2 v E1 => app v (rplug E1 e)
   end.
-
-Notation fill := plug.
+*)
 
 Inductive contextual_step (e1 : expr) (e2 : expr) : Prop :=
   Ectx_step K e1' e2' :
@@ -145,6 +164,18 @@ Definition obs_eqv e1 e2 :=
 
 Infix "≈" := equiterminate (at level 80, right associativity, only printing).
 Infix "≡obs" := obs_eqv (at level 80, right associativity, only printing).
+
+Lemma contextual_step_comp :
+  ∀ K e1 e2,
+    contextual_step e1 e2 →
+    contextual_step (fill K e1) (fill K e2).
+Proof.
+  intros K e1 e2 H_step.
+  inversion H_step. subst. econstructor.
+  - by apply ectx_comp_correct.
+  - by apply ectx_comp_correct.
+  - assumption.
+Qed.
 
 Notation name := string.
 Definition sub : Set := gmap name val.
@@ -956,6 +987,50 @@ Proof.
       - assumption. } }
 Qed.
 
+Lemma not_base_step_val : ∀ (v : val) e, ¬ base_step v e.
+Proof. intros v e Hstep. inversion Hstep. Qed.
+
+Lemma val_eq_fill_inv : ∀ (v : val) K e, ret v = fill K e → e = v ∧ K = ectx_hole.
+Proof.
+  intros v K.
+  induction K; intros e' H_eq. simpl in *.
+  - auto.
+  - specialize (IHK _ H_eq) as (H_absurd & _). discriminate.
+  - specialize (IHK _ H_eq) as (H_absurd & _). discriminate.
+Qed.
+
+Lemma not_contextual_step_val : ∀ (v : val) e, ¬ contextual_step v e.
+Proof.
+  intros v e Hstep.
+  inversion Hstep.
+  apply val_eq_fill_inv in H as [-> ->].
+  by eapply not_base_step_val.
+Qed.
+
+Lemma base_step_is_deterministic :
+  ∀ e1 e2 e3,
+    base_step e1 e2 →
+    base_step e1 e3 →
+    e2 = e3.
+Proof.
+  intros e1 e2 e3 Hstep2 Hstep3.
+  inversion Hstep2.
+  inversion Hstep3.
+  congruence.
+Qed.
+
+Lemma contextual_step_is_deterministic :
+  ∀ e1 e2 e3,
+    contextual_step e1 e2 →
+    contextual_step e1 e3 →
+    e2 = e3.
+Proof.
+  intros e1 e2 e3 Hstep2 Hstep3.
+  inversion Hstep2.
+  inversion Hstep3.
+  admit.
+Admitted.
+
 Lemma L_rel_red_l (e1 e1' e2 : expr) n :
   closed ∅ e1 →
   closed ∅ e2 →
@@ -971,8 +1046,7 @@ Proof.
   - iintro.
     intros v1 H_eq.
     rewrite -> H_eq in Hred.
-    (* absurd *)
-    admit.
+    exfalso. by eapply not_contextual_step_val.
   - iintros e1'' Hred'.
     idestruct Hred'.
     replace e1'' with e1' by admit. (* deterministic *)
@@ -1112,12 +1186,10 @@ Proof.
   eapply O_rel_red_both.
   { by apply HEc1. } (* need: closed-ness for context *)
   { by apply HEc2. }
-  { admit. }
-  { admit. }
-  { later_shift. apply E_rel_elimO.
-    - exact He.
-    - exact HE. }
-Admitted.
+  { by apply contextual_step_comp. }
+  { by apply contextual_step_comp. }
+  { later_shift. by apply E_rel_elimO. }
+Qed.
 
 Lemma subst_subst_map : ∀ (e:expr) Γ (x : string) (es : val) (map : sub),
   subst_is_closed Γ ∅ map →
@@ -1282,10 +1354,10 @@ Proof.
     { intros. assumption. } }
 Qed.
 
-Lemma subst_map_closed'_2 Γ X γ (v:val):
-  closed (X ∪ (dom γ)) v ->
+Lemma subst_map_closed'_2 Γ X γ e :
+  closed (X ∪ (dom γ)) e ->
   subst_is_closed Γ X γ ->
-  closed X (subst_map γ v).
+  closed X (subst_map γ e).
 Proof.
   intros Hcl Hsubst.
   eapply subst_map_closed'; first eassumption.
@@ -1309,6 +1381,29 @@ Proof.
   rewrite <- H1.
   replace (∅ ∪ Γ) with Γ. assumption.
   set_solver.
+Qed.
+
+Lemma lambda_closed Γ γ x e :
+  closed (Γ ∪ {[x]}) e  →
+  subst_is_closed Γ ∅ γ  →
+  closed ∅ (vlambda x (subst_map (delete x γ) e)).
+Proof.
+  intros Hec [Heq Hγc].
+  rewrite closed_lambda.
+  eapply subst_map_closed'_2.
+  - eapply closed_weaken.
+    exact Hec.
+    setoid_rewrite dom_delete.
+    intros y. destruct (decide (x = y)); set_solver.
+  - apply (subst_is_closed_subseteq (Γ ∖ {[x]}) Γ _ (delete x γ) γ).
+    + set_solver.
+    + apply delete_subseteq.
+    + set_solver.
+    + unfold subst_is_closed. split.
+      * exact Heq.
+      * intros x' Hin v Hlookup.
+        specialize (Hγc x' Hin v Hlookup).
+        by eapply closed_weaken.
 Qed.
 
 Lemma compat_lambda Γ (e1 e2 : expr) n x :
@@ -1353,10 +1448,14 @@ Proof.
 
   (* we now have the arguments *)
   iintros u1 u2 Hu1 Hu2 Hv.
+  idestruct Hu1.
+  idestruct Hu2.
+  destruct (E_rel_o_elim _ _ _ _ He) as (Hec1 & Hec2 & He').
+  destruct (G_rel_elim _ _ _ _ Hγ) as (Hγc1 & Hγc2 & Hγ').
 
   eapply R_rel_red_both.
-  { admit. } (* can be proven *)
-  { admit. }
+  { simpl. rewrite closed_app. by eauto using lambda_closed. }
+  { simpl. rewrite closed_app. by eauto using lambda_closed. }
   { simpl. eapply (Ectx_step _ _ ectx_hole _ _ eq_refl eq_refl).
     simpl. constructor.
     simpl. constructor.
@@ -1373,7 +1472,7 @@ Proof.
     2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [_ ?]. assumption. }
     iapply He.
     apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). }
-Admitted.
+Qed.
 
 (* Print Assumptions compat_lambda. *)
 
