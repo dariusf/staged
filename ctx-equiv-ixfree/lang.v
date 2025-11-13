@@ -22,11 +22,11 @@ Inductive expr :=
   (* | eplus (e1 e2: expr) *)
 
 with val :=
-  | vint (z : Z)
+  (*| vint (z : Z) *)
   | vlambda (x : string) (e: expr)
   (* | vbool (b : bool) *)
   (* | vloc (l : loc) *)
-  | vunit.
+  (* | vunit *).
 
 Definition to_val (e : expr) : option val :=
   match e with
@@ -42,8 +42,8 @@ Inductive hprop :=
 
 Fixpoint subst_val (x : string) (es : expr) (v : val)  : val :=
   match v with
-  | vunit => vunit
-  | vint n => vint n
+  (*| vunit => vunit
+  | vint n => vint n*)
   | vlambda y e =>
       vlambda y $ if decide (x = y) then e else
         (subst x es e)
@@ -183,8 +183,8 @@ Definition scope : Set := gset name.
 
 Fixpoint subst_map_val (xs : sub) (v : val) : val :=
   match v with
-  | vunit => vunit
-  | vint n => vint n
+  (*| vunit => vunit
+  | vint n => vint n*)
   | vlambda x e => vlambda x (subst_map (delete x xs) e)
   end
 
@@ -201,7 +201,7 @@ with subst_map (xs : sub) (e : expr) : expr :=
 Fixpoint is_closed (X : scope) (e : expr) : bool :=
   match e with
   | var x => bool_decide (x ∈ X)
-  | ret vunit | ret (vint _) => true
+  (*| ret vunit | ret (vint _) => true*)
   | ret (vlambda x e) => is_closed (X ∪ {[x]}) e
   | app e1 e2
   (* | eplus e1 e2 *)
@@ -235,12 +235,12 @@ Proof.
       apply (IHe2 _ _ H1 H0). }
   { revert X Y.
     induction v; intros.
-    - constructor.
+    (*- constructor.*)
     - unfold closed in *.
       simpl in *.
       apply (closed_weaken e _ _ H).
       set_solver.
-    - constructor. }
+    (*- constructor.*) }
 Qed.
 
 Lemma closed_subst :
@@ -279,7 +279,7 @@ Proof.
     unfold closed in *.
     intros Γ x v e H_closed1 H_closed2.
     induction v.
-    - simpl in *. auto.
+    (* - simpl in *. auto. *)
     - simpl in *.
       rewrite -> decide_bool_decide.
       destruct (bool_decide_reflect (x = x0)) as [H_eq | H_neq].
@@ -291,7 +291,7 @@ Proof.
         eapply closed_weaken.
         exact H_closed1. set_solver.
         exact H_closed2.
-    - simpl in *. auto.
+    (*- simpl in *. auto.*)
   }
 Qed.
 
@@ -960,7 +960,7 @@ with subst_closed X e x es :
   closed X e → x ∉ X → subst x es e = e.
 Proof.
   { induction v.
-    { reflexivity. }
+    (*{ reflexivity. }*)
     { simpl.
       case_decide.
       - reflexivity.
@@ -969,7 +969,7 @@ Proof.
         rewrite closed_lambda in H0.
         apply (subst_closed _ _ _ _ H0).
         set_solver. }
-    { reflexivity. } }
+    (*{ reflexivity. }*) }
  { induction e; intros; simpl.
     { f_equal.
       eapply subst_val_closed.
@@ -1020,6 +1020,26 @@ Proof.
   congruence.
 Qed.
 
+Lemma unique_decomposition :
+  ∀ E1 E2 e1 e2 e1' e2',
+    base_step e1 e1' →
+    base_step e2 e2' →
+    fill E1 e1 = fill E2 e2 →
+    E1 = E2 ∧ e1 = e2.
+Proof.
+  intros E1 E2 e1 e2 e1' e2' Hstep1 Hstep2.
+  revert E2.
+  induction E1; intros E2 Heq; simpl in *.
+  - destruct E2.
+    + simpl in *. auto.
+    + simpl in *. (* e1 is not a potential redex *) admit.
+    + simpl in *. admit.
+  - destruct E2.
+    + simpl in *. admit.
+    + simpl in *. admit.
+    + simpl in *. admit.
+Admitted. (* hard *)
+
 Lemma contextual_step_is_deterministic :
   ∀ e1 e2 e3,
     contextual_step e1 e2 →
@@ -1029,8 +1049,12 @@ Proof.
   intros e1 e2 e3 Hstep2 Hstep3.
   inversion Hstep2.
   inversion Hstep3.
-  admit.
-Admitted.
+  destruct (unique_decomposition K K0 e1' e1'0 e2' e2'0 H1 H4) as [HK_eq He_eq].
+  { congruence. }
+  rewrite -> He_eq in H1.
+  assert (He_eq' := base_step_is_deterministic e1'0 e2' e2'0 H1 H4).
+  congruence.
+Qed.
 
 Lemma L_rel_red_l (e1 e1' e2 : expr) n :
   closed ∅ e1 →
@@ -1229,7 +1253,7 @@ Proof.
         by rewrite decide_False. } } }
     { intros. simpl. f_equal; eauto. } }
   { intros v. induction v; intros.
-    { reflexivity. }
+    (*{ reflexivity. }*)
     { (* the lambda case *)
       simpl. f_equal. f_equal.
       case_decide.
@@ -1246,7 +1270,7 @@ Proof.
         apply delete_subseteq.
         set_solver.
         assumption. } }
-    { reflexivity. } }
+    (*{ reflexivity. }*) }
 Qed.
 
 (** Special case of Theorem A.1 from Erlang paper:
@@ -1341,7 +1365,7 @@ Proof.
       by eapply IHe2. }
   }
   { revert X Y γ. induction v.
-    { intros. assumption. }
+    (*{ intros. assumption. }*)
     { unfold closed. simpl.
       intros * Hce H.
       eapply subst_map_closed'. eassumption.
@@ -1355,7 +1379,7 @@ Proof.
       { rewrite elem_of_singleton in H0.
         subst. rewrite lookup_delete_eq with (m:=γ). set_solver. }
     }
-    { intros. assumption. } }
+    (*{ intros. assumption. }*) }
 Qed.
 
 (* simple corollary of [subst_map_closed'],
@@ -1499,7 +1523,5 @@ Proof.
       apply compat_app; auto. }
   { intros H_closed.
     induction v.
-    - admit.
-    - apply compat_lambda. apply fundamental_property_e. rewrite <- closed_lambda. assumption.
-    - admit. }
-Admitted.
+    - apply compat_lambda. apply fundamental_property_e. rewrite <- closed_lambda. assumption. }
+Qed.
