@@ -166,9 +166,9 @@ Proof.
   (* Proof Mode "Classic". *)
   (* this doesn't fail in lsp, but does in batch mode *)
   Proof Mode "Ltac2".
-  pose (some_lemma).
+  assert (e := some_lemma).
   specialise e true.
-  pose (some_lemma).
+  assert (e0 := some_lemma).
   assert (true = true). reflexivity.
   specialise e0 H.
   specialise e e0.
