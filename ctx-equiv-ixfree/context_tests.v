@@ -14,10 +14,6 @@ E ::= □ | E e | v E
 
 standard outside-in contexts:
 
-  □[□ 3][□ 2]
-= (□ 3)[□ 2]
-= ((□ 2) 3)
-
 rplug ((□ 2) 3) 1
 = ((rplug (□ 2) 1) 3)
 = (((rplug □ 1) 2) 3)

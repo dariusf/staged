@@ -94,7 +94,7 @@ Inductive base_step : expr → expr → Prop :=
      e2 = (eint n2) →
      (n1 + n2)%Z = n3 →
      base_step (Plus e1 e2) (eint n3) *)
-  .
+.
 
 (* inside-out contexts *)
 Inductive ectx :=
@@ -297,10 +297,10 @@ Lemma closed_app xs e1 e2:
   closed xs e1 ∧ closed xs e2.
 Proof. unfold closed. simpl. by rewrite andb_True. Qed.
 
-Lemma closed_lambda e X x : closed X (vlambda x e) ↔ closed (X ∪ {[x]}) e.
+Lemma closed_lambda e Γ x : closed Γ (vlambda x e) ↔ closed (Γ ∪ {[x]}) e.
 Proof. split. auto. auto. Qed.
 
-Lemma closed_var Γ x : x ∈ Γ ↔ closed Γ (var x).
+Lemma closed_var Γ x : closed Γ (var x) ↔ x ∈ Γ.
 Proof. unfold closed. simpl. by rewrite bool_decide_spec. Qed.
 
 Lemma base_step_preserve_closedness :
@@ -394,8 +394,6 @@ Definition ctx_rel := ectx ⇒ᵢ ectx ⇒ᵢ IRel.
 
 Definition L_rel_pre (L_rel : expr_rel) : expr_rel :=
   λ e1 e2,
-    (closed ∅ e1)ᵢ ∧ᵢ
-    (closed ∅ e2)ᵢ ∧ᵢ
     (∀ v1 : val, e1 = v1 → terminates e2)ᵢ ∧ᵢ
     ∀ᵢ e1' : expr, (contextual_step e1 e1')ᵢ →ᵢ ▷ L_rel e1' e2.
 
@@ -405,16 +403,12 @@ Definition O_rel e1 e2 := L_rel e1 e2 ∧ᵢ L_rel e2 e1.
 
 Definition K_rel_pre (V_rel : val_rel) :=
   λ E1 E2,
-    (ectx_is_closed ∅ E1)ᵢ ∧ᵢ
-    (ectx_is_closed ∅ E2)ᵢ ∧ᵢ
     (∀ᵢ (v1 v2 : val),
       V_rel v1 v2 →ᵢ
       O_rel (fill E1 v1) (fill E2 v2)).
 
 Definition R_rel_pre (V_rel : val_rel) (e1 e2 : expr) :=
   ∀ᵢ E1 E2,
-    (ectx_is_closed ∅ E1)ᵢ →ᵢ
-    (ectx_is_closed ∅ E2)ᵢ →ᵢ
     ▷ K_rel_pre V_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2).
 
 Definition V_rel_pre (V_rel : val_rel) : val_rel :=
@@ -422,8 +416,6 @@ Definition V_rel_pre (V_rel : val_rel) : val_rel :=
     (closed ∅ v1)ᵢ ∧ᵢ
     (closed ∅ v2)ᵢ ∧ᵢ
     ∀ᵢ (u1 u2 : val),
-      (closed ∅ u1)ᵢ →ᵢ
-      (closed ∅ u2)ᵢ →ᵢ
       ▷ V_rel u1 u2 →ᵢ
       R_rel_pre V_rel (app v1 u1) (app v2 u2).
 
@@ -435,8 +427,6 @@ Definition K_rel := K_rel_pre V_rel_fix.
 
 Definition E_rel : expr_rel :=
   λ e1 e2,
-    (closed ∅ e1)ᵢ ∧ᵢ
-    (closed ∅ e2)ᵢ ∧ᵢ
     ∀ᵢ E1 E2 : ectx, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2).
 
 (* Relations for open terms *)
@@ -450,13 +440,9 @@ Definition G_rel (Γ: scope) (γ1 γ2 : sub) : IProp :=
     V_rel v1 v2.
 
 Definition E_rel_o (Γ: scope) (e1 e2 : expr) : IProp :=
-  (closed Γ e1)ᵢ ∧ᵢ
-  (closed Γ e2)ᵢ ∧ᵢ
   ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ E_rel (subst_map γ1 e1) (subst_map γ2 e2).
 
 Definition V_rel_o (Γ: scope) (v1 v2 : val) : IProp :=
-  (closed Γ v1)ᵢ ∧ᵢ
-  (closed Γ v2)ᵢ ∧ᵢ
   ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2).
 
 (** Contractiveness and unrolling fixpoint *)
@@ -505,22 +491,18 @@ Lemma V_rel_intro (v1 v2 : val) n :
   closed ∅ v1 →
   closed ∅ v2 →
   (n ⊨ ∀ᵢ (u1 u2:val),
-        (closed ∅ u1)ᵢ →ᵢ
-        (closed ∅ u2)ᵢ →ᵢ
-        ▷ V_rel u1 u2 →ᵢ
-        R_rel (app v1 u1) (app v2 u2)) →
+         ▷ V_rel u1 u2 →ᵢ
+         R_rel (app v1 u1) (app v2 u2)) →
   n ⊨ V_rel v1 v2.
 Proof.
   intros H_closed1 H_closed2 Hv.
   isplit; [| isplit].
   - apply I_prop_intro. assumption.
   - apply I_prop_intro. assumption.
-  - iintros u1 u2 Hucl1 Hucl2 Hv_later.
+  - iintros u1 u2 Hv_later.
     ispecialize Hv u1.
     ispecialize Hv u2.
-    iapply Hv in Hucl1.
-    iapply Hucl1 in Hucl2.
-    iapply Hucl2.
+    iapply Hv.
     later_shift.
     apply V_rel_unroll.
     assumption.
@@ -531,8 +513,6 @@ Lemma V_rel_elim (v1 v2 : val) n :
   closed ∅ v1 ∧
   closed ∅ v2 ∧
   (n ⊨ (∀ᵢ (u1 u2 : val),
-         (closed ∅ u1)ᵢ →ᵢ
-         (closed ∅ u2)ᵢ →ᵢ
          ▷ V_rel u1 u2 →ᵢ
          R_rel (app v1 u1) (app v2 u2))).
 Proof.
@@ -544,8 +524,8 @@ Proof.
   split; [| split].
   - assumption.
   - assumption.
-  - iintros u1 u2 Hucl1 Hucl2 Hv_later.
-    ispecialize Hv u1. ispecialize Hv u2. ispec Hv Hucl1. ispec Hv Hucl2.
+  - iintros u1 u2 Hv_later.
+    ispecialize Hv u1. ispecialize Hv u2.
     iapply Hv.
     later_shift.
     apply V_rel_roll.
@@ -553,35 +533,23 @@ Proof.
 Qed.
 
 Lemma K_rel_intro (E1 E2 : ectx) n :
-  ectx_is_closed ∅ E1 →
-  ectx_is_closed ∅ E2 →
   n ⊨ (∀ᵢ v1 v2, V_rel v1 v2 →ᵢ O_rel (fill E1 v1) (fill E2 v2)) →
   n ⊨ K_rel E1 E2.
 Proof.
-  intros Hc1 Hc2 HE.
+  intros HE.
   unfold K_rel, K_rel_pre.
-  repeat isplit.
-  - iintro. exact Hc1.
-  - iintro. exact Hc2.
-  - iintros v1 v2 Hv.
-    iapply HE. apply V_rel_unroll. exact Hv.
+  iintros v1 v2 Hv.
+  iapply HE. apply V_rel_unroll. exact Hv.
 Qed.
 
 Lemma K_rel_elim (E1 E2 : ectx) n :
   n ⊨ K_rel E1 E2 →
-  ectx_is_closed ∅ E1 ∧
-  ectx_is_closed ∅ E2 ∧
   (n ⊨ ∀ᵢ v1 v2, V_rel v1 v2 →ᵢ O_rel (fill E1 v1) (fill E2 v2)).
 Proof.
   unfold K_rel, K_rel_pre.
   intros HE.
-  idestruct HE as Hc1 HE. idestruct Hc1.
-  idestruct HE as Hc2 HE. idestruct Hc2.
-  split; [| split].
-  - exact Hc1.
-  - exact Hc2.
-  - iintros v1 v2 Hv.
-    iapply HE. apply V_rel_roll. exact Hv.
+  iintros v1 v2 Hv.
+  iapply HE. apply V_rel_roll. exact Hv.
 Qed.
 
 Lemma K_rel_elimO E1 E2 v1 v2 n :
@@ -590,58 +558,46 @@ Lemma K_rel_elimO E1 E2 v1 v2 n :
   n ⊨ O_rel (fill E1 v1) (fill E2 v2).
 Proof.
   intros HE Hv.
-  apply K_rel_elim in HE as (_ & _ & HE).
+  apply K_rel_elim in HE.
   iapply HE. exact Hv.
 Qed.
 
 Lemma R_rel_intro (e1 e2 : expr) n :
-  n ⊨ (∀ᵢ E1 E2,
-        (ectx_is_closed ∅ E1)ᵢ →ᵢ
-        (ectx_is_closed ∅ E2)ᵢ →ᵢ
-        ▷ K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)) ->
+  n ⊨ (∀ᵢ E1 E2, ▷ K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)) ->
   n ⊨ R_rel e1 e2.
 Proof. auto. Qed.
 
-Lemma R_rel_elim (e1 e2 : expr) E1 E2 n :
+Lemma R_rel_elim (e1 e2 : expr) n :
   n ⊨ R_rel e1 e2 →
-  ectx_is_closed ∅ E1 →
-  ectx_is_closed ∅ E2 →
+  n ⊨ (∀ᵢ E1 E2, ▷ K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)).
+Proof. auto. Qed.
+
+Lemma R_rel_elimO (e1 e2 : expr) E1 E2 n :
+  n ⊨ R_rel e1 e2 →
   n ⊨ ▷ K_rel E1 E2 →
   n ⊨ O_rel (fill E1 e1) (fill E2 e2).
 Proof.
-  intros He Hc1 Hc2 HE.
-  unfold R_rel, R_rel_pre in He.
-  iapply He.
-  - iintro. exact Hc1.
-  - iintro. exact Hc2.
-  - exact HE.
+  intros He HE.
+  apply R_rel_elim in He.
+  iapply He. exact HE.
 Qed.
 
 Lemma E_rel_intro (e1 e2 : expr) n :
-  closed ∅ e1 →
-  closed ∅ e2 →
   (n ⊨ ∀ᵢ E1 E2, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)) ->
   n ⊨ E_rel e1 e2.
 Proof.
-  intros H_closed1 H_closed2 HE.
+  intros HE.
   unfold E_rel.
-  isplit; [| isplit].
-  - apply I_prop_intro. exact H_closed1.
-  - apply I_prop_intro. exact H_closed2.
-  - exact HE.
+  exact HE.
 Qed.
 
 Lemma E_rel_elim (e1 e2 : expr) n :
   n ⊨ E_rel e1 e2 →
-  closed ∅ e1 ∧
-  closed ∅ e2 ∧
   (n ⊨ ∀ᵢ E1 E2, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)).
 Proof.
   intros He.
   unfold E_rel in He.
-  idestruct He as H_closed1 He. idestruct H_closed1.
-  idestruct He as H_closed2 He. idestruct H_closed2.
-  split; [| split]; assumption.
+  assumption.
 Qed.
 
 (** Bind lemma *)
@@ -651,7 +607,7 @@ Lemma E_rel_elimO e1 e2 E1 E2 n :
   n ⊨ O_rel (fill E1 e1) (fill E2 e2).
 Proof.
   intros He HE.
-  apply E_rel_elim in He as (_ & _ & He).
+  apply E_rel_elim in He.
   iapply He. exact HE.
 Qed.
 
@@ -664,17 +620,10 @@ Proof.
   destruct (V_rel_elim _ _ _ Hv) as (Hv1_closed & Hv2_closed & Hv').
   destruct (V_rel_elim _ _ _ Hu) as (Hu1_closed & Hu2_closed & _).
   apply E_rel_intro.
-  { unfold closed. simpl. rewrite -> andb_True. auto. }
-  { unfold closed. simpl. rewrite -> andb_True. auto. }
   iintros E1 E2 HE. simpl.
-  destruct (K_rel_elim _ _ _ HE) as (HE1_closed & HE2_closed & _).
-  apply R_rel_elim.
+  apply R_rel_elimO.
   - iapply Hv'.
-    + iintro. assumption.
-    + iintro. assumption.
-    + later_shift. exact Hu.
-  - exact HE1_closed.
-  - exact HE2_closed.
+    later_shift. exact Hu.
   - later_shift. exact HE.
 Qed.
 
@@ -714,63 +663,44 @@ Proof.
 Qed.
 
 Lemma E_rel_o_intro Γ e1 e2 n :
-  closed Γ e1 →
-  closed Γ e2 →
   (n ⊨ ∀ᵢ γ1 γ2,
          G_rel Γ γ1 γ2 →ᵢ
          E_rel (subst_map γ1 e1) (subst_map γ2 e2)) →
   n ⊨ E_rel_o Γ e1 e2.
 Proof.
-  intros H_closed1 H_closed2 He.
+  intros He.
   unfold E_rel_o.
-  isplit; [| isplit].
-  - apply I_prop_intro. exact H_closed1.
-  - apply I_prop_intro. exact H_closed2.
-  - exact He.
+  exact He.
 Qed.
 
 Lemma E_rel_o_elim Γ e1 e2 n :
   n ⊨ E_rel_o Γ e1 e2 →
-  closed Γ e1 ∧
-  closed Γ e2 ∧
   (n ⊨ ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ E_rel (subst_map γ1 e1) (subst_map γ2 e2)).
 Proof.
   unfold E_rel_o.
   intros He.
-  idestruct He as H_closed1 He. idestruct H_closed1.
-  idestruct He as H_closed2 He. idestruct H_closed2.
   auto.
 Qed.
 
 Lemma V_rel_o_intro Γ (v1 v2 : val) n :
-  closed Γ v1 →
-  closed Γ v2 →
   (n ⊨ ∀ᵢ γ1 γ2,
          G_rel Γ γ1 γ2 →ᵢ
          V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2)) →
   n ⊨ V_rel_o Γ v1 v2.
 Proof.
-  intros H_closed1 H_closed2 Hv.
+  intros Hv.
   unfold V_rel_o.
-  isplit; [| isplit].
-  - apply I_prop_intro. exact H_closed1.
-  - apply I_prop_intro. exact H_closed2.
-  - exact Hv.
+  exact Hv.
 Qed.
 
 Lemma V_rel_o_elim Γ (v1 v2 : val) n :
   n ⊨ V_rel_o Γ v1 v2 →
-  closed Γ v1 ∧
-  closed Γ v2 ∧
   (n ⊨ ∀ᵢ γ1 γ2,
          G_rel Γ γ1 γ2 →ᵢ
          V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2)).
 Proof.
   unfold V_rel_o.
-  intros Hv.
-  idestruct Hv as H_closed1 Hv. idestruct H_closed1.
-  idestruct Hv as H_closed2 Hv. idestruct H_closed2.
-  auto.
+  intros Hv. exact Hv.
 Qed.
 
 (** compatibility lemma *)
@@ -781,17 +711,12 @@ Lemma compat_val (Γ : scope) (v1 v2 : val) n :
   n ⊨ E_rel_o Γ v1 v2.
 Proof.
   intros Hv.
-  apply V_rel_o_elim in Hv as (H_closed1 & H_closed2 & Hv).
+  apply V_rel_o_elim in Hv.
   apply E_rel_o_intro.
-  { exact H_closed1. }
-  { exact H_closed2. }
-  clear H_closed1 H_closed2.
   iintros γ1 γ2 Hγ.
   ispecialize Hv γ1. ispecialize Hv γ2. ispec Hv Hγ.
   apply V_rel_elim in Hv as (H_closed1 & H_closed2 & Hv).
   apply E_rel_intro.
-  { exact H_closed1. }
-  { exact H_closed2. }
   iintros E1 E2 HE. simpl.
   apply (K_rel_elimO E1 E2 _ _ _ HE).
   apply V_rel_intro.
@@ -830,24 +755,18 @@ Lemma compat_app (Γ:scope) (e1 e2 e1' e2' : expr) n :
   n ⊨ E_rel_o Γ (app e1 e1') (app e2 e2').
 Proof.
   intros He He'.
-  apply E_rel_o_elim in He as (Hc1 & Hc2 & He).
-  (* From He, we have closed-ness of e1, closed-ness of e2 and
-     contextual equivalence of e1 and e2, in related context *)
-  apply E_rel_o_elim in He' as (Hc1' & Hc2' & He').
+  apply E_rel_o_elim in He.
+  (* From He, we have contextual equivalence of e1 and e2,
+     in related context *)
+  apply E_rel_o_elim in He'.
   apply E_rel_o_intro.
-  { rewrite closed_app. auto. }
-  { rewrite closed_app. auto. }
-  clear Hc1 Hc2 Hc1' Hc2'.
   iintros γ1 γ2 Hγ. simpl.
   ispecialize He γ1. ispecialize He γ2. ispec He Hγ.
   ispecialize He' γ1. ispecialize He' γ2. ispec He' Hγ.
-  apply E_rel_elim in He as (Hc1 & Hc2 & He).
-  apply E_rel_elim in He' as (Hc1' & Hc2' & He').
+  apply E_rel_elim in He.
+  apply E_rel_elim in He'.
   apply E_rel_intro.
-  { rewrite closed_app. auto. }
-  { rewrite closed_app. auto. }
   iintros E1 E2 HE.
-  destruct (K_rel_elim _ _ _ HE) as (HEc1 & HEc2 & _).
   (* e1/e2 are evaluated first. We "zap" then down using He.
      We consider the contexts surround e1 and e2, and we are left
      with showing that the surrounding contexts are related *)
@@ -859,17 +778,12 @@ Proof.
      e2 evaluated to two related values v1 and v2, respectively; and then
      we prove that the two contexts are related *)
   apply K_rel_intro.
-  { by apply closed_ectx_app1. }
-  { by apply closed_ectx_app1. }
   iintros v1 v2 Hv. simpl.
-  destruct (V_rel_elim _ _ _ Hv) as (Hvc1 & Hvc2 & _).
   (* e1'/e2' are evaluated. We "zap" then down using He' *)
   ispecialize He' (ectx_app2 v1 E1).
   ispecialize He' (ectx_app2 v2 E2).
   iapply He'.
   apply K_rel_intro.
-  { by apply closed_ectx_app2. }
-  { by apply closed_ectx_app2. }
   iintros v1' v2' Hv'. simpl.
   (* Now, we "zap" (app v1 v1') and (app v2 v2') down using E_rel_elimO *)
   apply E_rel_elimO.
@@ -924,18 +838,15 @@ Proof.
 Qed.
 
 Lemma compat_var Γ (x : string) n :
-  x ∈ Γ →
+  closed Γ (var x) →
   n ⊨ E_rel_o Γ (var x) (var x).
 Proof.
   intros Hdom.
+  rewrite closed_var in Hdom.
   apply E_rel_o_intro.
-  { by apply closed_var. }
-  { by apply closed_var. }
   iintros γ1 γ2 Hγ.
   apply G_rel_elim in Hγ as (Hc1 & Hc2 & Hγ).
   apply E_rel_intro.
-  { apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc1). }
-  { apply (subst_is_closed_closed_subst_map _ _ _ Hdom Hc2). }
   iintros E1 E2 HE. simpl.
   destruct (γ1 !! x) eqn:Hx1.
   2: { destruct (subset_is_closed_absurd _ _ _ Hdom Hc1 Hx1). }
@@ -946,11 +857,6 @@ Proof.
   ispec Hγ x v v0 Hx1 Hx2.
   by apply K_rel_elimO.
 Qed.
-
-Lemma G_sub_closed Γ γ1 γ2 n :
-  n ⊨ G_rel Γ γ1 γ2 →
-  subst_is_closed Γ ∅ γ1 ∧ subst_is_closed Γ ∅ γ2.
-Proof. intros Hγ. apply G_rel_elim in Hγ. easy. Qed.
 
 Lemma subst_val_closed v X x es :
   closed X (of_val v) → x ∉ X → subst_val x es v = v
@@ -1055,50 +961,39 @@ Proof.
 Qed.
 
 Lemma L_rel_red_l (e1 e1' e2 : expr) n :
-  closed ∅ e1 →
-  closed ∅ e2 →
   contextual_step e1 e1' →
   n ⊨ ▷ L_rel e1' e2 →
   n ⊨ L_rel e1 e2.
 Proof.
-  intros Hc1 Hc2 Hred HL.
+  intros Hred HL.
   unfold L_rel. unfold L_rel_pre.
   repeat isplit.
-  - iintro. assumption.
-  - iintro. assumption.
   - iintro.
     intros v1 H_eq.
     rewrite -> H_eq in Hred.
     exfalso. by eapply not_contextual_step_val.
   - iintros e1'' Hred'.
     idestruct Hred'.
-    replace e1'' with e1' by admit. (* deterministic *)
+    rewrite -> (contextual_step_is_deterministic _ _ _ Hred' Hred).
     later_shift. apply L_rel_roll.
     exact HL.
-Admitted.
+Qed.
 
 Lemma L_rel_red_r (e2 e2' : expr) n :
-  (*closed [] e1 →*)
-  closed ∅ e2 →
   contextual_step e2 e2' →
   n ⊨ (∀ᵢ e1, L_rel e1 e2' →ᵢ L_rel e1 e2).
 Proof.
-  intros Hc2 Hred.
+  intros Hred.
   loeb_induction.
   iintros e1 HL.
   unfold L_rel in HL.
   unfold L_rel_pre in HL.
-  idestruct HL as Hc1 HL.
-  idestruct HL as Hc2' HL.
   idestruct HL as HL1 HL2.
   repeat isplit.
-  - assumption.
-  - iintro. assumption.
   - iintro. intros v1 H_eq.
     idestruct HL1.
     specialize (HL1 v1 H_eq).
     unfold terminates in *.
-    Print bigstep.
     unfold bigstep in *.
     destruct HL1 as (v & e3 & Hrtc & H_terminates).
     exists v, e3. split.
@@ -1113,77 +1008,59 @@ Proof.
 Qed.
 
 Lemma O_rel_red_l (e1 e1' e2 : expr) n :
-  closed ∅ e1 →
-  closed ∅ e2 →
   contextual_step e1 e1' →
   n ⊨ O_rel e1' e2 →
   n ⊨ O_rel e1 e2.
 Proof.
-  intros Hc1 Hc2 Hred HO.
+  intros Hred HO.
   unfold O_rel in *.
   idestruct HO as HL1 HL2.
   isplit.
   - eapply L_rel_red_l.
-    + exact Hc1.
-    + exact Hc2.
     + exact Hred.
     + later_shift. exact HL1.
   - iapply L_rel_red_r.
-    + exact Hc1.
     + exact Hred.
     + exact HL2.
 Qed.
 
 Lemma O_rel_red_r (e1 e2 e2' : expr) n :
   (* contextual_step e1 e1' → contextual_step e2 e2' → *)
-  closed ∅ e1 →
-  closed ∅ e2 →
   contextual_step e2 e2' →
   n ⊨ O_rel e1 e2' →
   n ⊨ O_rel e1 e2.
 Proof.
-  intros Hc1 Hc2 Hred HO.
+  intros Hred HO.
   unfold O_rel in *.
   idestruct HO as HL1 HL2.
   isplit.
   - iapply L_rel_red_r.
-    + exact Hc2.
     + exact Hred.
     + exact HL1.
   - iapply L_rel_red_l.
-    + exact Hc2.
-    + exact Hc1.
     + exact Hred.
     + later_shift. exact HL2.
 Qed.
 
 Lemma O_rel_red_both (e1 e1' e2 e2' : expr) n :
-  closed ∅ e1 →
-  closed ∅ e2 →
   contextual_step e1 e1' →
   contextual_step e2 e2' →
   n ⊨ ▷ O_rel e1' e2' →
   n ⊨ O_rel e1 e2.
 Proof.
-  intros Hc1 Hc2 Hred1 Hred2 HO.
+  intros Hred1 Hred2 HO.
   unfold O_rel in *.
   apply I_conj_later_down in HO.
   idestruct HO as HL1 HL2.
   isplit.
   - iapply L_rel_red_r.
-    { exact Hc2. }
     { exact Hred2. }
     iapply L_rel_red_l.
-    { exact Hc1. }
-    { by eapply contextual_step_preserve_closedness. }
     { exact Hred1. }
     { later_shift. exact HL1. }
   - iapply L_rel_red_r.
-    { exact Hc1. }
     { exact Hred1. }
     iapply L_rel_red_l.
-    { exact Hc2. }
-    { by eapply contextual_step_preserve_closedness. }
     { exact Hred2. }
     { later_shift. exact HL2. }
 Qed.
@@ -1196,19 +1073,15 @@ Qed.
    - But not: O_rel_red_l ∧ O_rel_red_r → O_rel_red_both *)
 
 Lemma R_rel_red_both (e1 e1' e2 e2' : expr) n :
-  closed ∅ e1 →
-  closed ∅ e2 →
   contextual_step e1 e1' →
   contextual_step e2 e2' →
   n ⊨ ▷ E_rel e1' e2' →
   n ⊨ R_rel e1 e2.
 Proof.
-  intros Hc1 Hc2 Hred1 Hred2 He.
+  intros Hred1 Hred2 He.
   apply R_rel_intro.
-  iintros E1 E2 HEc1 HEc2 HE. idestruct HEc1. idestruct HEc2.
+  iintros E1 E2 HE.
   eapply O_rel_red_both.
-  { by apply HEc1. } (* need: closed-ness for context *)
-  { by apply HEc2. }
   { by apply contextual_step_comp. }
   { by apply contextual_step_comp. }
   { later_shift. by apply E_rel_elimO. }
@@ -1304,17 +1177,12 @@ Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
   n ⊨ G_rel Γ γ1 γ2 →
   n ⊨ G_rel (Γ ∪ {[x]}) (<[x := v1]> γ1) (<[x := v2]> γ2).
 Proof.
-  intros.
-  unfold G_rel.
-  isplit; [ | isplit ].
-  { iintro.
-    apply V_rel_elim in H as (Hcv1&_).
-    apply G_sub_closed in H0 as [H _].
-    apply (scope_extend1 _ x _ _ Hcv1 H). }
-  { iintro.
-    apply V_rel_elim in H as (_&Hcv2&_).
-    apply G_sub_closed in H0 as [_ H].
-    apply (scope_extend1 _ x _ _ Hcv2 H). }
+  intros Hv Hγ.
+  destruct (V_rel_elim _ _ _ Hv) as (Hvc1 & Hvc2 & Hv').
+  destruct (G_rel_elim _ _ _ _ Hγ) as (Hγc1 & Hγc2 & Hγ').
+  apply G_rel_intro.
+  { by apply scope_extend1. }
+  { by apply scope_extend1. }
 
   iintros x0 v0 v3 H1 H2.
   destruct (decide (x=x0)).
@@ -1324,12 +1192,9 @@ Proof.
     assumption. }
   { rewrite lookup_insert_ne with (m:=γ2) in H2. idestruct H2. 2: { assumption. }
     rewrite lookup_insert_ne with (m:=γ1) in H1. idestruct H1. 2: { assumption. }
-
-    apply V_rel_elim in H as (Hcv1&Hcv2&?).
-    ispec H v1 v2 Hcv1 Hcv2.
-    iapply H0.
-    - iintro. apply H1.
-    - iintro. apply H3. }
+    iapply Hγ'.
+    - iintro. eassumption.
+    - iintro. eassumption. }
 Qed.
 
 (* if e is closed under Y, we can split the variables in Y between X and γ *)
@@ -1436,56 +1301,26 @@ Proof.
         by eapply closed_weaken.
 Qed.
 
+
 Lemma compat_lambda Γ (e1 e2 : expr) n x :
+  closed Γ (vlambda x e1) →
+  closed Γ (vlambda x e2) →
   n ⊨ E_rel_o (Γ ∪ {[x]}) e1 e2 →
   n ⊨ V_rel_o Γ (vlambda x e1) (vlambda x e2).
 Proof.
-  intros He.
-  unfold V_rel_o.
-  isplit; [ | isplit ].
-  { iintro.
-    unfold E_rel_o in He. idestruct He as Hc1 He.
-    idestruct Hc1.
-    rewrite closed_lambda.
-    assumption. }
-  { iintro.
-    unfold E_rel_o in He. idestruct He as _ He. idestruct He as Hc2 He.
-    idestruct Hc2.
-    rewrite closed_lambda.
-    assumption. }
-
+  intros Hc1 Hc2 He.
+  apply E_rel_o_elim in He.
+  apply V_rel_o_intro.
   iintros γ1 γ2 Hγ.
+  destruct (G_rel_elim _ _ _ _ Hγ) as (Hγc1 & Hγc2 & Hγ').
   apply V_rel_intro.
 
-  { apply (subst_map_closed'_3 (vlambda x e1) Γ γ1).
-    { (* this part of the proof is repeated from before *)
-      unfold E_rel_o in He. idestruct He as Hc1 _.
-      idestruct Hc1.
-      rewrite closed_lambda.
-      assumption. }
-    { unfold G_rel in Hγ.
-      idestruct Hγ as Hcg1 Hγ. idestruct Hcg1.
-      assumption. } }
-
-  { apply (subst_map_closed'_3 (vlambda x e2) Γ γ2).
-    { (* more repetition *)
-      unfold E_rel_o in He. idestruct He as _ He. idestruct He as Hc2 _. idestruct Hc2.
-      rewrite closed_lambda.
-      assumption. }
-    { unfold G_rel in Hγ.
-      idestruct Hγ as Hcg1 Hγ. idestruct Hγ as Hcg2 Hγ. idestruct Hcg1. idestruct Hcg2.
-      assumption. } }
+  { by apply (subst_map_closed'_3 (vlambda x e1) Γ γ1). }
+  { by apply (subst_map_closed'_3 (vlambda x e2) Γ γ2). }
 
   (* we now have the arguments *)
-  iintros u1 u2 Hu1 Hu2 Hv.
-  idestruct Hu1.
-  idestruct Hu2.
-  destruct (E_rel_o_elim _ _ _ _ He) as (Hec1 & Hec2 & He').
-  destruct (G_rel_elim _ _ _ _ Hγ) as (Hγc1 & Hγc2 & Hγ').
-
+  iintros u1 u2 Hu.
   eapply R_rel_red_both.
-  { simpl. rewrite closed_app. by eauto using lambda_closed. }
-  { simpl. rewrite closed_app. by eauto using lambda_closed. }
   { simpl. eapply (Ectx_step _ _ ectx_hole _ _ eq_refl eq_refl).
     simpl. constructor.
     simpl. constructor.
@@ -1498,12 +1333,12 @@ Proof.
 
     rewrite subst_subst_map with (Γ:=Γ).
     (* 2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [_ ?]. assumption. } *)
-    2: { have: G_sub_closed Hγ. done. }
+    2: { have: G_rel_elim Hγ. done. }
     rewrite subst_subst_map with (Γ:=Γ).
-    2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [_ ?]. assumption. }
+    2: { have: G_rel_elim Hγ. done. }
     iapply He.
     (* apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). *)
-    applyy sem_context_rel_insert Hv Hγ. }
+    applyy sem_context_rel_insert Hu Hγ. }
 Qed.
 
 (* Print Assumptions compat_lambda. *)
@@ -1518,12 +1353,17 @@ Proof.
   { intros H_closed.
     induction e.
     - apply compat_val. apply fundamental_property_v. assumption.
-    - apply compat_var. rewrite closed_var. assumption.
-    - rewrite closed_app in H_closed. destruct H_closed.
+    - apply compat_var. assumption.
+    - rewrite -> closed_app in H_closed.
+      destruct H_closed as [H_closed1 H_closed2].
       apply compat_app; auto. }
   { intros H_closed.
     induction v.
-    - apply compat_lambda. apply fundamental_property_e. rewrite <- closed_lambda. assumption. }
+    - apply compat_lambda.
+      + exact H_closed.
+      + exact H_closed.
+      + rewrite -> closed_lambda in H_closed.
+        apply fundamental_property_e. assumption. }
 Qed.
 
 (** Inside-out general contexts. *)
