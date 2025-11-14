@@ -96,32 +96,50 @@ Inductive base_step : expr → expr → Prop :=
      base_step (Plus e1 e2) (eint n3) *)
 .
 
-(* inside-out contexts *)
+(* inside-out contexts, similar to a "reversed" list *)
 Inductive ectx :=
   | ectx_hole : ectx
   | ectx_app1 : ectx → expr → ectx
   | ectx_app2 : val → ectx → ectx.
 
+(* Imagine the list is from left-to-right, with the following structure:
+   ectx_hole ... ectx_app1 e ... ectx_app1 e ... ectx_app2 v.
+
+   The actual structure is zig-zag, but let's linearlize it so that we
+   can implement and reason about this data-structure just like a list *)
+
+(* similar to foldr of a "reversed" list (foldl of a normal list) *)
+(* ectx_hole -----> *)
 Fixpoint plug (E : ectx) (e : expr) : expr :=
   match E with
   | ectx_hole => e
-  | ectx_app1 E1 e1 => plug E1 (app e e1)
-  | ectx_app2 v E1 => plug E1 (app v e)
+  | ectx_app1 E' e' => plug E' (app e e')
+  | ectx_app2 v E' => plug E' (app v e)
   end.
 
+(* similar to "prepend" of a "reversed" list ("append" of a normal list) *)
 Fixpoint ectx_comp (E1 E2 : ectx) : ectx :=
-  match E1 with
-  | ectx_hole => E2
-  | ectx_app1 E1 e => ectx_app1 (ectx_comp E1 E2) e
-  | ectx_app2 v E1 => ectx_app2 v (ectx_comp E1 E2)
+  match E2 with
+  | ectx_hole => E1
+  | ectx_app1 E2' e => ectx_app1 (ectx_comp E1 E2') e
+  | ectx_app2 v E2' => ectx_app2 v (ectx_comp E1 E2')
   end.
 
 Notation fill := plug.
 
-Lemma ectx_comp_correct :
-  ∀ E1 E2 e, plug E1 (plug E2 e) = plug (ectx_comp E2 E1) e.
+Lemma ectx_comp_assoc E1 E2 E3 :
+  ectx_comp E1 (ectx_comp E2 E3) = ectx_comp (ectx_comp E1 E2) E3.
 Proof.
-  intros E1 E2.
+  induction E3; simpl.
+  - reflexivity.
+  - rewrite -> IHE3. reflexivity.
+  - rewrite -> IHE3. reflexivity.
+Qed.
+
+Lemma ectx_comp_correct E1 E2 e :
+  plug (ectx_comp E1 E2) e = plug E1 (plug E2 e).
+Proof.
+  revert e.
   induction E2; intros e'.
   - simpl in *. reflexivity.
   - simpl in *. rewrite (IHE2 (app e' e)). reflexivity.
@@ -129,19 +147,115 @@ Proof.
 Qed.
 
 (** Outside-in evaluation contexts *)
-(*
+(* similar to a normal list *)
 Inductive rctx :=
   | rctx_hole : rctx
   | rctx_app1 : rctx → expr → rctx
   | rctx_app2 : val → rctx → rctx.
 
+(* similar to foldr of a normal list *)
 Fixpoint rplug (E : rctx) (e : expr) : expr :=
   match E with
   | rctx_hole => e
-  | rctx_app1 E1 e1 => app (rplug E1 e) e1
-  | rctx_app2 v E1 => app v (rplug E1 e)
+  | rctx_app1 E' e1 => app (rplug E' e) e1
+  | rctx_app2 v E' => app v (rplug E' e)
   end.
-*)
+
+Fixpoint rctx_comp (E1 E2 : rctx) : rctx :=
+  match E1 with
+  | rctx_hole => E2
+  | rctx_app1 E1' e => rctx_app1 (rctx_comp E1' E2) e
+  | rctx_app2 v E1' => rctx_app2 v (rctx_comp E1' E2)
+  end.
+
+Lemma rctx_comp_assoc (E1 E2 E3 : rctx) :
+  rctx_comp (rctx_comp E1 E2) E3 = rctx_comp E1 (rctx_comp E2 E3).
+Proof.
+  induction E1.
+  - simpl. reflexivity.
+  - simpl. rewrite -> IHE1. reflexivity.
+  - simpl. rewrite -> IHE1. reflexivity.
+Qed.
+
+(* similar to reverse_prepend : reverse E, and then prepend F to it *)
+Fixpoint ectx_comp_rctx1 (F : ectx) (E : rctx) : ectx :=
+  match E with
+  | rctx_hole => F
+  | rctx_app1 E e => ectx_comp_rctx1 (ectx_app1 F e) E
+  | rctx_app2 v E => ectx_comp_rctx1 (ectx_app2 v F) E
+  end.
+
+(* similar to reverse *)
+Definition rctx_to_ectx : rctx -> ectx := ectx_comp_rctx1 ectx_hole.
+
+Lemma ectx_comp_rctx1_correct (F : ectx) (E : rctx) (e : expr) :
+  plug (ectx_comp_rctx1 F E) e = plug F (rplug E e).
+Proof.
+  revert F.
+  induction E; intros F.
+  - simpl. reflexivity.
+  - simpl. rewrite -> (IHE (ectx_app1 F e0)). simpl. reflexivity.
+  - simpl. rewrite -> (IHE (ectx_app2 v F)). simpl. reflexivity.
+Qed.
+
+(* similar to reverse_append : reverse E, and then append to F *)
+(* E1 ... En | F1 ... Fn ~> En ... E1 F1 ... Fn *)
+Fixpoint ectx_comp_rctx2 (E : ectx) (F : rctx) : rctx :=
+  match E with
+  | ectx_hole => F
+  | ectx_app1 E e => ectx_comp_rctx2 E (rctx_app1 F e)
+  | ectx_app2 v E => ectx_comp_rctx2 E (rctx_app2 v F)
+  end.
+
+Definition ectx_to_rctx (E : ectx) : rctx :=
+  ectx_comp_rctx2 E rctx_hole.
+
+Lemma ectx_comp_rctx2_correct (E : ectx) (F : rctx) (e : expr) :
+  rplug (ectx_comp_rctx2 E F) e = plug E (rplug F e).
+Proof.
+  revert F.
+  induction E; intros F.
+  - simpl. reflexivity.
+  - simpl. rewrite -> (IHE (rctx_app1 F e0)). simpl. reflexivity.
+  - simpl. rewrite -> (IHE (rctx_app2 v F)). simpl. reflexivity.
+Qed.
+
+Lemma ectx_comp_rctx1_reset (F : ectx) (E : rctx) :
+  ectx_comp_rctx1 F E = ectx_comp F (ectx_comp_rctx1 ectx_hole E).
+Proof.
+  revert F.
+  induction E; intros F; simpl.
+  - reflexivity.
+  - rewrite -> (IHE (ectx_app1 F e)).
+    rewrite -> (IHE (ectx_app1 ectx_hole e)).
+    rewrite -> ectx_comp_assoc. simpl.
+    reflexivity.
+  - rewrite -> (IHE (ectx_app2 v F)).
+    rewrite -> (IHE (ectx_app2 v ectx_hole)).
+    rewrite -> ectx_comp_assoc. simpl.
+    reflexivity.
+Qed.
+
+Lemma ectx_comp_rctx2_reset (E : ectx) (F : rctx) :
+  ectx_comp_rctx2 E F = rctx_comp (ectx_comp_rctx2 E rctx_hole) F.
+Proof.
+  revert F.
+  induction E; intros F; simpl.
+  - reflexivity.
+  - rewrite -> (IHE (rctx_app1 F e)).
+    rewrite -> (IHE (rctx_app1 rctx_hole e)).
+    rewrite -> rctx_comp_assoc. simpl.
+    reflexivity.
+  - rewrite -> (IHE (rctx_app2 v F)).
+    rewrite -> (IHE (rctx_app2 v rctx_hole)).
+    rewrite -> rctx_comp_assoc. simpl.
+    reflexivity.
+Qed.
+
+Lemma ectx_rctx_bijection1 E :
+  rctx_to_ectx (ectx_to_rctx E) = E.
+Proof.
+Admitted.
 
 Inductive contextual_step (e1 : expr) (e2 : expr) : Prop :=
   Ectx_step K e1' e2' :
@@ -169,8 +283,8 @@ Lemma contextual_step_comp :
 Proof.
   intros K e1 e2 H_step.
   inversion H_step. subst. econstructor.
-  - by apply ectx_comp_correct.
-  - by apply ectx_comp_correct.
+  - rewrite ectx_comp_correct. reflexivity.
+  - rewrite ectx_comp_correct. reflexivity.
   - assumption.
 Qed.
 
@@ -892,16 +1006,29 @@ Proof.
       - assumption. } }
 Qed.
 
-Lemma not_base_step_val : ∀ (v : val) e, ¬ base_step v e.
-Proof. intros v e Hstep. inversion Hstep. Qed.
+Lemma not_base_step_val (v : val) e : ¬ base_step v e.
+Proof. intros Hstep. inversion Hstep. Qed.
 
-Lemma val_eq_fill_inv : ∀ (v : val) K e, ret v = fill K e → e = v ∧ K = ectx_hole.
+Lemma val_eq_fill_inv (v : val) K e :
+  ret v = fill K e →
+  e = v ∧ K = ectx_hole.
 Proof.
-  intros v K.
-  induction K; intros e' H_eq. simpl in *.
+  revert e.
+  induction K; intros e' H_eq.
   - auto.
   - specialize (IHK _ H_eq) as (H_absurd & _). discriminate.
   - specialize (IHK _ H_eq) as (H_absurd & _). discriminate.
+Qed.
+
+Lemma val_eq_rplug_inv (v : val) K e :
+  ret v = rplug K e →
+  e = v ∧ K = rctx_hole.
+Proof.
+  intros H_eq.
+  destruct K.
+  - simpl in *. auto.
+  - simpl in *. discriminate.
+  - simpl in *. discriminate.
 Qed.
 
 Lemma not_contextual_step_val : ∀ (v : val) e, ¬ contextual_step v e.
@@ -924,25 +1051,69 @@ Proof.
   congruence.
 Qed.
 
+Inductive potential_redex : expr -> Prop :=
+| pr_app : ∀ (v1 v2 : val), potential_redex (app v1 v2).
+
+Lemma potential_redex_not_val (v : val) : ¬ potential_redex v.
+Proof. intros H_absurd. inversion H_absurd. Qed.
+
+Lemma unique_partial_decomposition E1 E2 e1 e2 :
+  potential_redex e1 →
+  potential_redex e2 →
+  rplug E1 e1 = rplug E2 e2 →
+  E1 = E2 ∧ e1 = e2.
+Proof.
+  intros He1 He2.
+  revert E2.
+  induction E1; intros E2 H_eq.
+  - destruct E2.
+    + simpl in *. auto.
+    + simpl in *. subst. inversion He1.
+      apply val_eq_rplug_inv in H0 as []. subst.
+      exfalso. by eapply potential_redex_not_val.
+    + simpl in *. subst. inversion He1.
+      apply val_eq_rplug_inv in H1 as []. subst.
+      exfalso. by eapply potential_redex_not_val.
+  - destruct E2.
+    + simpl in *. subst. inversion He2.
+      apply val_eq_rplug_inv in H0 as []. subst.
+      exfalso. by eapply potential_redex_not_val.
+    + simpl in *. injection H_eq as H_eq1 H_eq2.
+      specialize (IHE1 _ H_eq1) as []. subst. auto.
+    + simpl in *. injection H_eq as H_eq1 H_eq2.
+      symmetry in H_eq1.
+      apply val_eq_rplug_inv in H_eq1 as []. subst.
+      exfalso. by eapply potential_redex_not_val.
+  - destruct E2.
+    + simpl in *. subst. inversion He2.
+      apply val_eq_rplug_inv in H1 as []. subst.
+      exfalso. by eapply potential_redex_not_val.
+    + simpl in *. injection H_eq as H_eq1 H_eq2.
+      apply val_eq_rplug_inv in H_eq1 as []. subst.
+      exfalso. by eapply potential_redex_not_val.
+    + simpl in *. injection H_eq as H_eq1 H_eq2.
+      specialize (IHE1 _ H_eq2) as []. subst. auto.
+Qed.
+
 Lemma unique_decomposition :
-  ∀ E1 E2 e1 e2 e1' e2',
-    base_step e1 e1' →
-    base_step e2 e2' →
+  ∀ E1 E2 e1 e2,
+    potential_redex e1 →
+    potential_redex e2 →
     fill E1 e1 = fill E2 e2 →
     E1 = E2 ∧ e1 = e2.
 Proof.
-  intros E1 E2 e1 e2 e1' e2' Hstep1 Hstep2.
-  revert E2.
-  induction E1; intros E2 Heq; simpl in *.
-  - destruct E2.
-    + simpl in *. auto.
-    + simpl in *. (* e1 is not a potential redex *) admit.
-    + simpl in *. admit.
-  - destruct E2.
-    + simpl in *. admit.
-    + simpl in *. admit.
-    + simpl in *. admit.
-Admitted. (* hard *)
+  intros E1 E2 e1 e2 He1 He2.
+Admitted.
+
+Lemma base_step_potential_redex e e' :
+  base_step e e' -> potential_redex e.
+Proof.
+  inversion 1. subst.
+  destruct e2.
+  + constructor.
+  + simpl in *. contradiction.
+  + simpl in *. contradiction.
+Qed.
 
 Lemma contextual_step_is_deterministic :
   ∀ e1 e2 e3,
@@ -953,7 +1124,9 @@ Proof.
   intros e1 e2 e3 Hstep2 Hstep3.
   inversion Hstep2.
   inversion Hstep3.
-  destruct (unique_decomposition K K0 e1' e1'0 e2' e2'0 H1 H4) as [HK_eq He_eq].
+  assert (Hpr1 := base_step_potential_redex _ _ H1).
+  assert (Hpr2 := base_step_potential_redex _ _ H4).
+  destruct (unique_decomposition K K0 e1' e1'0 Hpr1 Hpr2) as [HK_eq He_eq].
   { congruence. }
   rewrite -> He_eq in H1.
   assert (He_eq' := base_step_is_deterministic e1'0 e2' e2'0 H1 H4).
