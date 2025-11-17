@@ -1554,11 +1554,22 @@ Fixpoint cplug (C : ctx) : expr → expr (* closed *) :=
   | ctx_app2 e1 C => λ e, cplug C (app e1 e)
   end.
 
-(* aka contextual scoping C : Γ ~> Γ', a special case of contextual typing *)
-Definition closed_ctx (Γ Γ' : scope) (C:ctx) : Prop :=
+(* aka contextual scoping C : Γ ~> Γ', a special case of contextual typing.
+  defined inductively because we need to invert it. soundness is proved below. *)
+Inductive closed_ctx : scope → scope → ctx → Prop :=
+  | cc_hole Γ :
+    closed_ctx Γ Γ ctx_hole
+  .
+
+Definition closed_ctx_sem (Γ Γ' : scope) (C:ctx) : Prop :=
   forall e, closed Γ e → closed Γ' (cplug C e).
 
-(* TODO some lemmas closed_ctx lemmas *)
+Lemma closed_ctx_sound Γ Γ' e :
+  closed_ctx Γ Γ' e → closed_ctx_sem Γ Γ' e.
+Proof.
+  intros H. induction H; unfold closed_ctx_sem.
+  - simpl. done.
+Qed.
 
 (** Observational approximation for complete programs *)
 Definition obs_approx (e1 e2 : expr) : Prop :=
@@ -1691,21 +1702,25 @@ Proof.
     intro; iapply Hobs.
 Qed.
 
-Lemma precongruence (e1 e2 : expr) Γ C n :
-  (* TODO something about free vars in context? *)
-  n ⊨ E_rel_o Γ e1 e2 → n ⊨ E_rel_o Γ (cplug C e1) (cplug C e2).
+Lemma precongruence (e1 e2 : expr) Γ Γ' C n :
+  closed_ctx Γ Γ' C →
+  n ⊨ E_rel_o Γ e1 e2 →
+  n ⊨ E_rel_o Γ' (cplug C e1) (cplug C e2).
 Proof.
-  (* revert e1 e2 n; induction C; intros e1 e2 n He; simpl; try apply IHC.
-  - assumption.
+  revert e1 e2 n; induction C; intros e1 e2 n He; simpl; try apply IHC.
+  - inversion He. subst. done.
   (* Search (_ → E_rel _ _). *)
-  - apply compat_val, compat_lambda.
+  -
+  (* apply compat_val, compat_lambda. *)
     admit.
   (* assumption. *)
-  - apply compat_app; [ assumption | ]; apply fundamental_property_e.
+  -
+  (* apply compat_app; [ assumption | ]; apply fundamental_property_e. *)
     (* arguments need to be closed *)
     admit.
-  - apply compat_app; [ | assumption ]; apply fundamental_property_e.
-    admit. *)
+  -
+  (* apply compat_app; [ | assumption ]; apply fundamental_property_e. *)
+    admit.
 Admitted.
 
 Theorem E_rel_o_soundness Γ (e1 e2 : expr) :
