@@ -252,11 +252,52 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma ectx_rctx_bijection1_aux (E : ectx) (R : rctx) :
+  ectx_comp_rctx1 ectx_hole (ectx_comp_rctx2 E R) = ectx_comp_rctx1 E R.
+Proof.
+  revert R.
+  induction E; intros R.
+  - simpl. reflexivity.
+  - simpl. rewrite -> (IHE (rctx_app1 R e)). simpl. reflexivity.
+  - simpl. rewrite -> (IHE (rctx_app2 v R)). simpl. reflexivity.
+Qed.
+
 Lemma ectx_rctx_bijection1 E :
   rctx_to_ectx (ectx_to_rctx E) = E.
 Proof.
-Admitted.
+  unfold rctx_to_ectx, ectx_to_rctx.
+  rewrite -> (ectx_rctx_bijection1_aux E rctx_hole).
+  simpl. reflexivity.
+Qed.
 
+Lemma ectx_rctx_bijection2_aux (E : ectx) (R : rctx) :
+  ectx_comp_rctx2 (ectx_comp_rctx1 E R) rctx_hole = ectx_comp_rctx2 E R.
+Proof.
+  revert E.
+  induction R; intros E.
+  - simpl. reflexivity.
+  - simpl. rewrite -> (IHR (ectx_app1 E e)). simpl. reflexivity.
+  - simpl. rewrite -> (IHR (ectx_app2 v E)). simpl. reflexivity.
+Qed.
+
+Lemma ectx_rctx_bijection2 R :
+  ectx_to_rctx (rctx_to_ectx R) = R.
+Proof.
+  unfold ectx_to_rctx, rctx_to_ectx.
+  rewrite -> (ectx_rctx_bijection2_aux ectx_hole R).
+  simpl. reflexivity.
+Qed.
+
+Lemma plug_rplug_equiv E e :
+  plug E e = rplug (ectx_to_rctx E) e.
+Proof.
+  unfold ectx_to_rctx.
+  rewrite -> (ectx_comp_rctx2_correct E rctx_hole e).
+  simpl. reflexivity.
+Qed.
+
+
+(** contextual step *)
 Inductive contextual_step (e1 : expr) (e2 : expr) : Prop :=
   Ectx_step K e1' e2' :
     e1 = fill K e1' →
@@ -1102,8 +1143,16 @@ Lemma unique_decomposition :
     fill E1 e1 = fill E2 e2 →
     E1 = E2 ∧ e1 = e2.
 Proof.
-  intros E1 E2 e1 e2 He1 He2.
-Admitted.
+  intros E1 E2 e1 e2 He1 He2 Heq.
+  rewrite -> plug_rplug_equiv in Heq.
+  rewrite -> plug_rplug_equiv in Heq.
+  destruct (unique_partial_decomposition _ _ _ _ He1 He2 Heq) as [Heq1 Heq2].
+  split.
+  - rewrite <- (ectx_rctx_bijection1 E1).
+    rewrite <- (ectx_rctx_bijection1 E2).
+    rewrite -> Heq1. reflexivity.
+  - exact Heq2.
+Qed.
 
 Lemma base_step_potential_redex e e' :
   base_step e e' -> potential_redex e.
