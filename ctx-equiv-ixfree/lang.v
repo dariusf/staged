@@ -1571,9 +1571,21 @@ Notation cplug := crplug.
 Inductive closed_ctx : scope → scope → ctx → Prop :=
   | cc_hole Γ :
     closed_ctx Γ Γ ctx_hole
+
   | cc_lambda x Γ Γ' C :
     closed_ctx Γ (Γ' ∪ {[x]}) C →
     closed_ctx Γ Γ' (ctx_lam x C)
+
+  | cc_app1 Γ Γ' C e :
+    closed_ctx Γ Γ' C →
+    closed Γ' e →
+    closed_ctx Γ Γ' (ctx_app1 C e)
+
+  | cc_app2 Γ Γ' C v :
+    closed_ctx Γ Γ' C →
+    closed Γ' (ret v) →
+    closed_ctx Γ Γ' (ctx_app2 v C)
+
   .
 
 Definition closed_ctx_sem (Γ Γ' : scope) (C:ctx) : Prop :=
@@ -1586,15 +1598,22 @@ Proof.
   - simpl. done.
   - intros e Hc.
     simpl.
-    (* is x in Γ? *)
-    unfold closed_ctx_sem in IHclosed_ctx. specialize (IHclosed_ctx e Hc).
-
-    eapply closed_weaken in IHclosed_ctx.
-
-
-
-(* Qed. *)
-Admitted.
+    specialize (IHclosed_ctx e Hc).
+    unfold closed. simpl.
+    apply IHclosed_ctx.
+  - intros e2 Hc.
+    specialize (IHclosed_ctx _ Hc).
+    simpl.
+    unfold closed. simpl.
+    unfold closed in IHclosed_ctx. simpl in IHclosed_ctx.
+    auto.
+  - intros e1 Hc.
+    specialize (IHclosed_ctx _ Hc).
+    simpl.
+    unfold closed. simpl.
+    unfold closed in IHclosed_ctx. simpl in IHclosed_ctx.
+    auto.
+Qed.
 
 (** Observational approximation for complete programs *)
 Definition obs_approx (e1 e2 : expr) : Prop :=
@@ -1727,33 +1746,6 @@ Proof.
     intro; iapply Hobs.
 Qed.
 
-(* Lemma cplug_lambda C x Γ e1 e2 n :
-  closed Γ (vlambda x e1) →
-  closed Γ (vlambda x e2) →
-  n ⊨ E_rel_o (Γ ∪ {[x]}) (cplug C e1) (cplug C e2) →
-  n ⊨ E_rel_o Γ (cplug C (vlambda x e1)) (cplug C (vlambda x e2)).
-Proof.
-  revert x Γ e1 e2 n.
-  (* intros. *)
-  (* apply E_rel_elim in H. *)
-  (* have: E_rel_elim. *)
-  induction C; intros.
-  - simpl in *.
-    apply compat_val.
-    apply compat_lambda.
-    assumption.
-    assumption.
-    assumption.
-  -
-    simpl in *.
-    apply IHC.
-    rewrite closed_lambda. eapply closed_weaken. exact H. set_solver.
-    rewrite closed_lambda. eapply closed_weaken. exact H0. set_solver.
-    admit.
-  -
-  admit.
-Admitted. *)
-
 Lemma precongruence (e1 e2 : expr) Γ Γ' C n :
   closed Γ e1 →
   closed Γ e2 →
@@ -1763,23 +1755,24 @@ Lemma precongruence (e1 e2 : expr) Γ Γ' C n :
 Proof.
   revert Γ Γ' e1 e2 n.
   induction C; intros Γ Γ' e1 e2 n Hc1 Hc2 Hcc HE; simpl.
-  - inversion Hcc. subst. done.
-  - inversion Hcc. subst.
+  { inversion Hcc. subst. done. }
+  { inversion Hcc. subst.
     apply compat_val.
     apply compat_lambda.
     { have Hc: closed_ctx_sound Hcc.
       apply (Hc _ Hc1). }
     { have Hc: closed_ctx_sound Hcc.
       apply (Hc _ Hc2). }
-    applyy IHC Hc1 Hc2 H2 HE.
-  -
-  (* apply compat_app; [ assumption | ]; apply fundamental_property_e. *)
-    (* arguments need to be closed *)
-    admit.
-  -
-  (* apply compat_app; [ | assumption ]; apply fundamental_property_e. *)
-    admit.
-Admitted.
+    applyy IHC Hc1 Hc2 H2 HE. }
+  { inversion Hcc. subst.
+    apply compat_app.
+    - applyy IHC Hc1 Hc2 H3 HE.
+    - applyy fundamental_property_e H4. }
+  { inversion Hcc. subst.
+    apply compat_app.
+    - applyy fundamental_property_e H4.
+    - applyy IHC Hc1 Hc2 H3 HE. }
+Qed.
 
 Theorem E_rel_o_soundness Γ (e1 e2 : expr) :
   closed Γ e1 →
