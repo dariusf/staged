@@ -1541,10 +1541,10 @@ Qed.
 
 (** Inside-out general contexts. *)
 Inductive ctx : Type :=
-| ctx_hole   : ctx (* note: closed *)
-| ctx_lam    : name → ctx → ctx
-| ctx_app1   : ctx → expr → ctx
-| ctx_app2   : expr → ctx → ctx.
+  | ctx_hole   : ctx
+  | ctx_lam    : name → ctx → ctx
+  | ctx_app1   : ctx → expr → ctx
+  | ctx_app2   : expr → ctx → ctx.
 
 Fixpoint cplug (C : ctx) : expr → expr (* closed *) :=
   match C with
@@ -1554,19 +1554,20 @@ Fixpoint cplug (C : ctx) : expr → expr (* closed *) :=
   | ctx_app2 e1 C => λ e, cplug C (app e1 e)
   end.
 
-Lemma cplug_closed C e :
-  closed ∅ (cplug C e).
-Proof.
-Admitted.
+(* aka contextual scoping C : Γ ~> Γ', a special case of contextual typing *)
+Definition closed_ctx (Γ Γ' : scope) (C:ctx) : Prop :=
+  forall e, closed Γ e → closed Γ' (cplug C e).
+
+(* TODO some lemmas closed_ctx lemmas *)
 
 (** Observational approximation for complete programs *)
-Definition obs_approx (e1 e2 : expr (* closed *)) : Prop :=
-  closed ∅ e1 ∧ terminates e1 →
-  closed ∅ e2 ∧ terminates e2.
+Definition obs_approx (e1 e2 : expr) : Prop :=
+  terminates e1 →
+  terminates e2.
 
 (** Observational equivalence for complete programs *)
-Definition obs_equiv (e1 e2 : expr (* closed *)) : Prop :=
-  closed ∅ e1 ∧ terminates e1 ↔ closed ∅ e2 ∧ terminates e2.
+Definition obs_equiv (e1 e2 : expr) : Prop :=
+  terminates e1 ↔ terminates e2.
 
 Infix "≼obs" := obs_approx (at level 80, right associativity, only printing).
 Infix "≡obs" := obs_equiv (at level 80, right associativity, only printing).
@@ -1574,7 +1575,7 @@ Infix "≡obs" := obs_equiv (at level 80, right associativity, only printing).
 #[global]
 Instance Reflexive_obs_approx : Reflexive obs_approx.
 Proof.
-  unfold Reflexive, obs_approx. intros x (?&?). split; assumption.
+  unfold Reflexive, obs_approx. done.
 Qed.
 
 #[global]
@@ -1662,27 +1663,33 @@ Qed.
 Lemma L_rel_adequacy (v : val) (e1 e2 : expr) :
   bigstep e1 v → (∀ w, w ⊨ L_rel e1 e2) → terminates e2.
 Proof.
-  (* intro RED; remember v as p; revert RED Heqp.
-  induction 1; intros Hp Hobs.
-  + specialize (Hobs {| nw_index := 0 |}).
-    apply I_conj_elim1, I_prop_elim in Hobs.
-    eapply Hobs; eassumption.
-  + apply IHRED; [ assumption | ].
+  intro RED; remember v as p; revert RED Heqp.
+  intros Hbig.
+  destruct Hbig as (e&H1&H2).
+  (* induction on the rtc of contextual step *)
+  induction H1; intros Hp Hobs.
+  + (* expose the fact that x is a value *)
+    unfold to_val in H2.
+    destruct x. 2: { done. } 2: { done. }
+    injection H2; intros; subst; clear H2.
+    (* no steps are needed *)
+    specialize (Hobs {| nw_index := 0 |}). apply I_conj_elim1, I_prop_elim in Hobs.
+    by apply (Hobs v).
+  + apply IHrtc. assumption. assumption.
     intro w; specialize (Hobs (world_lift w)).
     apply L_rel_unroll, I_world_lift_later.
     iapply Hobs; iintro; assumption.
-Qed. *)
-Admitted.
+Qed.
 
 Theorem O_rel_adequacy e1 e2 :
   (∀ n, n ⊨ O_rel e1 e2) → obs_equiv e1 e2.
 Proof.
-  (* intro Hobs; split.
+  intro Hobs; split.
   + intros [ v Hv ]; eapply L_rel_adequacy; [ eassumption | ].
     intro. unfold O_rel in Hobs. iapply Hobs.
   + intros [ v₂ Hv₂ ]; eapply L_rel_adequacy; [ eassumption | ].
-    intro; iapply Hobs. *)
-Admitted.
+    intro; iapply Hobs.
+Qed.
 
 Lemma precongruence (e1 e2 : expr) Γ C n :
   (* TODO something about free vars in context? *)
