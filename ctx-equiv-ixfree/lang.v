@@ -317,6 +317,14 @@ Definition equiterminate e1 e2 := terminates e1 ↔ terminates e2.
 
 Infix "≈" := equiterminate (at level 80, right associativity, only printing).
 
+Lemma terminates_val v :
+  terminates (ret v).
+Proof.
+  exists v.
+  exists v.
+  split; done.
+Qed.
+
 Lemma contextual_step_comp :
   ∀ K e1 e2,
     contextual_step e1 e2 →
@@ -599,6 +607,9 @@ Definition E_rel_o (Γ: scope) (e1 e2 : expr) : IProp :=
 
 Definition V_rel_o (Γ: scope) (v1 v2 : val) : IProp :=
   ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2).
+
+Definition P_rel_o (Γ: scope) (e1 e2 : expr) : IProp :=
+  ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ O_rel (subst_map γ1 e1) (subst_map γ2 e2).
 
 (** Contractiveness and unrolling fixpoint *)
 
@@ -1713,11 +1724,11 @@ Proof.
 Qed.
 
 (** Contextual approximation *)
-Definition ctx_approx (e1 e2 : expr (* open *)) : Prop :=
+Definition ctx_approx (e1 e2 : expr) : Prop :=
   ∀ C, obs_approx (cplug C e1) (cplug C e2).
 
 (** Contextual equivalence *)
-Definition ctx_equiv (e1 e2 : expr (* open *)) : Prop :=
+Definition ctx_equiv (e1 e2 : expr) : Prop :=
   ∀ C, obs_equiv (cplug C e1) (cplug C e2).
 
 Infix "≼ctx" := ctx_approx (at level 80, right associativity, only printing).
@@ -1793,6 +1804,40 @@ Proof.
     intro. unfold O_rel in Hobs. iapply Hobs.
   + intros [ v₂ Hv₂ ]; eapply L_rel_adequacy; [ eassumption | ].
     intro; iapply Hobs.
+Qed.
+
+Lemma L_rel_value (v1 v2 : val) n :
+  n ⊨ L_rel v1 v2.
+Proof.
+  unfold L_rel, L_rel_pre.
+  isplit.
+  - iintro. intros.
+    apply terminates_val.
+  - iintros e1 He.
+    idestruct He.
+    apply not_contextual_step_val in He. done.
+Qed.
+
+Lemma O_rel_value (v1 v2 : val) n :
+  n ⊨ O_rel v1 v2.
+Proof.
+  unfold O_rel.
+  isplit; apply L_rel_value.
+Qed.
+
+Lemma P_rel_compat_expr Γ (e1 e2 : expr) n :
+  n ⊨ E_rel_o Γ e1 e2 →
+  n ⊨ P_rel_o Γ e1 e2.
+Proof.
+  intro He.
+  iintros γ1 γ2 Hγ.
+  unfold E_rel_o in He. ispec He γ1 γ2 Hγ.
+  have: E_rel_elimO ectx_hole ectx_hole He. simpl in H.
+  apply H.
+  apply K_rel_intro.
+  iintros.
+  simpl.
+  apply O_rel_value.
 Qed.
 
 Lemma precongruence (e1 e2 : expr) Γ Γ' C n :
