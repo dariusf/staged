@@ -1724,55 +1724,65 @@ Proof.
 Qed.
 
 (** Contextual approximation *)
-Definition ctx_approx (e1 e2 : expr) : Prop :=
-  ∀ C, obs_approx (cplug C e1) (cplug C e2).
+Definition ctx_approx Γ (e1 e2 : expr) : Prop :=
+  ∀ C, closed_ctx Γ ∅ C →
+    obs_approx (cplug C e1) (cplug C e2).
 
 (** Contextual equivalence *)
-Definition ctx_equiv (e1 e2 : expr) : Prop :=
-  ∀ C, obs_equiv (cplug C e1) (cplug C e2).
+Definition ctx_equiv Γ (e1 e2 : expr) : Prop :=
+  ∀ C, closed_ctx Γ ∅ C →
+    obs_equiv (cplug C e1) (cplug C e2).
 
-Infix "≼ctx" := ctx_approx (at level 80, right associativity, only printing).
-Infix "≡ctx" := ctx_equiv (at level 80, right associativity, only printing).
+(* TODO *)
+(* Infix "≼ctx" := ctx_approx (at level 80, right associativity, only printing).
+Infix "≡ctx" := ctx_equiv (at level 80, right associativity, only printing). *)
 
 #[global]
-Instance Reflexive_ctx_approx : Reflexive ctx_approx.
+Instance Reflexive_ctx_approx Γ : Reflexive (ctx_approx Γ).
 Proof.
   intros e C; reflexivity.
 Qed.
 
 #[global]
-Instance Transitive_ctx_approx : Transitive ctx_approx.
+Instance Transitive_ctx_approx Γ : Transitive (ctx_approx Γ).
 Proof.
   unfold Transitive, ctx_approx, obs_approx. intros.
   auto.
 Qed.
 
 #[global]
-Instance Reflexive_ctx_equiv : Reflexive ctx_equiv.
+Instance Reflexive_ctx_equiv Γ : Reflexive (ctx_equiv Γ).
 Proof.
   intros e C; reflexivity.
 Qed.
 
 #[global]
-Instance Symmetric_ctx_equiv : Symmetric ctx_equiv.
+Instance Symmetric_ctx_equiv Γ : Symmetric (ctx_equiv Γ).
 Proof.
-  intros e1 e2 H C; symmetry; apply H.
+  intros e1 e2 H C H1. symmetry. apply H. assumption.
 Qed.
 
 #[global]
-Instance Transitive_ctx_equiv : Transitive ctx_equiv.
+Instance Transitive_ctx_equiv Γ : Transitive (ctx_equiv Γ).
 Proof.
   unfold Transitive, ctx_approx, ctx_equiv, obs_equiv. intros.
   specialize (H C).
   specialize (H0 C).
   destruct H. destruct H0.
+  assumption.
+  assumption.
+  specialize (H0 H1) as (?&?).
   split; auto.
 Qed.
 
-Lemma ctx_equiv_both_approx (e1 e2 : expr) :
-  ctx_approx e1 e2 → ctx_approx e2 e1 → ctx_equiv e1 e2.
+Lemma ctx_equiv_both_approx Γ (e1 e2 : expr) :
+  ctx_approx Γ e1 e2 →
+  ctx_approx Γ e2 e1 →
+  ctx_equiv Γ e1 e2.
 Proof.
   intros H1 H2 C; split; apply H1 || apply H2.
+  assumption.
+  assumption.
 Qed.
 
 Lemma L_rel_adequacy (v : val) (e1 e2 : expr) :
@@ -1868,18 +1878,52 @@ Proof.
     - applyy IHC Hc1 Hc2 H3 HE. }
 Qed.
 
+Lemma G_rel_empty n :
+  n ⊨ G_rel ∅ ∅ ∅.
+Proof.
+  apply G_rel_intro.
+  - unfold subst_is_closed. split; set_solver.
+  - unfold subst_is_closed. split; set_solver.
+  - iintros.
+    apply V_rel_intro.
+
+Admitted.
+
+Lemma subst_map_empty (e:expr) :
+  subst_map ∅ e = e
+with subst_map_val_empty (v:val) :
+  subst_map_val ∅ v = v.
+Proof.
+  (* unfold subst_map. *)
+  {
+  induction e.
+  - simpl. f_equal. eapply subst_map_val_empty.
+  - simpl.
+    admit.
+  - admit.
+  }
+  {
+  admit.
+  }
+(* Qed. *)
+Admitted.
+
 Theorem E_rel_o_soundness Γ (e1 e2 : expr) :
   closed Γ e1 →
   closed Γ e2 →
-  (∀ n, n ⊨ E_rel_o Γ e1 e2) → ctx_equiv e1 e2.
+  (∀ n, n ⊨ E_rel_o Γ e1 e2) →
+  ctx_equiv Γ e1 e2.
 Proof.
-  intros He C.
-  (* apply O_rel_adequacy; intro n. *)
-  (* rewrite <- (bind_pure' (cplug C e1)). *)
-  (* rewrite <- (bind_pure' (cplug C e2)). *)
-  (* iapply (precongruence _ _ C n (He n)).
-  iintro x; destruct x. *)
-(* Qed. *)
-Admitted.
+  intros Hc1 Hc2 HE C Hcc.
+  apply O_rel_adequacy; intro n.
+  have: precongruence Hc1 Hc2 Hcc (HE n).
+  have: P_rel_compat_expr H.
+  unfold P_rel_o in H0.
+  ispec H0 ∅ ∅.
+  rewrite <- (subst_map_empty (cplug C e1)).
+  rewrite <- (subst_map_empty (cplug C e2)).
+  iapply H0.
+  apply G_rel_empty.
+Qed.
 
 (* TODO proper *)
