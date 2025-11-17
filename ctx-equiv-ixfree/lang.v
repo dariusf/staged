@@ -1885,28 +1885,28 @@ Proof.
   - unfold subst_is_closed. split; set_solver.
   - unfold subst_is_closed. split; set_solver.
   - iintros.
-    apply V_rel_intro.
-
-Admitted.
+    idestruct H.
+    setoid_rewrite lookup_empty in H.
+    discriminate H.
+Qed.
 
 Lemma subst_map_empty (e:expr) :
   subst_map ∅ e = e
 with subst_map_val_empty (v:val) :
   subst_map_val ∅ v = v.
 Proof.
-  (* unfold subst_map. *)
-  {
-  induction e.
-  - simpl. f_equal. eapply subst_map_val_empty.
-  - simpl.
-    admit.
-  - admit.
-  }
-  {
-  admit.
-  }
-(* Qed. *)
-Admitted.
+  { induction e.
+    - simpl. f_equal. eapply subst_map_val_empty.
+    - simpl.
+      setoid_rewrite lookup_empty.
+      reflexivity.
+    - simpl. rewrite IHe1. rewrite IHe2. reflexivity. }
+  { induction v.
+    - simpl.
+      f_equal.
+      setoid_rewrite delete_empty.
+      apply subst_map_empty. }
+Qed.
 
 Theorem E_rel_o_soundness Γ (e1 e2 : expr) :
   closed Γ e1 →
