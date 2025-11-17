@@ -1588,26 +1588,53 @@ Proof.
         apply fundamental_property_e. assumption. }
 Qed.
 
-(** Inside-out general contexts. *)
+(** general contexts *)
 Inductive ctx : Type :=
   | ctx_hole   : ctx
   | ctx_lam    : name → ctx → ctx
   | ctx_app1   : ctx → expr → ctx
   | ctx_app2   : expr → ctx → ctx.
 
-Fixpoint cplug (C : ctx) : expr → expr (* closed *) :=
+(* inside-out plugging *)
+Fixpoint ciplug (C : ctx) : expr → expr (* closed *) :=
   match C with
   | ctx_hole      => id
-  | ctx_lam x C    => λ e, cplug C (ret (vlambda x e))
-  | ctx_app1 C e2 => λ e, cplug C (app e e2)
-  | ctx_app2 e1 C => λ e, cplug C (app e1 e)
+  | ctx_lam x C    => λ e, ciplug C (ret (vlambda x e))
+  | ctx_app1 C e2 => λ e, ciplug C (app e e2)
+  | ctx_app2 e1 C => λ e, ciplug C (app e1 e)
   end.
+
+(* outside-in plugging *)
+Fixpoint crplug (C : ctx) (e : expr) : expr :=
+  match C with
+  | ctx_hole => e
+  | ctx_app1 C' e1 => app (crplug C' e) e1
+  | ctx_app2 v C' => app v (crplug C' e)
+  | ctx_lam x C' => vlambda x (crplug C' e)
+  end.
+
+Notation cplug := crplug.
 
 (* aka contextual scoping C : Γ ~> Γ', a special case of contextual typing.
   defined inductively because we need to invert it. soundness is proved below. *)
 Inductive closed_ctx : scope → scope → ctx → Prop :=
   | cc_hole Γ :
     closed_ctx Γ Γ ctx_hole
+
+  | cc_lambda x Γ Γ' C :
+    closed_ctx Γ (Γ' ∪ {[x]}) C →
+    closed_ctx Γ Γ' (ctx_lam x C)
+
+  | cc_app1 Γ Γ' C e :
+    closed_ctx Γ Γ' C →
+    closed Γ' e →
+    closed_ctx Γ Γ' (ctx_app1 C e)
+
+  | cc_app2 Γ Γ' C v :
+    closed_ctx Γ Γ' C →
+    closed Γ' (ret v) →
+    closed_ctx Γ Γ' (ctx_app2 v C)
+
   .
 
 Definition closed_ctx_sem (Γ Γ' : scope) (C:ctx) : Prop :=
@@ -1618,6 +1645,23 @@ Lemma closed_ctx_sound Γ Γ' e :
 Proof.
   intros H. induction H; unfold closed_ctx_sem.
   - simpl. done.
+  - intros e Hc.
+    simpl.
+    specialize (IHclosed_ctx e Hc).
+    unfold closed. simpl.
+    apply IHclosed_ctx.
+  - intros e2 Hc.
+    specialize (IHclosed_ctx _ Hc).
+    simpl.
+    unfold closed. simpl.
+    unfold closed in IHclosed_ctx. simpl in IHclosed_ctx.
+    auto.
+  - intros e1 Hc.
+    specialize (IHclosed_ctx _ Hc).
+    simpl.
+    unfold closed. simpl.
+    unfold closed in IHclosed_ctx. simpl in IHclosed_ctx.
+    auto.
 Qed.
 
 (** Observational approximation for complete programs *)
@@ -1752,31 +1796,40 @@ Proof.
 Qed.
 
 Lemma precongruence (e1 e2 : expr) Γ Γ' C n :
+  closed Γ e1 →
+  closed Γ e2 →
   closed_ctx Γ Γ' C →
   n ⊨ E_rel_o Γ e1 e2 →
   n ⊨ E_rel_o Γ' (cplug C e1) (cplug C e2).
 Proof.
-  revert e1 e2 n; induction C; intros e1 e2 n He; simpl; try apply IHC.
-  - inversion He. subst. done.
-  (* Search (_ → E_rel _ _). *)
-  -
-  (* apply compat_val, compat_lambda. *)
-    admit.
-  (* assumption. *)
-  -
-  (* apply compat_app; [ assumption | ]; apply fundamental_property_e. *)
-    (* arguments need to be closed *)
-    admit.
-  -
-  (* apply compat_app; [ | assumption ]; apply fundamental_property_e. *)
-    admit.
-Admitted.
+  revert Γ Γ' e1 e2 n.
+  induction C; intros Γ Γ' e1 e2 n Hc1 Hc2 Hcc HE; simpl.
+  { inversion Hcc. subst. done. }
+  { inversion Hcc. subst.
+    apply compat_val.
+    apply compat_lambda.
+    { have Hc: closed_ctx_sound Hcc.
+      apply (Hc _ Hc1). }
+    { have Hc: closed_ctx_sound Hcc.
+      apply (Hc _ Hc2). }
+    applyy IHC Hc1 Hc2 H2 HE. }
+  { inversion Hcc. subst.
+    apply compat_app.
+    - applyy IHC Hc1 Hc2 H3 HE.
+    - applyy fundamental_property_e H4. }
+  { inversion Hcc. subst.
+    apply compat_app.
+    - applyy fundamental_property_e H4.
+    - applyy IHC Hc1 Hc2 H3 HE. }
+Qed.
 
 Theorem E_rel_o_soundness Γ (e1 e2 : expr) :
+  closed Γ e1 →
+  closed Γ e2 →
   (∀ n, n ⊨ E_rel_o Γ e1 e2) → ctx_equiv e1 e2.
 Proof.
   intros He C.
-  apply O_rel_adequacy; intro n.
+  (* apply O_rel_adequacy; intro n. *)
   (* rewrite <- (bind_pure' (cplug C e1)). *)
   (* rewrite <- (bind_pure' (cplug C e2)). *)
   (* iapply (precongruence _ _ C n (He n)).
