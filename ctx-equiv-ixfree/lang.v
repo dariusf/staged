@@ -1775,7 +1775,7 @@ Proof.
   split; auto.
 Qed.
 
-Lemma ctx_equiv_both_approx Γ (e1 e2 : expr) :
+Lemma ctx_equiv_fold Γ (e1 e2 : expr) :
   ctx_approx Γ e1 e2 →
   ctx_approx Γ e2 e1 →
   ctx_equiv Γ e1 e2.
@@ -1783,6 +1783,26 @@ Proof.
   intros H1 H2 C; split; apply H1 || apply H2.
   assumption.
   assumption.
+Qed.
+
+Lemma ctx_equiv_unfold Γ (e1 e2 : expr) :
+  ctx_equiv Γ e1 e2 →
+  ctx_approx Γ e1 e2 ∧
+  ctx_approx Γ e2 e1.
+Proof.
+  unfold ctx_approx, ctx_equiv.
+  intros H.
+  split.
+  { intros C Hc.
+    specialize (H C Hc).
+    destruct H.
+    unfold obs_approx.
+    apply H. }
+  { intros C Hc.
+    specialize (H C Hc).
+    destruct H.
+    unfold obs_approx.
+    apply H0. }
 Qed.
 
 Lemma L_rel_adequacy (v : val) (e1 e2 : expr) :
@@ -1938,6 +1958,20 @@ Proof.
 Qed.
 
 #[global]
+Instance Proper_ctx_approx_equiv Γ : Proper
+  (ctx_equiv Γ ==> ctx_equiv Γ ==> impl)
+  (ctx_approx Γ).
+Proof.
+  unfold flip, Proper, respectful, impl. intros.
+  assert (ctx_approx Γ y x0).
+  { apply ctx_equiv_unfold in H. destruct H.
+    transitivity x; assumption. }
+  transitivity x0.
+  assumption.
+  apply ctx_equiv_unfold in H0. destruct H0. assumption.
+Qed.
+
+#[global]
 Instance Proper_ctx_approx Γ : Proper
   (flip (ctx_approx Γ) ==> ctx_approx Γ ==> impl)
   (ctx_approx Γ).
@@ -1947,10 +1981,20 @@ Proof.
   transitivity x0; assumption.
 Qed.
 
+Notation equiv := (ctx_equiv ∅).
 Notation refines := (ctx_approx ∅).
 
 Example ex_rew x y :
   refines (vlambda x (var x)) (vlambda y (var y)) →
+  refines (vlambda x (var x)) (vlambda y (var y)).
+Proof.
+  intros.
+  rewrite H.
+  reflexivity.
+Qed.
+
+Example ex_rew1 x y :
+  equiv (vlambda x (var x)) (vlambda y (var y)) →
   refines (vlambda x (var x)) (vlambda y (var y)).
 Proof.
   intros.
