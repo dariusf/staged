@@ -18,7 +18,7 @@ Inductive expr :=
   | var (x : string)
   (* | bind (e1 : expr) (x : binder) (e2 : expr) *)
   | app (e1 e2: expr)
-  (* | abs (x : binder) (e : expr) *)
+ (* | abs (x : binder) (e : expr) *)
   (* | eplus (e1 e2: expr) *)
 
 with val :=
@@ -339,22 +339,44 @@ Notation name := string.
 Definition sub : Set := gmap name val.
 Definition scope : Set := gset name.
 
-Fixpoint subst_map_val (xs : sub) (v : val) : val :=
+Fixpoint subst_map_val (γ : sub) (v : val) : val :=
   match v with
   (*| vunit => vunit
   | vint n => vint n*)
-  | vlambda x e => vlambda x (subst_map (delete x xs) e)
+  | vlambda x e => vlambda x (subst_map (delete x γ) e)
   end
-
-with subst_map (xs : sub) (e : expr) : expr :=
+with subst_map (γ : sub) (e : expr) : expr :=
   match e with
-  | ret v => ret (subst_map_val xs v)
+  | ret v => ret (subst_map_val γ v)
   (* | eunit => eunit *)
-  | var y => match xs !! y with Some es => of_val es | _ =>  var y end
-  | app e1 e2 => app (subst_map xs e1) (subst_map xs e2)
+  | var x => match γ !! x with Some v => ret v | _ =>  var x end
+  | app e1 e2 => app (subst_map γ e1) (subst_map γ e2)
   (* | abs x e => abs x (subst_map (binder_delete x xs) e) *)
   (* | eplus e1 e2 => eplus (subst_map xs e1) (subst_map xs e2) *)
   end.
+
+Lemma fold_unfold_subst_map_val_vlambda γ x e :
+  subst_map_val γ (vlambda x e) =
+  vlambda x (subst_map (delete x γ) e).
+Proof. auto. Qed.
+
+Lemma fold_unfold_subst_map_ret γ v :
+  subst_map γ (ret v) =
+  ret (subst_map_val γ v).
+Proof. auto. Qed.
+
+Lemma fold_unfold_subst_map_var γ x :
+  subst_map γ (var x) =
+  match γ !! x with
+  | Some v => ret v
+  |  _ =>  var x
+  end.
+Proof. auto. Qed.
+
+Lemma fold_unfold_subst_map_app γ e1 e2 :
+  subst_map γ (app e1 e2) =
+  app (subst_map γ e1) (subst_map γ e2).
+Proof. auto. Qed.
 
 Fixpoint is_closed (X : scope) (e : expr) : bool :=
   match e with

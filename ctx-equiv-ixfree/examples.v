@@ -1,7 +1,9 @@
 
 From CtxEquivIxFree Require Import lang.
-From CtxEquivIxFree Require Import propriety.
+(*From CtxEquivIxFree Require Import propriety.*)
+From IxFree Require Import Lib Nat.
 
+(*
 Example ex_rew x y :
   ctx_approx ∅ (vlambda x (var x)) (vlambda y (var y)) →
   ctx_approx ∅ (vlambda x (var x)) (vlambda y (var y)).
@@ -19,11 +21,74 @@ Proof.
   rewrite H.
   reflexivity.
 Qed.
+*)
 
 Example ex_ctx_lambda x y :
-  x <> y →
-  ctx_equiv ∅ (vlambda x (var x))
-    (vlambda y (app (vlambda x (var x)) (var y))).
+  closed ∅ (vlambda x (var x)) →
+  closed ∅ (vlambda x (app (vlambda y (var y)) (var x))) →
+  ctx_equiv ∅
+    (vlambda x (var x))
+    (vlambda x (app (vlambda y (var y)) (var x))).
 Proof.
-  intros.
-Abort.
+  intros Hc1 Hc2.
+  apply E_rel_o_soundness.
+  { exact Hc1. }
+  { exact Hc2. }
+  intros n.
+  apply compat_val.
+  apply compat_lambda.
+  { exact Hc1. }
+  { exact Hc2. }
+  apply E_rel_o_intro.
+  iintros γ1 γ2 Hγ.
+  apply G_rel_elim in Hγ as (Hγc1 & Hγc2 & Hγ').
+  destruct Hγc1 as [Hdom1 Hγc1].
+  destruct Hγc2 as [Hdom2 Hγc2].
+  rewrite -> fold_unfold_subst_map_app.
+  rewrite -> fold_unfold_subst_map_ret.
+  assert (Hc3 : closed ∅ (vlambda y (var y))).
+  { unfold closed. simpl. rewrite bool_decide_spec. set_solver. }
+  rewrite -> (subst_map_val_closed _ _ Hc3).
+  assert (Hin1 : x ∈ dom γ1) by set_solver.
+  rewrite -> Hdom1 in Hγc1.
+  specialize (Hγc1 x Hin1).
+  apply elem_of_dom in Hin1.
+  unfold is_Some in Hin1.
+  destruct Hin1 as [u1 Hu1].
+  specialize (Hγc1 u1 Hu1).
+  assert (Hin2 : x ∈ dom γ2) by set_solver.
+  rewrite -> Hdom2 in Hγc2.
+  specialize (Hγc2 x Hin2).
+  apply elem_of_dom in Hin2.
+  unfold is_Some in Hin2.
+  destruct Hin2 as [u2 Hu2].
+  specialize (Hγc2 u2 Hu2).
+  rewrite -> fold_unfold_subst_map_var.
+  rewrite -> fold_unfold_subst_map_var.
+  setoid_rewrite -> Hu1.
+  setoid_rewrite -> Hu2.
+  apply E_rel_intro.
+  iintros E1 E2 HE.
+  apply (O_rel_red_r _ _ (fill E2 u2)).
+  { econstructor.
+    - reflexivity.
+    - reflexivity.
+    - econstructor. exact I. simpl. rewrite -> decide_True; auto. }
+  iapply (K_rel_elim _ _ _ HE).
+  iapply Hγ'.
+  { iintro. eassumption. }
+  { iintro. eassumption. }
+Qed.
+
+(*
+Example ex_ctx_app e1 e2 e1' e2' :
+  ctx_equiv ∅ e1 e1' →
+  ctx_equiv ∅ e2 e2' →
+  ctx_equiv ∅ (app e1 e2) (app e1' e2').
+Proof.
+  intros He1 He2.
+  rewrite -> He1.
+  rewrite -> He2.
+  reflexivity.
+Qed.
+*)

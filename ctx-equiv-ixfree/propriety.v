@@ -1,5 +1,8 @@
 
+From IxFree Require Import Nat Lib.
 From CtxEquivIxFree Require Import lang.
+
+(** top level Proper instances (using ctx_equiv/ctx_approx) *)
 
 #[global]
 Instance Proper_ctx_equiv Γ : Proper
@@ -36,20 +39,35 @@ Proof.
   transitivity x0; assumption.
 Qed.
 
-#[global]
-Instance Proper_ctx_approx_app Γ : Proper
-  (flip (ctx_approx Γ) ==> ctx_approx Γ ==> ctx_approx Γ)
-  app.
-Proof.
-  unfold flip, Proper, respectful. intros.
-(* Qed. *)
-Abort.
+
+(** congruence Proper instances (using E_rel_o) *)
+
+(* TODO: move to lang_ext.v or whatever *)
+Definition E_rel_o_closed n Γ e1 e2 :=
+  closed Γ e1 →
+  closed Γ e2 →
+  n ⊨ E_rel_o Γ e1 e2.
+
+Definition elambda x e := ret (vlambda x e).
 
 #[global]
-Instance Proper_ctx_approx_lambda Γ : Proper
-  (eq ==> ctx_approx Γ ==> ctx_approx Γ)
-  vlambda.
+Instance Proper_E_rel_o_app n Γ :
+  Proper
+    (E_rel_o_closed n Γ ==>
+     E_rel_o_closed n Γ ==>
+     E_rel_o_closed n Γ) app.
 Proof.
-  unfold flip, Proper, respectful. intros.
-(* Qed. *)
-Abort.
+  unfold Proper, E_rel_o_closed, respectful.
+  intros e1 e1' He1.
+  intros e2 e2' He2.
+  admit.
+Admitted.
+
+Instance Proper_E_rel_o_lambda n Γ x :
+  Proper
+    (E_rel_o_closed n (Γ ∪ {[x]}) ==>
+     E_rel_o_closed n Γ) (elambda x).
+Proof.
+  unfold Proper, E_rel_o_closed, respectful, elambda.
+  admit.
+Admitted.
