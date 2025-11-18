@@ -39,7 +39,6 @@ Proof.
   transitivity x0; assumption.
 Qed.
 
-
 (** congruence Proper instances (using E_rel_o) *)
 
 (* TODO: move to lang_ext.v or whatever *)
@@ -60,8 +59,15 @@ Proof.
   unfold Proper, E_rel_o_closed, respectful.
   intros e1 e1' He1.
   intros e2 e2' He2.
-  admit.
-Admitted.
+  intros Hc1 Hc2.
+  rewrite closed_app in Hc1.
+  rewrite closed_app in Hc2.
+  destruct Hc1 as (?&?).
+  destruct Hc2 as (?&?).
+  specialize (He1 H H1).
+  specialize (He2 H0 H2).
+  by apply compat_app.
+Qed.
 
 Instance Proper_E_rel_o_lambda n Γ x :
   Proper
@@ -69,5 +75,10 @@ Instance Proper_E_rel_o_lambda n Γ x :
      E_rel_o_closed n Γ) (elambda x).
 Proof.
   unfold Proper, E_rel_o_closed, respectful, elambda.
-  admit.
-Admitted.
+  intros e1 e2 He Hc1 Hc2.
+  ospecialize (He _ _).
+  { by rewrite closed_lambda in Hc1. }
+  { by rewrite closed_lambda in Hc2. }
+  apply compat_val.
+  by apply compat_lambda.
+Qed.

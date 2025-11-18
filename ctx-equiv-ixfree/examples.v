@@ -1,6 +1,6 @@
 
 From CtxEquivIxFree Require Import lang.
-(*From CtxEquivIxFree Require Import propriety.*)
+From CtxEquivIxFree Require Import propriety.
 From IxFree Require Import Lib Nat.
 
 (*
@@ -22,6 +22,32 @@ Proof.
   reflexivity.
 Qed.
 *)
+
+#[global]
+Instance Reflexive_E_rel_o_closed n Γ : Reflexive (E_rel_o_closed n Γ).
+Proof.
+  unfold Reflexive, E_rel_o_closed. intros.
+  apply fundamental_property_e.
+  assumption.
+Qed.
+
+Example ex_ctx_lambda1 n x y :
+  E_rel_o_closed n (∅ ∪ {[x]})
+    (app (elambda y (var y)) (var x)) (var x) →
+  E_rel_o_closed n ∅
+    (elambda x (app (elambda y (var y)) (var x)))
+    (elambda x (var x)).
+Proof.
+  intros H.
+  Fail rewrite -> H.
+
+  (* apply Proper_E_rel_o_lambda.
+  (* why does this work *)
+  eassert (∅ ∪ {[x]} = {[x]}).
+  { eapply union_empty_r. set_solver. }
+  apply H. *)
+
+Abort.
 
 Example ex_ctx_lambda x y :
   closed ∅ (vlambda x (var x)) →
