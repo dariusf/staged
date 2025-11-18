@@ -45,10 +45,9 @@ Proof.
   destruct Hγc1 as [Hdom1 Hγc1].
   destruct Hγc2 as [Hdom2 Hγc2].
   rewrite -> fold_unfold_subst_map_app.
-  rewrite -> fold_unfold_subst_map_ret.
   assert (Hc3 : closed ∅ (vlambda y (var y))).
   { unfold closed. simpl. rewrite bool_decide_spec. set_solver. }
-  rewrite -> (subst_map_val_closed _ _ Hc3).
+  rewrite -> (subst_map_closed _ _ Hc3).
   assert (Hin1 : x ∈ dom γ1) by set_solver.
   rewrite -> Hdom1 in Hγc1.
   specialize (Hγc1 x Hin1).
