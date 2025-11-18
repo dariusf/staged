@@ -1926,4 +1926,34 @@ Proof.
   apply G_rel_empty.
 Qed.
 
-(* TODO proper *)
+#[global]
+Instance Proper_ctx_equiv Γ : Proper
+  (ctx_equiv Γ ==> ctx_equiv Γ ==> impl)
+  (ctx_equiv Γ).
+Proof.
+  unfold flip, Proper, respectful, impl. intros.
+  assert (ctx_equiv Γ y x). { symmetry. assumption. }
+  assert (ctx_equiv Γ y x0). { transitivity x; assumption. }
+  transitivity x0; assumption.
+Qed.
+
+#[global]
+Instance Proper_ctx_approx Γ : Proper
+  (flip (ctx_approx Γ) ==> ctx_approx Γ ==> impl)
+  (ctx_approx Γ).
+Proof.
+  unfold flip, Proper, respectful, impl. intros.
+  assert (ctx_approx Γ y x0). { transitivity x; assumption. }
+  transitivity x0; assumption.
+Qed.
+
+Notation refines := (ctx_approx ∅).
+
+Example ex_rew x y :
+  refines (vlambda x (var x)) (vlambda y (var y)) →
+  refines (vlambda x (var x)) (vlambda y (var y)).
+Proof.
+  intros.
+  rewrite H.
+  reflexivity.
+Qed.
