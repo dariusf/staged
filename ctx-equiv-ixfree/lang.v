@@ -105,7 +105,7 @@ Inductive ectx :=
 (* Imagine the list is from left-to-right, with the following structure:
    ectx_hole ... ectx_app1 e ... ectx_app1 e ... ectx_app2 v.
 
-   The actual structure is zig-zag, but let's linearlize it so that we
+   The actual structure is zig-zag, but let's linearize it so that we
    can implement and reason about this data-structure just like a list *)
 
 (* similar to foldr of a "reversed" list (foldl of a normal list) *)
@@ -296,8 +296,6 @@ Proof.
   simpl. reflexivity.
 Qed.
 
-
-(** contextual step *)
 Inductive contextual_step (e1 : expr) (e2 : expr) : Prop :=
   Ectx_step K e1' e2' :
     e1 = fill K e1' →
@@ -370,9 +368,6 @@ Fixpoint is_closed (X : scope) (e : expr) : bool :=
 
 (* aka a scoping judgment, the untyped equivalent of a typing judgment *)
 Definition closed (X : scope) (e : expr) : Prop := Is_true (is_closed X e).
-
-Definition ectx_is_closed (X : scope) (E : ectx) :=
-  ∀ e, closed ∅ e → closed X (fill E e).
 
 Lemma closed_weaken e X Y:
   closed X e → X ⊆ Y → closed Y e
@@ -479,6 +474,9 @@ Proof.
   exact (closed_subst ∅ x e0 e2 Hc1 Hc2).
 Qed.
 
+Definition ectx_is_closed (X : scope) (E : ectx) :=
+  ∀ e, closed ∅ e → closed X (fill E e).
+
 Lemma closed_decompose :
   ∀ E e,
     closed ∅ (fill E e) →
@@ -527,7 +525,7 @@ Proof.
   apply closed_compose; auto.
 Qed.
 
-(** subscoped from Erlang paper *)
+(** subscoped from the Erlang paper *)
 Definition subst_is_closed (Γ free : scope) (sub : sub) :=
   Γ = dom sub ∧
   ∀ x, x ∈ Γ →
@@ -548,7 +546,7 @@ Proof.
   apply (Hc2 x ltac:(set_solver) _ Hγ).
 Qed.
 
-(* Relations *)
+(** Relations *)
 
 Definition expr_rel := expr ⇒ᵢ expr ⇒ᵢ IRel.
 Definition val_rel := val ⇒ᵢ val ⇒ᵢ IRel.
@@ -592,7 +590,7 @@ Definition E_rel : expr_rel :=
   λ e1 e2,
     ∀ᵢ E1 E2 : ectx, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2).
 
-(* Relations for open terms *)
+(** Relations for open terms *)
 
 Definition G_rel (Γ: scope) (γ1 γ2 : sub) : IProp :=
   (subst_is_closed Γ ∅ γ1)ᵢ ∧ᵢ
@@ -651,7 +649,7 @@ Proof.
   apply V_rel_pre_contractive.
 Qed.
 
-(** introduction and elimination lemmas *)
+(** Introduction and elimination lemmas *)
 
 Lemma V_rel_intro (v1 v2 : val) n :
   closed ∅ v1 →
@@ -869,7 +867,7 @@ Proof.
   intros Hv. exact Hv.
 Qed.
 
-(** compatibility lemma *)
+(** Compatibility lemmas *)
 
 (* aka val inclusion *)
 Lemma compat_val (Γ : scope) (v1 v2 : val) n :
@@ -1599,23 +1597,23 @@ Proof.
         apply fundamental_property_e. assumption. }
 Qed.
 
-(** general contexts *)
+(** General program contexts *)
 Inductive ctx : Type :=
   | ctx_hole   : ctx
   | ctx_lam    : name → ctx → ctx
   | ctx_app1   : ctx → expr → ctx
   | ctx_app2   : expr → ctx → ctx.
 
-(* inside-out plugging *)
-Fixpoint ciplug (C : ctx) : expr → expr (* closed *) :=
+(* Inside-out plugging *)
+Fixpoint ciplug (C : ctx) : expr → expr :=
   match C with
-  | ctx_hole      => id
-  | ctx_lam x C    => λ e, ciplug C (ret (vlambda x e))
+  | ctx_hole => id
+  | ctx_lam x C => λ e, ciplug C (ret (vlambda x e))
   | ctx_app1 C e2 => λ e, ciplug C (app e e2)
   | ctx_app2 e1 C => λ e, ciplug C (app e1 e)
   end.
 
-(* outside-in plugging *)
+(* Outside-in plugging *)
 Fixpoint crplug (C : ctx) (e : expr) : expr :=
   match C with
   | ctx_hole => e
@@ -1624,10 +1622,11 @@ Fixpoint crplug (C : ctx) (e : expr) : expr :=
   | ctx_lam x C' => vlambda x (crplug C' e)
   end.
 
+(* Outside-in plugging simplifies the proofs below *)
 Notation cplug := crplug.
 
 (* aka contextual scoping C : Γ ~> Γ', a special case of contextual typing.
-  defined inductively because we need to invert it. soundness is proved below. *)
+  defined inductively because we need to invert it. *)
 Inductive closed_ctx : scope → scope → ctx → Prop :=
   | cc_hole Γ :
     closed_ctx Γ Γ ctx_hole
@@ -1645,7 +1644,6 @@ Inductive closed_ctx : scope → scope → ctx → Prop :=
     closed_ctx Γ Γ' C →
     closed Γ' (ret v) →
     closed_ctx Γ Γ' (ctx_app2 v C)
-
   .
 
 Definition closed_ctx_sem (Γ Γ' : scope) (C:ctx) : Prop :=
@@ -1723,7 +1721,7 @@ Proof.
   split; auto.
 Qed.
 
-(** Contextual approximation *)
+(** Contextual approximation, where the context closes off Γ *)
 Definition ctx_approx Γ (e1 e2 : expr) : Prop :=
   ∀ C, closed_ctx Γ ∅ C →
     obs_approx (cplug C e1) (cplug C e2).
@@ -1944,60 +1942,4 @@ Proof.
   rewrite <- (subst_map_empty (cplug C e2)).
   iapply H0.
   apply G_rel_empty.
-Qed.
-
-#[global]
-Instance Proper_ctx_equiv Γ : Proper
-  (ctx_equiv Γ ==> ctx_equiv Γ ==> impl)
-  (ctx_equiv Γ).
-Proof.
-  unfold flip, Proper, respectful, impl. intros.
-  assert (ctx_equiv Γ y x). { symmetry. assumption. }
-  assert (ctx_equiv Γ y x0). { transitivity x; assumption. }
-  transitivity x0; assumption.
-Qed.
-
-#[global]
-Instance Proper_ctx_approx_equiv Γ : Proper
-  (ctx_equiv Γ ==> ctx_equiv Γ ==> impl)
-  (ctx_approx Γ).
-Proof.
-  unfold flip, Proper, respectful, impl. intros.
-  assert (ctx_approx Γ y x0).
-  { apply ctx_equiv_unfold in H. destruct H.
-    transitivity x; assumption. }
-  transitivity x0.
-  assumption.
-  apply ctx_equiv_unfold in H0. destruct H0. assumption.
-Qed.
-
-#[global]
-Instance Proper_ctx_approx Γ : Proper
-  (flip (ctx_approx Γ) ==> ctx_approx Γ ==> impl)
-  (ctx_approx Γ).
-Proof.
-  unfold flip, Proper, respectful, impl. intros.
-  assert (ctx_approx Γ y x0). { transitivity x; assumption. }
-  transitivity x0; assumption.
-Qed.
-
-Notation equiv := (ctx_equiv ∅).
-Notation refines := (ctx_approx ∅).
-
-Example ex_rew x y :
-  refines (vlambda x (var x)) (vlambda y (var y)) →
-  refines (vlambda x (var x)) (vlambda y (var y)).
-Proof.
-  intros.
-  rewrite H.
-  reflexivity.
-Qed.
-
-Example ex_rew1 x y :
-  equiv (vlambda x (var x)) (vlambda y (var y)) →
-  refines (vlambda x (var x)) (vlambda y (var y)).
-Proof.
-  intros.
-  rewrite H.
-  reflexivity.
 Qed.
