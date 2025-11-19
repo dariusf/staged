@@ -170,9 +170,40 @@ Proof.
           exists v, v. split.
           { constructor. }
           { simpl. reflexivity. }
-      + admit.
-Admitted.
+      + (* this direction seems ... difficult *)
+Abort.
 
+Lemma L_rel_nterminates n e1 e2 :
+  (n ⊨ L_rel e1 e2) →
+  forall m,
+    m ≤ nw_index n →
+    nterminates m e1 →
+    terminates e2.
+Proof.
+  revert e1.
+  destruct n as [n]. simpl.
+  induction n as [| n' IHn']; intros e1 He m Hm He1.
+  - rewrite -> Nat.le_0_r in Hm.
+    rewrite -> Hm in He1.
+    apply nterminates_zero in He1 as (v & He1).
+    idestruct He as HeO _. idestruct HeO.
+    exact (HeO v He1).
+  - destruct m as [| m'].
+    + idestruct He as HeO _. idestruct HeO.
+      apply nterminates_zero in He1 as (v & He1).
+      exact (HeO v He1).
+    + rewrite <- Nat.succ_le_mono in Hm.
+      apply nterminates_succ in He1 as (e1' & Hstep & He1').
+      idestruct He as _ HeS.
+      eapply IHn'.
+      * eapply I_prop_intro in Hstep.
+        iapply HeS in Hstep.
+        eapply I_later_elim in Hstep.
+        { apply L_rel_unroll. exact Hstep. }
+        { unfold "⊏↓". simpl. lia. }
+      * exact Hm.
+      * exact He1'.
+Qed.
 
 Lemma terminates_impl_nterminates e :
   terminates e → ∃ n, nterminates n e.
@@ -194,6 +225,7 @@ Qed.
 
 Instance Transitive_l_rel : Transitive l_rel.
 Proof.
+(*
   unfold Transitive, l_rel.
   intros x y z Hxy Hyz n.
   specialize (Hxy n).
@@ -203,18 +235,18 @@ Proof.
   specialize (Hyz {| nw_index := n' |}).
   rewrite -> L_rel_alt in Hyz. simpl in Hyz.
   exact (Hyz n' ltac:(auto) Hy).
-
-  Restart.
+*)
 
   unfold Transitive, l_rel.
   intros x y z Hxy Hyz n.
+  unfold L_rel, L_rel_pre in Hxy.
+  specialize (Hxy n). idestruct Hxy as Hxy Hxy'. idestruct Hxy.
   isplit.
   + iintro. intros v ->.
-    unfold L_rel, L_rel_pre in Hxy.
-    specialize (Hxy n). idestruct Hxy as Hxy _. idestruct Hxy.
     specialize (Hxy v eq_refl).
-    admit.
-  + admit.
+    apply terminates_impl_nterminates in Hxy as (n' & Hy).
+    exact (L_rel_nterminates {| nw_index := n' |} _ _ (Hyz _) n' (Nat.le_refl _) Hy).
+  + admit. (* loeb_induction *)
 Admitted.
 
 Lemma O_rel_trans n :
