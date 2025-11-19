@@ -31,6 +31,31 @@ Proof.
   assumption.
 Qed.
 
+#[global]
+Instance Transitive_E_rel_o_closed n Γ : Transitive (E_rel_o_closed n Γ).
+Proof.
+  unfold Transitive, E_rel_o_closed. intros.
+Admitted.
+(* Qed. *)
+
+(* #[global]
+Instance Transitive_E_rel_o_closed n Γ : Transitive (E_rel_o_closed n Γ).
+Proof.
+  unfold Transitive, E_rel_o_closed. intros.
+  apply fundamental_property_e.
+  assumption.
+Qed. *)
+
+#[global]
+Instance Proper_E_rel_o_closed n Γ : Proper
+  (flip (E_rel_o_closed n Γ) ==> E_rel_o_closed n Γ ==> impl)
+  (E_rel_o_closed n Γ).
+Proof.
+  unfold flip, Proper, respectful, impl. intros.
+  assert (E_rel_o_closed n Γ y x0). { transitivity x; assumption. }
+  transitivity x0; assumption.
+Qed.
+
 Example ex_ctx_lambda1 n x y :
   E_rel_o_closed n (∅ ∪ {[x]})
     (app (elambda y (var y)) (var x)) (var x) →
@@ -39,15 +64,15 @@ Example ex_ctx_lambda1 n x y :
     (elambda x (var x)).
 Proof.
   intros H.
-  Fail rewrite -> H.
+  rewrite -> H.
+  reflexivity.
+Qed.
 
   (* apply Proper_E_rel_o_lambda.
   (* why does this work *)
   eassert (∅ ∪ {[x]} = {[x]}).
   { eapply union_empty_r. set_solver. }
   apply H. *)
-
-Abort.
 
 Example ex_ctx_lambda x y :
   closed ∅ (vlambda x (var x)) →
