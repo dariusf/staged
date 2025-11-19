@@ -39,6 +39,10 @@ Proof.
   transitivity x0; assumption.
 Qed.
 
+(** Dependent types seem more expressive than explicit hypotheses,
+  as there are some statements where associating a property with
+  an object seems different from putting it in front of or behind
+  an implication. *)
 Record cexpr (Γ:scope) := mk_cexpr {
   cexpr_car :> expr;
   cexpr_closed : closed Γ cexpr_car
