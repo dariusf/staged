@@ -68,6 +68,7 @@ Ltac2 fresh_goal_of_constr type :=
   | _ => Control.zero Match_failure
   end.
 
+(* TODO handle the case where nothing is matched; fail instead of succeeding silently *)
 Ltac2 rec specialise_many (h:ident) (hs:constr list) :=
   match hs with
   | [] =>
