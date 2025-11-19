@@ -16,8 +16,6 @@ Ltac ispec_one H H1 k :=
     ispecialize H H1; k
   | I_valid_at _ (I_prop (forall _, _)) =>
     ispecialize H H1; k
-  | I_valid_at _ (I_prop (forall _, forall _, _)) =>
-    ispecialize H H1; k
   | I_valid_at _ (I_arrow (I_prop _) _) =>
     let H2 := fresh "H" in
     refine ((fun H2 => _) (I_arrow_elim _ _ H (I_prop_intro _ H1)));

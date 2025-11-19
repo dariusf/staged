@@ -1093,32 +1093,30 @@ Proof.
   apply E_rel_elim in He.
   apply E_rel_elim in He'.
   apply E_rel_intro.
-  (* we have to show that the apps are in O if placed in related contexts E1 and E2. *)
+  (* we have to show that the apps are in O, given that they are placed
+    in related contexts E1 and E2. *)
   iintros E1 E2 HE.
-  (* The functions e1/e2 are evaluated first. We "zap" them down using He.
-    To do this, we have to give two contexts s.t. if we can prove them to be related,
+  (* The functions e1/e2 are evaluated first, so we "zap" them down using He.
+    To use He, we have to give two contexts s.t. if we can prove them to be related,
     plugging e1/e2 into them will be in O.
-    We give app_ctx1 because the plugging will give us exactly the goal we need.
-    This reduces the problem to that of showing the contexts are related.
-
-     We consider the contexts surround e1 and e2, and we are left
-     with showing that the surrounding contexts are related *)
+    We give ectx_app1 because the plugging will give us exactly the goal we need. *)
   ispecialize He (ectx_app1 E1 (subst_map γ1 e1')).
   ispecialize He (ectx_app1 E2 (subst_map γ2 e2')).
   iapply He.
-  (* after e1/e2 are fully evaluated, we are left with `ectx_app1 E1 e1'`
-     and `ectx_app1 E2 e2'`. Using K_rel_intro, we "assume" that e1 and
-     e2 evaluated to two related values v1 and v2, respectively; and then
-     we prove that the two contexts are related *)
+  (* This reduces the problem to that of showing that the two app contexts are related. *)
   apply K_rel_intro.
   iintros v1 v2 Hv. simpl.
-  (* e1'/e2' are evaluated. We "zap" then down using He' *)
+  (* Given that they are plugged with two related values, we now have to prove
+    that the result is in O. We use He' for a similar purpose. We give ectx_app2
+    because plugging e1'/e2' into it will match the goal. *)
   ispecialize He' (ectx_app2 v1 E1).
   ispecialize He' (ectx_app2 v2 E2).
   iapply He'.
+  (* Now we have to prove the ectx_app2 are related. *)
   apply K_rel_intro.
   iintros v1' v2' Hv'. simpl.
-  (* Now, we "zap" (app v1 v1') and (app v2 v2') down using E_rel_elimO *)
+  (* Now, we have that the two values and contexts are related.
+    We "zap" (app v1 v1') and (app v2 v2') down using E_rel_elimO *)
   apply E_rel_elimO.
   apply V_rel_elimE; [exact Hv | exact Hv'].
   (* Finally, we are left with just E1 and E2. They are related according
