@@ -45,6 +45,15 @@ n ⊨ L_rel e2 (fill E2 (subst_map γ2 z)) *)
 Instance Transitive_L_rel n Γ : Transitive (n ⊨ L_rel ).
 Proof. *)
 
+Goal ∀ n P, (n ⊨ ▷ (P)ᵢ) → P.
+Proof.
+  intros n P H_later.
+  (* if n = 0, then H_later holds trivially, but P may not hold *)
+  (* if n > 0, then H_later holds at (n = S n'), by the semantics of ▷, P holds at n'. Because P is pure,
+     P holds *)
+  (* so, the problem comes from the case, where n = 0! *)
+Abort.
+
 Lemma L_rel_trans n :
   n ⊨ ∀ᵢ x y z, L_rel x y →ᵢ
   (* n ⊨ *)
@@ -59,6 +68,23 @@ Proof.
   iintros x y z Hxy Hyz.
 
   unfold L_rel, L_rel_pre in Hxy, Hyz |- *.
+  (* if n = 0, then:
+     - if x is val, then y eventually terminates; otherwise we cannot say anything
+     - if y is val, then z eventually terminates; otherwise we cannot say anything
+
+     Now, we are given that x is val, and we need to show that z eventually terminates.
+     From x is val, we know that y eventually terminates. However, if y terminates in
+     more than 0 steps, we cannot say anything (z may loop). Therefore, this does not hold.
+
+     -> Counter-example:
+     let x = λx.x (is val)
+     let y = (λx.x)(λx.x) (terminates after 1 step)
+     let z = (λx.xx)(λx.xx) (omega, loops)
+
+     we observe that 0 ⊨ L_rel x y
+     we also observe that 0 ⊨ L_rel y z
+     but 0 ⊭ L_rel x z
+   *)
   (* unfold L_rel, L_rel_pre. *)
   isplit.
   {
@@ -74,8 +100,19 @@ Proof.
     destruct H as (e2&Hrtc&Hr).
     (* destruct Hrtc. *)
     (* Print rtc. *)
-    inversion Hrtc.
+    inversion Hrtc; subst.
     admit.
+    Search (▷ _).
+    eapply I_prop_intro in H.
+    ispec H2 y0.
+    iapply H2 in H. clear H2.
+    Search (▷ _).
+    assert (n ⊨ ▷ (terminates z)ᵢ).
+    { later_shift.
+      iintro.
+      assert (n ⊨ L_rel z z) by admit.
+      apply L_rel_unroll in H.
+      ispec IH y0. ispec IH z. ispec IH z. ispec IH H. ispec IH H4.
     admit.
   }
   {
