@@ -24,6 +24,7 @@ Proof.
 Qed.
 *)
 
+(*
 #[global]
 Instance Reflexive_E_rel_o_closed n Γ : Reflexive (E_rel_o_closed n Γ).
 Proof.
@@ -31,19 +32,7 @@ Proof.
   apply fundamental_property_e.
   apply cexpr_closed.
 Qed.
-
-(* #[global]
-Instance Transitive_L_rel n Γ : Transitive (L_rel).
-Proof. *)
-
-(* n ⊨ L_rel e1 e2
-n ⊨ L_rel (fill E2 (subst_map γ2 y)) (fill E1 (subst_map γ1 x))
-n ⊨ O_rel  (fill E2 (subst_map γ2 z))
-n ⊨ L_rel e2 (fill E2 (subst_map γ2 z)) *)
-
-(* #[global]
-Instance Transitive_L_rel n Γ : Transitive (n ⊨ L_rel ).
-Proof. *)
+*)
 
 Goal ∀ n P, (n ⊨ ▷ (P)ᵢ) → P.
 Proof.
@@ -55,99 +44,178 @@ Proof.
 Abort.
 
 Lemma L_rel_trans n :
-  n ⊨ ∀ᵢ x y z, L_rel x y →ᵢ
-  (* n ⊨ *)
-  L_rel y z →ᵢ
-  (* n ⊨ *)
-  L_rel x z.
+  n ⊨ ∀ᵢ x y z,
+    L_rel x y →ᵢ
+    L_rel y z →ᵢ
+    L_rel x z.
 Proof.
-  (* loeb_induction. *)
-
-  (* intros. *)
   loeb_induction.
   iintros x y z Hxy Hyz.
-
-  unfold L_rel, L_rel_pre in Hxy, Hyz |- *.
-  (* if n = 0, then:
-     - if x is val, then y eventually terminates; otherwise we cannot say anything
-     - if y is val, then z eventually terminates; otherwise we cannot say anything
-
-     Now, we are given that x is val, and we need to show that z eventually terminates.
-     From x is val, we know that y eventually terminates. However, if y terminates in
-     more than 0 steps, we cannot say anything (z may loop). Therefore, this does not hold.
-
-     -> Counter-example:
-     let x = λx.x (is val)
-     let y = (λx.x)(λx.x) (terminates after 1 step)
-     let z = (λx.xx)(λx.xx) (omega, loops)
-
-     we observe that 0 ⊨ L_rel x y
-     we also observe that 0 ⊨ L_rel y z
-     but 0 ⊭ L_rel x z
-   *)
-  (* unfold L_rel, L_rel_pre. *)
+  unfold L_rel, L_rel_pre.
   isplit.
-  {
-    iintro.
-    intros v1 ->.
-    idestruct Hxy.
-    idestruct Hyz.
-    ispec H v1.
-    specialize (H eq_refl).
+  { unfold L_rel, L_rel_pre in Hxy, Hyz.
+    (* If n = 0, then:
+       - If x is val, then y eventually terminates; otherwise we cannot say anything.
+       - If y is val, then z eventually terminates; otherwise we cannot say anything.
 
-    destruct H as (v2&?).
-    unfold bigstep in H.
-    destruct H as (e2&Hrtc&Hr).
-    (* destruct Hrtc. *)
-    (* Print rtc. *)
-    inversion Hrtc; subst.
-    admit.
-    Search (▷ _).
-    eapply I_prop_intro in H.
-    ispec H2 y0.
-    iapply H2 in H. clear H2.
-    Search (▷ _).
-    assert (n ⊨ ▷ (terminates z)ᵢ).
-    { later_shift.
-      iintro.
-      assert (n ⊨ L_rel z z) by admit.
-      apply L_rel_unroll in H.
-      ispec IH y0. ispec IH z. ispec IH z. ispec IH H. ispec IH H4.
-    admit.
-  }
-  {
-    iintros e1 Hc.
-    (* idestruct Hc. *)
+       Now, we are given that x is val, and we need to show that z eventually terminates.
+       From x is val, we know that y eventually terminates. However, if y terminates in
+       more than 0 steps, we cannot say anything (z may loop). Therefore, this does not
+       hold.
 
-    idestruct Hxy.
-    (* idestruct H2. *)
-    ispec H0 e1 Hc.
+       Counter-example:
+       x = λx.x (is val)
+       y = (λx.x)(λx.x) (terminates after 1 step)
+       z = (λx.xx)(λx.xx) (omega, loops)
+
+       We observe that 0 ⊨ L_rel x y.
+       We also observe that 0 ⊨ L_rel y z.
+       But 0 ⊭ L_rel x z. *)
+    admit. }
+  { iintros x' Hc.
+    unfold L_rel, L_rel_pre in Hxy.
+    idestruct Hxy as _ Hxy.
+    ispec Hxy x' Hc.
     later_shift.
-    (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+    apply L_rel_unroll in Hxy.
+    apply L_rel_roll.
+    ispec IH x' y z Hxy Hyz.
+    exact IH. }
+Abort. (* cannot be proven *)
 
-    ispec IH e1 y z.
-    admit.
-    (* iapply H2 in Hc. *)
+Definition l_rel e1 e2 : Prop := ∀ n, n ⊨ L_rel e1 e2.
 
-(* I_arrow_elim *)
-    (* Search "I_arrow". *)
+Definition nbigstep n e v := ∃ e', nsteps contextual_step n e e' ∧ to_val e' = Some v.
+Definition nterminates n e := ∃ v, nbigstep n e v.
+
+Lemma to_val_eq_Some e v :
+  to_val e = Some v →
+  e = ret v.
+Proof. destruct e; simpl; congruence. Qed.
+
+Lemma nterminates_zero e :
+  nterminates O e →
+  ∃ (v : val), e = v.
+Proof.
+  unfold nterminates, nbigstep.
+  intros (v & e' & Hnsteps & Heq).
+  inversion Hnsteps. subst.
+  apply to_val_eq_Some in Heq.
+  exists v. exact Heq.
+Qed.
 
 
-    (* ispecialize H2 Hc. *)
+Lemma nterminates_succ e n :
+  nterminates (S n) e →
+  ∃ e', contextual_step e e' ∧ nterminates n e'.
+Proof.
+  unfold nterminates, nbigstep.
+  intros (v & e' & Hnsteps & Heq).
+  inversion Hnsteps. subst.
+  exists y. split.
+  - assumption.
+  - exists v, e'. auto.
+Qed.
 
-    (* idestruct H1. *)
-
-  }
-
-  (* apply L_rel_unroll.
-  apply L_rel_roll in H, H0.
-  unfold L_rel_fix in *.
-  unfold L_rel_pre in *.
-
-  unfold L_rel in *. *)
-
+Lemma L_rel_alt n e1 e2 :
+  (n ⊨ L_rel e1 e2) ↔
+  (forall m, m ≤ nw_index n → nterminates m e1 → terminates e2).
+Proof.
+  split.
+  { revert e1.
+    destruct n as [n]. simpl.
+    induction n as [| n' IHn']; intros e1 He m Hm He1.
+    - rewrite -> Nat.le_0_r in Hm.
+      rewrite -> Hm in He1.
+      apply nterminates_zero in He1 as (v & He1).
+      idestruct He as HeO _. idestruct HeO.
+      exact (HeO v He1).
+    - destruct m as [| m'].
+      + idestruct He as HeO _. idestruct HeO.
+        apply nterminates_zero in He1 as (v & He1).
+        exact (HeO v He1).
+      + rewrite <- Nat.succ_le_mono in Hm.
+        apply nterminates_succ in He1 as (e1' & Hstep & He1').
+        idestruct He as _ HeS.
+        eapply IHn'.
+        * eapply I_prop_intro in Hstep.
+          iapply HeS in Hstep.
+          eapply I_later_elim in Hstep.
+          { apply L_rel_unroll. exact Hstep. }
+          { unfold "⊏↓". simpl. lia. }
+        * exact Hm.
+        * exact He1'. }
+  { destruct n as [n]. simpl.
+    induction n as [| n' IHn']; intros H_terminates.
+    - isplit.
+      + iintro.
+        intros v ->.
+        apply (H_terminates 0).
+        * exact (Nat.le_0_l _).
+        * unfold nterminates, nbigstep.
+          exists v, v. split.
+          { constructor. }
+          { simpl. reflexivity. }
+      + iintros e1' _.
+        destruct w as [w]. simpl in *.
+        replace w with 0 by lia.
+        iapply I_later_zero.
+        simpl. reflexivity.
+    - isplit.
+      + iintro.
+        intros v ->.
+        apply (H_terminates 0).
+        * exact (Nat.le_0_l _).
+        * unfold nterminates, nbigstep.
+          exists v, v. split.
+          { constructor. }
+          { simpl. reflexivity. }
+      + admit.
 Admitted.
 
+
+Lemma terminates_impl_nterminates e :
+  terminates e → ∃ n, nterminates n e.
+Proof.
+  unfold terminates, nterminates.
+  unfold bigstep, nbigstep.
+  intros (v & e' & Hrtc & Heq).
+  induction Hrtc.
+  - exists O, v, x.
+    split.
+    + constructor.
+    + exact Heq.
+  - specialize (IHHrtc Heq) as (n & v' & e' & Hnsteps & Heq').
+    exists (S n), v', e'.
+    split.
+    + econstructor; eassumption.
+    + exact Heq'.
+Qed.
+
+Instance Transitive_l_rel : Transitive l_rel.
+Proof.
+  unfold Transitive, l_rel.
+  intros x y z Hxy Hyz n.
+  specialize (Hxy n).
+  rewrite -> L_rel_alt in Hxy |- *.
+  intros m Hlt Hx. specialize (Hxy m Hlt Hx).
+  apply terminates_impl_nterminates in Hxy as (n' & Hy).
+  specialize (Hyz {| nw_index := n' |}).
+  rewrite -> L_rel_alt in Hyz. simpl in Hyz.
+  exact (Hyz n' ltac:(auto) Hy).
+
+  Restart.
+
+  unfold Transitive, l_rel.
+  intros x y z Hxy Hyz n.
+  isplit.
+  + iintro. intros v ->.
+    unfold L_rel, L_rel_pre in Hxy.
+    specialize (Hxy n). idestruct Hxy as Hxy _. idestruct Hxy.
+    specialize (Hxy v eq_refl).
+    admit.
+  + admit.
+Admitted.
 
 Lemma O_rel_trans n :
   n ⊨ ∀ᵢ x y z, O_rel x y →ᵢ
@@ -182,7 +250,7 @@ Proof.
 
   apply E_rel_o_elim in H1.
   apply E_rel_o_elim in H2.
-  ispec H1 γ1 γ2 HG.
+  ispec H1 γ1 γ1 ltac:(admit).
   ispec H2 γ1 γ2 HG.
 
 Admitted.
