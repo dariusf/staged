@@ -149,44 +149,43 @@ Proof.
 Admitted.
 
 
-#[global]
-Instance Transitive_E_rel_o_closed n Γ : Transitive (E_rel_o_closed n Γ).
+Lemma O_rel_trans n :
+  n ⊨ ∀ᵢ x y z, O_rel x y →ᵢ
+  (* n ⊨ *)
+  O_rel y z →ᵢ
+  (* n ⊨ *)
+  O_rel x z.
 Proof.
-  (* unfold Transitive. E_rel_o_closed. intros * H1 H2.
+Admitted.
+
+Lemma E_rel_trans n x y z :
+  n ⊨ E_rel x y →
+  n ⊨ E_rel y z →
+  n ⊨ E_rel x z.
+Proof.
+  intros Hxy Hyz.
+
+  apply E_rel_intro.
+  iintros E1 E2 HK.
+
+  apply E_rel_elim in Hxy.
+  apply E_rel_elim in Hyz.
+Admitted.
+
+#[global]
+Instance Transitive_E_rel_o_closed n Γ :
+  Transitive (E_rel_o_closed n Γ).
+Proof.
+  unfold Transitive, E_rel_o_closed. intros * H1 H2.
   apply E_rel_o_intro.
   iintros γ1 γ2 HG.
 
   apply E_rel_o_elim in H1.
   apply E_rel_o_elim in H2.
   ispec H1 γ1 γ2 HG.
-  (* huh *)
-  (* rename H3 into H2. *)
-  ispec H3 γ1 γ2 HG.
-  (* ispec H2 HG. *)
-  (* ispecialize H2 HG. *)
+  ispec H2 γ1 γ2 HG.
 
-  apply E_rel_intro.
-  iintros E1 E2 HK.
-
-  apply E_rel_elim in H1.
-  ispec H1 E1 E2 HK.
-
-
-  (* rename H3 into H2. *)
-  apply E_rel_elim in H3.
-  ispec H3 E1 E2 HK.
-
-  idestruct H1 as H1 H2.
-
-
-  (* apply O_rel_intro. *)
-  unfold O_rel.
-  isplit. *)
-
-
-  (* transitivity y. *)
 Admitted.
-(* Qed. *)
 
 (* #[global]
 Instance Transitive_E_rel_o_closed n Γ : Transitive (E_rel_o_closed n Γ).
