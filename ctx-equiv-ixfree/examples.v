@@ -41,10 +41,81 @@ n ⊨ L_rel (fill E2 (subst_map γ2 y)) (fill E1 (subst_map γ1 x))
 n ⊨ O_rel  (fill E2 (subst_map γ2 z))
 n ⊨ L_rel e2 (fill E2 (subst_map γ2 z)) *)
 
+(* #[global]
+Instance Transitive_L_rel n Γ : Transitive (n ⊨ L_rel ).
+Proof. *)
+
+Lemma L_rel_trans n :
+  n ⊨ ∀ᵢ x y z, L_rel x y →ᵢ
+  (* n ⊨ *)
+  L_rel y z →ᵢ
+  (* n ⊨ *)
+  L_rel x z.
+Proof.
+  (* loeb_induction. *)
+
+  (* intros. *)
+  loeb_induction.
+  iintros x y z Hxy Hyz.
+
+  unfold L_rel, L_rel_pre in Hxy, Hyz |- *.
+  (* unfold L_rel, L_rel_pre. *)
+  isplit.
+  {
+    iintro.
+    intros v1 ->.
+    idestruct Hxy.
+    idestruct Hyz.
+    ispec H v1.
+    specialize (H eq_refl).
+
+    destruct H as (v2&?).
+    unfold bigstep in H.
+    destruct H as (e2&Hrtc&Hr).
+    (* destruct Hrtc. *)
+    (* Print rtc. *)
+    inversion Hrtc.
+    admit.
+    admit.
+  }
+  {
+    iintros e1 Hc.
+    (* idestruct Hc. *)
+
+    idestruct Hxy.
+    (* idestruct H2. *)
+    ispec H0 e1 Hc.
+    later_shift.
+    (* Unset Printing Notations. Set Printing Coercions. Set Printing Parentheses. *)
+
+    ispec IH e1 y z.
+    admit.
+    (* iapply H2 in Hc. *)
+
+(* I_arrow_elim *)
+    (* Search "I_arrow". *)
+
+
+    (* ispecialize H2 Hc. *)
+
+    (* idestruct H1. *)
+
+  }
+
+  (* apply L_rel_unroll.
+  apply L_rel_roll in H, H0.
+  unfold L_rel_fix in *.
+  unfold L_rel_pre in *.
+
+  unfold L_rel in *. *)
+
+Admitted.
+
+
 #[global]
 Instance Transitive_E_rel_o_closed n Γ : Transitive (E_rel_o_closed n Γ).
 Proof.
-  unfold Transitive, E_rel_o_closed. intros * H1 H2.
+  (* unfold Transitive. E_rel_o_closed. intros * H1 H2.
   apply E_rel_o_intro.
   iintros γ1 γ2 HG.
 
@@ -73,9 +144,7 @@ Proof.
 
   (* apply O_rel_intro. *)
   unfold O_rel.
-  isplit.
-
-
+  isplit. *)
 
 
   (* transitivity y. *)
