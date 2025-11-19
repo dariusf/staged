@@ -39,46 +39,59 @@ Proof.
   transitivity x0; assumption.
 Qed.
 
+Record cexpr (Γ:scope) := mk_cexpr {
+  cexpr_car :> expr;
+  cexpr_closed : closed Γ cexpr_car
+}.
+
 (** congruence Proper instances (using E_rel_o) *)
 
 (* TODO: move to lang_ext.v or whatever *)
-Definition E_rel_o_closed n Γ e1 e2 :=
-  closed Γ e1 →
-  closed Γ e2 →
+Definition E_rel_o_closed n Γ (e1 e2:cexpr Γ) :=
+  (* closed Γ e1 → *)
+  (* closed Γ e2 → *)
   n ⊨ E_rel_o Γ e1 e2.
 
 Definition elambda x e := ret (vlambda x e).
+Program Definition celambda {Γ} x (e:cexpr (Γ ∪ {[x]})) : cexpr Γ :=
+  mk_cexpr {[x]} (ret (vlambda x e)) _.
+Next Obligation.
+  intros.
+  rewrite closed_lambda.
+  apply cexpr_closed.
+Qed.
+
+Program Definition capp {Γ} (e1 e2:cexpr Γ) : cexpr Γ :=
+  mk_cexpr Γ (app (cexpr_car Γ e1) (cexpr_car Γ e2)) _.
+Next Obligation.
+  intros.
+  apply closed_app.
+  split; apply cexpr_closed.
+Qed.
 
 #[global]
 Instance Proper_E_rel_o_app n Γ :
   Proper
     (E_rel_o_closed n Γ ==>
      E_rel_o_closed n Γ ==>
-     E_rel_o_closed n Γ) app.
+     E_rel_o_closed n Γ) capp.
 Proof.
   unfold Proper, E_rel_o_closed, respectful.
   intros e1 e1' He1.
   intros e2 e2' He2.
-  intros Hc1 Hc2.
-  rewrite closed_app in Hc1.
-  rewrite closed_app in Hc2.
-  destruct Hc1 as (?&?).
-  destruct Hc2 as (?&?).
-  specialize (He1 H H1).
-  specialize (He2 H0 H2).
   by apply compat_app.
 Qed.
 
 Instance Proper_E_rel_o_lambda n Γ x :
   Proper
     (E_rel_o_closed n (Γ ∪ {[x]}) ==>
-     E_rel_o_closed n Γ) (elambda x).
+     E_rel_o_closed n Γ) (celambda x).
 Proof.
-  unfold Proper, E_rel_o_closed, respectful, elambda.
-  intros e1 e2 He Hc1 Hc2.
-  ospecialize (He _ _).
-  { by rewrite closed_lambda in Hc1. }
-  { by rewrite closed_lambda in Hc2. }
+  unfold Proper, E_rel_o_closed, respectful.
+  intros e1 e2 He.
   apply compat_val.
-  by apply compat_lambda.
+  apply compat_lambda.
+  apply cexpr_closed.
+  apply cexpr_closed.
+  assumption.
 Qed.

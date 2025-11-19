@@ -2,6 +2,7 @@
 From CtxEquivIxFree Require Import lang.
 From CtxEquivIxFree Require Import propriety.
 From IxFree Require Import Lib Nat.
+From CtxEquivIxFree Require Import ixfree_tactics.
 
 (*
 Example ex_rew x y :
@@ -28,13 +29,56 @@ Instance Reflexive_E_rel_o_closed n Γ : Reflexive (E_rel_o_closed n Γ).
 Proof.
   unfold Reflexive, E_rel_o_closed. intros.
   apply fundamental_property_e.
-  assumption.
+  apply cexpr_closed.
 Qed.
+
+(* #[global]
+Instance Transitive_L_rel n Γ : Transitive (L_rel).
+Proof. *)
+
+(* n ⊨ L_rel e1 e2
+n ⊨ L_rel (fill E2 (subst_map γ2 y)) (fill E1 (subst_map γ1 x))
+n ⊨ O_rel  (fill E2 (subst_map γ2 z))
+n ⊨ L_rel e2 (fill E2 (subst_map γ2 z)) *)
 
 #[global]
 Instance Transitive_E_rel_o_closed n Γ : Transitive (E_rel_o_closed n Γ).
 Proof.
-  unfold Transitive, E_rel_o_closed. intros.
+  unfold Transitive, E_rel_o_closed. intros * H1 H2.
+  apply E_rel_o_intro.
+  iintros γ1 γ2 HG.
+
+  apply E_rel_o_elim in H1.
+  apply E_rel_o_elim in H2.
+  ispec H1 γ1 γ2 HG.
+  (* huh *)
+  (* rename H3 into H2. *)
+  ispec H3 γ1 γ2 HG.
+  (* ispec H2 HG. *)
+  (* ispecialize H2 HG. *)
+
+  apply E_rel_intro.
+  iintros E1 E2 HK.
+
+  apply E_rel_elim in H1.
+  ispec H1 E1 E2 HK.
+
+
+  (* rename H3 into H2. *)
+  apply E_rel_elim in H3.
+  ispec H3 E1 E2 HK.
+
+  idestruct H1 as H1 H2.
+
+
+  (* apply O_rel_intro. *)
+  unfold O_rel.
+  isplit.
+
+
+
+
+  (* transitivity y. *)
 Admitted.
 (* Qed. *)
 
@@ -56,12 +100,20 @@ Proof.
   transitivity x0; assumption.
 Qed.
 
+Program Definition cvar {Γ} (x: name) : cexpr (Γ ∪ {[x]}) :=
+  mk_cexpr (Γ ∪ {[x]}) (var x) _.
+Next Obligation.
+  intros.
+  rewrite closed_var.
+  set_solver.
+Qed.
+
 Example ex_ctx_lambda1 n x y :
   E_rel_o_closed n (∅ ∪ {[x]})
-    (app (elambda y (var y)) (var x)) (var x) →
+    (capp (celambda y (cvar y)) (cvar x)) (cvar x) →
   E_rel_o_closed n ∅
-    (elambda x (app (elambda y (var y)) (var x)))
-    (elambda x (var x)).
+    (celambda x (capp (celambda y (cvar y)) (cvar x)))
+    (celambda x (cvar x)).
 Proof.
   intros H.
   rewrite -> H.

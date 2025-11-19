@@ -1067,10 +1067,9 @@ Proof.
   apply E_rel_o_intro.
   iintros γ1 γ2 Hγ.
   ispecialize Hv γ1. ispecialize Hv γ2. ispec Hv Hγ.
-  apply V_rel_elim in Hv as (H_closed1 & H_closed2 & Hv).
-  apply E_rel_intro.
-  iintros E1 E2 HE. simpl.
+  apply E_rel_intro. iintros E1 E2 HE. simpl.
   apply (K_rel_elimO E1 E2 _ _ _ HE).
+  apply V_rel_elim in Hv as (H_closed1 & H_closed2 & Hv).
   apply V_rel_intro.
   { exact H_closed1. }
   { exact H_closed2. }
@@ -1094,8 +1093,14 @@ Proof.
   apply E_rel_elim in He.
   apply E_rel_elim in He'.
   apply E_rel_intro.
+  (* we have to show that the apps are in O if placed in related contexts E1 and E2. *)
   iintros E1 E2 HE.
-  (* e1/e2 are evaluated first. We "zap" then down using He.
+  (* The functions e1/e2 are evaluated first. We "zap" them down using He.
+    To do this, we have to give two contexts s.t. if we can prove them to be related,
+    plugging e1/e2 into them will be in O.
+    We give app_ctx1 because the plugging will give us exactly the goal we need.
+    This reduces the problem to that of showing the contexts are related.
+
      We consider the contexts surround e1 and e2, and we are left
      with showing that the surrounding contexts are related *)
   ispecialize He (ectx_app1 E1 (subst_map γ1 e1')).
@@ -1622,8 +1627,6 @@ Proof.
     (* apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). *)
     applyy sem_context_rel_insert Hu Hγ. }
 Qed.
-
-(* Print Assumptions compat_lambda. *)
 
 Lemma fundamental_property_e Γ (e : expr) n :
   closed Γ e →
