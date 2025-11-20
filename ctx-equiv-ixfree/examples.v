@@ -70,7 +70,12 @@ Proof.
 
        We observe that 0 ⊨ L_rel x y.
        We also observe that 0 ⊨ L_rel y z.
-       But 0 ⊭ L_rel x z. *)
+       But 0 ⊭ L_rel x z.
+
+       Also note that 0 ⊨ L_rel y x and 0 ⊨ L_rel z y.
+       Thus 0 ⊨ O_rel x y and 0 ⊨ O_rel y z.
+       But 0 ⊭ L_rel x z, hence 0 ⊭ O_rel x z.
+     *)
     admit. }
   { iintros x' Hc.
     unfold L_rel, L_rel_pre in Hxy.
@@ -195,7 +200,7 @@ Proof.
     + rewrite <- Nat.succ_le_mono in Hm.
       apply nterminates_succ in He1 as (e1' & Hstep & He1').
       idestruct He as _ HeS.
-      eapply IHn'.
+      eapply (IHn' e1').
       * eapply I_prop_intro in Hstep.
         iapply HeS in Hstep.
         eapply I_later_elim in Hstep.
@@ -236,27 +241,83 @@ Proof.
   rewrite -> L_rel_alt in Hyz. simpl in Hyz.
   exact (Hyz n' ltac:(auto) Hy).
 *)
-
   unfold Transitive, l_rel.
   intros x y z Hxy Hyz n.
-  unfold L_rel, L_rel_pre in Hxy.
-  specialize (Hxy n). idestruct Hxy as Hxy Hxy'. idestruct Hxy.
+  specialize (Hxy n).
+  irevert x Hxy. loeb_induction IH.
+  iintros x Hxy.
   isplit.
-  + iintro. intros v ->.
+  + idestruct Hxy as Hxy _. idestruct Hxy.
+    iintro. intros v ->.
     specialize (Hxy v eq_refl).
     apply terminates_impl_nterminates in Hxy as (n' & Hy).
     exact (L_rel_nterminates {| nw_index := n' |} _ _ (Hyz _) n' (Nat.le_refl _) Hy).
-  + admit. (* loeb_induction *)
-Admitted.
+  + iintros x' Hc.
+    idestruct Hxy as _ Hxy.
+    ispec Hxy x' Hc.
+    later_shift.
+    apply L_rel_unroll in Hxy.
+    apply L_rel_roll.
+    ispec IH x' Hxy.
+    exact IH.
+Qed.
 
-Lemma O_rel_trans n :
-  n ⊨ ∀ᵢ x y z, O_rel x y →ᵢ
-  (* n ⊨ *)
-  O_rel y z →ᵢ
-  (* n ⊨ *)
-  O_rel x z.
+Definition o_rel e1 e2 := ∀ n, n ⊨ O_rel e1 e2.
+
+Lemma o_rel_alt e1 e2 :
+  o_rel e1 e2 ↔
+  l_rel e1 e2 ∧ l_rel e2 e1.
 Proof.
-Admitted.
+  unfold o_rel, l_rel, O_rel.
+  split.
+  { intros He. split.
+    - intros n. exact (I_conj_elim1 _ _ (He n)).
+    - intros n. exact (I_conj_elim2 _ _ (He n)). }
+  { intros [He1 He2] n. isplit; auto. }
+Qed.
+
+Instance Transitive_o_rel : Transitive o_rel.
+Proof.
+  unfold Transitive.
+  intros x y z Hxy Hyz.
+  apply o_rel_alt in Hxy as [Hxy1 Hxy2].
+  apply o_rel_alt in Hyz as [Hyz1 Hyz2].
+  apply o_rel_alt. split.
+  - etransitivity; eauto.
+  - etransitivity; eauto.
+Qed.
+
+Definition e_rel e1 e2 := ∀ n, n ⊨ E_rel e1 e2.
+Definition k_rel E1 E2 := ∀ n, n ⊨ K_rel E1 E2.
+
+Lemma e_rel_elim e1 e2 E1 E2 :
+  e_rel e1 e2 →
+  k_rel E1 E2 →
+  o_rel (fill E1 e1) (fill E2 e2).
+Proof.
+  unfold e_rel, k_rel, o_rel.
+  intros He HE n.
+  apply E_rel_elimO; auto.
+Qed.
+
+Lemma e_rel_intro e1 e2 :
+  (∀ E1 E2 n, n ⊨ K_rel E1 E2 → o_rel (fill E1 e1) (fill E2 e2)) →
+  e_rel e1 e2.
+Proof.
+  unfold e_rel, o_rel.
+  intros He n.
+  apply E_rel_intro.
+  iintros E1 E2 HE.
+  eapply He. exact HE.
+Qed.
+
+Instance Transitive_e_rel : Transitive e_rel.
+Proof.
+  unfold Transitive.
+  intros x y z Hxy Hyz.
+  apply e_rel_intro.
+  intros E1 E2 n HE.
+Abort.
 
 Lemma E_rel_trans n x y z :
   n ⊨ E_rel x y →
