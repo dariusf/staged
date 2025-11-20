@@ -287,66 +287,108 @@ Proof.
   - etransitivity; eauto.
 Qed.
 
-Definition e_rel e1 e2 := ∀ n, n ⊨ E_rel e1 e2.
-Definition k_rel E1 E2 := ∀ n, n ⊨ K_rel E1 E2.
-
-Lemma e_rel_elim e1 e2 E1 E2 :
-  e_rel e1 e2 →
-  k_rel E1 E2 →
-  o_rel (fill E1 e1) (fill E2 e2).
-Proof.
-  unfold e_rel, k_rel, o_rel.
-  intros He HE n.
-  apply E_rel_elimO; auto.
-Qed.
-
-Lemma e_rel_intro e1 e2 :
-  (∀ E1 E2 n, n ⊨ K_rel E1 E2 → o_rel (fill E1 e1) (fill E2 e2)) →
-  e_rel e1 e2.
-Proof.
-  unfold e_rel, o_rel.
-  intros He n.
-  apply E_rel_intro.
-  iintros E1 E2 HE.
-  eapply He. exact HE.
-Qed.
-
+(*
 Instance Transitive_e_rel : Transitive e_rel.
 Proof.
-  unfold Transitive.
-  intros x y z Hxy Hyz.
-  apply e_rel_intro.
-  intros E1 E2 n HE.
-Abort.
-
-Lemma E_rel_trans n x y z :
-  n ⊨ E_rel x y →
-  n ⊨ E_rel y z →
-  n ⊨ E_rel x z.
-Proof.
-  intros Hxy Hyz.
-
+  unfold Transitive, e_rel.
+  intros x y z Hxy Hyz n.
   apply E_rel_intro.
-  iintros E1 E2 HK.
+  iintros E1 E2 HE.
+Abort.
+*)
 
-  apply E_rel_elim in Hxy.
-  apply E_rel_elim in Hyz.
+Definition ciu_equiv Γ e1 e2 :=
+  ∀ E, ectx_is_closed Γ E → obs_equiv (plug E e1) (plug E e2).
+
+Fixpoint rctx_to_ctx (R : rctx) : ctx :=
+  match R with
+  | rctx_hole => ctx_hole
+  | rctx_app1 R' e => ctx_app1 (rctx_to_ctx R') e
+  | rctx_app2 v R' => ctx_app2 v (rctx_to_ctx R')
+  end.
+
+Definition ectx_to_ctx (E : ectx) : ctx :=
+  rctx_to_ctx (ectx_to_rctx E).
+
+Lemma rctx_to_ctx_correct R e :
+  rplug R e = cplug (rctx_to_ctx R) e.
+Proof.
+  induction R.
+  - simpl. reflexivity.
+  - simpl. rewrite -> IHR. reflexivity.
+  - simpl. rewrite -> IHR. reflexivity.
+Qed.
+
+Lemma rctx_to_ectx_correct R e :
+  rplug R e = plug (rctx_to_ectx R) e.
+Proof.
+  unfold rctx_to_ectx.
+  rewrite -> ectx_comp_rctx1_correct.
+  simpl. reflexivity.
+Qed.
+
+Lemma ectx_to_ctx_correct E e :
+  plug E e = cplug (ectx_to_ctx E) e.
+Proof.
+  unfold ectx_to_ctx.
+  rewrite <- (ectx_rctx_bijection1 E) at 1.
+  rewrite <- rctx_to_ectx_correct. simpl.
+  rewrite -> rctx_to_ctx_correct.
+  reflexivity.
+Qed.
+
+Check E_rel_o_soundness.
+
+Lemma ciu_equiv_completeness Γ e1 e2 :
+  closed Γ e1 →
+  closed Γ e2 →
+  ctx_equiv Γ e1 e2 →
+  ciu_equiv Γ e1 e2.
+Proof.
+  unfold ctx_equiv, ciu_equiv.
+  intros Hce1 Hce2 Hequiv E HcE.
+  rewrite -> ectx_to_ctx_correct.
+  rewrite -> ectx_to_ctx_correct.
+  apply Hequiv.
+  unfold ectx_is_closed in HcE.
+  unfold ectx_to_ctx.
+  induction E.
+  - simpl in *. admit.
 Admitted.
+
+Lemma E_rel_o_completeness Γ e1 e2 n :
+  closed Γ e1 →
+  closed Γ e2 →
+  ctx_equiv Γ e1 e2 →
+  n ⊨ E_rel_o Γ e1 e2.
+Proof.
+  intros Hce1 Hce2 Hequiv.
+  apply ciu_equiv_completeness in Hequiv.
+  unfold ciu_equiv in Hequiv.
+  apply E_rel_o_intro.
+  iintros γ1 γ2 Hγ.
+  apply E_rel_intro.
+  iintros E1 E2 HE.
+  assert (Htmp : n ⊨ O_rel (fill E1 (subst_map γ1 e1)) (fill E2 (subst_map γ2 e1))).
+  { eapply E_rel_elimO; [| exact HE].
+    assert (He1 := fundamental_property_e Γ e1 n Hce1).
+    iapply (E_rel_o_elim _ _ _ _ He1).
+    exact Hγ. }
+Admitted.
+
+Definition E_rel_o_closed' Γ e1 e2 := ∀ n, E_rel_o_closed n Γ e1 e2.
 
 #[global]
-Instance Transitive_E_rel_o_closed n Γ :
-  Transitive (E_rel_o_closed n Γ).
+Instance Transitive_E_rel_o_closed Γ :
+  Transitive (E_rel_o_closed' Γ).
 Proof.
-  unfold Transitive, E_rel_o_closed. intros * H1 H2.
-  apply E_rel_o_intro.
-  iintros γ1 γ2 HG.
-
-  apply E_rel_o_elim in H1.
-  apply E_rel_o_elim in H2.
-  ispec H1 γ1 γ1 ltac:(admit).
-  ispec H2 γ1 γ2 HG.
-
-Admitted.
+  unfold Transitive, E_rel_o_closed', E_rel_o_closed.
+  intros [x Hcx] [y Hcy] [z Hcz] Hxy Hyz n. simpl in *.
+  apply E_rel_o_completeness; auto.
+  apply (E_rel_o_soundness Γ x y Hcx Hcy) in Hxy.
+  apply (E_rel_o_soundness Γ y z Hcy Hcz) in Hyz.
+  etransitivity; eassumption.
+Qed.
 
 (* #[global]
 Instance Transitive_E_rel_o_closed n Γ : Transitive (E_rel_o_closed n Γ).
