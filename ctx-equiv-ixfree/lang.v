@@ -1649,6 +1649,70 @@ Proof.
         apply fundamental_property_e. assumption. }
 Qed.
 
+Lemma G_rel_empty n :
+  n ⊨ G_rel ∅ ∅ ∅.
+Proof.
+  apply G_rel_intro.
+  - unfold subst_is_closed. split; set_solver.
+  - unfold subst_is_closed. split; set_solver.
+  - iintros.
+    idestruct H.
+    setoid_rewrite lookup_empty in H.
+    discriminate H.
+Qed.
+
+Lemma subst_map_empty (e:expr) :
+  subst_map ∅ e = e
+with subst_map_val_empty (v:val) :
+  subst_map_val ∅ v = v.
+Proof.
+  { induction e.
+    - simpl. f_equal. eapply subst_map_val_empty.
+    - simpl.
+      setoid_rewrite lookup_empty.
+      reflexivity.
+    - simpl. rewrite IHe1. rewrite IHe2. reflexivity. }
+  { induction v.
+    - simpl.
+      f_equal.
+      setoid_rewrite delete_empty.
+      apply subst_map_empty. }
+Qed.
+
+Lemma fundamental_property_sub Γ γ n :
+  subst_is_closed Γ ∅ γ →
+  n ⊨ G_rel Γ γ γ.
+Proof.
+  intros Hc.
+  apply G_rel_intro.
+  { exact Hc. }
+  { exact Hc. }
+  iintros x v1 v2 Heq1 Heq2.
+  idestruct Heq1.
+  idestruct Heq2.
+  rewrite -> Heq1 in Heq2.
+  injection Heq2 as ->.
+  destruct Hc as [-> Hc].
+  assert (Hcv2 : closed ∅ v2).
+  { eapply Hc.
+    - setoid_rewrite -> elem_of_dom.
+      unfold is_Some. eauto.
+    - exact Heq1. }
+  assert (H_fundamental := fundamental_property_v ∅ v2 n Hcv2).
+  apply V_rel_o_elim in H_fundamental.
+  ispec H_fundamental ∅ ∅ (G_rel_empty n).
+  rewrite -> subst_map_val_empty in H_fundamental.
+  exact H_fundamental.
+Qed.
+
+Lemma fundamental_property_ectx E n :
+  n ⊨ K_rel E E.
+Proof.
+  apply K_rel_intro.
+  iintros v1 v2 Hv.
+  admit.
+Admitted.
+
 (** General program contexts *)
 Inductive ctx : Type :=
   | ctx_hole   : ctx
@@ -1946,36 +2010,6 @@ Proof.
     apply compat_app.
     - applyy fundamental_property_e H4.
     - applyy IHC Hc1 Hc2 H3 HE. }
-Qed.
-
-Lemma G_rel_empty n :
-  n ⊨ G_rel ∅ ∅ ∅.
-Proof.
-  apply G_rel_intro.
-  - unfold subst_is_closed. split; set_solver.
-  - unfold subst_is_closed. split; set_solver.
-  - iintros.
-    idestruct H.
-    setoid_rewrite lookup_empty in H.
-    discriminate H.
-Qed.
-
-Lemma subst_map_empty (e:expr) :
-  subst_map ∅ e = e
-with subst_map_val_empty (v:val) :
-  subst_map_val ∅ v = v.
-Proof.
-  { induction e.
-    - simpl. f_equal. eapply subst_map_val_empty.
-    - simpl.
-      setoid_rewrite lookup_empty.
-      reflexivity.
-    - simpl. rewrite IHe1. rewrite IHe2. reflexivity. }
-  { induction v.
-    - simpl.
-      f_equal.
-      setoid_rewrite delete_empty.
-      apply subst_map_empty. }
 Qed.
 
 Theorem E_rel_o_soundness Γ (e1 e2 : expr) :

@@ -298,7 +298,10 @@ Abort.
 *)
 
 Definition ciu_equiv Γ e1 e2 :=
-  ∀ E, ectx_is_closed Γ E → obs_equiv (plug E e1) (plug E e2).
+  ∀ E γ,
+    ectx_is_closed ∅ E →
+    subst_is_closed Γ ∅ γ →
+    obs_equiv (plug E (subst_map γ e1)) (plug E (subst_map γ e2)).
 
 Fixpoint rctx_to_ctx (R : rctx) : ctx :=
   match R with
@@ -337,43 +340,89 @@ Proof.
   reflexivity.
 Qed.
 
-Check E_rel_o_soundness.
-
+(*
 Lemma ciu_equiv_completeness Γ e1 e2 :
   closed Γ e1 →
   closed Γ e2 →
   ctx_equiv Γ e1 e2 →
   ciu_equiv Γ e1 e2.
 Proof.
-  unfold ctx_equiv, ciu_equiv.
-  intros Hce1 Hce2 Hequiv E HcE.
-  rewrite -> ectx_to_ctx_correct.
-  rewrite -> ectx_to_ctx_correct.
-  apply Hequiv.
-  unfold ectx_is_closed in HcE.
-  unfold ectx_to_ctx.
-  induction E.
-  - simpl in *. admit.
+  revert e1 e2.
+  induction Γ as [Γ IH] using (induction_ltof1 _ size).
+  intros e1 e2 Hce1 Hce2 Hequiv.
+  destruct (size Γ) as [| n'] eqn:Hsize.
+  - unfold ctx_equiv, ciu_equiv in *.
+    intros E γ HE [-> _].
+    setoid_rewrite -> size_dom in Hsize.
+    rewrite -> map_size_empty_iff in Hsize. subst.
+    setoid_rewrite -> dom_empty_L in Hce1.
+    setoid_rewrite -> dom_empty_L in Hce2.
+    setoid_rewrite -> dom_empty_L in Hequiv.
+    rewrite ->2 subst_map_empty.
+    rewrite ->2 ectx_to_ctx_correct.
+    apply Hequiv.
+    unfold ectx_is_closed in HE.
+    admit.
+  - Search (size _ = S _).
+Admitted.
+*)
+
+Instance Transitive_ciu_equiv Γ : Transitive (ciu_equiv Γ).
+Proof.
+  unfold Transitive, ciu_equiv.
+  intros x y z Hxy Hyz E HE γ Hγ.
+  specialize (Hxy E HE γ Hγ).
+  specialize (Hyz E HE γ Hγ).
+  etransitivity; eassumption.
+Qed.
+
+Lemma O_rel_comp_obs_equiv e1 e2 e3 n :
+  n ⊨ O_rel e1 e2 →
+  obs_equiv e2 e3 →
+  n ⊨ O_rel e1 e3.
+Proof. Admitted.
+
+Lemma E_rel_o_soundness' Γ e1 e2 :
+  closed Γ e1 →
+  closed Γ e2 →
+  (∀ n, n ⊨ E_rel_o Γ e1 e2) →
+  ciu_equiv Γ e1 e2.
+Proof.
+  unfold ciu_equiv.
+  intros Hc1 Hc2 He E γ HE Hγ.
+  apply O_rel_adequacy. intros n.
+  specialize (He n).
+  apply E_rel_o_elim in He.
+  assert (HG : n ⊨ G_rel Γ γ γ).
+  { apply fundamental_property_sub. exact Hγ. }
+  ispec He γ γ HG.
+  apply E_rel_elim in He.
+  iapply He. admit.
+  (* need n ⊨ K_rel E E, I'm not sure whether this holds for arbitrary E (not closed) *)
 Admitted.
 
+(* Observation: we prove the transitivity of E_rel_o by going through
+   the transitivity of ciu_equiv, NOT of ctx_equiv *)
 Lemma E_rel_o_completeness Γ e1 e2 n :
   closed Γ e1 →
   closed Γ e2 →
-  ctx_equiv Γ e1 e2 →
+  ciu_equiv Γ e1 e2 →
   n ⊨ E_rel_o Γ e1 e2.
 Proof.
   intros Hce1 Hce2 Hequiv.
-  apply ciu_equiv_completeness in Hequiv.
   unfold ciu_equiv in Hequiv.
   apply E_rel_o_intro.
   iintros γ1 γ2 Hγ.
   apply E_rel_intro.
   iintros E1 E2 HE.
-  assert (Htmp : n ⊨ O_rel (fill E1 (subst_map γ1 e1)) (fill E2 (subst_map γ2 e1))).
+  apply (O_rel_comp_obs_equiv _ (fill E2 (subst_map γ2 e1))).
   { eapply E_rel_elimO; [| exact HE].
-    assert (He1 := fundamental_property_e Γ e1 n Hce1).
-    iapply (E_rel_o_elim _ _ _ _ He1).
+    iapply (E_rel_o_elim _ _ _ _ (fundamental_property_e Γ e1 n Hce1)).
     exact Hγ. }
+  { apply Hequiv.
+    admit.
+    apply G_rel_elim in Hγ as (_ & Hγ2 & _).
+    exact Hγ2. }
 Admitted.
 
 Definition E_rel_o_closed' Γ e1 e2 := ∀ n, E_rel_o_closed n Γ e1 e2.
@@ -385,8 +434,8 @@ Proof.
   unfold Transitive, E_rel_o_closed', E_rel_o_closed.
   intros [x Hcx] [y Hcy] [z Hcz] Hxy Hyz n. simpl in *.
   apply E_rel_o_completeness; auto.
-  apply (E_rel_o_soundness Γ x y Hcx Hcy) in Hxy.
-  apply (E_rel_o_soundness Γ y z Hcy Hcz) in Hyz.
+  apply (E_rel_o_soundness' Γ x y Hcx Hcy) in Hxy.
+  apply (E_rel_o_soundness' Γ y z Hcy Hcz) in Hyz.
   etransitivity; eassumption.
 Qed.
 
@@ -398,6 +447,7 @@ Proof.
   assumption.
 Qed. *)
 
+(*
 #[global]
 Instance Proper_E_rel_o_closed n Γ : Proper
   (flip (E_rel_o_closed n Γ) ==> E_rel_o_closed n Γ ==> impl)
@@ -407,6 +457,7 @@ Proof.
   assert (E_rel_o_closed n Γ y x0). { transitivity x; assumption. }
   transitivity x0; assumption.
 Qed.
+*)
 
 Program Definition cvar {Γ} (x: name) : cexpr (Γ ∪ {[x]}) :=
   mk_cexpr (Γ ∪ {[x]}) (var x) _.
