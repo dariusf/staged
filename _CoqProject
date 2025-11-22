@@ -4,6 +4,7 @@
 -Q shiftreset ShiftReset
 -Q future Future
 -Q types Types
+-Q Binding Binding
 -Q ctx-equiv-iris CtxEquivIris
 -Q ctx-equiv-ixfree CtxEquivIxFree
 -arg -w
@@ -15,3 +16,4 @@ future
 types
 ctx-equiv-iris
 ctx-equiv-ixfree
+Binding
