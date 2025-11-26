@@ -5,19 +5,35 @@ Local Open Scope string_scope.
 Definition vminus := viop (fun x y => x - y).
 Definition vtimes := viop (fun x y => x * y).
 
+(*
+
+  let landin_rec f1 =
+    ∃ r,
+      let knot n =
+        ∀ f2, req r->f2; ens r->f2; f1(f2, n)
+      in
+      ens r->id;
+      req r->id; ens r->knot;
+      ens[res] res=knot
+
+  let factorial_inner (self, n) =
+    ens[r] n <= 0 ∧ r=1
+    ∨ ens n > 0; self(n - 1); r1. ens[r] r=n*r1
+
+*)
 Definition landin_rec f :=
-  ∃' r f_name,
+  ∃ r f_name,
   ens_ \[f = vfptr f_name];;
   defun "knot" (fun n =>
     fall (fun r_pointee =>
-      req (r ~~> r_pointee) 
+      req (r ~~> r_pointee)
       (ens_ (r ~~> r_pointee) ;; unk f_name (vtup r_pointee n)))) ;;
   ens_ (r ~~> vfptr "identity");;
   req (r ~~> vfptr "identity")
   (ens (fun res => r ~~> vfptr "knot" \* \[res = vfptr "knot"])).
 
 Definition factorial_inner params :=
-  ∃' self n,
+  ∃ self n,
     ens_ \[params = vtup (vfptr self) n] ;;
     disj
     (ens (fun r => \[vle n (vint 0) /\ r = vint 1]))
@@ -44,7 +60,7 @@ Qed.
 
 
 Lemma norm_bind_ens_pure : forall s P fk,
-  entails_under s 
+  entails_under s
   (bind (ens (fun r => \[P r])) fk)
   (∃' r, ens_ \[P r] ;; (fk r)).
 Proof.
@@ -56,7 +72,7 @@ Proof.
   unfold entails_under.
   intros.
   apply (@s_seq s h1 vunit _ _ _ _ _ _ _ ).
-  apply s_ens. 
+  apply s_ens.
   eexists. eexists. intuition.
   - rewrite hstar_hpure_conj. apply hpure_intro. intuition.
   - rewrite Fmap.union_empty_r. reflexivity.
@@ -76,7 +92,7 @@ Proof.
     destruct H5 as (v0&h4&Hnorm&S1&(Hd1&Hd2)).
     inverts Hnorm.
     rewrite hstar_hpure_l in S1. destruct S1 as (Seq&S). subst.
-    inverts H8. 
+    inverts H8.
     destruct H5 as (v&h3&HR&H3&H2&Haa).
     hinv H3.
     subst.
@@ -94,7 +110,7 @@ Lemma norm_bind_seq_assoc1: forall fk f1 f2,
   shift_free f1 -> entails (f1 ;; bind f2 fk) (bind (f1 ;; f2) fk).
 Proof.
   intros * Hsf.
-  introv Hseq_bind. 
+  introv Hseq_bind.
   inverts Hseq_bind. 2: { false Hsf H5. }
   inverts H7.
   {
@@ -109,10 +125,10 @@ Proof.
   }
 Qed.
 
-Lemma norm_seq_ex_r1 : forall {T : Type} (f1 : flow) (f2 : T -> flow), 
-  shift_free f1 -> entails (∃' x, f1 ;; f2 x) (f1 ;; ∃' x, f2 x).
+Lemma norm_seq_ex_r1 : forall {T : Type} (f1 : flow) (f2 : T -> flow),
+  shift_free f1 -> entails (∃ x, f1 ;; f2 x) (f1 ;; ∃' x, f2 x).
 Proof.
-  intros. 
+  intros.
   introv Hex_seq.
   inverts Hex_seq.
   destruct H6 as [b Hseq].
@@ -142,7 +158,7 @@ Qed.
 Lemma ent_ens_single : forall s (Q1 : postcond) (Q : postcond),
   Q1 ===> Q -> entails_under s (ens Q1) (ens Q).
 Proof.
-  intros. 
+  intros.
   unfold entails_under.
   intros.
   inverts H0. destr H7. subst.
@@ -153,7 +169,7 @@ Proof.
 Qed.
 
 (* some custom tactics *)
-Ltac resolve_fn_in_env1 := 
+Ltac resolve_fn_in_env1 :=
   match goal with
   | |- Fmap.read (Fmap.update _ ?k _) ?k = _ =>
     rewrite fmap_read_update; [reflexivity | solve_not_indom]
@@ -181,7 +197,9 @@ Ltac funfold2 env f := unfold env; funfold2_inner f; fold env.
 
 
 Module Attempt1.
-
+(*
+  let factorial n = (landin_rec factorial_inner) n
+*)
 Definition factorial n := bind (unk "landin_rec" (vfptr "factorial_inner"))
   (fun f => ∃' bound_name, ens_ \[ f = vfptr bound_name ] ;; unk bound_name n).
 
@@ -196,10 +214,11 @@ Definition factorial_correctness n' :=
   (* some garbage to hide behind an existential (maybe possible if i add a 'discard' to factorial) *)
   defun "knot" (fun n =>
     fall (fun r_pointee =>
-      req (r ~~> r_pointee) 
+      req (r ~~> r_pointee)
       (ens_ (r ~~> r_pointee) ;; unk "factorial_inner" (vtup r_pointee n))));;
   (* the actual correctness spec *)
   (∃' v, ens (fun res => (r ~~> vfptr fptr) \* \[res = vint v /\ v = factorial_pure n'])).
+
 Lemma factorial_spec : forall n n',
   n = vint (Z.of_nat n') ->
   entails_under factorial_env
@@ -222,7 +241,7 @@ Proof.
   (* lift the f_name equality to the metalogic *)
   rewrite norm_bind_seq_assoc. 2: { apply sf_ens. } (* can i automate solving goal 2 there? *)
   apply ent_seq_ens_void_pure_l. intros H. inverts H.
- 
+
   (* expose both defuns as the first stage *)
   rewrite norm_bind_defun_out.
   apply ent_ex_r. exists b.
@@ -281,7 +300,7 @@ Proof.
       apply ent_ens_single.
       xsimpl.
       intuition.
-    } 
+    }
     {
       rewrite norm_ens_void_pure_swap.
       apply ent_seq_ens_void_pure_l. intros H. invert H.
@@ -298,7 +317,7 @@ Proof.
     (* lift the unpacking of var into the context *)
     rewrite norm_ens_void_pure_swap.
     apply ent_seq_ens_void_pure_l.
-    intros H. 
+    intros H.
     (*rewrite Zpos_P_of_succ_nat in H2. rewrite Zpos_P_of_succ_nat. clear H. subst.*)
     inverts H. subst.
     rewrite norm_seq_disj_r. all: try (apply sf_ens).
@@ -325,9 +344,9 @@ Proof.
 
       rewrite norm_bind_req.
       fbiabduction.
-      
+
       funfold2 factorial_env "factorial_inner".
-       
+
       (* invoke the induction hypothesis *)
       rewrite Zpos_P_of_succ_nat. (* massage the term to match the IH *)
       autorewrite with nz.
@@ -338,17 +357,17 @@ Proof.
       (* match the b ~~> vfptr "knot" on both sides *)
       rewrite entl_ens_hstar_pure_r.
       rewrite norm_bind_seq_assoc. 2: { apply sf_ens. }
-       
+
       apply ent_ex_r. eexists.
-      
+
       (* invoke something like
          bind (ens (fun r => \[P r])) f ⊑ fex (fun r => ens_ \[P r] ;; f r)
-         
+
          [ent_bind_ens_pure_l] is almost this, but the `bind` has to be at the top-level
 
          [norm_bind_seq_ex] is almost this but it doesn't connect P to the existential *)
       rewrite norm_bind_ens_pure.
-      
+
       (* match the heap state on both sides *)
       rewrite norm_seq_ex_r. 2: { apply sf_ens. }
       fdestruct_old x.
@@ -360,7 +379,7 @@ Proof.
       (* reduce this to an entailment between postconditions *)
       apply (ent_ens_single).
       unfold qimpl. intros res.
-      
+
       xsimpl.
       rewrite Z_of_nat_S.
       intuition.
@@ -370,13 +389,21 @@ Proof.
 Qed.
 
 End Attempt1.
+
+
 Module Attempt2.
 
 (* now, let's attempt to prove a spec that doesn't mention the function in the store
 
    since the underlying separation logic is only selectively affine, we do this by discarding
    knot after the function call completes *)
-
+(*
+  let factorial n =
+    let f = landin_rec factorial_inner in
+    let res = f n in
+    ∀ r, req r->f; discard f;
+    ret res
+*)
 Definition factorial n := bind (unk "landin_rec" (vfptr "factorial_inner"))
   (fun f => ∃' bound_name, ens_ \[ f = vfptr bound_name ] ;;
     bind (unk bound_name n)
@@ -407,7 +434,7 @@ Theorem factorial_spec : forall n n',
   (factorial_correctness n').
 Proof.
   intros n n' Hn. subst.
-  unfold factorial. 
+  unfold factorial.
 
   funfold2 factorial_env "landin_rec".
   unfold landin_rec.
@@ -425,17 +452,17 @@ Proof.
      ∀ r_pointee : Val.value,
        req (r ~~> r_pointee)
          (ens_ (r ~~> r_pointee);; unk "factorial_inner" (vtup r_pointee n0)))(factorial_correctness n')).
-  
+
   2: {
     unfold factorial_env.
     unfold Fmap.update.
     (* solve_not_indom should solve this but it's missing some cases *)
     rewrite indom_union_eq. rewrite not_or_eq. split.
     - rewrite indom_single_eq. intuition. inverts H.
-    - rewrite indom_union_eq. rewrite not_or_eq. split. 
+    - rewrite indom_union_eq. rewrite not_or_eq. split.
       + rewrite indom_single_eq. intuition. inverts H.
       + apply not_indom_empty.
-    
+
   }
 
   apply ent_seq_defun_both.
@@ -476,7 +503,7 @@ Proof.
       rewrite norm_ens_void_pure_swap.
 
       apply ent_seq_ens_void_pure_l. intros H. inverts H.
-      
+
       rewrite norm_seq_disj_r. 2: { shiftfree. }
       apply ent_disj_l.
       - unfold factorial_correctness.
@@ -498,7 +525,7 @@ Proof.
       fbiabduction.
       funfold2 factorial_env "factorial_inner".
       unfold factorial_inner.
-      
+
       rewrite norm_seq_ex_r. 2: { shiftfree. } fdestruct_old self.
       rewrite norm_seq_ex_r. 2: { shiftfree. } fdestruct_old n.
       rewrite norm_ens_void_pure_swap.
@@ -512,7 +539,7 @@ Proof.
         apply ent_ex_r. eexists.
         rewrite <- entl_ens_hstar_pure_r.
         apply ent_ens_single.
-        xsimpl. intros r0 [Hn Hr0]. subst. intuition.
+        xsimpl. intros r0 [Hn Hr0]. subst. auto with *.
       - rewrite norm_ens_void_pure_swap.
         apply ent_seq_ens_void_pure_l. intros H. inverts H.
         unfold vminus. unfold viop. autorewrite with nz.
@@ -539,8 +566,8 @@ Proof.
         rewrite entl_ens_hstar_pure_l.
         rewrite <- norm_seq_ex_r1. 2: { shiftfree. }
         apply ent_ex_r. eexists.
-        rewrite <- entl_ens_hstar_pure_r. 
-        
+        rewrite <- entl_ens_hstar_pure_r.
+
         apply ent_ens_single.
         xsimpl. intuition. subst. rewrite <- Z_of_nat_S. auto.
     }
@@ -573,3 +600,5 @@ Proof.
   auto.
 Qed.
 
+
+End Attempt2.
