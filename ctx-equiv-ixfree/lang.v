@@ -1,133 +1,130 @@
-
+From stdpp Require Export relations.
+(** Note: both stdpp and Binding define `fmap`, but with different
+    signature. What we want in this file is Binding's `fmap`, thus
+    we Require Import Binding after stdpp *)
+From Stdlib Require Import Utf8.
+From Binding Require Import Lib Auto.
+Require Import Binding.Set.
 From IxFree Require Import Lib Nat.
 From CtxEquivIxFree Require Import ixfree_tactics.
 From CtxEquivIxFree Require Import tactics.
-(* From stdpp Require Export binders. *)
-From stdpp Require Export gmap.
-From stdpp Require Export strings.
+
+Local Close Scope stdpp_scope.
 
 Definition loc : Set := nat.
 
-Inductive expr :=
-  (* | eint (z : Z) *)
-  (* | eunit *)
-  | ret (v:val)
-  (* | ens (H : hprop) *)
-  (* | ensp (P : prop) *)
-  (* | var (x : binder) *)
-  | var (x : string)
-  (* | bind (e1 : expr) (x : binder) (e2 : expr) *)
-  | app (e1 e2: expr)
- (* | abs (x : binder) (e : expr) *)
-  (* | eplus (e1 e2: expr) *)
+Inductive expr (V : Set) : Set :=
+| ret (v : val V)
+| app (e1 e2 : expr V)
 
-with val :=
-  (* TODO reenable context tests when this is restored *)
-  (*| vint (z : Z) *)
-  | vlambda (x : string) (e: expr)
-  (* | vbool (b : bool) *)
-  (* | vloc (l : loc) *)
-  (* | vunit *).
+with val (V : Set) : Set :=
+| v_var (x : V)
+| v_lambda (e : expr (inc V)).
 
-Definition to_val (e : expr) : option val :=
+Arguments ret {V} v.
+Arguments app {V} e1 e2.
+Arguments v_var {V} x.
+Arguments v_lambda {V} e.
+
+#[global]
+Instance SetPureCore_value : SetPureCore val :=
+  { set_pure := @v_var }.
+
+Fixpoint emap {A B} (f : A [→] B) (e : expr A) : expr B :=
   match e with
-  | ret v => Some v
-  (* | abs x e => Some (vlambda x e) *)
-  | _ => None
-  end.
-
-Inductive hprop :=
-  | emp
-  | pts (l : loc) (v : val)
-  | sep (h1 h2: hprop).
-
-Fixpoint subst_val (x : string) (es : expr) (v : val)  : val :=
-  match v with
-  (*| vunit => vunit
-  | vint n => vint n*)
-  | vlambda y e =>
-      vlambda y $ if decide (x = y) then e else
-        (subst x es e)
+  | ret v => ret (vmap f v)
+  | app e1 e2 => app (emap f e1) (emap f e2)
   end
 
-with subst (x : string) (es : expr) (e : expr)  : expr :=
-  match e with
-  | ret v => ret (subst_val x es v)
-  (* The function [decide] can be used to decide propositions.
-    [decide P] is of type {P} + {¬ P}.
-    It can only be applied to propositions for which, by type class inference,
-    it can be determined that the proposition is decidable. *)
-  | var y => if decide (x = y) then es else var y
-  (* | abs y e =>
-      abs y $ if decide (BNamed x = y) then e else subst x es e *)
-  | app e1 e2 => app (subst x es e1) (subst x es e2)
-  (* | eplus e1 e2 => eplus (subst x es e1) (subst x es e2) *)
-  end.
-
-(* Definition subst' (mx : binder) (es : expr) : expr → expr :=
-  match mx with BNamed x => subst x es | BAnon => id end. *)
-
-Definition is_val (e : expr) : Prop :=
-  match e with
-  | ret v => True
-  (* | abs x e => True *)
-  | _ => False
-  end.
-
-(* Definition of_val (v : val) : expr :=
+with vmap {A B} (f : A [→] B) (v : val A) : val B :=
   match v with
-  | vunit => eunit
-  | vint n => eint n
-  | vlambda x e => abs x e
-  end. *)
+  | v_var x => v_var (f x)
+  | v_lambda e => v_lambda (emap (lift f) e)
+  end.
 
-Notation of_val := ret.
+#[global]
+Instance FunctorCore_emap : FunctorCore expr := @emap.
+
+#[global]
+Instance FunctorCore_vmap : FunctorCore val := @vmap.
+
+Fixpoint ebind {A B} (f : A [⇒] B) (e : expr A) : expr B :=
+  match e with
+  | ret v => ret (vbind f v)
+  | app e1 e2 => app (ebind f e1) (ebind f e2)
+  end
+
+with vbind {A B} (f : A [⇒] B) (v : val A) : val B :=
+  match v with
+  | v_var x => f x
+  | v_lambda e => v_lambda (ebind (lift f) e)
+  end.
+
+#[global]
+Instance BindCore_ebind : BindCore expr := @ebind.
+
+#[global]
+Instance BindCore_vbind : BindCore val := @vbind.
+
 Coercion ret : val >-> expr.
 
-Inductive base_step : expr → expr → Prop :=
-  | BetaS x e1 e2 e' :
-     is_val e2 →
-     e' = subst x e2 e1 →
-     base_step (app (ret (vlambda x e1)) e2) e'
-  (* | PlusS e1 e2 (n1 n2 n3 : Z):
-     e1 = (eint n1) →
-     e2 = (eint n2) →
-     (n1 + n2)%Z = n3 →
-     base_step (Plus e1 e2) (eint n3) *)
-.
-
-(* inside-out contexts, similar to a "reversed" list *)
-Inductive ectx :=
-  | ectx_hole : ectx
-  | ectx_app1 : ectx → expr → ectx
-  | ectx_app2 : val → ectx → ectx.
+(** Inside-out contexts, similar to a "reversed" list *)
 
 (* Imagine the list is from left-to-right, with the following structure:
    ectx_hole ... ectx_app1 e ... ectx_app1 e ... ectx_app2 v.
 
    The actual structure is zig-zag, but let's linearize it so that we
    can implement and reason about this data-structure just like a list *)
+Inductive ectx (V : Set) :=
+  | ectx_hole
+  | ectx_app1 (E : ectx V) (e : expr V)
+  | ectx_app2 (v : val V) (E : ectx V).
+
+Arguments ectx_hole {V}.
+Arguments ectx_app1 {V} E e.
+Arguments ectx_app2 {V} v E.
+
+Fixpoint ectx_map {A B} (f : A [→] B) (E : ectx A) : ectx B :=
+  match E with
+  | ectx_hole => ectx_hole
+  | ectx_app1 E' e => ectx_app1 (ectx_map f E') (fmap f e)
+  | ectx_app2 v E' => ectx_app2 (fmap f v) (ectx_map f E')
+  end.
+
+#[global]
+Instance FunctorCore_ectx_map : FunctorCore ectx := @ectx_map.
+
+Fixpoint ectx_bind {A B} (f : A [⇒] B) (E : ectx A) : ectx B :=
+  match E with
+  | ectx_hole => ectx_hole
+  | ectx_app1 E' e => ectx_app1 (ectx_bind f E') (bind f e)
+  | ectx_app2 v E' => ectx_app2 (bind f v) (ectx_bind f E')
+  end.
+
+#[global]
+Instance BindCore_ectx_bind : BindCore ectx := @ectx_bind.
 
 (* similar to foldr of a "reversed" list (foldl of a normal list) *)
-(* ectx_hole -----> *)
-Fixpoint plug (E : ectx) (e : expr) : expr :=
+Fixpoint plug {V} (E : ectx V) (e : expr V) : expr V :=
   match E with
   | ectx_hole => e
   | ectx_app1 E' e' => plug E' (app e e')
   | ectx_app2 v E' => plug E' (app v e)
   end.
 
+Lemma fold_unfold_plug_ectx_hole {V} (e : expr V) :
+  plug ectx_hole e = e.
+Proof. auto. Qed.
+
 (* similar to "prepend" of a "reversed" list ("append" of a normal list) *)
-Fixpoint ectx_comp (E1 E2 : ectx) : ectx :=
+Fixpoint ectx_comp {V} (E1 E2 : ectx V) : ectx V :=
   match E2 with
   | ectx_hole => E1
   | ectx_app1 E2' e => ectx_app1 (ectx_comp E1 E2') e
   | ectx_app2 v E2' => ectx_app2 v (ectx_comp E1 E2')
   end.
 
-Notation fill := plug.
-
-Lemma ectx_comp_assoc E1 E2 E3 :
+Lemma ectx_comp_assoc {V} (E1 E2 E3 : ectx V) :
   ectx_comp E1 (ectx_comp E2 E3) = ectx_comp (ectx_comp E1 E2) E3.
 Proof.
   induction E3; simpl.
@@ -136,123 +133,159 @@ Proof.
   - rewrite -> IHE3. reflexivity.
 Qed.
 
-Lemma ectx_comp_correct E1 E2 e :
+Lemma ectx_comp_correct {V} (E1 E2 : ectx V) (e : expr V) :
   plug (ectx_comp E1 E2) e = plug E1 (plug E2 e).
 Proof.
   revert e.
   induction E2; intros e'.
-  - simpl in *. reflexivity.
-  - simpl in *. rewrite (IHE2 (app e' e)). reflexivity.
-  - simpl in *. rewrite (IHE2 (app v e')). reflexivity.
+  - simpl. reflexivity.
+  - simpl. rewrite -> (IHE2 (app e' e)). reflexivity.
+  - simpl. rewrite -> (IHE2 (app v e')). reflexivity.
 Qed.
 
-(** Outside-in evaluation contexts *)
-(* similar to a normal list *)
-Inductive rctx :=
-  | rctx_hole : rctx
-  | rctx_app1 : rctx → expr → rctx
-  | rctx_app2 : val → rctx → rctx.
+(** Outside-in evaluation contexts, similar to a normal list *)
+
+Inductive rctx (V : Set) :=
+  | rctx_hole
+  | rctx_app1 (R : rctx V) (e : expr V)
+  | rctx_app2 (v : val V) (R : rctx V).
+
+Arguments rctx_hole {V}.
+Arguments rctx_app1 {V} R e.
+Arguments rctx_app2 {V} v R.
+
+Fixpoint rctx_map {A B} (f : A [→] B) (R : rctx A) : rctx B :=
+  match R with
+  | rctx_hole => rctx_hole
+  | rctx_app1 R' e => rctx_app1 (rctx_map f R') (fmap f e)
+  | rctx_app2 v R' => rctx_app2 (fmap f v) (rctx_map f R')
+  end.
+
+#[global]
+Instance FunctorCore_rctx_map : FunctorCore rctx := @rctx_map.
+
+Fixpoint rctx_bind {A B} (f : A [⇒] B) (R : rctx A) : rctx B :=
+  match R with
+  | rctx_hole => rctx_hole
+  | rctx_app1 R' e => rctx_app1 (rctx_bind f R') (bind f e)
+  | rctx_app2 v R' => rctx_app2 (bind f v) (rctx_bind f R')
+  end.
+
+#[global]
+Instance BindCore_rctx_bind : BindCore rctx := @rctx_bind.
 
 (* similar to foldr of a normal list *)
-Fixpoint rplug (E : rctx) (e : expr) : expr :=
-  match E with
+Fixpoint rplug {V} (R : rctx V) (e : expr V) : expr V :=
+  match R with
   | rctx_hole => e
-  | rctx_app1 E' e1 => app (rplug E' e) e1
-  | rctx_app2 v E' => app v (rplug E' e)
+  | rctx_app1 R' e' => app (rplug R' e) e'
+  | rctx_app2 v R' => app v (rplug R' e)
   end.
 
-Fixpoint rctx_comp (E1 E2 : rctx) : rctx :=
-  match E1 with
-  | rctx_hole => E2
-  | rctx_app1 E1' e => rctx_app1 (rctx_comp E1' E2) e
-  | rctx_app2 v E1' => rctx_app2 v (rctx_comp E1' E2)
+(* similar to append of a normal list *)
+Fixpoint rctx_comp {V} (R1 R2 : rctx V) : rctx V :=
+  match R1 with
+  | rctx_hole => R2
+  | rctx_app1 R1' e => rctx_app1 (rctx_comp R1' R2) e
+  | rctx_app2 v R1' => rctx_app2 v (rctx_comp R1' R2)
   end.
 
-Lemma rctx_comp_assoc (E1 E2 E3 : rctx) :
-  rctx_comp (rctx_comp E1 E2) E3 = rctx_comp E1 (rctx_comp E2 E3).
+Lemma rctx_comp_assoc {V} (R1 R2 R3 : rctx V) :
+  rctx_comp (rctx_comp R1 R2) R3 = rctx_comp R1 (rctx_comp R2 R3).
 Proof.
-  induction E1.
+  induction R1.
   - simpl. reflexivity.
-  - simpl. rewrite -> IHE1. reflexivity.
-  - simpl. rewrite -> IHE1. reflexivity.
+  - simpl. rewrite -> IHR1. reflexivity.
+  - simpl. rewrite -> IHR1. reflexivity.
 Qed.
 
-(* similar to reverse_prepend : reverse E, and then prepend F to it *)
-Fixpoint ectx_comp_rctx1 (F : ectx) (E : rctx) : ectx :=
-  match E with
-  | rctx_hole => F
-  | rctx_app1 E e => ectx_comp_rctx1 (ectx_app1 F e) E
-  | rctx_app2 v E => ectx_comp_rctx1 (ectx_app2 v F) E
+Lemma rctx_comp_correct {V} (R1 R2 : rctx V) (e : expr V) :
+  rplug (rctx_comp R1 R2) e = rplug R1 (rplug R2 e).
+Proof.
+  induction R1.
+  - simpl. reflexivity.
+  - simpl. rewrite -> IHR1. reflexivity.
+  - simpl. rewrite -> IHR1. reflexivity.
+Qed.
+
+(** Equivalence of ectx and rctx *)
+
+(* similar to reverse_prepend : reverse R, and then prepend E to it *)
+Fixpoint ectx_comp_rctx1 {V} (E : ectx V) (R : rctx V) : ectx V :=
+  match R with
+  | rctx_hole => E
+  | rctx_app1 R' e => ectx_comp_rctx1 (ectx_app1 E e) R'
+  | rctx_app2 v R' => ectx_comp_rctx1 (ectx_app2 v E) R'
   end.
 
 (* similar to reverse *)
-Definition rctx_to_ectx : rctx -> ectx := ectx_comp_rctx1 ectx_hole.
+Definition rctx_to_ectx {V} : rctx V -> ectx V :=
+  ectx_comp_rctx1 ectx_hole.
 
-Lemma ectx_comp_rctx1_correct (F : ectx) (E : rctx) (e : expr) :
-  plug (ectx_comp_rctx1 F E) e = plug F (rplug E e).
+Lemma ectx_comp_rctx1_correct {V} (E : ectx V) (R : rctx V) (e : expr V) :
+  plug (ectx_comp_rctx1 E R) e = plug E (rplug R e).
 Proof.
-  revert F.
-  induction E; intros F.
+  revert E.
+  induction R; intros E.
   - simpl. reflexivity.
-  - simpl. rewrite -> (IHE (ectx_app1 F e0)). simpl. reflexivity.
-  - simpl. rewrite -> (IHE (ectx_app2 v F)). simpl. reflexivity.
+  - simpl. rewrite -> (IHR (ectx_app1 E _)). simpl. reflexivity.
+  - simpl. rewrite -> (IHR (ectx_app2 _ E)). simpl. reflexivity.
 Qed.
 
-(* similar to reverse_append : reverse E, and then append to F *)
-(* E1 ... En | F1 ... Fn ~> En ... E1 F1 ... Fn *)
-Fixpoint ectx_comp_rctx2 (E : ectx) (F : rctx) : rctx :=
+(* similar to reverse_append : reverse E, and then append to R *)
+Fixpoint ectx_comp_rctx2 {V} (E : ectx V) (R : rctx V) : rctx V :=
   match E with
-  | ectx_hole => F
-  | ectx_app1 E e => ectx_comp_rctx2 E (rctx_app1 F e)
-  | ectx_app2 v E => ectx_comp_rctx2 E (rctx_app2 v F)
+  | ectx_hole => R
+  | ectx_app1 E e => ectx_comp_rctx2 E (rctx_app1 R e)
+  | ectx_app2 v E => ectx_comp_rctx2 E (rctx_app2 v R)
   end.
 
-Definition ectx_to_rctx (E : ectx) : rctx :=
+Definition ectx_to_rctx {V} (E : ectx V) : rctx V :=
   ectx_comp_rctx2 E rctx_hole.
 
-Lemma ectx_comp_rctx2_correct (E : ectx) (F : rctx) (e : expr) :
-  rplug (ectx_comp_rctx2 E F) e = plug E (rplug F e).
+Lemma ectx_comp_rctx2_correct {V} (E : ectx V) (R : rctx V) (e : expr V) :
+  rplug (ectx_comp_rctx2 E R) e = plug E (rplug R e).
 Proof.
-  revert F.
-  induction E; intros F.
+  revert R.
+  induction E; intros R.
   - simpl. reflexivity.
-  - simpl. rewrite -> (IHE (rctx_app1 F e0)). simpl. reflexivity.
-  - simpl. rewrite -> (IHE (rctx_app2 v F)). simpl. reflexivity.
+  - simpl. rewrite -> (IHE (rctx_app1 R _)). simpl. reflexivity.
+  - simpl. rewrite -> (IHE (rctx_app2 _ R)). simpl. reflexivity.
 Qed.
 
-Lemma ectx_comp_rctx1_reset (F : ectx) (E : rctx) :
-  ectx_comp_rctx1 F E = ectx_comp F (ectx_comp_rctx1 ectx_hole E).
+Lemma ectx_comp_rctx1_reset {V} (E : ectx V) (R : rctx V) :
+  ectx_comp_rctx1 E R = ectx_comp E (ectx_comp_rctx1 ectx_hole R).
 Proof.
-  revert F.
-  induction E; intros F; simpl.
+  revert E.
+  induction R; intros E; simpl.
   - reflexivity.
-  - rewrite -> (IHE (ectx_app1 F e)).
-    rewrite -> (IHE (ectx_app1 ectx_hole e)).
+  - rewrite -> (IHR (ectx_app1 E e)).
+    rewrite -> (IHR (ectx_app1 ectx_hole e)).
     rewrite -> ectx_comp_assoc. simpl.
     reflexivity.
-  - rewrite -> (IHE (ectx_app2 v F)).
-    rewrite -> (IHE (ectx_app2 v ectx_hole)).
+  - rewrite -> (IHR (ectx_app2 v E)).
+    rewrite -> (IHR (ectx_app2 v ectx_hole)).
     rewrite -> ectx_comp_assoc. simpl.
     reflexivity.
 Qed.
 
-Lemma ectx_comp_rctx2_reset (E : ectx) (F : rctx) :
-  ectx_comp_rctx2 E F = rctx_comp (ectx_comp_rctx2 E rctx_hole) F.
+Lemma ectx_comp_rctx2_reset {V} (E : ectx V) (R : rctx V) :
+  ectx_comp_rctx2 E R = rctx_comp (ectx_comp_rctx2 E rctx_hole) R.
 Proof.
-  revert F.
-  induction E; intros F; simpl.
+  revert R.
+  induction E; intros R; simpl.
   - reflexivity.
-  - rewrite -> (IHE (rctx_app1 F e)).
+  - rewrite -> (IHE (rctx_app1 R e)).
     rewrite -> (IHE (rctx_app1 rctx_hole e)).
     rewrite -> rctx_comp_assoc. simpl.
     reflexivity.
-  - rewrite -> (IHE (rctx_app2 v F)).
+  - rewrite -> (IHE (rctx_app2 v R)).
     rewrite -> (IHE (rctx_app2 v rctx_hole)).
     rewrite -> rctx_comp_assoc. simpl.
     reflexivity.
 Qed.
 
-Lemma ectx_rctx_bijection1_aux (E : ectx) (R : rctx) :
+Lemma ectx_rctx_bijection_aux {V} (E : ectx V) (R : rctx V) :
   ectx_comp_rctx1 ectx_hole (ectx_comp_rctx2 E R) = ectx_comp_rctx1 E R.
 Proof.
   revert R.
@@ -262,15 +295,14 @@ Proof.
   - simpl. rewrite -> (IHE (rctx_app2 v R)). simpl. reflexivity.
 Qed.
 
-Lemma ectx_rctx_bijection1 E :
+Lemma ectx_rctx_bijection {V} (E : ectx V) :
   rctx_to_ectx (ectx_to_rctx E) = E.
 Proof.
   unfold rctx_to_ectx, ectx_to_rctx.
-  rewrite -> (ectx_rctx_bijection1_aux E rctx_hole).
-  simpl. reflexivity.
+  exact (ectx_rctx_bijection_aux E rctx_hole).
 Qed.
 
-Lemma ectx_rctx_bijection2_aux (E : ectx) (R : rctx) :
+Lemma rctx_ectx_bijection_aux {V} (E : ectx V) (R : rctx V) :
   ectx_comp_rctx2 (ectx_comp_rctx1 E R) rctx_hole = ectx_comp_rctx2 E R.
 Proof.
   revert E.
@@ -280,57 +312,1401 @@ Proof.
   - simpl. rewrite -> (IHR (ectx_app2 v E)). simpl. reflexivity.
 Qed.
 
-Lemma ectx_rctx_bijection2 R :
+Lemma rctx_ectx_bijection {V} (R : rctx V) :
   ectx_to_rctx (rctx_to_ectx R) = R.
 Proof.
   unfold ectx_to_rctx, rctx_to_ectx.
-  rewrite -> (ectx_rctx_bijection2_aux ectx_hole R).
-  simpl. reflexivity.
+  exact (rctx_ectx_bijection_aux ectx_hole R).
 Qed.
 
-Lemma plug_rplug_equiv E e :
+Lemma plug_rplug_equiv {V} (E : ectx V) (e : expr V) :
   plug E e = rplug (ectx_to_rctx E) e.
 Proof.
   unfold ectx_to_rctx.
-  rewrite -> (ectx_comp_rctx2_correct E rctx_hole e).
-  simpl. reflexivity.
+  rewrite -> ectx_comp_rctx2_correct. simpl. reflexivity.
 Qed.
 
-Inductive contextual_step (e1 : expr) (e2 : expr) : Prop :=
-  Ectx_step K e1' e2' :
-    e1 = fill K e1' →
-    e2 = fill K e2' →
-    base_step e1' e2' →
-    contextual_step e1 e2.
-
-Definition contextual_reducible (e : expr) :=
-  ∃ e', contextual_step e e'.
-
-Definition bigstep e1 (v:val) :=
-  ∃ e2, rtc contextual_step e1 e2 ∧ to_val e2 = Some v.
-
-Definition terminates e := ∃ v, bigstep e v.
-
-Lemma terminates_val v :
-  terminates (ret v).
+Lemma plug_eq_val_inv {V} E e (v : val V) :
+  plug E e = v →
+  E = ectx_hole ∧ e = v.
 Proof.
-  exists v.
-  exists v.
-  split; done.
+  revert e.
+  induction E; intros e' H_eq; simpl in *.
+  - auto.
+  - specialize (IHE _ H_eq) as (_ & H_absurd). discriminate.
+  - specialize (IHE _ H_eq) as (_ & H_absurd). discriminate.
 Qed.
 
-Lemma contextual_step_comp :
-  ∀ K e1 e2,
-    contextual_step e1 e2 →
-    contextual_step (fill K e1) (fill K e2).
+Lemma rplug_eq_val_inv {V} R e (v : val V) :
+  rplug R e = v →
+  R = rctx_hole ∧ e = v.
 Proof.
-  intros K e1 e2 H_step.
-  inversion H_step. subst. econstructor.
-  - rewrite ectx_comp_correct. reflexivity.
-  - rewrite ectx_comp_correct. reflexivity.
-  - assumption.
+  intros H_eq.
+  destruct R; simpl in *.
+  - auto.
+  - discriminate.
+  - discriminate.
 Qed.
 
+(** Properties of syntax *)
+
+Lemma fmap_plug {A B} (f : A [→] B) (E : ectx A) (e : expr A) :
+  fmap f (plug E e) = plug (fmap f E) (fmap f e).
+Proof.
+  revert e.
+  induction E; intros e'.
+  - term_simpl. reflexivity.
+  - term_simpl. rewrite -> (IHE (app e' e)). term_simpl. reflexivity.
+  - term_simpl. rewrite -> (IHE (app v e')). term_simpl. reflexivity.
+Qed.
+
+Lemma bind_plug {A B} (f : A [⇒] B) (E : ectx A) (e : expr A) :
+  bind f (plug E e) = plug (bind f E) (bind f e).
+Proof.
+  revert e.
+  induction E; intros e'.
+  - term_simpl. reflexivity.
+  - term_simpl. rewrite -> (IHE (app e' e)). term_simpl. reflexivity.
+  - term_simpl. rewrite -> (IHE (app v e')). term_simpl. reflexivity.
+Qed.
+
+Lemma subst_plug {V} (E : ectx (inc V)) e v :
+  subst (plug E e) v = plug (subst E v) (subst e v).
+Proof.
+  revert e.
+  induction E as [| E IHE e' | v' E IHE]; intros e.
+  - term_simpl. reflexivity.
+  - term_simpl. rewrite -> (IHE (app e e')). term_simpl. reflexivity.
+  - term_simpl. rewrite -> (IHE (app v' e)). term_simpl. reflexivity.
+Qed.
+
+#[global] Hint Rewrite @fmap_plug : term_simpl.
+#[global] Hint Rewrite @bind_plug : term_simpl.
+#[global] Hint Rewrite @subst_plug : term_simpl.
+
+#[global]
+Instance SetPure_val : SetPure val.
+Proof.
+  split.
+  - simpl. unfold SetPureCore_value. term_simpl. reflexivity.
+  - simpl. unfold SetPureCore_value. term_simpl. reflexivity.
+Qed.
+
+(** Functor instances *)
+
+Fixpoint emap_id {A} (f : A [→] A) (e : expr A) :
+  equal f (arrow_id A) → fmap f e = e
+with vmap_id {A} (f : A [→] A) (v : val A) :
+  equal f (arrow_id A) → fmap f v = v.
+Proof.
+  - auto_map_id.
+  - auto_map_id.
+Qed.
+
+Fixpoint emap_comp {A B C} (f : B [→] C) (g : A [→] B) (h : A [→] C) (e : expr A) :
+  equal (arrow_comp f g) h → fmap f (fmap g e) = fmap h e
+with vmap_comp {A B C} (f : B [→] C) (g : A [→] B) (h : A [→] C) (v : val A) :
+  equal (arrow_comp f g) h → fmap f (fmap g v) = fmap h v.
+Proof.
+  - auto_map_comp.
+  - auto_map_comp.
+Qed.
+
+#[global]
+Instance Functor_expr : Functor expr.
+Proof.
+  constructor.
+  - exact @emap_id.
+  - exact @emap_comp.
+Qed.
+
+#[global]
+Instance Functor_val : Functor val.
+Proof.
+  constructor.
+  - exact @vmap_id.
+  - exact @vmap_comp.
+Qed.
+
+Fixpoint ectx_map_id {A} (f : A [→] A) (E : ectx A) :
+  equal f (arrow_id A) → fmap f E = E.
+Proof. auto_map_id. Qed.
+
+Fixpoint ectx_map_comp {A B C} (f : B [→] C) (g : A [→] B) (h : A [→] C) (E : ectx A) :
+  equal (arrow_comp f g) h → fmap f (fmap g E) = fmap h E.
+Proof. auto_map_comp. Qed.
+
+#[global]
+Instance Functor_ectx : Functor ectx.
+Proof.
+  constructor.
+  - exact @ectx_map_id.
+  - exact @ectx_map_comp.
+Qed.
+
+(** Bind-Map_Pure instances *)
+
+Fixpoint ebind_map_pure {A B} (f : A [→] B) g (e : expr A) :
+  equal (subst_of_arr f) g → fmap f e = bind g e
+with vbind_map_pure {A B} (f : A [→] B) g (v : val A) :
+  equal (subst_of_arr f) g → fmap f v = bind g v.
+Proof.
+  - auto_map_bind_pure.
+  - auto_map_bind_pure.
+Qed.
+
+#[global]
+Instance BindMapPure_expr : BindMapPure expr.
+Proof. constructor. exact @ebind_map_pure. Qed.
+
+#[global]
+Instance BindMapPure_val : BindMapPure val.
+Proof. constructor. exact @vbind_map_pure. Qed.
+
+Fixpoint ectx_bind_map_pure {A B} (f : A [→] B) g (E : ectx A) :
+  equal (subst_of_arr f) g → fmap f E = bind g E.
+Proof. auto_map_bind_pure. Qed.
+
+#[global]
+Instance BindMapPure_ectx : BindMapPure ectx.
+Proof. constructor. exact @ectx_bind_map_pure. Qed.
+
+(** Bind-Map_Comm instances *)
+
+Fixpoint ebind_map_comm {A B1 B2 C}
+  (f1 : B1 [→] C) (f2 : A [→] B2) (g1 : A [⇒] B1) (g2 : B2 [⇒] C) (e : expr A) :
+  equal (arrow_comp g2 (subst_of_arr f2)) (arrow_comp (subst_of_arr f1) g1) →
+  bind g2 (fmap f2 e) = fmap f1 (bind g1 e)
+with vbind_map_comm {A B1 B2 C}
+  (f1 : B1 [→] C) (f2 : A [→] B2) (g1 : A [⇒] B1) (g2 : B2 [⇒] C) (v : val A) :
+  equal (arrow_comp g2 (subst_of_arr f2)) (arrow_comp (subst_of_arr f1) g1) →
+  bind g2 (fmap f2 v) = fmap f1 (bind g1 v).
+Proof.
+  - auto_map_bind_comm.
+  - auto_map_bind_comm.
+Qed.
+
+#[global]
+Instance BindMapComm_expr : BindMapComm expr.
+Proof. constructor. exact @ebind_map_comm. Qed.
+
+#[global]
+Instance BindMapComm_val : BindMapComm val.
+Proof. constructor. exact @vbind_map_comm. Qed.
+
+Fixpoint ectx_bind_map_comm {A B1 B2 C}
+  (f1 : B1 [→] C) (f2 : A [→] B2) (g1 : A [⇒] B1) (g2 : B2 [⇒] C) (E : ectx A) :
+  equal (arrow_comp g2 (subst_of_arr f2)) (arrow_comp (subst_of_arr f1) g1) →
+  bind g2 (fmap f2 E) = fmap f1 (bind g1 E).
+Proof. auto_map_bind_comm. Qed.
+
+#[global]
+Instance BindMapComm_ectx : BindMapComm ectx.
+Proof. constructor. exact @ectx_bind_map_comm. Qed.
+
+(** Bind instances *)
+
+Fixpoint ebind_id {A} (f : A [⇒] A) (e : expr A) :
+  equal f (arrow_id A) → bind f e = e
+with vbind_id {A} (f : A [⇒] A) (v : val A) :
+  equal f (arrow_id A) → bind f v = v.
+Proof.
+  - auto_bind_id.
+  - auto_bind_id.
+Qed.
+
+Fixpoint ebind_comp {A B C}
+  (f : B [⇒] C) (g : A [⇒] B) (h : A [⇒] C) (e : expr A) :
+  equal (arrow_comp f g) h → bind f (bind g e) = bind h e
+with vbind_comp {A B C}
+  (f : B [⇒] C) (g : A [⇒] B) (h : A [⇒] C) (v : val A) :
+  equal (arrow_comp f g) h → bind f (bind g v) = bind h v.
+Proof.
+  - auto_bind_comp.
+  - auto_bind_comp.
+Qed.
+
+#[global]
+Instance Bind_expr : Bind expr.
+Proof.
+  constructor.
+  - exact @ebind_id.
+  - exact @ebind_comp.
+Qed.
+
+#[global]
+Instance Bind_val : Bind val.
+Proof.
+  constructor.
+  - exact @vbind_id.
+  - exact @vbind_comp.
+Qed.
+
+Fixpoint ectx_bind_id {A} (f : A [⇒] A) (E : ectx A) :
+  equal f (arrow_id A) → bind f E = E.
+Proof. auto_bind_id. Qed.
+
+Fixpoint ectx_bind_comp {A B C}
+  (f : B [⇒] C) (g : A [⇒] B) (h : A [⇒] C) (E : ectx A) :
+  equal (arrow_comp f g) h → bind f (bind g E) = bind h E.
+Proof. auto_bind_comp. Qed.
+
+#[global]
+Instance Bind_ectx : Bind ectx.
+Proof.
+  constructor.
+  - exact @ectx_bind_id.
+  - exact @ectx_bind_comp.
+Qed.
+
+(** Reduction *)
+
+Inductive base_step {V} : expr V → expr V → Prop :=
+| Beta_step (e : expr (inc V)) (v : val V) :
+  base_step (app (v_lambda e) v) (subst (Inc:=inc) e v).
+
+Inductive contextual_step {V} : expr V → expr V → Prop :=
+| Ectx_step E e1 e2 :
+  base_step e1 e2 →
+  contextual_step (plug E e1) (plug E e2).
+
+Definition big_step {V} e (v : val V) :=
+  rtc contextual_step e v.
+
+Definition terminates {V} (e : expr V) :=
+  ∃ v, big_step e v.
+
+Lemma not_base_step_val {V} (v : val V) e : ¬ base_step v e.
+Proof. inversion_clear 1. Qed.
+
+Lemma not_contextual_step_val {V} (v : val V) e : ¬ contextual_step v e.
+Proof.
+  intros Hstep.
+  inversion Hstep as [E' e1' e2' H_step' Hv He].
+  apply plug_eq_val_inv in Hv as [_ ->].
+  by eapply not_base_step_val.
+Qed.
+
+Lemma big_step_val {V} (v : val V) : big_step v v.
+Proof. unfold big_step. done. Qed.
+
+Lemma terminates_val {V} (v : val V) : terminates v.
+Proof. unfold terminates. exists v. apply big_step_val. Qed.
+
+Lemma contextual_step_comp {V} (E : ectx V) e1 e2 :
+  contextual_step e1 e2 →
+  contextual_step (plug E e1) (plug E e2).
+Proof.
+  intros H_step.
+  inversion_clear H_step as [E' e1' e2' H_step'].
+  rewrite <- ectx_comp_correct.
+  rewrite <- ectx_comp_correct.
+  constructor. exact H_step'.
+Qed.
+
+Lemma contextual_step_terminates {V} (e e' : expr V) :
+  contextual_step e e' →
+  terminates e' →
+  terminates e.
+Proof.
+  unfold terminates, big_step.
+  intros H_step [v H_steps].
+  exists v. econstructor; eauto.
+Qed.
+
+Lemma base_step_is_deterministic {V} (e1 e2 e3 : expr V) :
+  base_step e1 e2 →
+  base_step e1 e3 →
+  e2 = e3.
+Proof.
+  intros Hstep2 Hstep3.
+  inversion Hstep2.
+  inversion Hstep3.
+  congruence.
+Qed.
+
+Inductive potential_redex {V} : expr V -> Prop :=
+| pr_app (v1 v2 : val V) : potential_redex (app v1 v2).
+
+Lemma not_potential_redex_val {V} (v : val V) : ¬ potential_redex v.
+Proof. inversion_clear 1. Qed.
+
+Lemma potential_redex_app_inv {V} e1 e2 :
+  potential_redex (app e1 e2) →
+  ∃ (v1 v2 : val V), e1 = v1 ∧ e2 = v2.
+Proof. inversion_clear 1. eauto. Qed.
+
+Lemma unique_rdecomposition {V} (R1 R2 : rctx V) e1 e2 :
+  potential_redex e1 →
+  potential_redex e2 →
+  rplug R1 e1 = rplug R2 e2 →
+  R1 = R2 ∧ e1 = e2.
+Proof.
+  intros He1 He2.
+  revert R2.
+  induction R1; intros R2 Heq.
+  - destruct R2; simpl in *.
+    + auto.
+    + rewrite -> Heq in He1.
+      apply potential_redex_app_inv in He1 as (v1 & v2 & Hv1 & Hv2).
+      apply rplug_eq_val_inv in Hv1 as [_ ->].
+      contradict (not_potential_redex_val _ He2).
+    + rewrite -> Heq in He1.
+      apply potential_redex_app_inv in He1 as (v1 & v2 & Hv1 & Hv2).
+      apply rplug_eq_val_inv in Hv2 as [_ ->].
+      contradict (not_potential_redex_val _ He2).
+  - destruct R2; simpl in *.
+    + rewrite <- Heq in He2.
+      apply potential_redex_app_inv in He2 as (v1 & v2 & Hv1 & Hv2).
+      apply rplug_eq_val_inv in Hv1 as [_ ->].
+      contradict (not_potential_redex_val _ He1).
+    + injection Heq as Heq1 Heq2.
+      apply IHR1 in Heq1 as [Heq11 Heq12].
+      split; congruence.
+    + injection Heq as Heq1 Heq2.
+      apply rplug_eq_val_inv in Heq1 as [_ ->].
+      contradict (not_potential_redex_val _ He1).
+  - destruct R2; simpl in *.
+    + rewrite <- Heq in He2.
+      apply potential_redex_app_inv in He2 as (v1 & v2 & Hv1 & Hv2).
+      apply rplug_eq_val_inv in Hv2 as [_ ->].
+      contradict (not_potential_redex_val _ He1).
+    + injection Heq as Heq1 Heq2. symmetry in Heq1.
+      apply rplug_eq_val_inv in Heq1 as [_ ->].
+      contradict (not_potential_redex_val _ He2).
+    + injection Heq as Heq1 Heq2.
+      apply IHR1 in Heq2 as [Heq11 Heq12].
+      split; congruence.
+Qed.
+
+Lemma unique_decomposition {V} (E1 E2 : ectx V) e1 e2 :
+  potential_redex e1 →
+  potential_redex e2 →
+  plug E1 e1 = plug E2 e2 →
+  E1 = E2 ∧ e1 = e2.
+Proof.
+  intros He1 He2 Heq.
+  rewrite -> plug_rplug_equiv in Heq.
+  rewrite -> plug_rplug_equiv in Heq.
+  destruct (unique_rdecomposition _ _ _ _ He1 He2 Heq) as [Heq1 Heq2].
+  split.
+  - rewrite <- (ectx_rctx_bijection E1).
+    rewrite <- (ectx_rctx_bijection E2).
+    f_equal. exact Heq1.
+  - exact Heq2.
+Qed.
+
+Lemma base_step_potential_redex {V} (e e' : expr V) :
+  base_step e e' →
+  potential_redex e.
+Proof.
+  inversion_clear 1.
+  constructor.
+Qed.
+
+Lemma contextual_step_is_deterministic {V} (e1 e2 e3 : expr V) :
+  contextual_step e1 e2 →
+  contextual_step e1 e3 →
+  e2 = e3.
+Proof.
+  intros Hstep2 Hstep3.
+  inversion Hstep2 as [E2 e12 e2' Hstep2' He12 He2'].
+  inversion Hstep3 as [E3 e13 e3' Hstep3' He13 He3'].
+  assert (Hpr2 := base_step_potential_redex _ _ Hstep2').
+  assert (Hpr3 := base_step_potential_redex _ _ Hstep3').
+  destruct (unique_decomposition E2 E3 e12 e13 Hpr2 Hpr3) as [HE_eq He_eq].
+  { congruence. }
+  rewrite -> He_eq in Hstep2'.
+  assert (He_eq' := base_step_is_deterministic e13 e2' e3' Hstep2' Hstep3').
+  congruence.
+Qed.
+
+(** Relations for closed term *)
+
+Definition expr_rel := expr ∅ ⇒ᵢ expr ∅ ⇒ᵢ IRel.
+Definition val_rel := val ∅ ⇒ᵢ val ∅ ⇒ᵢ IRel.
+Definition ectx_rel := ectx ∅ ⇒ᵢ ectx ∅ ⇒ᵢ IRel.
+
+Definition L_rel_pre (L_rel : expr_rel) : expr_rel :=
+  λ e1 e2,
+    (∀ v1 : val ∅, e1 = v1 → terminates e2)ᵢ ∧ᵢ
+    (∀ᵢ e1' : expr ∅, (contextual_step e1 e1')ᵢ →ᵢ ▷ L_rel e1' e2).
+
+Definition L_rel_fix := I_fix L_rel_pre.
+Definition L_rel := L_rel_pre L_rel_fix.
+
+Definition O_rel : expr_rel :=
+  λ e1 e2, L_rel e1 e2 ∧ᵢ L_rel e2 e1.
+
+Definition K_rel_pre (V_rel : val_rel) : ectx_rel :=
+  λ E1 E2,
+    ∀ᵢ (v1 v2 : val ∅),
+      V_rel v1 v2 →ᵢ
+      O_rel (plug E1 v1) (plug E2 v2).
+
+Definition R_rel_pre (V_rel : val_rel) : expr_rel :=
+  λ e1 e2,
+    ∀ᵢ E1 E2,
+      ▷ K_rel_pre V_rel E1 E2 →ᵢ
+      O_rel (plug E1 e1) (plug E2 e2).
+
+Definition V_rel_pre (V_rel : val_rel) : val_rel :=
+  λ v1 v2,
+    ∀ᵢ u1 u2,
+      ▷ V_rel u1 u2 →ᵢ
+      R_rel_pre V_rel (app v1 u1) (app v2 u2).
+
+Definition V_rel_fix := I_fix V_rel_pre.
+Definition V_rel := V_rel_pre V_rel_fix.
+Definition R_rel := R_rel_pre V_rel_fix.
+Definition K_rel := K_rel_pre V_rel_fix.
+
+Definition E_rel (e1 e2 : expr ∅) :=
+  ∀ᵢ E1 E2,
+    K_rel E1 E2 →ᵢ
+    O_rel (plug E1 e1) (plug E2 e2).
+
+(** Relations for open terms *)
+
+Definition G_rel {V} (γ1 γ2 : V [⇒] ∅) : IProp :=
+  ∀ᵢ x, V_rel (γ1 x) (γ2 x).
+
+Definition E_rel_o {V} (e1 e2 : expr V) : IProp :=
+  ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ E_rel (bind γ1 e1) (bind γ2 e2).
+
+Definition V_rel_o {V} (v1 v2 : val V) : IProp :=
+  ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ V_rel (bind γ1 v1) (bind γ2 v2).
+
+Definition O_rel_o {V} (e1 e2 : expr V) : IProp :=
+  ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ O_rel (bind γ1 e1) (bind γ2 e2).
+
+(** Contractiveness and unrolling fixpoint *)
+
+Lemma L_rel_pre_contractive : contractive L_rel_pre.
+Proof. intro n; iintros; unfold L_rel_pre; auto_contr. Qed.
+
+Lemma L_rel_roll p1 p2 n :
+  n ⊨ L_rel p1 p2 →
+  n ⊨ L_rel_fix p1 p2.
+Proof.
+  intro H; iapply (I_fix_roll expr_rel); [| exact H].
+  apply L_rel_pre_contractive.
+Qed.
+
+Lemma L_rel_unroll p1 p2 n :
+  n ⊨ L_rel_fix p1 p2 →
+  n ⊨ L_rel p1 p2.
+Proof.
+  intro H; iapply (I_fix_unroll expr_rel); [| exact H].
+  apply L_rel_pre_contractive.
+Qed.
+
+Lemma V_rel_pre_contractive : contractive V_rel_pre.
+Proof. intro n; iintros; unfold V_rel_pre, R_rel_pre, K_rel_pre; auto_contr. Qed.
+
+Lemma V_rel_roll v1 v2 n :
+  n ⊨ V_rel v1 v2 →
+  n ⊨ V_rel_fix v1 v2.
+Proof.
+  intro H; iapply (I_fix_roll val_rel); [| exact H].
+  apply V_rel_pre_contractive.
+Qed.
+
+Lemma V_rel_unroll v1 v2 n :
+  n ⊨ V_rel_fix v1 v2 →
+  n ⊨ V_rel v1 v2.
+Proof.
+  intro H; iapply (I_fix_unroll val_rel); [| exact H].
+  apply V_rel_pre_contractive.
+Qed.
+
+(** Introduction and elimination lemmas *)
+
+Lemma L_rel_intro (e1 e2 : expr ∅) n :
+  (∀ v1 : val ∅, e1 = v1 → terminates e2) →
+  n ⊨ (∀ᵢ e1' : expr ∅, (contextual_step e1 e1')ᵢ →ᵢ ▷ L_rel e1' e2) →
+  n ⊨ L_rel e1 e2.
+Proof.
+  intros H_val H_expr.
+  unfold L_rel, L_rel_pre.
+  isplit.
+  - iintro. exact H_val.
+  - iintros e1' H_step.
+    ispec H_expr e1' H_step.
+    later_shift. apply L_rel_roll. exact H_expr.
+Qed.
+
+Lemma L_rel_elim (e1 e2 : expr ∅) n :
+  n ⊨ L_rel e1 e2 →
+  (∀ v1 : val ∅, e1 = v1 → terminates e2) ∧
+  (n ⊨ ∀ᵢ e1' : expr ∅, (contextual_step e1 e1')ᵢ →ᵢ ▷ L_rel e1' e2).
+Proof.
+  intros He.
+  unfold L_rel, L_rel_pre in He.
+  idestruct He as He1 He2.
+  split.
+  - idestruct He1. exact He1.
+  - iintros e1' H_step.
+    ispec He2 e1' H_step.
+    later_shift. apply L_rel_unroll. exact He2.
+Qed.
+
+Lemma O_rel_intro (e1 e2 : expr ∅) n :
+  n ⊨ L_rel e1 e2 →
+  n ⊨ L_rel e2 e1 →
+  n ⊨ O_rel e1 e2.
+Proof.
+  intros He1 He2.
+  unfold O_rel. isplit; assumption.
+Qed.
+
+Lemma O_rel_elim (e1 e2 : expr ∅) n :
+  n ⊨ O_rel e1 e2 →
+  (n ⊨ L_rel e1 e2) ∧
+  (n ⊨ L_rel e2 e1).
+Proof.
+  unfold O_rel.
+  intros He. idestruct He as He1 He2.
+  split; assumption.
+Qed.
+
+Lemma V_rel_intro (v1 v2 : val ∅) n :
+  (n ⊨ ∀ᵢ u1 u2,
+         ▷ V_rel u1 u2 →ᵢ
+         R_rel (app v1 u1) (app v2 u2)) →
+  n ⊨ V_rel v1 v2.
+Proof.
+  intros Hv.
+  unfold V_rel, V_rel_pre.
+  iintros u1 u2 Hu.
+  ispecialize Hv u1.
+  ispecialize Hv u2.
+  iapply Hv. later_shift.
+  apply V_rel_unroll. exact Hu.
+Qed.
+
+Lemma V_rel_elim (v1 v2 : val ∅) n :
+  n ⊨ V_rel v1 v2 →
+  n ⊨ ∀ᵢ u1 u2,
+        ▷ V_rel u1 u2 →ᵢ
+        R_rel (app v1 u1) (app v2 u2).
+Proof.
+  intros Hv.
+  unfold V_rel, V_rel_pre in Hv.
+  iintros u1 u2 Hu.
+  ispecialize Hv u1.
+  ispecialize Hv u2.
+  iapply Hv. later_shift.
+  apply V_rel_roll. exact Hu.
+Qed.
+
+Lemma V_rel_elimR (v1 v2 u1 u2 : val ∅) n :
+  n ⊨ V_rel v1 v2 →
+  n ⊨ ▷ V_rel u1 u2 →
+  n ⊨ R_rel (app v1 u1) (app v2 u2).
+Proof.
+  intros Hv Hu.
+  apply V_rel_elim in Hv.
+  iapply Hv. exact Hu.
+Qed.
+
+Lemma K_rel_intro (E1 E2 : ectx ∅) n :
+  n ⊨ (∀ᵢ v1 v2, V_rel v1 v2 →ᵢ O_rel (plug E1 v1) (plug E2 v2)) →
+  n ⊨ K_rel E1 E2.
+Proof.
+  intros HE.
+  unfold K_rel, K_rel_pre.
+  iintros v1 v2 Hv.
+  iapply HE. apply V_rel_unroll. exact Hv.
+Qed.
+
+Lemma K_rel_elim (E1 E2 : ectx ∅) n :
+  n ⊨ K_rel E1 E2 →
+  n ⊨ ∀ᵢ v1 v2, V_rel v1 v2 →ᵢ O_rel (plug E1 v1) (plug E2 v2).
+Proof.
+  unfold K_rel, K_rel_pre.
+  intros HE.
+  iintros v1 v2 Hv.
+  iapply HE. apply V_rel_roll. exact Hv.
+Qed.
+
+Lemma K_rel_elimO E1 E2 v1 v2 n :
+  n ⊨ K_rel E1 E2 →
+  n ⊨ V_rel v1 v2 →
+  n ⊨ O_rel (plug E1 v1) (plug E2 v2).
+Proof.
+  intros HE Hv.
+  apply K_rel_elim in HE.
+  iapply HE. exact Hv.
+Qed.
+
+Lemma R_rel_intro (e1 e2 : expr ∅) n :
+  n ⊨ (∀ᵢ E1 E2, ▷ K_rel E1 E2 →ᵢ O_rel (plug E1 e1) (plug E2 e2)) ->
+  n ⊨ R_rel e1 e2.
+Proof. auto. Qed.
+
+Lemma R_rel_elim (e1 e2 : expr ∅) n :
+  n ⊨ R_rel e1 e2 →
+  n ⊨ (∀ᵢ E1 E2, ▷ K_rel E1 E2 →ᵢ O_rel (plug E1 e1) (plug E2 e2)).
+Proof. auto. Qed.
+
+Lemma R_rel_elimO (e1 e2 : expr ∅) E1 E2 n :
+  n ⊨ R_rel e1 e2 →
+  n ⊨ ▷ K_rel E1 E2 →
+  n ⊨ O_rel (plug E1 e1) (plug E2 e2).
+Proof.
+  intros He HE.
+  apply R_rel_elim in He.
+  iapply He. exact HE.
+Qed.
+
+Lemma E_rel_intro (e1 e2 : expr ∅) n :
+  (n ⊨ ∀ᵢ E1 E2, K_rel E1 E2 →ᵢ O_rel (plug E1 e1) (plug E2 e2)) →
+  n ⊨ E_rel e1 e2.
+Proof. auto. Qed.
+
+Lemma E_rel_elim (e1 e2 : expr ∅) n :
+  n ⊨ E_rel e1 e2 →
+  n ⊨ ∀ᵢ E1 E2, K_rel E1 E2 →ᵢ O_rel (plug E1 e1) (plug E2 e2).
+Proof. auto. Qed.
+
+(** Bind lemma *)
+Lemma E_rel_elimO e1 e2 E1 E2 n :
+  n ⊨ E_rel e1 e2 →
+  n ⊨ K_rel E1 E2 →
+  n ⊨ O_rel (plug E1 e1) (plug E2 e2).
+Proof.
+  intros He HE.
+  apply E_rel_elim in He.
+  iapply He. exact HE.
+Qed.
+
+Lemma V_rel_elimE (v1 v2 u1 u2 : val ∅) n :
+  n ⊨ V_rel v1 v2 →
+  n ⊨ V_rel u1 u2 →
+  n ⊨ E_rel (app v1 u1) (app v2 u2).
+Proof.
+  intros Hv Hu.
+  apply E_rel_intro.
+  iintros E1 E2 HE.
+  apply R_rel_elimO.
+  - apply V_rel_elimR.
+    + exact Hv.
+    + later_shift. exact Hu.
+  - later_shift. exact HE.
+Qed.
+
+Lemma G_rel_intro {V} (γ1 γ2 : V [⇒] ∅) n :
+  (n ⊨ ∀ᵢ x, V_rel (γ1 x) (γ2 x)) →
+  n ⊨ G_rel γ1 γ2.
+Proof. auto. Qed.
+
+Lemma G_rel_elim {V} (γ1 γ2 : V [⇒] ∅) n :
+  n ⊨ G_rel γ1 γ2 →
+  n ⊨ ∀ᵢ x, V_rel (γ1 x) (γ2 x).
+Proof. auto. Qed.
+
+Lemma G_rel_elimV {V} (γ1 γ2 : V [⇒] ∅) (x : V) n :
+  n ⊨ G_rel γ1 γ2 →
+  n ⊨ V_rel (γ1 x) (γ2 x).
+Proof.
+  intros Hγ.
+  apply G_rel_elim in Hγ.
+  iapply Hγ.
+Qed.
+
+Lemma E_rel_o_intro {V} (e1 e2 : expr V) n :
+  (n ⊨ ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ E_rel (bind γ1 e1) (bind γ2 e2)) →
+  n ⊨ E_rel_o e1 e2.
+Proof. auto. Qed.
+
+Lemma E_rel_o_elim {V} (e1 e2 : expr V) n :
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ E_rel (bind γ1 e1) (bind γ2 e2).
+Proof. auto. Qed.
+
+Lemma E_rel_o_elimE {V} (e1 e2 : expr V) (γ1 γ2 : V [⇒] ∅) n :
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ G_rel γ1 γ2 →
+  n ⊨ E_rel (bind γ1 e1) (bind γ2 e2).
+Proof.
+  intros He Hγ.
+  apply E_rel_o_elim in He.
+  iapply He. exact Hγ.
+Qed.
+
+Lemma V_rel_o_intro {V} (v1 v2 : val V) n :
+  (n ⊨ ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ V_rel (bind γ1 v1) (bind γ2 v2)) →
+  n ⊨ V_rel_o v1 v2.
+Proof. auto. Qed.
+
+Lemma V_rel_o_elim {V} (v1 v2 : val V) n :
+  n ⊨ V_rel_o v1 v2 →
+  n ⊨ ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ V_rel (bind γ1 v1) (bind γ2 v2).
+Proof. auto. Qed.
+
+Lemma V_rel_o_elimV {V} (v1 v2 : val V) (γ1 γ2 : V [⇒] ∅) n :
+  n ⊨ V_rel_o v1 v2 →
+  n ⊨ G_rel γ1 γ2 →
+  n ⊨ V_rel (bind γ1 v1) (bind γ2 v2).
+Proof.
+  intros Hv Hγ.
+  apply V_rel_o_elim in Hv.
+  iapply Hv. exact Hγ.
+Qed.
+
+Lemma O_rel_o_intro {V} (e1 e2 : expr V) n :
+  (n ⊨ ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ O_rel (bind γ1 e1) (bind γ2 e2)) →
+  n ⊨ O_rel_o e1 e2.
+Proof. auto. Qed.
+
+Lemma O_rel_o_elim {V} (e1 e2 : expr V) n :
+  n ⊨ O_rel_o e1 e2 →
+  n ⊨ ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ O_rel (bind γ1 e1) (bind γ2 e2).
+Proof. auto. Qed.
+
+Lemma O_rel_o_elimO {V} (e1 e2 : expr V) (γ1 γ2 : V [⇒] ∅) n :
+  n ⊨ O_rel_o e1 e2 →
+  n ⊨ G_rel γ1 γ2 →
+  n ⊨ O_rel (bind γ1 e1) (bind γ2 e2).
+Proof.
+  intros He Hγ.
+  apply O_rel_o_elim in He.
+  iapply He. exact Hγ.
+Qed.
+
+(** Compatibility lemmas *)
+
+(* aka val inclusion *)
+Lemma compat_val {V} (v1 v2 : val V) n :
+  n ⊨ V_rel_o v1 v2 →
+  n ⊨ E_rel_o v1 v2.
+Proof.
+  intros Hv.
+  apply V_rel_o_elim in Hv.
+  apply E_rel_o_intro. iintros γ1 γ2 Hγ.
+  apply E_rel_intro. iintros E1 E2 HE.
+  apply (K_rel_elimO E1 E2 (bind γ1 v1) (bind γ2 v2) _ HE).
+  iapply Hv. exact Hγ.
+Qed.
+
+Lemma compat_app {V} (e1 e2 e1' e2' : expr V) n :
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ E_rel_o e1' e2' →
+  n ⊨ E_rel_o (app e1 e1') (app e2 e2').
+Proof.
+  intros He He'.
+  apply E_rel_o_elim in He.
+  (* From He, we have contextual equivalence of e1 and e2,
+     in related context *)
+  apply E_rel_o_elim in He'.
+  apply E_rel_o_intro. iintros γ1 γ2 Hγ.
+  apply E_rel_intro. iintros E1 E2 HE. term_simpl.
+  (* The functions e1/e2 are evaluated first, so we "zap" them down using He.
+    To use He, we have to give two contexts s.t. if we can prove them to be related,
+    plugging e1/e2 into them will be in O.
+    We give ectx_app1 because the plugging will give us exactly the goal we need. *)
+  ispec He γ1 γ2 Hγ.
+  apply E_rel_elim in He.
+  ispecialize He (ectx_app1 E1 (bind γ1 e1')).
+  ispecialize He (ectx_app1 E2 (bind γ2 e2')).
+  iapply He.
+  (* This reduces the problem to that of showing that the two app contexts are related. *)
+  apply K_rel_intro.
+  iintros v1 v2 Hv. simpl.
+  (* Given that they are plugged with two related values, we now have to prove
+    that the result is in O. We use He' for a similar purpose. We give ectx_app2
+    because plugging e1'/e2' into it will match the goal. *)
+  ispec He' γ1 γ2 Hγ.
+  apply E_rel_elim in He'.
+  ispecialize He' (ectx_app2 v1 E1).
+  ispecialize He' (ectx_app2 v2 E2).
+  iapply He'.
+  (* Now we have to prove the ectx_app2 are related. *)
+  apply K_rel_intro.
+  iintros v1' v2' Hv'. simpl.
+  (* Now, we have that the two values and contexts are related.
+    We "zap" (app v1 v1') and (app v2 v2') down using E_rel_elimO *)
+  apply E_rel_elimO.
+  apply V_rel_elimE; [exact Hv | exact Hv'].
+  (* Finally, we are left with just E1 and E2. They are related according
+     to our hypothesis *)
+  exact HE.
+Qed.
+
+Lemma compat_var {V : Set} (x : V) n :
+  n ⊨ V_rel_o (v_var x) (v_var x).
+Proof.
+  apply V_rel_o_intro.
+  iintros γ1 γ2 Hγ. term_simpl.
+  apply G_rel_elimV. exact Hγ.
+Qed.
+
+Lemma L_rel_red_l (e1 e1' e2 : expr ∅) n :
+  contextual_step e1 e1' →
+  n ⊨ ▷ L_rel e1' e2 →
+  n ⊨ L_rel e1 e2.
+Proof.
+  intros H_step He.
+  apply L_rel_intro.
+  - intros v1 H_eq.
+    rewrite -> H_eq in H_step.
+    contradict (not_contextual_step_val _ _ H_step).
+  - iintros e1'' H_step'.
+    idestruct H_step'.
+    rewrite -> (contextual_step_is_deterministic _ _ _ H_step' H_step).
+    exact He.
+Qed.
+
+Lemma L_rel_red_r (e2 e2' : expr ∅) n :
+  contextual_step e2 e2' →
+  n ⊨ (∀ᵢ e1, L_rel e1 e2' →ᵢ L_rel e1 e2).
+Proof.
+  intros H_step.
+  loeb_induction IH.
+  iintros e1 He.
+  apply L_rel_elim in He as [He1 He2].
+  apply L_rel_intro.
+  - intros v1 H_eq.
+    specialize (He1 v1 H_eq).
+    eapply contextual_step_terminates; eauto.
+  - iintros e1' H_step'.
+    ispec He2 e1' H_step'.
+    later_shift. iapply IH. exact He2.
+Qed.
+
+Lemma O_rel_red_l (e1 e1' e2 : expr ∅) n :
+  contextual_step e1 e1' →
+  n ⊨ O_rel e1' e2 →
+  n ⊨ O_rel e1 e2.
+Proof.
+  intros H_step He.
+  apply O_rel_elim in He as [He1 He2].
+  apply O_rel_intro.
+  - eapply L_rel_red_l.
+    + exact H_step.
+    + later_shift. exact He1.
+  - iapply L_rel_red_r.
+    + exact H_step.
+    + exact He2.
+Qed.
+
+(* symmetric to the proof of O_rel_red_l *)
+Lemma O_rel_red_r (e1 e2 e2' : expr ∅) n :
+  contextual_step e2 e2' →
+  n ⊨ O_rel e1 e2' →
+  n ⊨ O_rel e1 e2.
+Proof.
+  intros H_step He.
+  apply O_rel_elim in He as [He1 He2].
+  apply O_rel_intro.
+  - iapply L_rel_red_r.
+    + exact H_step.
+    + exact He1.
+  - eapply L_rel_red_l.
+    + exact H_step.
+    + later_shift. exact He2.
+Qed.
+
+Lemma O_rel_red_both (e1 e1' e2 e2' : expr ∅) n :
+  contextual_step e1 e1' →
+  contextual_step e2 e2' →
+  n ⊨ ▷ O_rel e1' e2' →
+  n ⊨ O_rel e1 e2.
+Proof.
+  intros H_step1 H_step2 He.
+  unfold O_rel in He.
+  apply I_conj_later_down in He.
+  idestruct He as He1 He2.
+  apply O_rel_intro.
+  - eapply L_rel_red_l. { exact H_step1. }
+    later_shift.
+    iapply L_rel_red_r. { exact H_step2. }
+    exact He1.
+  - iapply L_rel_red_r. { exact H_step1. }
+    iapply L_rel_red_l. { exact H_step2. }
+    later_shift. exact He2.
+Qed.
+
+(* Observation: later_shift is significant in O_rel_red_both,
+   but is not significant in O_rel_red_l and O_rel_red_r. We
+   hypothesize that O_rel_red_l and O_rel_red_r are stronger
+   property:
+   - O_rel_red_both → O_rel_red_l ∧ O_rel_red_r
+   - But not: O_rel_red_l ∧ O_rel_red_r → O_rel_red_both *)
+
+Lemma R_rel_red_both (e1 e1' e2 e2' : expr ∅) n :
+  contextual_step e1 e1' →
+  contextual_step e2 e2' →
+  n ⊨ ▷ E_rel e1' e2' →
+  n ⊨ R_rel e1 e2.
+Proof.
+  intros H_step1 H_step2 He.
+  apply R_rel_intro.
+  iintros E1 E2 HE.
+  eapply O_rel_red_both.
+  - by apply contextual_step_comp.
+  - by apply contextual_step_comp.
+  - later_shift. by apply E_rel_elimO.
+Qed.
+
+Lemma compat_lambda {V} (e1 e2 : expr (inc V)) n :
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ V_rel_o (v_lambda e1) (v_lambda e2).
+Proof.
+  intros He.
+  apply E_rel_o_elim in He.
+  apply V_rel_o_intro. iintros γ1 γ2 Hγ.
+  apply V_rel_intro. iintros u1 u2 Hu. term_simpl.
+  eapply R_rel_red_both.
+  { eapply (Ectx_step ectx_hole). constructor. }
+  { eapply (Ectx_step ectx_hole). constructor. }
+  later_shift. simpl. unfold subst.
+  rewrite -> bind_bind_comp'.
+  rewrite -> bind_bind_comp'.
+  iapply He.
+  apply G_rel_intro.
+  iintros x. destruct x as [| x'].
+  - term_simpl. exact Hu.
+  - term_simpl. apply G_rel_elimV. exact Hγ.
+Qed.
+
+Lemma fundamental_property_e {V} (e : expr V) n :
+  n ⊨ E_rel_o e e
+with fundamental_property_v {V} (v : val V) n :
+  n ⊨ V_rel_o v v.
+Proof.
+  { induction e.
+    - apply compat_val. apply fundamental_property_v.
+    - apply compat_app; auto. }
+  { induction v.
+    - apply compat_var.
+    - apply compat_lambda.
+      apply fundamental_property_e. }
+Qed.
+
+(** General program contexts *)
+Inductive ctx : Set → Type :=
+| ctx_hole : ctx ∅
+| ctx_lam {V} : ctx V → ctx (inc V)
+| ctx_app1 {V} : ctx V → expr V → ctx V
+| ctx_app2 {V} : expr V → ctx V → ctx V.
+
+(** Inside-out plugging, always result in a closed expression *)
+Fixpoint ciplug {V} (C : ctx V) : expr V → expr ∅ :=
+  match C with
+  | ctx_hole => λ e, e
+  | ctx_lam C => λ e, ciplug C (v_lambda e)
+  | ctx_app1 C e2 => λ e, ciplug C (app e e2)
+  | ctx_app2 e1 C => λ e, ciplug C (app e1 e)
+  end.
+
+Inductive ctxr : Set → Set → Type :=
+| ctxr_hole {A} : ctxr A A
+| ctxr_lam {A B} : ctxr A (inc B) → ctxr A B
+| ctxr_app1 {A B} : ctxr A B → expr B → ctxr A B
+| ctxr_app2 {A B} : expr B → ctxr A B → ctxr A B.
+
+(* Outside-in plugging *)
+Fixpoint crplug {A B} (C : ctxr A B) : expr A → expr B :=
+  match C with
+  | ctxr_hole => λ e, e
+  | ctxr_lam C => λ e, v_lambda (crplug C e)
+  | ctxr_app1 C e2 => λ e, app (crplug C e) e2
+  | ctxr_app2 e1 C => λ e, app e1 (crplug C e)
+  end.
+
+(* Outside-in plugging simplifies the proofs below *)
+Notation cplug := crplug.
+
+(** Observational approximation for complete programs *)
+Definition obs_approx (e1 e2 : expr ∅) : Prop :=
+  terminates e1 → terminates e2.
+
+(** Observational equivalence for complete programs *)
+Definition obs_equiv (e1 e2 : expr ∅) : Prop :=
+  terminates e1 ↔ terminates e2.
+
+Infix "≼obs" := obs_approx (at level 80, right associativity, only printing).
+Infix "≡obs" := obs_equiv (at level 80, right associativity, only printing).
+
+#[global]
+Instance Reflexive_obs_approx : Reflexive obs_approx.
+Proof. unfold Reflexive, obs_approx. auto. Qed.
+
+#[global]
+Instance Transitive_obs_approx : Transitive obs_approx.
+Proof. unfold Transitive, obs_approx. auto. Qed.
+
+#[global]
+Instance Reflexive_obs_equiv : Reflexive obs_equiv.
+Proof. unfold Reflexive, obs_equiv. auto. Qed.
+
+#[global]
+Instance Symmetric_obs_equiv : Symmetric obs_equiv.
+Proof. unfold Symmetric, obs_equiv. auto. Qed.
+
+#[global]
+Instance Transitive_obs_equiv : Transitive obs_equiv.
+Proof. unfold Transitive, obs_equiv. intuition auto. Qed.
+
+(** Contextual approximation, where the context closes off Γ *)
+Definition ctx_approx {V} (e1 e2 : expr V) : Prop :=
+  ∀ C, obs_approx (cplug C e1) (cplug C e2).
+
+(** Contextual equivalence *)
+Definition ctx_equiv {V} (e1 e2 : expr V) : Prop :=
+  ∀ C, obs_equiv (cplug C e1) (cplug C e2).
+
+(* TODO *)
+(* Infix "≼ctx" := ctx_approx (at level 80, right associativity, only printing).
+Infix "≡ctx" := ctx_equiv (at level 80, right associativity, only printing). *)
+
+#[global]
+Instance Reflexive_ctx_approx {V} : Reflexive (@ctx_approx V).
+Proof. unfold Reflexive, ctx_approx. reflexivity. Qed.
+
+#[global]
+Instance Transitive_ctx_approx {V} : Transitive (@ctx_approx V).
+Proof. unfold Transitive, ctx_approx. etransitivity; eauto. Qed.
+
+#[global]
+Instance Reflexive_ctx_equiv {V} : Reflexive (@ctx_equiv V).
+Proof. unfold Reflexive, ctx_equiv. reflexivity. Qed.
+
+#[global]
+Instance Symmetric_ctx_equiv {V} : Symmetric (@ctx_equiv V).
+Proof. unfold Symmetric, ctx_equiv. symmetry. auto. Qed.
+
+#[global]
+Instance Transitive_ctx_equiv {V} : Transitive (@ctx_equiv V).
+Proof. unfold Transitive, ctx_equiv. etransitivity; eauto. Qed.
+
+Lemma ctx_equiv_intro {V} (e1 e2 : expr V) :
+  ctx_approx e1 e2 →
+  ctx_approx e2 e1 →
+  ctx_equiv e1 e2.
+Proof.
+  intros He1 He2. split.
+  - apply He1.
+  - apply He2.
+Qed.
+
+Definition n_big_step {V} n (e : expr V) (v : val V) := nsteps contextual_step n e v.
+Definition n_terminates {V} n (e : expr V) := ∃ v, n_big_step n e v.
+
+Lemma big_step_iff_n_big_step {V} (e : expr V) (v : val V) :
+  big_step e v ↔ ∃ n, n_big_step n e v.
+Proof.
+  unfold big_step, n_big_step.
+  apply rtc_nsteps.
+Qed.
+
+Lemma terminates_iff_n_terminates {V} (e : expr V) :
+  terminates e ↔ ∃ n, n_terminates n e.
+Proof.
+  unfold terminates, n_terminates.
+  split.
+  - intros [v H_big_step].
+    apply big_step_iff_n_big_step in H_big_step as [n H_n_big_step].
+    eauto.
+  - intros (n & v & H_n_big_step).
+    exists v. apply big_step_iff_n_big_step.
+    exists n. exact H_n_big_step.
+Qed.
+
+Lemma n_big_step_O_inv {V} e (v : val V) :
+  n_big_step O e v → e = v.
+Proof.
+  unfold n_big_step.
+  inversion_clear 1. auto.
+Qed.
+
+Lemma n_big_step_S_inv {V} n e (v : val V) :
+  n_big_step (S n) e v →
+  ∃ e', contextual_step e e' ∧ n_big_step n e' v.
+Proof.
+  unfold n_big_step.
+  inversion_clear 1. eauto.
+Qed.
+
+Lemma n_terminates_O_inv {V} (e : expr V) :
+  n_terminates O e →
+  ∃ (v : val V), e = v.
+Proof.
+  unfold n_terminates.
+  intros [v H_n_big_step].
+  apply n_big_step_O_inv in H_n_big_step. eauto.
+Qed.
+
+Lemma n_terminates_S_inv {V} n (e : expr V) :
+  n_terminates (S n) e →
+  ∃ e', contextual_step e e' ∧ n_terminates n e'.
+Proof.
+  unfold n_terminates.
+  intros [v H_n_big_step].
+  apply n_big_step_S_inv in H_n_big_step as (e' & H_step & H_n_big_step).
+  eauto.
+Qed.
+
+Lemma ctx_equiv_elim {V} (e1 e2 : expr V) :
+  ctx_equiv e1 e2 →
+  ctx_approx e1 e2 ∧
+  ctx_approx e2 e1.
+Proof.
+  unfold ctx_equiv, ctx_approx, obs_equiv, obs_approx.
+  intros He. split; apply He.
+Qed.
+
+Lemma L_rel_adequacy_n (e1 e2 : expr ∅) n :
+  (∀ w, w ⊨ L_rel e1 e2) →
+  n_terminates n e1 →
+  terminates e2.
+Proof.
+  revert e1.
+  induction n as [| n' IHn']; intros e1 He H_n_terminates.
+  - apply n_terminates_O_inv in H_n_terminates as [v Hv].
+    specialize (He {| nw_index := O |}).
+    apply L_rel_elim in He as [He _].
+    exact (He v Hv).
+  - apply n_terminates_S_inv in H_n_terminates as (e' & H_step & H_n_terminates).
+    apply (IHn' e'); [| exact H_n_terminates].
+    intros w. specialize (He (world_lift w)).
+    apply L_rel_elim in He as [_ He].
+    apply I_world_lift_later.
+    iapply He. iintro. exact H_step.
+Qed.
+
+Lemma L_rel_adequacy (e1 e2 : expr ∅) :
+  (∀ n, n ⊨ L_rel e1 e2) →
+  terminates e1 →
+  terminates e2.
+Proof.
+  intros He H_terminates.
+  apply terminates_iff_n_terminates in H_terminates as (n & H_n_terminates).
+  exact (L_rel_adequacy_n e1 e2 n He H_n_terminates).
+Qed.
+
+Theorem O_rel_adequacy e1 e2 :
+  (∀ w, w ⊨ O_rel e1 e2) → obs_equiv e1 e2.
+Proof.
+  intros He. split.
+  - apply L_rel_adequacy.
+    intros w. specialize (He w).
+    by apply O_rel_elim in He as [].
+  - apply L_rel_adequacy.
+    intros w. specialize (He w).
+    by apply O_rel_elim in He as [].
+Qed.
+
+Lemma L_rel_value (v1 v2 : val ∅) n :
+  n ⊨ L_rel v1 v2.
+Proof.
+  apply L_rel_intro.
+  - intros _ _.
+    apply terminates_val.
+  - iintros e1 He. idestruct He.
+    by apply not_contextual_step_val in He.
+Qed.
+
+Lemma O_rel_value (v1 v2 : val ∅) n :
+  n ⊨ O_rel v1 v2.
+Proof.
+  apply O_rel_intro; apply L_rel_value.
+Qed.
+
+Lemma K_rel_ectx_hole n :
+  n ⊨ K_rel ectx_hole ectx_hole.
+Proof.
+  apply K_rel_intro.
+  iintros v1 v2 Hv. simpl.
+  apply O_rel_value.
+Qed.
+
+Lemma O_rel_o_compat_expr {V} (e1 e2 : expr V) n :
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ O_rel_o e1 e2.
+Proof.
+  intro He.
+  apply O_rel_o_intro.
+  iintros γ1 γ2 Hγ.
+  apply E_rel_o_elim in He. ispec He γ1 γ2 Hγ.
+  rewrite <- (fold_unfold_plug_ectx_hole (bind γ1 e1)).
+  rewrite <- (fold_unfold_plug_ectx_hole (bind γ2 e2)).
+  apply (E_rel_elimO _ _ _ _ _ He).
+  exact (K_rel_ectx_hole n).
+Qed.
+
+Lemma precongruence {A B} (e1 e2 : expr A) (C : ctxr A B) n :
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ E_rel_o (cplug C e1) (cplug C e2).
+Proof.
+  intros He.
+  induction C; simpl.
+  - exact He.
+  - apply compat_val.
+    apply compat_lambda.
+    apply IHC. exact He.
+  - apply compat_app.
+    + apply IHC. exact He.
+    + apply fundamental_property_e.
+  - apply compat_app.
+    + apply fundamental_property_e.
+    + apply IHC. exact He.
+Qed.
+
+Theorem E_rel_o_soundness {V} (e1 e2 : expr V) :
+  (∀ n, n ⊨ E_rel_o e1 e2) →
+  ctx_equiv e1 e2.
+Proof.
+  unfold ctx_equiv.
+  intros He C.
+  apply O_rel_adequacy. intros w.
+  rewrite <- (bind_pure' (cplug C e1)).
+  rewrite <- (bind_pure' (cplug C e2)).
+  specialize (He w).
+  apply (precongruence _ _ C) in He.
+  apply O_rel_o_compat_expr in He.
+  apply (O_rel_o_elimO _ _ _ _ _ He).
+  apply G_rel_intro. iintros x. destruct x.
+Qed.
+
+(*
+(* composition of subst and subst_map,
+  where the variable to be substituted doesn't appear in the substitution *)
+Lemma subst_subst_map : ∀ (e:expr) Γ (x : string) (es : val) (map : sub),
+  subst_is_closed Γ ∅ map →
+  subst x es (subst_map (delete x map) e) =
+  subst_map (insert x es map) e
+with subst_subst_map_val : ∀ (v:val) Γ (x : string) (es : val) (map : sub),
+  subst_is_closed Γ ∅ map →
+  subst x es (subst_map_val (delete x map) v) =
+  subst_map_val (insert x es map) v.
+Proof.
+  { intros e. induction e.
+    { intros. apply (subst_subst_map_val _ _ _ _ _ H). }
+    { (* e is a variable x *)
+      intros. simpl. destruct (decide (x0=x)) as [->|Hne].
+      { (* if x=x0, we'll end up substituting es into x *)
+        rewrite lookup_delete_eq with (m:=map).
+        rewrite lookup_insert_eq with (m:=map).
+        simpl.
+        by rewrite decide_True. }
+      { (* if not equal, the deletion and insertion will have no effect *)
+        rewrite lookup_delete_ne with (m:=map). 2: { assumption. }
+        rewrite lookup_insert_ne with (m:=map). 2: { assumption. }
+        (* we then need to see if x is in the map to begin with *)
+        destruct (map !! x) as [v1|] eqn:Hkey.
+        { Fail rewrite Hkey. (* why does regular rewrite not work? *)
+          setoid_rewrite Hkey.
+          simpl.
+          rewrite (subst_val_closed _ ∅ _ _).
+          - reflexivity.
+          - apply (subst_is_closed_elim_closed _ _ x _ _ H Hkey).
+          - set_solver. }
+      { setoid_rewrite Hkey.
+        simpl.
+        by rewrite decide_False. } } }
+    { intros. simpl. f_equal; eauto. } }
+  { intros v. induction v; intros.
+    (*{ reflexivity. }*)
+    { (* the lambda case *)
+      simpl. f_equal. f_equal.
+      case_decide.
+      { subst.
+        rewrite delete_delete_eq with (m:=map).
+        rewrite delete_insert_eq with (m:=map). done. }
+      { rewrite delete_insert_ne with (m:=map). 2: { congruence. }
+        rewrite delete_delete with (m:=map).
+        eapply subst_subst_map.
+        apply (subst_is_closed_subseteq (Γ ∖ {[x]}) Γ _ (delete x map) map).
+        destruct H as [H1 H2].
+        rewrite H1.
+        set_solver.
+        apply delete_subseteq.
+        set_solver.
+        assumption. } }
+    (*{ reflexivity. }*) }
+Qed.
+
+(** Special case of Theorem A.1 from Erlang paper:
+  scoping of extended substitutions.
+  Given a closed substitution, we can add a closed value to it. *)
+Lemma scope_extend1 Γ x (v:val) (γ:sub):
+  closed ∅ v →
+  subst_is_closed Γ ∅ γ →
+  subst_is_closed (Γ ∪ {[x]}) ∅ (<[x := v]> γ).
+Proof.
+  intros Hc Hsc.
+  split.
+  { destruct Hsc. rewrite H. set_solver. }
+  intros x0 Hd v0 Hs.
+  (* we have to prove that for an arbitrary binding x0 := v0 in γ, v0 is closed *)
+  destruct (decide (x=x0)) as [->|Hne].
+  (* if x = x0, the premise tells us v0 is closed *)
+  { rewrite lookup_insert_eq with (m:=γ) in Hs.
+    injection Hs. intros. subst.
+    exact Hc. }
+  (* if they are not equal, we know x0 is in Γ and have to use the fact
+    that the subst_is_closed *)
+  { rewrite elem_of_union in Hd. destruct Hd. 2: { assert (x0 = x). set_solver. done. }
+    destruct Hsc as [_ Hsc].
+    rewrite lookup_insert_ne with (m:=γ) in Hs. 2: { assumption. }
+    specialize (Hsc x0 H v0 Hs).
+    assumption. }
+Qed.
+
+(* we can extend related substitutions with related values *)
+Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
+  n ⊨ V_rel v1 v2 →
+  n ⊨ G_rel Γ γ1 γ2 →
+  n ⊨ G_rel (Γ ∪ {[x]}) (<[x := v1]> γ1) (<[x := v2]> γ2).
+Proof.
+  intros Hv Hγ.
+  destruct (V_rel_elim _ _ _ Hv) as (Hvc1 & Hvc2 & Hv').
+  destruct (G_rel_elim _ _ _ _ Hγ) as (Hγc1 & Hγc2 & Hγ').
+  apply G_rel_intro.
+  { by apply scope_extend1. }
+  { by apply scope_extend1. }
+
+  iintros x0 v0 v3 H1 H2.
+  destruct (decide (x=x0)).
+  { subst.
+    rewrite lookup_insert_eq with (m:=γ2) in H2. idestruct H2. injection H2 as ->.
+    rewrite lookup_insert_eq with (m:=γ1) in H1. idestruct H1. injection H1 as ->.
+    assumption. }
+  { rewrite lookup_insert_ne with (m:=γ2) in H2. idestruct H2. 2: { assumption. }
+    rewrite lookup_insert_ne with (m:=γ1) in H1. idestruct H1. 2: { assumption. }
+    iapply Hγ'.
+    - iintro. eassumption.
+    - iintro. eassumption. }
+Qed.
+
+Lemma lambda_closed Γ γ x e :
+  closed (Γ ∪ {[x]}) e  →
+  subst_is_closed Γ ∅ γ  →
+  closed ∅ (vlambda x (subst_map (delete x γ) e)).
+Proof.
+  intros Hec [Heq Hγc].
+  rewrite closed_lambda.
+  eapply subst_map_closed'_2.
+  - eapply closed_weaken.
+    exact Hec.
+    setoid_rewrite dom_delete.
+    intros y. destruct (decide (x = y)); set_solver.
+  - apply (subst_is_closed_subseteq (Γ ∖ {[x]}) Γ _ (delete x γ) γ).
+    + set_solver.
+    + apply delete_subseteq.
+    + set_solver.
+    + unfold subst_is_closed. split.
+      * exact Heq.
+      * intros x' Hin v Hlookup.
+        specialize (Hγc x' Hin v Hlookup).
+        by eapply closed_weaken.
+Qed.
+*)
+
+(*
 Notation name := string.
 Definition sub : Set := gmap name val.
 Definition scope : Set := gset name.
@@ -733,397 +2109,9 @@ Proof.
   - exact Hc.
   - set_solver.
 Qed.
+*)
 
-(** Relations *)
-
-Definition expr_rel := expr ⇒ᵢ expr ⇒ᵢ IRel.
-Definition val_rel := val ⇒ᵢ val ⇒ᵢ IRel.
-Definition sub_rel := sub ⇒ᵢ sub ⇒ᵢ IRel.
-Definition ctx_rel := ectx ⇒ᵢ ectx ⇒ᵢ IRel.
-
-Definition L_rel_pre (L_rel : expr_rel) : expr_rel :=
-  λ e1 e2,
-    (∀ v1 : val, e1 = v1 → terminates e2)ᵢ ∧ᵢ
-    ∀ᵢ e1' : expr, (contextual_step e1 e1')ᵢ →ᵢ ▷ L_rel e1' e2.
-
-Definition L_rel_fix := I_fix L_rel_pre.
-Definition L_rel := L_rel_pre L_rel_fix.
-Definition O_rel e1 e2 := L_rel e1 e2 ∧ᵢ L_rel e2 e1.
-
-Definition K_rel_pre (V_rel : val_rel) :=
-  λ E1 E2,
-    (∀ᵢ (v1 v2 : val),
-      V_rel v1 v2 →ᵢ
-      O_rel (fill E1 v1) (fill E2 v2)).
-
-Definition R_rel_pre (V_rel : val_rel) (e1 e2 : expr) :=
-  ∀ᵢ E1 E2,
-    ▷ K_rel_pre V_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2).
-
-Definition V_rel_pre (V_rel : val_rel) : val_rel :=
-  λ v1 v2,
-    (closed ∅ v1)ᵢ ∧ᵢ
-    (closed ∅ v2)ᵢ ∧ᵢ
-    ∀ᵢ (u1 u2 : val),
-      ▷ V_rel u1 u2 →ᵢ
-      R_rel_pre V_rel (app v1 u1) (app v2 u2).
-
-Definition V_rel_fix := I_fix V_rel_pre.
-
-Definition V_rel := V_rel_pre V_rel_fix.
-Definition R_rel := R_rel_pre V_rel_fix.
-Definition K_rel := K_rel_pre V_rel_fix.
-
-Definition E_rel : expr_rel :=
-  λ e1 e2,
-    ∀ᵢ E1 E2 : ectx, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2).
-
-(** Relations for open terms *)
-
-Definition G_rel (Γ: scope) (γ1 γ2 : sub) : IProp :=
-  (subst_is_closed Γ ∅ γ1)ᵢ ∧ᵢ
-  (subst_is_closed Γ ∅ γ2)ᵢ ∧ᵢ
-  ∀ᵢ x v1 v2,
-    (γ1 !! x = Some v1)ᵢ →ᵢ
-    (γ2 !! x = Some v2)ᵢ →ᵢ
-    V_rel v1 v2.
-
-Definition E_rel_o (Γ: scope) (e1 e2 : expr) : IProp :=
-  ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ E_rel (subst_map γ1 e1) (subst_map γ2 e2).
-
-Definition V_rel_o (Γ: scope) (v1 v2 : val) : IProp :=
-  ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2).
-
-Definition P_rel_o (Γ: scope) (e1 e2 : expr) : IProp :=
-  ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ O_rel (subst_map γ1 e1) (subst_map γ2 e2).
-
-(** Contractiveness and unrolling fixpoint *)
-
-Lemma L_rel_pre_contractive : contractive L_rel_pre.
-Proof.
-  intro n; iintros; unfold L_rel_pre; auto_contr.
-Qed.
-
-Lemma L_rel_roll p1 p2 n :
-  n ⊨ L_rel p1 p2 → n ⊨ L_rel_fix p1 p2.
-Proof.
-  intro H; iapply (I_fix_roll expr_rel); [ | exact H ].
-  apply L_rel_pre_contractive.
-Qed.
-
-Lemma L_rel_unroll p1 p2 n :
-  n ⊨ L_rel_fix p1 p2 → n ⊨ L_rel p1 p2.
-Proof.
-  intro H; iapply (I_fix_unroll expr_rel); [ | exact H ].
-  apply L_rel_pre_contractive.
-Qed.
-
-Lemma V_rel_pre_contractive : contractive V_rel_pre.
-Proof.
-  intro n; iintros; unfold V_rel_pre, R_rel_pre, K_rel_pre; auto_contr.
-Qed.
-
-Lemma V_rel_roll v1 v2 n :
-  n ⊨ V_rel v1 v2 → n ⊨ V_rel_fix v1 v2.
-Proof.
-  intro H; iapply (I_fix_roll val_rel); [ | exact H ].
-  apply V_rel_pre_contractive.
-Qed.
-
-Lemma V_rel_unroll v1 v2 n :
-  n ⊨ V_rel_fix v1 v2 → n ⊨ V_rel v1 v2.
-Proof.
-  intro H; iapply (I_fix_unroll val_rel); [ | exact H ].
-  apply V_rel_pre_contractive.
-Qed.
-
-(** Introduction and elimination lemmas *)
-
-Lemma V_rel_intro (v1 v2 : val) n :
-  closed ∅ v1 →
-  closed ∅ v2 →
-  (n ⊨ ∀ᵢ (u1 u2:val),
-         ▷ V_rel u1 u2 →ᵢ
-         R_rel (app v1 u1) (app v2 u2)) →
-  n ⊨ V_rel v1 v2.
-Proof.
-  intros H_closed1 H_closed2 Hv.
-  isplit; [| isplit].
-  - apply I_prop_intro. assumption.
-  - apply I_prop_intro. assumption.
-  - iintros u1 u2 Hv_later.
-    ispecialize Hv u1.
-    ispecialize Hv u2.
-    iapply Hv.
-    later_shift.
-    apply V_rel_unroll.
-    assumption.
-Qed.
-
-Lemma V_rel_elim (v1 v2 : val) n :
-  n ⊨ V_rel v1 v2 →
-  closed ∅ v1 ∧
-  closed ∅ v2 ∧
-  (n ⊨ (∀ᵢ (u1 u2 : val),
-         ▷ V_rel u1 u2 →ᵢ
-         R_rel (app v1 u1) (app v2 u2))).
-Proof.
-  intros Hv.
-  unfold V_rel in Hv.
-  unfold V_rel_pre in Hv.
-  idestruct Hv as H_closed1 Hv. idestruct H_closed1.
-  idestruct Hv as H_closed2 Hv. idestruct H_closed2.
-  split; [| split].
-  - assumption.
-  - assumption.
-  - iintros u1 u2 Hv_later.
-    ispecialize Hv u1. ispecialize Hv u2.
-    iapply Hv.
-    later_shift.
-    apply V_rel_roll.
-    assumption.
-Qed.
-
-Lemma K_rel_intro (E1 E2 : ectx) n :
-  n ⊨ (∀ᵢ v1 v2, V_rel v1 v2 →ᵢ O_rel (fill E1 v1) (fill E2 v2)) →
-  n ⊨ K_rel E1 E2.
-Proof.
-  intros HE.
-  unfold K_rel, K_rel_pre.
-  iintros v1 v2 Hv.
-  iapply HE. apply V_rel_unroll. exact Hv.
-Qed.
-
-Lemma K_rel_elim (E1 E2 : ectx) n :
-  n ⊨ K_rel E1 E2 →
-  (n ⊨ ∀ᵢ v1 v2, V_rel v1 v2 →ᵢ O_rel (fill E1 v1) (fill E2 v2)).
-Proof.
-  unfold K_rel, K_rel_pre.
-  intros HE.
-  iintros v1 v2 Hv.
-  iapply HE. apply V_rel_roll. exact Hv.
-Qed.
-
-Lemma K_rel_elimO E1 E2 v1 v2 n :
-  n ⊨ K_rel E1 E2 →
-  n ⊨ V_rel v1 v2 →
-  n ⊨ O_rel (fill E1 v1) (fill E2 v2).
-Proof.
-  intros HE Hv.
-  apply K_rel_elim in HE.
-  iapply HE. exact Hv.
-Qed.
-
-Lemma R_rel_intro (e1 e2 : expr) n :
-  n ⊨ (∀ᵢ E1 E2, ▷ K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)) ->
-  n ⊨ R_rel e1 e2.
-Proof. auto. Qed.
-
-Lemma R_rel_elim (e1 e2 : expr) n :
-  n ⊨ R_rel e1 e2 →
-  n ⊨ (∀ᵢ E1 E2, ▷ K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)).
-Proof. auto. Qed.
-
-Lemma R_rel_elimO (e1 e2 : expr) E1 E2 n :
-  n ⊨ R_rel e1 e2 →
-  n ⊨ ▷ K_rel E1 E2 →
-  n ⊨ O_rel (fill E1 e1) (fill E2 e2).
-Proof.
-  intros He HE.
-  apply R_rel_elim in He.
-  iapply He. exact HE.
-Qed.
-
-Lemma E_rel_intro (e1 e2 : expr) n :
-  (n ⊨ ∀ᵢ E1 E2, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)) ->
-  n ⊨ E_rel e1 e2.
-Proof.
-  intros HE.
-  unfold E_rel.
-  exact HE.
-Qed.
-
-Lemma E_rel_elim (e1 e2 : expr) n :
-  n ⊨ E_rel e1 e2 →
-  (n ⊨ ∀ᵢ E1 E2, K_rel E1 E2 →ᵢ O_rel (fill E1 e1) (fill E2 e2)).
-Proof.
-  intros He.
-  unfold E_rel in He.
-  assumption.
-Qed.
-
-(** Bind lemma *)
-Lemma E_rel_elimO e1 e2 E1 E2 n :
-  n ⊨ E_rel e1 e2 →
-  n ⊨ K_rel E1 E2 →
-  n ⊨ O_rel (fill E1 e1) (fill E2 e2).
-Proof.
-  intros He HE.
-  apply E_rel_elim in He.
-  iapply He. exact HE.
-Qed.
-
-Lemma V_rel_elimE (v1 v2 u1 u2 : val) n :
-  n ⊨ V_rel v1 v2 →
-  n ⊨ V_rel u1 u2 →
-  n ⊨ E_rel (app v1 u1) (app v2 u2).
-Proof.
-  intros Hv Hu.
-  destruct (V_rel_elim _ _ _ Hv) as (Hv1_closed & Hv2_closed & Hv').
-  destruct (V_rel_elim _ _ _ Hu) as (Hu1_closed & Hu2_closed & _).
-  apply E_rel_intro.
-  iintros E1 E2 HE. simpl.
-  apply R_rel_elimO.
-  - iapply Hv'.
-    later_shift. exact Hu.
-  - later_shift. exact HE.
-Qed.
-
-Lemma G_rel_intro Γ γ1 γ2 n :
-  subst_is_closed Γ ∅ γ1 →
-  subst_is_closed Γ ∅ γ2 →
-  n ⊨
-    (∀ᵢ x v1 v2,
-       (γ1 !! x = Some v1)ᵢ →ᵢ
-       (γ2 !! x = Some v2)ᵢ →ᵢ
-       V_rel v1 v2) →
-  n ⊨ G_rel Γ γ1 γ2.
-Proof.
-  intros H_closed1 H_closed2 Hγ.
-  unfold G_rel.
-  isplit; [| isplit].
-  - iintro. exact H_closed1.
-  - iintro. exact H_closed2.
-  - exact Hγ.
-Qed.
-
-Lemma G_rel_elim Γ γ1 γ2 n :
-  n ⊨ G_rel Γ γ1 γ2 →
-  subst_is_closed Γ ∅ γ1 ∧
-  subst_is_closed Γ ∅ γ2 ∧
-  (n ⊨
-     ∀ᵢ x v1 v2,
-       (γ1 !! x = Some v1)ᵢ →ᵢ
-       (γ2 !! x = Some v2)ᵢ →ᵢ
-       V_rel v1 v2).
-Proof.
-  unfold G_rel.
-  intros Hγ.
-  idestruct Hγ as H_closed1 Hγ. idestruct H_closed1.
-  idestruct Hγ as H_closed2 Hγ. idestruct H_closed2.
-  auto.
-Qed.
-
-Lemma E_rel_o_intro Γ e1 e2 n :
-  (n ⊨ ∀ᵢ γ1 γ2,
-         G_rel Γ γ1 γ2 →ᵢ
-         E_rel (subst_map γ1 e1) (subst_map γ2 e2)) →
-  n ⊨ E_rel_o Γ e1 e2.
-Proof.
-  intros He.
-  unfold E_rel_o.
-  exact He.
-Qed.
-
-Lemma E_rel_o_elim Γ e1 e2 n :
-  n ⊨ E_rel_o Γ e1 e2 →
-  (n ⊨ ∀ᵢ γ1 γ2, G_rel Γ γ1 γ2 →ᵢ E_rel (subst_map γ1 e1) (subst_map γ2 e2)).
-Proof.
-  unfold E_rel_o.
-  intros He.
-  auto.
-Qed.
-
-Lemma V_rel_o_intro Γ (v1 v2 : val) n :
-  (n ⊨ ∀ᵢ γ1 γ2,
-         G_rel Γ γ1 γ2 →ᵢ
-         V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2)) →
-  n ⊨ V_rel_o Γ v1 v2.
-Proof.
-  intros Hv.
-  unfold V_rel_o.
-  exact Hv.
-Qed.
-
-Lemma V_rel_o_elim Γ (v1 v2 : val) n :
-  n ⊨ V_rel_o Γ v1 v2 →
-  (n ⊨ ∀ᵢ γ1 γ2,
-         G_rel Γ γ1 γ2 →ᵢ
-         V_rel (subst_map_val γ1 v1) (subst_map_val γ2 v2)).
-Proof.
-  unfold V_rel_o.
-  intros Hv. exact Hv.
-Qed.
-
-(** Compatibility lemmas *)
-
-(* aka val inclusion *)
-Lemma compat_val (Γ : scope) (v1 v2 : val) n :
-  n ⊨ V_rel_o Γ v1 v2 →
-  n ⊨ E_rel_o Γ v1 v2.
-Proof.
-  intros Hv.
-  apply V_rel_o_elim in Hv.
-  apply E_rel_o_intro.
-  iintros γ1 γ2 Hγ.
-  ispecialize Hv γ1. ispecialize Hv γ2. ispec Hv Hγ.
-  apply E_rel_intro. iintros E1 E2 HE. simpl.
-  apply (K_rel_elimO E1 E2 _ _ _ HE).
-  apply V_rel_elim in Hv as (H_closed1 & H_closed2 & Hv).
-  apply V_rel_intro.
-  { exact H_closed1. }
-  { exact H_closed2. }
-  { exact Hv. }
-Qed.
-
-Lemma compat_app (Γ:scope) (e1 e2 e1' e2' : expr) n :
-  n ⊨ E_rel_o Γ e1 e2 →
-  n ⊨ E_rel_o Γ e1' e2' →
-  n ⊨ E_rel_o Γ (app e1 e1') (app e2 e2').
-Proof.
-  intros He He'.
-  apply E_rel_o_elim in He.
-  (* From He, we have contextual equivalence of e1 and e2,
-     in related context *)
-  apply E_rel_o_elim in He'.
-  apply E_rel_o_intro.
-  iintros γ1 γ2 Hγ. simpl.
-  ispecialize He γ1. ispecialize He γ2. ispec He Hγ.
-  ispecialize He' γ1. ispecialize He' γ2. ispec He' Hγ.
-  apply E_rel_elim in He.
-  apply E_rel_elim in He'.
-  apply E_rel_intro.
-  (* we have to show that the apps are in O, given that they are placed
-    in related contexts E1 and E2. *)
-  iintros E1 E2 HE.
-  (* The functions e1/e2 are evaluated first, so we "zap" them down using He.
-    To use He, we have to give two contexts s.t. if we can prove them to be related,
-    plugging e1/e2 into them will be in O.
-    We give ectx_app1 because the plugging will give us exactly the goal we need. *)
-  ispecialize He (ectx_app1 E1 (subst_map γ1 e1')).
-  ispecialize He (ectx_app1 E2 (subst_map γ2 e2')).
-  iapply He.
-  (* This reduces the problem to that of showing that the two app contexts are related. *)
-  apply K_rel_intro.
-  iintros v1 v2 Hv. simpl.
-  (* Given that they are plugged with two related values, we now have to prove
-    that the result is in O. We use He' for a similar purpose. We give ectx_app2
-    because plugging e1'/e2' into it will match the goal. *)
-  ispecialize He' (ectx_app2 v1 E1).
-  ispecialize He' (ectx_app2 v2 E2).
-  iapply He'.
-  (* Now we have to prove the ectx_app2 are related. *)
-  apply K_rel_intro.
-  iintros v1' v2' Hv'. simpl.
-  (* Now, we have that the two values and contexts are related.
-    We "zap" (app v1 v1') and (app v2 v2') down using E_rel_elimO *)
-  apply E_rel_elimO.
-  apply V_rel_elimE; [exact Hv | exact Hv'].
-  (* Finally, we are left with just E1 and E2. They are related according
-     to our hypothesis *)
-  exact HE.
-Qed.
-
+(*
 Lemma subset_is_closed_absurd x Γ γ:
   x ∈ Γ →
   subst_is_closed Γ ∅ γ →
@@ -1136,28 +2124,9 @@ Proof.
   setoid_rewrite <- H0 in H.
   set_solver.
 Qed.
+*)
 
-Lemma compat_var Γ (x : string) n :
-  closed Γ (var x) →
-  n ⊨ E_rel_o Γ (var x) (var x).
-Proof.
-  intros Hdom.
-  rewrite closed_var in Hdom.
-  apply E_rel_o_intro.
-  iintros γ1 γ2 Hγ.
-  apply G_rel_elim in Hγ as (Hc1 & Hc2 & Hγ).
-  apply E_rel_intro.
-  iintros E1 E2 HE. simpl.
-  destruct (γ1 !! x) eqn:Hx1.
-  2: { destruct (subset_is_closed_absurd _ _ _ Hdom Hc1 Hx1). }
-  destruct (γ2 !! x) eqn:Hx2.
-  2: { destruct (subset_is_closed_absurd _ _ _ Hdom Hc2 Hx2). }
-  destruct Hc1 as [_ Hc1].
-  destruct Hc2 as [_ Hc2].
-  ispec Hγ x v v0 Hx1 Hx2.
-  by apply K_rel_elimO.
-Qed.
-
+(*
 Lemma subst_val_closed v X x es :
   closed X (of_val v) → x ∉ X → subst_val x es v = v
 with subst_closed X e x es :
@@ -1191,464 +2160,61 @@ Proof.
       - assumption.
       - assumption. } }
 Qed.
+*)
 
-Lemma not_base_step_val (v : val) e : ¬ base_step v e.
-Proof. intros Hstep. inversion Hstep. Qed.
+(*
+(* aka contextual scoping C : Γ ~> Γ', a special case of contextual typing.
+  defined inductively because we need to invert it. *)
+Inductive closed_ctx : scope → scope → ctx → Prop :=
+  | cc_hole Γ :
+    closed_ctx Γ Γ ctx_hole
 
-Lemma val_eq_fill_inv (v : val) K e :
-  ret v = fill K e →
-  e = v ∧ K = ectx_hole.
+  | cc_lambda x Γ Γ' C :
+    closed_ctx Γ (Γ' ∪ {[x]}) C →
+    closed_ctx Γ Γ' (ctx_lam x C)
+
+  | cc_app1 Γ Γ' C e :
+    closed_ctx Γ Γ' C →
+    closed Γ' e →
+    closed_ctx Γ Γ' (ctx_app1 C e)
+
+  | cc_app2 Γ Γ' C v :
+    closed_ctx Γ Γ' C →
+    closed Γ' (ret v) →
+    closed_ctx Γ Γ' (ctx_app2 v C)
+  .
+*)
+
+(*
+Definition closed_ctx_sem (Γ Γ' : scope) (C:ctx) : Prop :=
+  forall e, closed Γ e → closed Γ' (cplug C e).
+
+Lemma closed_ctx_sound Γ Γ' e :
+  closed_ctx Γ Γ' e → closed_ctx_sem Γ Γ' e.
 Proof.
-  revert e.
-  induction K; intros e' H_eq.
-  - auto.
-  - specialize (IHK _ H_eq) as (H_absurd & _). discriminate.
-  - specialize (IHK _ H_eq) as (H_absurd & _). discriminate.
+  intros H. induction H; unfold closed_ctx_sem.
+  - simpl. done.
+  - intros e Hc.
+    simpl.
+    specialize (IHclosed_ctx e Hc).
+    unfold closed. simpl.
+    apply IHclosed_ctx.
+  - intros e2 Hc.
+    specialize (IHclosed_ctx _ Hc).
+    simpl.
+    unfold closed. simpl.
+    unfold closed in IHclosed_ctx. simpl in IHclosed_ctx.
+    auto.
+  - intros e1 Hc.
+    specialize (IHclosed_ctx _ Hc).
+    simpl.
+    unfold closed. simpl.
+    unfold closed in IHclosed_ctx. simpl in IHclosed_ctx.
+    auto.
 Qed.
+*)
 
-Lemma val_eq_rplug_inv (v : val) K e :
-  ret v = rplug K e →
-  e = v ∧ K = rctx_hole.
-Proof.
-  intros H_eq.
-  destruct K.
-  - simpl in *. auto.
-  - simpl in *. discriminate.
-  - simpl in *. discriminate.
-Qed.
-
-Lemma not_contextual_step_val : ∀ (v : val) e, ¬ contextual_step v e.
-Proof.
-  intros v e Hstep.
-  inversion Hstep.
-  apply val_eq_fill_inv in H as [-> ->].
-  by eapply not_base_step_val.
-Qed.
-
-Lemma base_step_is_deterministic :
-  ∀ e1 e2 e3,
-    base_step e1 e2 →
-    base_step e1 e3 →
-    e2 = e3.
-Proof.
-  intros e1 e2 e3 Hstep2 Hstep3.
-  inversion Hstep2.
-  inversion Hstep3.
-  congruence.
-Qed.
-
-Inductive potential_redex : expr -> Prop :=
-| pr_app : ∀ (v1 v2 : val), potential_redex (app v1 v2).
-
-Lemma potential_redex_not_val (v : val) : ¬ potential_redex v.
-Proof. intros H_absurd. inversion H_absurd. Qed.
-
-Lemma unique_partial_decomposition E1 E2 e1 e2 :
-  potential_redex e1 →
-  potential_redex e2 →
-  rplug E1 e1 = rplug E2 e2 →
-  E1 = E2 ∧ e1 = e2.
-Proof.
-  intros He1 He2.
-  revert E2.
-  induction E1; intros E2 H_eq.
-  - destruct E2.
-    + simpl in *. auto.
-    + simpl in *. subst. inversion He1.
-      apply val_eq_rplug_inv in H0 as []. subst.
-      exfalso. by eapply potential_redex_not_val.
-    + simpl in *. subst. inversion He1.
-      apply val_eq_rplug_inv in H1 as []. subst.
-      exfalso. by eapply potential_redex_not_val.
-  - destruct E2.
-    + simpl in *. subst. inversion He2.
-      apply val_eq_rplug_inv in H0 as []. subst.
-      exfalso. by eapply potential_redex_not_val.
-    + simpl in *. injection H_eq as H_eq1 H_eq2.
-      specialize (IHE1 _ H_eq1) as []. subst. auto.
-    + simpl in *. injection H_eq as H_eq1 H_eq2.
-      symmetry in H_eq1.
-      apply val_eq_rplug_inv in H_eq1 as []. subst.
-      exfalso. by eapply potential_redex_not_val.
-  - destruct E2.
-    + simpl in *. subst. inversion He2.
-      apply val_eq_rplug_inv in H1 as []. subst.
-      exfalso. by eapply potential_redex_not_val.
-    + simpl in *. injection H_eq as H_eq1 H_eq2.
-      apply val_eq_rplug_inv in H_eq1 as []. subst.
-      exfalso. by eapply potential_redex_not_val.
-    + simpl in *. injection H_eq as H_eq1 H_eq2.
-      specialize (IHE1 _ H_eq2) as []. subst. auto.
-Qed.
-
-Lemma unique_decomposition :
-  ∀ E1 E2 e1 e2,
-    potential_redex e1 →
-    potential_redex e2 →
-    fill E1 e1 = fill E2 e2 →
-    E1 = E2 ∧ e1 = e2.
-Proof.
-  intros E1 E2 e1 e2 He1 He2 Heq.
-  rewrite -> plug_rplug_equiv in Heq.
-  rewrite -> plug_rplug_equiv in Heq.
-  destruct (unique_partial_decomposition _ _ _ _ He1 He2 Heq) as [Heq1 Heq2].
-  split.
-  - rewrite <- (ectx_rctx_bijection1 E1).
-    rewrite <- (ectx_rctx_bijection1 E2).
-    rewrite -> Heq1. reflexivity.
-  - exact Heq2.
-Qed.
-
-Lemma base_step_potential_redex e e' :
-  base_step e e' -> potential_redex e.
-Proof.
-  inversion 1. subst.
-  destruct e2.
-  + constructor.
-  + simpl in *. contradiction.
-  + simpl in *. contradiction.
-Qed.
-
-Lemma contextual_step_is_deterministic :
-  ∀ e1 e2 e3,
-    contextual_step e1 e2 →
-    contextual_step e1 e3 →
-    e2 = e3.
-Proof.
-  intros e1 e2 e3 Hstep2 Hstep3.
-  inversion Hstep2.
-  inversion Hstep3.
-  assert (Hpr1 := base_step_potential_redex _ _ H1).
-  assert (Hpr2 := base_step_potential_redex _ _ H4).
-  destruct (unique_decomposition K K0 e1' e1'0 Hpr1 Hpr2) as [HK_eq He_eq].
-  { congruence. }
-  rewrite -> He_eq in H1.
-  assert (He_eq' := base_step_is_deterministic e1'0 e2' e2'0 H1 H4).
-  congruence.
-Qed.
-
-Lemma L_rel_red_l (e1 e1' e2 : expr) n :
-  contextual_step e1 e1' →
-  n ⊨ ▷ L_rel e1' e2 →
-  n ⊨ L_rel e1 e2.
-Proof.
-  intros Hred HL.
-  unfold L_rel. unfold L_rel_pre.
-  repeat isplit.
-  - iintro.
-    intros v1 H_eq.
-    rewrite -> H_eq in Hred.
-    exfalso. by eapply not_contextual_step_val.
-  - iintros e1'' Hred'.
-    idestruct Hred'.
-    rewrite -> (contextual_step_is_deterministic _ _ _ Hred' Hred).
-    later_shift. apply L_rel_roll.
-    exact HL.
-Qed.
-
-Lemma L_rel_red_r (e2 e2' : expr) n :
-  contextual_step e2 e2' →
-  n ⊨ (∀ᵢ e1, L_rel e1 e2' →ᵢ L_rel e1 e2).
-Proof.
-  intros Hred.
-  loeb_induction.
-  iintros e1 HL.
-  unfold L_rel in HL.
-  unfold L_rel_pre in HL.
-  idestruct HL as HL1 HL2.
-  repeat isplit.
-  - iintro. intros v1 H_eq.
-    idestruct HL1.
-    specialize (HL1 v1 H_eq).
-    unfold terminates in *.
-    unfold bigstep in *.
-    destruct HL1 as (v & e3 & Hrtc & H_terminates).
-    exists v, e3. split.
-    + eapply rtc_l. exact Hred. exact Hrtc.
-    + exact H_terminates.
-  - iintros e1' Hred'.
-    ispec HL2 e1' Hred'.
-    later_shift.
-    apply L_rel_unroll in HL2.
-    apply L_rel_roll.
-    iapply IH. exact HL2.
-Qed.
-
-Lemma O_rel_red_l (e1 e1' e2 : expr) n :
-  contextual_step e1 e1' →
-  n ⊨ O_rel e1' e2 →
-  n ⊨ O_rel e1 e2.
-Proof.
-  intros Hred HO.
-  unfold O_rel in *.
-  idestruct HO as HL1 HL2.
-  isplit.
-  - eapply L_rel_red_l.
-    + exact Hred.
-    + later_shift. exact HL1.
-  - iapply L_rel_red_r.
-    + exact Hred.
-    + exact HL2.
-Qed.
-
-Lemma O_rel_red_r (e1 e2 e2' : expr) n :
-  (* contextual_step e1 e1' → contextual_step e2 e2' → *)
-  contextual_step e2 e2' →
-  n ⊨ O_rel e1 e2' →
-  n ⊨ O_rel e1 e2.
-Proof.
-  intros Hred HO.
-  unfold O_rel in *.
-  idestruct HO as HL1 HL2.
-  isplit.
-  - iapply L_rel_red_r.
-    + exact Hred.
-    + exact HL1.
-  - iapply L_rel_red_l.
-    + exact Hred.
-    + later_shift. exact HL2.
-Qed.
-
-Lemma O_rel_red_both (e1 e1' e2 e2' : expr) n :
-  contextual_step e1 e1' →
-  contextual_step e2 e2' →
-  n ⊨ ▷ O_rel e1' e2' →
-  n ⊨ O_rel e1 e2.
-Proof.
-  intros Hred1 Hred2 HO.
-  unfold O_rel in *.
-  apply I_conj_later_down in HO.
-  idestruct HO as HL1 HL2.
-  isplit.
-  - iapply L_rel_red_r.
-    { exact Hred2. }
-    iapply L_rel_red_l.
-    { exact Hred1. }
-    { later_shift. exact HL1. }
-  - iapply L_rel_red_r.
-    { exact Hred1. }
-    iapply L_rel_red_l.
-    { exact Hred2. }
-    { later_shift. exact HL2. }
-Qed.
-
-(* Observation: later_shift is significant in O_rel_red_both,
-   but is not significant in O_rel_red_l and O_rel_red_r. We
-   hypothesize that O_rel_red_l and O_rel_red_r are stronger
-   property:
-   - O_rel_red_both → O_rel_red_l ∧ O_rel_red_r
-   - But not: O_rel_red_l ∧ O_rel_red_r → O_rel_red_both *)
-
-Lemma R_rel_red_both (e1 e1' e2 e2' : expr) n :
-  contextual_step e1 e1' →
-  contextual_step e2 e2' →
-  n ⊨ ▷ E_rel e1' e2' →
-  n ⊨ R_rel e1 e2.
-Proof.
-  intros Hred1 Hred2 He.
-  apply R_rel_intro.
-  iintros E1 E2 HE.
-  eapply O_rel_red_both.
-  { by apply contextual_step_comp. }
-  { by apply contextual_step_comp. }
-  { later_shift. by apply E_rel_elimO. }
-Qed.
-
-(* composition of subst and subst_map,
-  where the variable to be substituted doesn't appear in the substitution *)
-Lemma subst_subst_map : ∀ (e:expr) Γ (x : string) (es : val) (map : sub),
-  subst_is_closed Γ ∅ map →
-  subst x es (subst_map (delete x map) e) =
-  subst_map (insert x es map) e
-with subst_subst_map_val : ∀ (v:val) Γ (x : string) (es : val) (map : sub),
-  subst_is_closed Γ ∅ map →
-  subst x es (subst_map_val (delete x map) v) =
-  subst_map_val (insert x es map) v.
-Proof.
-  { intros e. induction e.
-    { intros. apply (subst_subst_map_val _ _ _ _ _ H). }
-    { (* e is a variable x *)
-      intros. simpl. destruct (decide (x0=x)) as [->|Hne].
-      { (* if x=x0, we'll end up substituting es into x *)
-        rewrite lookup_delete_eq with (m:=map).
-        rewrite lookup_insert_eq with (m:=map).
-        simpl.
-        by rewrite decide_True. }
-      { (* if not equal, the deletion and insertion will have no effect *)
-        rewrite lookup_delete_ne with (m:=map). 2: { assumption. }
-        rewrite lookup_insert_ne with (m:=map). 2: { assumption. }
-        (* we then need to see if x is in the map to begin with *)
-        destruct (map !! x) as [v1|] eqn:Hkey.
-        { Fail rewrite Hkey. (* why does regular rewrite not work? *)
-          setoid_rewrite Hkey.
-          simpl.
-          rewrite (subst_val_closed _ ∅ _ _).
-          - reflexivity.
-          - apply (subst_is_closed_elim_closed _ _ x _ _ H Hkey).
-          - set_solver. }
-      { setoid_rewrite Hkey.
-        simpl.
-        by rewrite decide_False. } } }
-    { intros. simpl. f_equal; eauto. } }
-  { intros v. induction v; intros.
-    (*{ reflexivity. }*)
-    { (* the lambda case *)
-      simpl. f_equal. f_equal.
-      case_decide.
-      { subst.
-        rewrite delete_delete_eq with (m:=map).
-        rewrite delete_insert_eq with (m:=map). done. }
-      { rewrite delete_insert_ne with (m:=map). 2: { congruence. }
-        rewrite delete_delete with (m:=map).
-        eapply subst_subst_map.
-        apply (subst_is_closed_subseteq (Γ ∖ {[x]}) Γ _ (delete x map) map).
-        destruct H as [H1 H2].
-        rewrite H1.
-        set_solver.
-        apply delete_subseteq.
-        set_solver.
-        assumption. } }
-    (*{ reflexivity. }*) }
-Qed.
-
-(** Special case of Theorem A.1 from Erlang paper:
-  scoping of extended substitutions.
-  Given a closed substitution, we can add a closed value to it. *)
-Lemma scope_extend1 Γ x (v:val) (γ:sub):
-  closed ∅ v →
-  subst_is_closed Γ ∅ γ →
-  subst_is_closed (Γ ∪ {[x]}) ∅ (<[x := v]> γ).
-Proof.
-  intros Hc Hsc.
-  split.
-  { destruct Hsc. rewrite H. set_solver. }
-  intros x0 Hd v0 Hs.
-  (* we have to prove that for an arbitrary binding x0 := v0 in γ, v0 is closed *)
-  destruct (decide (x=x0)) as [->|Hne].
-  (* if x = x0, the premise tells us v0 is closed *)
-  { rewrite lookup_insert_eq with (m:=γ) in Hs.
-    injection Hs. intros. subst.
-    exact Hc. }
-  (* if they are not equal, we know x0 is in Γ and have to use the fact
-    that the subst_is_closed *)
-  { rewrite elem_of_union in Hd. destruct Hd. 2: { assert (x0 = x). set_solver. done. }
-    destruct Hsc as [_ Hsc].
-    rewrite lookup_insert_ne with (m:=γ) in Hs. 2: { assumption. }
-    specialize (Hsc x0 H v0 Hs).
-    assumption. }
-Qed.
-
-(* we can extend related substitutions with related values *)
-Lemma sem_context_rel_insert Γ x v1 v2 γ1 γ2 n:
-  n ⊨ V_rel v1 v2 →
-  n ⊨ G_rel Γ γ1 γ2 →
-  n ⊨ G_rel (Γ ∪ {[x]}) (<[x := v1]> γ1) (<[x := v2]> γ2).
-Proof.
-  intros Hv Hγ.
-  destruct (V_rel_elim _ _ _ Hv) as (Hvc1 & Hvc2 & Hv').
-  destruct (G_rel_elim _ _ _ _ Hγ) as (Hγc1 & Hγc2 & Hγ').
-  apply G_rel_intro.
-  { by apply scope_extend1. }
-  { by apply scope_extend1. }
-
-  iintros x0 v0 v3 H1 H2.
-  destruct (decide (x=x0)).
-  { subst.
-    rewrite lookup_insert_eq with (m:=γ2) in H2. idestruct H2. injection H2 as ->.
-    rewrite lookup_insert_eq with (m:=γ1) in H1. idestruct H1. injection H1 as ->.
-    assumption. }
-  { rewrite lookup_insert_ne with (m:=γ2) in H2. idestruct H2. 2: { assumption. }
-    rewrite lookup_insert_ne with (m:=γ1) in H1. idestruct H1. 2: { assumption. }
-    iapply Hγ'.
-    - iintro. eassumption.
-    - iintro. eassumption. }
-Qed.
-
-Lemma lambda_closed Γ γ x e :
-  closed (Γ ∪ {[x]}) e  →
-  subst_is_closed Γ ∅ γ  →
-  closed ∅ (vlambda x (subst_map (delete x γ) e)).
-Proof.
-  intros Hec [Heq Hγc].
-  rewrite closed_lambda.
-  eapply subst_map_closed'_2.
-  - eapply closed_weaken.
-    exact Hec.
-    setoid_rewrite dom_delete.
-    intros y. destruct (decide (x = y)); set_solver.
-  - apply (subst_is_closed_subseteq (Γ ∖ {[x]}) Γ _ (delete x γ) γ).
-    + set_solver.
-    + apply delete_subseteq.
-    + set_solver.
-    + unfold subst_is_closed. split.
-      * exact Heq.
-      * intros x' Hin v Hlookup.
-        specialize (Hγc x' Hin v Hlookup).
-        by eapply closed_weaken.
-Qed.
-
-Lemma compat_lambda Γ (e1 e2 : expr) n x :
-  closed Γ (vlambda x e1) →
-  closed Γ (vlambda x e2) →
-  n ⊨ E_rel_o (Γ ∪ {[x]}) e1 e2 →
-  n ⊨ V_rel_o Γ (vlambda x e1) (vlambda x e2).
-Proof.
-  intros Hc1 Hc2 He.
-  apply E_rel_o_elim in He.
-  apply V_rel_o_intro.
-  iintros γ1 γ2 Hγ.
-  destruct (G_rel_elim _ _ _ _ Hγ) as (Hγc1 & Hγc2 & Hγ').
-  apply V_rel_intro.
-
-  { by apply (subst_map_closed'_3 (vlambda x e1) Γ γ1). }
-  { by apply (subst_map_closed'_3 (vlambda x e2) Γ γ2). }
-
-  (* we now have the arguments *)
-  iintros u1 u2 Hu.
-  eapply R_rel_red_both.
-  { simpl. eapply (Ectx_step _ _ ectx_hole _ _ eq_refl eq_refl).
-    simpl. constructor.
-    simpl. constructor.
-    reflexivity. }
-  { simpl. eapply (Ectx_step _ _ ectx_hole _ _ eq_refl eq_refl).
-    simpl. constructor.
-    simpl. constructor.
-    reflexivity. }
-  { later_shift.
-
-    rewrite subst_subst_map with (Γ:=Γ).
-    (* 2: { pose proof (G_sub_closed _ _ _ _ Hγ) as [_ ?]. assumption. } *)
-    2: { have: G_rel_elim Hγ. done. }
-    rewrite subst_subst_map with (Γ:=Γ).
-    2: { have: G_rel_elim Hγ. done. }
-    iapply He.
-    (* apply (sem_context_rel_insert _ _ _ _ _ _ _ Hv Hγ). *)
-    applyy sem_context_rel_insert Hu Hγ. }
-Qed.
-
-Lemma fundamental_property_e Γ (e : expr) n :
-  closed Γ e →
-  n ⊨ E_rel_o Γ e e
-with fundamental_property_v Γ (v : val) n :
-  closed Γ v →
-  n ⊨ V_rel_o Γ v v.
-Proof.
-  { intros H_closed.
-    induction e.
-    - apply compat_val. apply fundamental_property_v. assumption.
-    - apply compat_var. assumption.
-    - rewrite -> closed_app in H_closed.
-      destruct H_closed as [H_closed1 H_closed2].
-      apply compat_app; auto. }
-  { intros H_closed.
-    induction v.
-    - apply compat_lambda.
-      + exact H_closed.
-      + exact H_closed.
-      + rewrite -> closed_lambda in H_closed.
-        apply fundamental_property_e. assumption. }
-Qed.
-
+(*
 Lemma G_rel_empty n :
   n ⊨ G_rel ∅ ∅ ∅.
 Proof.
@@ -1712,320 +2278,4 @@ Proof.
   iintros v1 v2 Hv.
   admit.
 Admitted.
-
-(** General program contexts *)
-Inductive ctx : Type :=
-  | ctx_hole   : ctx
-  | ctx_lam    : name → ctx → ctx
-  | ctx_app1   : ctx → expr → ctx
-  | ctx_app2   : expr → ctx → ctx.
-
-(* Inside-out plugging *)
-Fixpoint ciplug (C : ctx) : expr → expr :=
-  match C with
-  | ctx_hole => id
-  | ctx_lam x C => λ e, ciplug C (ret (vlambda x e))
-  | ctx_app1 C e2 => λ e, ciplug C (app e e2)
-  | ctx_app2 e1 C => λ e, ciplug C (app e1 e)
-  end.
-
-(* Outside-in plugging *)
-Fixpoint crplug (C : ctx) (e : expr) : expr :=
-  match C with
-  | ctx_hole => e
-  | ctx_app1 C' e1 => app (crplug C' e) e1
-  | ctx_app2 v C' => app v (crplug C' e)
-  | ctx_lam x C' => vlambda x (crplug C' e)
-  end.
-
-(* Outside-in plugging simplifies the proofs below *)
-Notation cplug := crplug.
-
-(* aka contextual scoping C : Γ ~> Γ', a special case of contextual typing.
-  defined inductively because we need to invert it. *)
-Inductive closed_ctx : scope → scope → ctx → Prop :=
-  | cc_hole Γ :
-    closed_ctx Γ Γ ctx_hole
-
-  | cc_lambda x Γ Γ' C :
-    closed_ctx Γ (Γ' ∪ {[x]}) C →
-    closed_ctx Γ Γ' (ctx_lam x C)
-
-  | cc_app1 Γ Γ' C e :
-    closed_ctx Γ Γ' C →
-    closed Γ' e →
-    closed_ctx Γ Γ' (ctx_app1 C e)
-
-  | cc_app2 Γ Γ' C v :
-    closed_ctx Γ Γ' C →
-    closed Γ' (ret v) →
-    closed_ctx Γ Γ' (ctx_app2 v C)
-  .
-
-Definition closed_ctx_sem (Γ Γ' : scope) (C:ctx) : Prop :=
-  forall e, closed Γ e → closed Γ' (cplug C e).
-
-Lemma closed_ctx_sound Γ Γ' e :
-  closed_ctx Γ Γ' e → closed_ctx_sem Γ Γ' e.
-Proof.
-  intros H. induction H; unfold closed_ctx_sem.
-  - simpl. done.
-  - intros e Hc.
-    simpl.
-    specialize (IHclosed_ctx e Hc).
-    unfold closed. simpl.
-    apply IHclosed_ctx.
-  - intros e2 Hc.
-    specialize (IHclosed_ctx _ Hc).
-    simpl.
-    unfold closed. simpl.
-    unfold closed in IHclosed_ctx. simpl in IHclosed_ctx.
-    auto.
-  - intros e1 Hc.
-    specialize (IHclosed_ctx _ Hc).
-    simpl.
-    unfold closed. simpl.
-    unfold closed in IHclosed_ctx. simpl in IHclosed_ctx.
-    auto.
-Qed.
-
-(** Observational approximation for complete programs *)
-Definition obs_approx (e1 e2 : expr) : Prop :=
-  terminates e1 →
-  terminates e2.
-
-(** Observational equivalence for complete programs *)
-Definition obs_equiv (e1 e2 : expr) : Prop :=
-  terminates e1 ↔ terminates e2.
-
-Infix "≼obs" := obs_approx (at level 80, right associativity, only printing).
-Infix "≡obs" := obs_equiv (at level 80, right associativity, only printing).
-
-#[global]
-Instance Reflexive_obs_approx : Reflexive obs_approx.
-Proof.
-  unfold Reflexive, obs_approx. done.
-Qed.
-
-#[global]
-Instance Transitive_obs_approx : Transitive obs_approx.
-Proof.
-  unfold Transitive, obs_approx. intros.
-  auto.
-Qed.
-
-#[global]
-Instance Reflexive_obs_equiv : Reflexive obs_equiv.
-Proof.
-  unfold Reflexive, obs_equiv. intros.
-  reflexivity.
-Qed.
-
-#[global]
-Instance Symmetric_obs_equiv : Symmetric obs_equiv.
-Proof.
-  unfold Symmetric, obs_equiv. intros.
-  auto.
-Qed.
-
-#[global]
-Instance Transitive_obs_equiv : Transitive obs_equiv.
-Proof.
-  unfold Transitive, obs_equiv. intros.
-  destruct H.
-  destruct H0.
-  split; auto.
-Qed.
-
-(** Contextual approximation, where the context closes off Γ *)
-Definition ctx_approx Γ (e1 e2 : expr) : Prop :=
-  ∀ C, closed_ctx Γ ∅ C →
-    obs_approx (cplug C e1) (cplug C e2).
-
-(** Contextual equivalence *)
-Definition ctx_equiv Γ (e1 e2 : expr) : Prop :=
-  ∀ C, closed_ctx Γ ∅ C →
-    obs_equiv (cplug C e1) (cplug C e2).
-
-(* TODO *)
-(* Infix "≼ctx" := ctx_approx (at level 80, right associativity, only printing).
-Infix "≡ctx" := ctx_equiv (at level 80, right associativity, only printing). *)
-
-#[global]
-Instance Reflexive_ctx_approx Γ : Reflexive (ctx_approx Γ).
-Proof.
-  intros e C; reflexivity.
-Qed.
-
-#[global]
-Instance Transitive_ctx_approx Γ : Transitive (ctx_approx Γ).
-Proof.
-  unfold Transitive, ctx_approx, obs_approx. intros.
-  auto.
-Qed.
-
-#[global]
-Instance Reflexive_ctx_equiv Γ : Reflexive (ctx_equiv Γ).
-Proof.
-  intros e C; reflexivity.
-Qed.
-
-#[global]
-Instance Symmetric_ctx_equiv Γ : Symmetric (ctx_equiv Γ).
-Proof.
-  intros e1 e2 H C H1. symmetry. apply H. assumption.
-Qed.
-
-#[global]
-Instance Transitive_ctx_equiv Γ : Transitive (ctx_equiv Γ).
-Proof.
-  unfold Transitive, ctx_approx, ctx_equiv, obs_equiv. intros.
-  specialize (H C).
-  specialize (H0 C).
-  destruct H. destruct H0.
-  assumption.
-  assumption.
-  specialize (H0 H1) as (?&?).
-  split; auto.
-Qed.
-
-Lemma ctx_equiv_fold Γ (e1 e2 : expr) :
-  ctx_approx Γ e1 e2 →
-  ctx_approx Γ e2 e1 →
-  ctx_equiv Γ e1 e2.
-Proof.
-  intros H1 H2 C; split; apply H1 || apply H2.
-  assumption.
-  assumption.
-Qed.
-
-Lemma ctx_equiv_unfold Γ (e1 e2 : expr) :
-  ctx_equiv Γ e1 e2 →
-  ctx_approx Γ e1 e2 ∧
-  ctx_approx Γ e2 e1.
-Proof.
-  unfold ctx_approx, ctx_equiv.
-  intros H.
-  split.
-  { intros C Hc.
-    specialize (H C Hc).
-    destruct H.
-    unfold obs_approx.
-    apply H. }
-  { intros C Hc.
-    specialize (H C Hc).
-    destruct H.
-    unfold obs_approx.
-    apply H0. }
-Qed.
-
-Lemma L_rel_adequacy (v : val) (e1 e2 : expr) :
-  bigstep e1 v → (∀ w, w ⊨ L_rel e1 e2) → terminates e2.
-Proof.
-  intro RED; remember v as p; revert RED Heqp.
-  intros Hbig.
-  destruct Hbig as (e&H1&H2).
-  (* induction on the rtc of contextual step *)
-  induction H1; intros Hp Hobs.
-  + (* expose the fact that x is a value *)
-    unfold to_val in H2.
-    destruct x. 2: { done. } 2: { done. }
-    injection H2; intros; subst; clear H2.
-    (* no steps are needed *)
-    specialize (Hobs {| nw_index := 0 |}). apply I_conj_elim1, I_prop_elim in Hobs.
-    by apply (Hobs v).
-  + apply IHrtc. assumption. assumption.
-    intro w; specialize (Hobs (world_lift w)).
-    apply L_rel_unroll, I_world_lift_later.
-    iapply Hobs; iintro; assumption.
-Qed.
-
-Theorem O_rel_adequacy e1 e2 :
-  (∀ n, n ⊨ O_rel e1 e2) → obs_equiv e1 e2.
-Proof.
-  intro Hobs; split.
-  + intros [ v Hv ]; eapply L_rel_adequacy; [ eassumption | ].
-    intro. unfold O_rel in Hobs. iapply Hobs.
-  + intros [ v₂ Hv₂ ]; eapply L_rel_adequacy; [ eassumption | ].
-    intro; iapply Hobs.
-Qed.
-
-Lemma L_rel_value (v1 v2 : val) n :
-  n ⊨ L_rel v1 v2.
-Proof.
-  unfold L_rel, L_rel_pre.
-  isplit.
-  - iintro. intros.
-    apply terminates_val.
-  - iintros e1 He.
-    idestruct He.
-    apply not_contextual_step_val in He. done.
-Qed.
-
-Lemma O_rel_value (v1 v2 : val) n :
-  n ⊨ O_rel v1 v2.
-Proof.
-  unfold O_rel.
-  isplit; apply L_rel_value.
-Qed.
-
-Lemma P_rel_compat_expr Γ (e1 e2 : expr) n :
-  n ⊨ E_rel_o Γ e1 e2 →
-  n ⊨ P_rel_o Γ e1 e2.
-Proof.
-  intro He.
-  iintros γ1 γ2 Hγ.
-  unfold E_rel_o in He. ispec He γ1 γ2 Hγ.
-  have: E_rel_elimO ectx_hole ectx_hole He. simpl in H.
-  apply H.
-  apply K_rel_intro.
-  iintros.
-  simpl.
-  apply O_rel_value.
-Qed.
-
-Lemma precongruence (e1 e2 : expr) Γ Γ' C n :
-  closed Γ e1 →
-  closed Γ e2 →
-  closed_ctx Γ Γ' C →
-  n ⊨ E_rel_o Γ e1 e2 →
-  n ⊨ E_rel_o Γ' (cplug C e1) (cplug C e2).
-Proof.
-  revert Γ Γ' e1 e2 n.
-  induction C; intros Γ Γ' e1 e2 n Hc1 Hc2 Hcc HE; simpl.
-  { inversion Hcc. subst. done. }
-  { inversion Hcc. subst.
-    apply compat_val.
-    apply compat_lambda.
-    { have Hc: closed_ctx_sound Hcc.
-      apply (Hc _ Hc1). }
-    { have Hc: closed_ctx_sound Hcc.
-      apply (Hc _ Hc2). }
-    applyy IHC Hc1 Hc2 H2 HE. }
-  { inversion Hcc. subst.
-    apply compat_app.
-    - applyy IHC Hc1 Hc2 H3 HE.
-    - applyy fundamental_property_e H4. }
-  { inversion Hcc. subst.
-    apply compat_app.
-    - applyy fundamental_property_e H4.
-    - applyy IHC Hc1 Hc2 H3 HE. }
-Qed.
-
-Theorem E_rel_o_soundness Γ (e1 e2 : expr) :
-  closed Γ e1 →
-  closed Γ e2 →
-  (∀ n, n ⊨ E_rel_o Γ e1 e2) →
-  ctx_equiv Γ e1 e2.
-Proof.
-  intros Hc1 Hc2 HE C Hcc.
-  apply O_rel_adequacy; intro n.
-  have: precongruence Hc1 Hc2 Hcc (HE n).
-  have: P_rel_compat_expr H.
-  unfold P_rel_o in H0.
-  ispec H0 ∅ ∅.
-  rewrite <- (subst_map_empty (cplug C e1)).
-  rewrite <- (subst_map_empty (cplug C e2)).
-  iapply H0.
-  apply G_rel_empty.
-Qed.
+*)
