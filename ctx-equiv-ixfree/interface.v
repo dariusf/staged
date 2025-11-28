@@ -42,6 +42,11 @@ Module Type StagedLogic.
   (* Substitution *)
   Parameter subst : ∀ {V}, expr (inc V) → expr V → expr V.
   (* TODO equations *)
+  Parameter subst_app : ∀ {V} (e1 e2:expr (inc V)) (v:expr V),
+    subst (app e1 e2) v = app (subst e1 v) (subst e2 v).
+
+  (* Parameter subst_lambda : ∀ {V V1} (e: expr (inc (inc V))) (v:expr (inc V)),
+    subst (lambda e) v = lambda (subst e v). *)
 
   (* Lemmas *)
   Parameter red_beta : ∀ {V} (e:expr (inc V)) (v:expr V),
