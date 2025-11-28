@@ -780,6 +780,9 @@ Definition V_rel_o {V} (v1 v2 : val V) : IProp :=
 Definition O_rel_o {V} (e1 e2 : expr V) : IProp :=
   ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ O_rel (bind γ1 e1) (bind γ2 e2).
 
+Definition K_rel_o {V} (E1 E2 : ectx V) : IProp :=
+  ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ K_rel (bind γ1 E1) (bind γ2 E2).
+
 (** Contractiveness and unrolling fixpoint *)
 
 Lemma L_rel_pre_contractive : contractive L_rel_pre.
@@ -869,6 +872,16 @@ Proof.
   intros He. idestruct He as He1 He2.
   split; assumption.
 Qed.
+
+Lemma O_rel_elim1 (e1 e2 : expr ∅) n :
+  n ⊨ O_rel e1 e2 →
+  n ⊨ L_rel e1 e2.
+Proof. intros He. by apply O_rel_elim in He as []. Qed.
+
+Lemma O_rel_elim2 (e1 e2 : expr ∅) n :
+  n ⊨ O_rel e1 e2 →
+  n ⊨ L_rel e2 e1.
+Proof. intros He. by apply O_rel_elim in He as []. Qed.
 
 Lemma V_rel_intro (v1 v2 : val ∅) n :
   (n ⊨ ∀ᵢ u1 u2,
@@ -981,21 +994,6 @@ Proof.
   iapply He. exact HE.
 Qed.
 
-Lemma V_rel_elimE (v1 v2 u1 u2 : val ∅) n :
-  n ⊨ V_rel v1 v2 →
-  n ⊨ V_rel u1 u2 →
-  n ⊨ E_rel (app v1 u1) (app v2 u2).
-Proof.
-  intros Hv Hu.
-  apply E_rel_intro.
-  iintros E1 E2 HE.
-  apply R_rel_elimO.
-  - apply V_rel_elimR.
-    + exact Hv.
-    + later_shift. exact Hu.
-  - later_shift. exact HE.
-Qed.
-
 Lemma G_rel_intro {V} (γ1 γ2 : V [⇒] ∅) n :
   (n ⊨ ∀ᵢ x, V_rel (γ1 x) (γ2 x)) →
   n ⊨ G_rel γ1 γ2.
@@ -1075,7 +1073,36 @@ Proof.
   iapply He. exact Hγ.
 Qed.
 
+Lemma K_rel_o_intro {V} (E1 E2 : ectx V) n :
+  n ⊨ (∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ K_rel (bind γ1 E1) (bind γ2 E2)) →
+  n ⊨ K_rel_o E1 E2.
+Proof. auto. Qed.
+
+Lemma K_rel_o_elim {V} (E1 E2 : ectx V) n :
+  n ⊨ K_rel_o E1 E2 →
+  n ⊨ ∀ᵢ γ1 γ2, G_rel γ1 γ2 →ᵢ K_rel (bind γ1 E1) (bind γ2 E2).
+Proof. auto. Qed.
+
+Lemma K_rel_o_elimK {V} (E1 E2 : ectx V) (γ1 γ2 : V [⇒] ∅) n :
+  n ⊨ K_rel_o E1 E2 →
+  n ⊨ G_rel γ1 γ2 →
+  n ⊨ K_rel (bind γ1 E1) (bind γ2 E2).
+Proof.
+  intros HE Hγ.
+  apply K_rel_o_elim in HE.
+  iapply HE. exact Hγ.
+Qed.
+
 (** Compatibility lemmas *)
+
+Lemma compat_val_closed v1 v2 n :
+  n ⊨ V_rel v1 v2 →
+  n ⊨ E_rel v1 v2.
+Proof.
+  intros Hv.
+  apply E_rel_intro. iintros E1 E2 HE.
+  apply K_rel_elimO; assumption.
+Qed.
 
 (* aka val inclusion *)
 Lemma compat_val {V} (v1 v2 : val V) n :
@@ -1084,10 +1111,57 @@ Lemma compat_val {V} (v1 v2 : val V) n :
 Proof.
   intros Hv.
   apply V_rel_o_elim in Hv.
-  apply E_rel_o_intro. iintros γ1 γ2 Hγ.
-  apply E_rel_intro. iintros E1 E2 HE.
-  apply (K_rel_elimO E1 E2 (bind γ1 v1) (bind γ2 v2) _ HE).
-  iapply Hv. exact Hγ.
+  apply E_rel_o_intro. iintros γ1 γ2 Hγ. term_simpl.
+  apply compat_val_closed. iapply Hv. exact Hγ.
+Qed.
+
+Lemma compat_app_closed_val (v1 v2 u1 u2 : val ∅) n :
+  n ⊨ V_rel v1 v2 →
+  n ⊨ V_rel u1 u2 →
+  n ⊨ E_rel (app v1 u1) (app v2 u2).
+Proof.
+  intros Hv Hu.
+  apply E_rel_intro.
+  iintros E1 E2 HE.
+  apply R_rel_elimO.
+  - apply V_rel_elimR. exact Hv.
+    later_shift. exact Hu.
+  - later_shift. exact HE.
+Qed.
+
+Lemma compat_app_closed e1 e2 e1' e2' n :
+  n ⊨ E_rel e1 e2 →
+  n ⊨ E_rel e1' e2' →
+  n ⊨ E_rel (app e1 e1') (app e2 e2').
+Proof.
+  intros He He'.
+  apply E_rel_intro. iintros E1 E2 HE. term_simpl.
+  (* The functions e1/e2 are evaluated first, so we "zap" them down using He.
+     To use He, we have to give two contexts s.t. if we can prove them to be
+     related, plugging e1/e2 into them will be in O_rel. We give ectx_app1
+     because the plugging will give us exactly the goal we need. *)
+  apply E_rel_elim in He.
+  ispecialize He (ectx_app1 E1 e1').
+  ispecialize He (ectx_app1 E2 e2').
+  iapply He. clear He.
+  (* Now, we need to show that the two app contexts are related. *)
+  apply K_rel_intro. iintros v1 v2 Hv. simpl.
+  (* Given that they are plugged with two related values, we now have to prove
+     that the result is in O_rel. We use He' for a similar purpose. We give
+     ectx_app2 because plugging e1'/e2' into it will match the goal. *)
+  apply E_rel_elim in He'.
+  ispecialize He' (ectx_app2 v1 E1).
+  ispecialize He' (ectx_app2 v2 E2).
+  iapply He'. clear He'.
+  (* Now we have to prove the ectx_app2 are related. *)
+  apply K_rel_intro. iintros v1' v2' Hv'. simpl.
+  (* Now, we have that the two values and contexts are related.
+     We "zap" (app v1 v1') and (app v2 v2') down using E_rel_elimO *)
+  apply E_rel_elimO.
+  apply compat_app_closed_val; [exact Hv | exact Hv'].
+  (* Finally, we are left with just E1 and E2.
+     They are related according to our hypothesis *)
+  exact HE.
 Qed.
 
 Lemma compat_app {V} (e1 e2 e1' e2' : expr V) n :
@@ -1096,42 +1170,11 @@ Lemma compat_app {V} (e1 e2 e1' e2' : expr V) n :
   n ⊨ E_rel_o (app e1 e1') (app e2 e2').
 Proof.
   intros He He'.
-  apply E_rel_o_elim in He.
-  (* From He, we have contextual equivalence of e1 and e2,
-     in related context *)
-  apply E_rel_o_elim in He'.
-  apply E_rel_o_intro. iintros γ1 γ2 Hγ.
-  apply E_rel_intro. iintros E1 E2 HE. term_simpl.
-  (* The functions e1/e2 are evaluated first, so we "zap" them down using He.
-    To use He, we have to give two contexts s.t. if we can prove them to be related,
-    plugging e1/e2 into them will be in O.
-    We give ectx_app1 because the plugging will give us exactly the goal we need. *)
-  ispec He γ1 γ2 Hγ.
-  apply E_rel_elim in He.
-  ispecialize He (ectx_app1 E1 (bind γ1 e1')).
-  ispecialize He (ectx_app1 E2 (bind γ2 e2')).
-  iapply He.
-  (* This reduces the problem to that of showing that the two app contexts are related. *)
-  apply K_rel_intro.
-  iintros v1 v2 Hv. simpl.
-  (* Given that they are plugged with two related values, we now have to prove
-    that the result is in O. We use He' for a similar purpose. We give ectx_app2
-    because plugging e1'/e2' into it will match the goal. *)
-  ispec He' γ1 γ2 Hγ.
-  apply E_rel_elim in He'.
-  ispecialize He' (ectx_app2 v1 E1).
-  ispecialize He' (ectx_app2 v2 E2).
-  iapply He'.
-  (* Now we have to prove the ectx_app2 are related. *)
-  apply K_rel_intro.
-  iintros v1' v2' Hv'. simpl.
-  (* Now, we have that the two values and contexts are related.
-    We "zap" (app v1 v1') and (app v2 v2') down using E_rel_elimO *)
-  apply E_rel_elimO.
-  apply V_rel_elimE; [exact Hv | exact Hv'].
-  (* Finally, we are left with just E1 and E2. They are related according
-     to our hypothesis *)
-  exact HE.
+  apply E_rel_o_intro. iintros γ1 γ2 Hγ. term_simpl.
+  (* Use the lemma about closed app *)
+  apply compat_app_closed.
+  - apply E_rel_o_elimE. exact He. exact Hγ.
+  - apply E_rel_o_elimE. exact He'. exact Hγ.
 Qed.
 
 Lemma compat_var {V : Set} (x : V) n :
@@ -1158,11 +1201,13 @@ Proof.
     exact He.
 Qed.
 
-Lemma L_rel_red_r (e2 e2' : expr ∅) n :
+Lemma L_rel_red_r (e1 e2 e2' : expr ∅) n :
   contextual_step e2 e2' →
-  n ⊨ (∀ᵢ e1, L_rel e1 e2' →ᵢ L_rel e1 e2).
+  n ⊨ L_rel e1 e2' →
+  n ⊨ L_rel e1 e2.
 Proof.
-  intros H_step.
+  intros H_step He1.
+  irevert e1 He1.
   loeb_induction IH.
   iintros e1 He.
   apply L_rel_elim in He as [He1 He2].
@@ -1186,7 +1231,7 @@ Proof.
   - eapply L_rel_red_l.
     + exact H_step.
     + later_shift. exact He1.
-  - iapply L_rel_red_r.
+  - eapply L_rel_red_r.
     + exact H_step.
     + exact He2.
 Qed.
@@ -1200,7 +1245,7 @@ Proof.
   intros H_step He.
   apply O_rel_elim in He as [He1 He2].
   apply O_rel_intro.
-  - iapply L_rel_red_r.
+  - eapply L_rel_red_r.
     + exact H_step.
     + exact He1.
   - eapply L_rel_red_l.
@@ -1221,10 +1266,10 @@ Proof.
   apply O_rel_intro.
   - eapply L_rel_red_l. { exact H_step1. }
     later_shift.
-    iapply L_rel_red_r. { exact H_step2. }
+    eapply L_rel_red_r. { exact H_step2. }
     exact He1.
-  - iapply L_rel_red_r. { exact H_step1. }
-    iapply L_rel_red_l. { exact H_step2. }
+  - eapply L_rel_red_r. { exact H_step1. }
+    eapply L_rel_red_l. { exact H_step2. }
     later_shift. exact He2.
 Qed.
 
@@ -1255,7 +1300,6 @@ Lemma compat_lambda {V} (e1 e2 : expr (inc V)) n :
   n ⊨ V_rel_o (v_lambda e1) (v_lambda e2).
 Proof.
   intros He.
-  apply E_rel_o_elim in He.
   apply V_rel_o_intro. iintros γ1 γ2 Hγ.
   apply V_rel_intro. iintros u1 u2 Hu. term_simpl.
   eapply R_rel_red_both.
@@ -1264,7 +1308,7 @@ Proof.
   later_shift. simpl. unfold subst.
   rewrite -> bind_bind_comp'.
   rewrite -> bind_bind_comp'.
-  iapply He.
+  apply E_rel_o_elim in He. iapply He.
   apply G_rel_intro.
   iintros x. destruct x as [| x'].
   - term_simpl. exact Hu.
@@ -1382,24 +1426,87 @@ Proof. unfold Symmetric, ctx_equiv. symmetry. auto. Qed.
 Instance Transitive_ctx_equiv {V} : Transitive (@ctx_equiv V).
 Proof. unfold Transitive, ctx_equiv. etransitivity; eauto. Qed.
 
-Lemma ctx_equiv_intro {V} (e1 e2 : expr V) :
+Lemma obs_equiv_intro_approx (e1 e2 : expr ∅) :
+  obs_approx e1 e2 →
+  obs_approx e2 e1 →
+  obs_equiv e1 e2.
+Proof.
+  unfold obs_approx, obs_equiv. done.
+Qed.
+
+Lemma obs_equiv_elim_approx (e1 e2 : expr ∅) :
+  obs_equiv e1 e2 →
+  obs_approx e1 e2 ∧
+  obs_approx e2 e1.
+Proof.
+  unfold obs_approx, obs_equiv. done.
+Qed.
+
+Lemma ctx_equiv_intro_approx {V} (e1 e2 : expr V) :
   ctx_approx e1 e2 →
   ctx_approx e2 e1 →
   ctx_equiv e1 e2.
 Proof.
-  intros He1 He2. split.
-  - apply He1.
-  - apply He2.
+  unfold ctx_approx, ctx_equiv.
+  intros He1 He2 C.
+  apply obs_equiv_intro_approx; auto.
+Qed.
+
+Lemma ctx_equiv_elim_approx {V} (e1 e2 : expr V) :
+  ctx_equiv e1 e2 →
+  ctx_approx e1 e2 ∧
+  ctx_approx e2 e1.
+Proof.
+  unfold ctx_equiv, ctx_approx.
+  intros He. split.
+  - intros C. specialize (He C). by apply obs_equiv_elim_approx in He as [].
+  - intros C. specialize (He C). by apply obs_equiv_elim_approx in He as [].
+Qed.
+
+Definition ciu_approx {V} (e1 e2 : expr V) : Prop :=
+  ∀ E γ, obs_approx (plug E (bind γ e1)) (plug E (bind γ e2)).
+
+Definition ciu_equiv {V} (e1 e2 : expr V) : Prop :=
+  ∀ E γ, obs_equiv (plug E (bind γ e1)) (plug E (bind γ e2)).
+
+Lemma ciu_equiv_intro_approx {V} (e1 e2 : expr V) :
+  ciu_approx e1 e2 →
+  ciu_approx e2 e1 →
+  ciu_equiv e1 e2.
+Proof.
+  unfold ciu_approx, ciu_equiv.
+  intros He1 He2 E γ.
+  apply obs_equiv_intro_approx; auto.
+Qed.
+
+Lemma ciu_equiv_elim_approx {V} (e1 e2 : expr V) :
+  ciu_equiv e1 e2 →
+  ciu_approx e1 e2 ∧
+  ciu_approx e2 e1.
+Proof.
+  unfold ciu_approx, ciu_equiv.
+  intros He. split.
+  - intros E γ. specialize (He E γ). by apply obs_equiv_elim_approx in He as [].
+  - intros E γ. specialize (He E γ). by apply obs_equiv_elim_approx in He as [].
 Qed.
 
 Definition n_big_step {V} n (e : expr V) (v : val V) := nsteps contextual_step n e v.
+Definition b_big_step {V} n (e : expr V) (v : val V) := bsteps contextual_step n e v.
 Definition n_terminates {V} n (e : expr V) := ∃ v, n_big_step n e v.
+Definition b_terminates {V} n (e : expr V) := ∃ v, b_big_step n e v.
 
 Lemma big_step_iff_n_big_step {V} (e : expr V) (v : val V) :
   big_step e v ↔ ∃ n, n_big_step n e v.
 Proof.
   unfold big_step, n_big_step.
   apply rtc_nsteps.
+Qed.
+
+Lemma big_step_iff_b_big_step {V} (e : expr V) (v : val V) :
+  big_step e v ↔ ∃ n, b_big_step n e v.
+Proof.
+  unfold big_step, b_big_step.
+  apply rtc_bsteps.
 Qed.
 
 Lemma terminates_iff_n_terminates {V} (e : expr V) :
@@ -1415,10 +1522,30 @@ Proof.
     exists n. exact H_n_big_step.
 Qed.
 
+Lemma terminates_iff_b_terminates {V} (e : expr V) :
+  terminates e ↔ ∃ n, b_terminates n e.
+Proof.
+  unfold terminates, b_terminates.
+  split.
+  - intros [v H_big_step].
+    apply big_step_iff_b_big_step in H_big_step as [n H_b_big_step].
+    eauto.
+  - intros (n & v & H_b_big_step).
+    exists v. apply big_step_iff_b_big_step.
+    exists n. exact H_b_big_step.
+Qed.
+
 Lemma n_big_step_O_inv {V} e (v : val V) :
   n_big_step O e v → e = v.
 Proof.
   unfold n_big_step.
+  inversion_clear 1. auto.
+Qed.
+
+Lemma b_big_step_O_inv {V} e (v : val V) :
+  b_big_step O e v → e = v.
+Proof.
+  unfold b_big_step.
   inversion_clear 1. auto.
 Qed.
 
@@ -1449,32 +1576,29 @@ Proof.
   eauto.
 Qed.
 
-Lemma ctx_equiv_elim {V} (e1 e2 : expr V) :
-  ctx_equiv e1 e2 →
-  ctx_approx e1 e2 ∧
-  ctx_approx e2 e1.
+Lemma b_terminates_O_inv {V} (e : expr V) :
+  b_terminates O e →
+  ∃ (v : val V), e = v.
 Proof.
-  unfold ctx_equiv, ctx_approx, obs_equiv, obs_approx.
-  intros He. split; apply He.
+  unfold b_terminates.
+  intros [v H_b_big_step].
+  apply b_big_step_O_inv in H_b_big_step. eauto.
 Qed.
 
 Lemma L_rel_adequacy_n (e1 e2 : expr ∅) n :
-  (∀ w, w ⊨ L_rel e1 e2) →
+  {| nw_index := n |} ⊨ L_rel e1 e2 →
   n_terminates n e1 →
   terminates e2.
 Proof.
   revert e1.
-  induction n as [| n' IHn']; intros e1 He H_n_terminates.
-  - apply n_terminates_O_inv in H_n_terminates as [v Hv].
-    specialize (He {| nw_index := O |}).
-    apply L_rel_elim in He as [He _].
-    exact (He v Hv).
-  - apply n_terminates_S_inv in H_n_terminates as (e' & H_step & H_n_terminates).
-    apply (IHn' e'); [| exact H_n_terminates].
-    intros w. specialize (He (world_lift w)).
-    apply L_rel_elim in He as [_ He].
+  induction n as [| n' IHn']; intros e1 He He1.
+  - apply n_terminates_O_inv in He1 as [v He1].
+    apply L_rel_elim in He as [He _]. eauto.
+  - apply n_terminates_S_inv in He1 as (e' & H_step & He1).
+    apply (IHn' e'); [| exact He1].
     apply I_world_lift_later.
-    iapply He. iintro. exact H_step.
+    apply L_rel_elim in He as [_ He]. iapply He.
+    iintro. exact H_step.
 Qed.
 
 Lemma L_rel_adequacy (e1 e2 : expr ∅) :
@@ -1482,59 +1606,186 @@ Lemma L_rel_adequacy (e1 e2 : expr ∅) :
   terminates e1 →
   terminates e2.
 Proof.
-  intros He H_terminates.
-  apply terminates_iff_n_terminates in H_terminates as (n & H_n_terminates).
-  exact (L_rel_adequacy_n e1 e2 n He H_n_terminates).
+  intros He He1.
+  apply terminates_iff_n_terminates in He1 as (n & He1).
+  eapply L_rel_adequacy_n.
+  - apply He.
+  - exact He1.
 Qed.
 
 Theorem O_rel_adequacy e1 e2 :
-  (∀ w, w ⊨ O_rel e1 e2) → obs_equiv e1 e2.
+  (∀ n, n ⊨ O_rel e1 e2) → obs_equiv e1 e2.
 Proof.
   intros He. split.
   - apply L_rel_adequacy.
-    intros w. specialize (He w).
+    intros n. specialize (He n).
     by apply O_rel_elim in He as [].
   - apply L_rel_adequacy.
-    intros w. specialize (He w).
+    intros n. specialize (He n).
     by apply O_rel_elim in He as [].
 Qed.
 
-Lemma L_rel_value (v1 v2 : val ∅) n :
+Lemma L_rel_val (v1 v2 : val ∅) n :
   n ⊨ L_rel v1 v2.
 Proof.
   apply L_rel_intro.
-  - intros _ _.
-    apply terminates_val.
+  - intros _ _. apply terminates_val.
   - iintros e1 He. idestruct He.
     by apply not_contextual_step_val in He.
 Qed.
 
-Lemma O_rel_value (v1 v2 : val ∅) n :
+Lemma O_rel_val (v1 v2 : val ∅) n :
   n ⊨ O_rel v1 v2.
 Proof.
-  apply O_rel_intro; apply L_rel_value.
+  apply O_rel_intro.
+  - apply L_rel_val.
+  - apply L_rel_val.
 Qed.
 
-Lemma K_rel_ectx_hole n :
+Lemma compat_empty_subst n :
+  n ⊨ G_rel (arrow_id ∅) (arrow_id ∅).
+Proof.
+  apply G_rel_intro.
+  iintros x. destruct x.
+Qed.
+
+Lemma fundamental_property_v_closed (v : val ∅) n :
+  n ⊨ V_rel v v.
+Proof.
+  rewrite <- (bind_pure' v).
+  apply V_rel_o_elimV.
+  - apply fundamental_property_v.
+  - apply compat_empty_subst.
+Qed.
+
+Lemma fundamental_property_e_closed (e : expr ∅) n :
+  n ⊨ E_rel e e.
+Proof.
+  rewrite <- (bind_pure' e).
+  apply E_rel_o_elimE.
+  - apply fundamental_property_e.
+  - apply compat_empty_subst.
+Qed.
+
+Lemma fundamental_property_g {V} (γ : V [⇒] ∅) n :
+  n ⊨ G_rel γ γ.
+Proof.
+  apply G_rel_intro.
+  iintros x. apply fundamental_property_v_closed.
+Qed.
+
+Lemma compat_ectx_hole_closed n :
   n ⊨ K_rel ectx_hole ectx_hole.
 Proof.
   apply K_rel_intro.
   iintros v1 v2 Hv. simpl.
-  apply O_rel_value.
+  apply O_rel_val.
 Qed.
 
-Lemma O_rel_o_compat_expr {V} (e1 e2 : expr V) n :
+Lemma compat_ectx_hole {V} n :
+  n ⊨ @K_rel_o V ectx_hole ectx_hole.
+Proof.
+  apply K_rel_o_intro.
+  iintros γ1 γ2 _. term_simpl.
+  apply compat_ectx_hole_closed.
+Qed.
+
+Lemma compat_ectx_app1_closed E1 E2 e1 e2 n :
+  n ⊨ K_rel E1 E2 →
+  n ⊨ E_rel e1 e2 →
+  n ⊨ K_rel (ectx_app1 E1 e1) (ectx_app1 E2 e2).
+Proof.
+  intros HE He.
+  apply K_rel_intro.
+  iintros v1 v2 Hv. simpl.
+  apply E_rel_elimO.
+  - apply compat_app_closed.
+    apply compat_val_closed. exact Hv.
+    exact He.
+  - exact HE.
+Qed.
+
+Lemma compat_ectx_app1 {V} (E1 E2 : ectx V) e1 e2 n :
+  n ⊨ K_rel_o E1 E2 →
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ K_rel_o (ectx_app1 E1 e1) (ectx_app1 E2 e2).
+Proof.
+  intros HE He.
+  apply K_rel_o_intro.
+  iintros γ1 γ2 Hγ. term_simpl.
+  apply compat_ectx_app1_closed.
+  - apply K_rel_o_elimK. exact HE. exact Hγ.
+  - apply E_rel_o_elimE. exact He. exact Hγ.
+Qed.
+
+Lemma compat_ectx_app2_closed v1 v2 E1 E2 n :
+  n ⊨ V_rel v1 v2 →
+  n ⊨ K_rel E1 E2 →
+  n ⊨ K_rel (ectx_app2 v1 E1) (ectx_app2 v2 E2).
+Proof.
+  intros Hv HE.
+  apply K_rel_intro.
+  iintros u1 u2 Hu. simpl.
+  apply E_rel_elimO.
+  - apply compat_app_closed_val. exact Hv. exact Hu.
+  - exact HE.
+Qed.
+
+Lemma compat_ectx_app2 {V} (v1 v2 : val V) E1 E2 n :
+  n ⊨ V_rel_o v1 v2 →
+  n ⊨ K_rel_o E1 E2 →
+  n ⊨ K_rel_o (ectx_app2 v1 E1) (ectx_app2 v2 E2).
+Proof.
+  intros Hv HE.
+  apply K_rel_o_intro.
+  iintros γ1 γ2 Hγ. term_simpl.
+  apply compat_ectx_app2_closed.
+  - apply V_rel_o_elimV. exact Hv. exact Hγ.
+  - apply K_rel_o_elimK. exact HE. exact Hγ.
+Qed.
+
+Lemma fundamental_property_k {V} (E : ectx V) n :
+  n ⊨ K_rel_o E E.
+Proof.
+  induction E.
+  - apply compat_ectx_hole.
+  - apply compat_ectx_app1.
+    + exact IHE.
+    + apply fundamental_property_e.
+  - apply compat_ectx_app2.
+    + apply fundamental_property_v.
+    + exact IHE.
+Qed.
+
+Lemma fundamental_property_k_closed E n :
+  n ⊨ K_rel E E.
+Proof.
+  rewrite <- (bind_pure' E).
+  apply K_rel_o_elimK.
+  - apply fundamental_property_k.
+  - apply compat_empty_subst.
+Qed.
+
+Lemma compat_expr_o_closed (e1 e2 : expr ∅) n :
+  n ⊨ E_rel e1 e2 →
+  n ⊨ O_rel e1 e2.
+Proof.
+  intros He.
+  rewrite <- (fold_unfold_plug_ectx_hole e1).
+  rewrite <- (fold_unfold_plug_ectx_hole e2).
+  apply E_rel_elimO.
+  - exact He.
+  - apply compat_ectx_hole_closed.
+Qed.
+
+Lemma compat_expr_o {V} (e1 e2 : expr V) n :
   n ⊨ E_rel_o e1 e2 →
   n ⊨ O_rel_o e1 e2.
 Proof.
-  intro He.
-  apply O_rel_o_intro.
-  iintros γ1 γ2 Hγ.
-  apply E_rel_o_elim in He. ispec He γ1 γ2 Hγ.
-  rewrite <- (fold_unfold_plug_ectx_hole (bind γ1 e1)).
-  rewrite <- (fold_unfold_plug_ectx_hole (bind γ2 e2)).
-  apply (E_rel_elimO _ _ _ _ _ He).
-  exact (K_rel_ectx_hole n).
+  intros He.
+  apply O_rel_o_intro. iintros γ1 γ2 Hγ.
+  apply compat_expr_o_closed.
+  apply E_rel_o_elimE; assumption.
 Qed.
 
 Lemma precongruence {A B} (e1 e2 : expr A) (C : ctxr A B) n :
@@ -1555,19 +1806,127 @@ Proof.
     + apply IHC. exact He.
 Qed.
 
+Theorem E_rel_o_soundness' {V} (e1 e2 : expr V) :
+  (∀ n, n ⊨ E_rel_o e1 e2) →
+  ciu_equiv e1 e2.
+Proof.
+  unfold ciu_equiv.
+  intros He E γ.
+  apply O_rel_adequacy. intros n.
+  apply E_rel_elimO.
+  - specialize (He n).
+    apply E_rel_o_elimE.
+    + exact He.
+    + apply fundamental_property_g.
+  - apply fundamental_property_k_closed.
+Qed.
+
+Lemma L_rel_obs_approx_trans e1 e2 e3 n :
+  n ⊨ L_rel e1 e2 →
+  obs_approx e2 e3 →
+  n ⊨ L_rel e1 e3.
+Proof.
+  unfold obs_approx.
+  intros He1 He2.
+  irevert e1 He1. loeb_induction IH.
+  iintros e1 He1.
+  apply L_rel_elim in He1 as [He1_val He1_step].
+  apply L_rel_intro.
+  - intros v Hv. exact (He2 (He1_val v Hv)).
+  - iintros e1' H_step.
+    ispec He1_step e1' H_step.
+    later_shift. iapply IH.
+    exact He1_step.
+Qed.
+
+Lemma O_rel_obs_equiv_trans e1 e2 e3 n :
+  n ⊨ O_rel e1 e2 →
+  obs_equiv e2 e3 →
+  n ⊨ O_rel e1 e3.
+Proof.
+  intros He1 He2.
+  apply O_rel_elim in He1 as [He1_l He1_r].
+  apply obs_equiv_elim_approx in He2 as [He2_l He2_r].
+  apply O_rel_intro.
+  - by eapply L_rel_obs_approx_trans.
+  - (* This direction is impossible to prove:
+       If e3 terminates in n steps, we need to prove that e1 MUST
+       terminate. Using He2_r, we can conclude that e2 terminates
+       in some m steps. However, if m > n, then He1_r does not imply
+       that e1 terminates. *)
+Abort.
+
+Theorem L_rel_completeness (e1 e2 : expr ∅) n :
+  obs_approx e1 e2 →
+  n ⊨ L_rel e1 e2.
+Proof.
+  intros He. irevert e1 He.
+  loeb_induction IH.
+  iintros e1 He.
+  apply L_rel_intro.
+  - intros v ->. apply He. apply terminates_val.
+  - iintros e1' H_step. idestruct H_step.
+    later_shift.
+    assert (He1' : obs_approx e1' e2).
+    { unfold obs_approx in *.
+      intros He1'. apply He.
+      by eapply contextual_step_terminates. }
+    ispec IH e1' He1'.
+    exact IH.
+Qed.
+
+Theorem O_rel_completeness (e1 e2 : expr ∅) n :
+  obs_equiv e1 e2 →
+  n ⊨ O_rel e1 e2.
+Proof.
+  intros He.
+  apply obs_equiv_elim_approx in He as [He1 He2].
+  apply O_rel_intro.
+  - by apply L_rel_completeness.
+  - by apply L_rel_completeness.
+Qed.
+
+Theorem E_rel_o_completeness' {V} (e1 e2 : expr V) n :
+  ciu_equiv e1 e2 →
+  n ⊨ E_rel_o e1 e2.
+Proof.
+  intros He.
+  apply ciu_equiv_elim_approx in He as [He1 He2].
+  unfold ciu_approx in *.
+  apply E_rel_o_intro. iintros γ1 γ2 Hγ.
+  apply E_rel_intro. iintros E1 E2 HE.
+  apply O_rel_intro.
+  - assert (He1' : n ⊨ L_rel (plug E1 (bind γ1 e1)) (plug E2 (bind γ2 e1))).
+    { apply O_rel_elim1.
+      apply E_rel_elimO.
+      apply E_rel_o_elimE.
+      apply fundamental_property_e.
+      exact Hγ. exact HE. }
+    specialize (He1 E2 γ2).
+    exact (L_rel_obs_approx_trans _ _ _ _ He1' He1).
+  - assert (He2' : n ⊨ L_rel (plug E2 (bind γ2 e2)) (plug E1 (bind γ1 e2))).
+    { apply O_rel_elim2.
+      apply E_rel_elimO.
+      apply E_rel_o_elimE.
+      apply fundamental_property_e.
+      exact Hγ. exact HE. }
+    specialize (He2 E1 γ1).
+    exact (L_rel_obs_approx_trans _ _ _ _ He2' He2).
+Qed.
+
 Theorem E_rel_o_soundness {V} (e1 e2 : expr V) :
   (∀ n, n ⊨ E_rel_o e1 e2) →
   ctx_equiv e1 e2.
 Proof.
   unfold ctx_equiv.
   intros He C.
-  apply O_rel_adequacy. intros w.
+  apply O_rel_adequacy. intros n.
+  specialize (He n).
+  apply (precongruence _ _ C) in He.
+  apply compat_expr_o in He.
   rewrite <- (bind_pure' (cplug C e1)).
   rewrite <- (bind_pure' (cplug C e2)).
-  specialize (He w).
-  apply (precongruence _ _ C) in He.
-  apply O_rel_o_compat_expr in He.
-  apply (O_rel_o_elimO _ _ _ _ _ He).
+  apply O_rel_o_elimO. exact He.
   apply G_rel_intro. iintros x. destruct x.
 Qed.
 

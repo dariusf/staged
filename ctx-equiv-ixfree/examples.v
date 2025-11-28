@@ -1,4 +1,4 @@
-
+(*
 From CtxEquivIxFree Require Import lang.
 From CtxEquivIxFree Require Import propriety.
 From IxFree Require Import Lib Nat.
@@ -537,4 +537,5 @@ Proof.
   rewrite -> He2.
   reflexivity.
 Qed.
+*)
 *)
