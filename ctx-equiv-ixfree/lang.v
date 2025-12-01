@@ -146,9 +146,9 @@ Qed.
 (** Outside-in evaluation contexts, similar to a normal list *)
 
 Inductive rctx (V : Set) :=
-  | rctx_hole
-  | rctx_app1 (R : rctx V) (e : expr V)
-  | rctx_app2 (v : val V) (R : rctx V).
+| rctx_hole
+| rctx_app1 (R : rctx V) (e : expr V)
+| rctx_app2 (v : val V) (R : rctx V).
 
 Arguments rctx_hole {V}.
 Arguments rctx_app1 {V} R e.
@@ -319,11 +319,11 @@ Proof.
   exact (rctx_ectx_bijection_aux ectx_hole R).
 Qed.
 
-Lemma plug_rplug_equiv {V} (E : ectx V) (e : expr V) :
-  plug E e = rplug (ectx_to_rctx E) e.
+Lemma ectx_to_rctx_correct {V} (E : ectx V) (e : expr V) :
+  rplug (ectx_to_rctx E) e = plug E e.
 Proof.
   unfold ectx_to_rctx.
-  rewrite -> ectx_comp_rctx2_correct. simpl. reflexivity.
+  exact (ectx_comp_rctx2_correct E rctx_hole e).
 Qed.
 
 Lemma plug_eq_val_inv {V} E e (v : val V) :
@@ -686,8 +686,8 @@ Lemma unique_decomposition {V} (E1 E2 : ectx V) e1 e2 :
   E1 = E2 ∧ e1 = e2.
 Proof.
   intros He1 He2 Heq.
-  rewrite -> plug_rplug_equiv in Heq.
-  rewrite -> plug_rplug_equiv in Heq.
+  rewrite <- ectx_to_rctx_correct in Heq.
+  rewrite <- ectx_to_rctx_correct in Heq.
   destruct (unique_rdecomposition _ _ _ _ He1 He2 Heq) as [Heq1 Heq2].
   split.
   - rewrite <- (ectx_rctx_bijection E1).
@@ -1332,6 +1332,8 @@ Qed.
 (** General program contexts *)
 Inductive ctx : Set → Type :=
 | ctx_hole : ctx ∅
+| ctx_fmap {A B} : (A [→] B) → ctx B → ctx A
+| ctx_bind {A B} : (A [⇒] B) → ctx B → ctx A
 | ctx_lam {V} : ctx V → ctx (inc V)
 | ctx_app1 {V} : ctx V → expr V → ctx V
 | ctx_app2 {V} : expr V → ctx V → ctx V.
@@ -1340,6 +1342,8 @@ Inductive ctx : Set → Type :=
 Fixpoint ciplug {V} (C : ctx V) : expr V → expr ∅ :=
   match C with
   | ctx_hole => λ e, e
+  | ctx_fmap f C => λ e, ciplug C (fmap f e)
+  | ctx_bind f C => λ e, ciplug C (bind f e)
   | ctx_lam C => λ e, ciplug C (v_lambda e)
   | ctx_app1 C e2 => λ e, ciplug C (app e e2)
   | ctx_app2 e1 C => λ e, ciplug C (app e1 e)
@@ -1347,6 +1351,8 @@ Fixpoint ciplug {V} (C : ctx V) : expr V → expr ∅ :=
 
 Inductive ctxr : Set → Set → Type :=
 | ctxr_hole {A} : ctxr A A
+| ctxr_fmap {A B C} : (A [→] B) → ctxr B C → ctxr A C
+| ctxr_bind {A B C} : (A [⇒] B) → ctxr B C → ctxr A C
 | ctxr_lam {A B} : ctxr A (inc B) → ctxr A B
 | ctxr_app1 {A B} : ctxr A B → expr B → ctxr A B
 | ctxr_app2 {A B} : expr B → ctxr A B → ctxr A B.
@@ -1355,6 +1361,8 @@ Inductive ctxr : Set → Set → Type :=
 Fixpoint crplug {A B} (C : ctxr A B) : expr A → expr B :=
   match C with
   | ctxr_hole => λ e, e
+  | ctxr_fmap f C => λ e, crplug C (fmap f e)
+  | ctxr_bind f C => λ e, crplug C (bind f e)
   | ctxr_lam C => λ e, v_lambda (crplug C e)
   | ctxr_app1 C e2 => λ e, app (crplug C e) e2
   | ctxr_app2 e1 C => λ e, app e1 (crplug C e)
@@ -1788,6 +1796,36 @@ Proof.
   apply E_rel_o_elimE; assumption.
 Qed.
 
+Lemma compat_fmap {A B} (f : A [→] B) e1 e2 n :
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ E_rel_o (fmap f e1) (fmap f e2).
+Proof.
+  intros He.
+  apply E_rel_o_intro. iintros γ1 γ2 Hγ.
+  rewrite -> (map_to_bind f).
+  rewrite -> (map_to_bind f).
+  rewrite -> bind_bind_comp'.
+  rewrite -> bind_bind_comp'.
+  apply E_rel_o_elimE. exact He.
+  apply G_rel_intro. iintros x. term_simpl.
+  apply G_rel_elimV. exact Hγ.
+Qed.
+
+Lemma compat_bind {A B} (f : A [⇒] B) e1 e2 n :
+  n ⊨ E_rel_o e1 e2 →
+  n ⊨ E_rel_o (bind f e1) (bind f e2).
+Proof.
+  intros He.
+  apply E_rel_o_intro. iintros γ1 γ2 Hγ.
+  rewrite -> bind_bind_comp'.
+  rewrite -> bind_bind_comp'.
+  apply E_rel_o_elimE. exact He.
+  apply G_rel_intro. iintros x. term_simpl.
+  apply V_rel_o_elimV.
+  - apply fundamental_property_v.
+  - exact Hγ.
+Qed.
+
 Lemma precongruence {A B} (e1 e2 : expr A) (C : ctxr A B) n :
   n ⊨ E_rel_o e1 e2 →
   n ⊨ E_rel_o (cplug C e1) (cplug C e2).
@@ -1795,6 +1833,8 @@ Proof.
   intros He.
   induction C; simpl.
   - exact He.
+  - apply IHC. apply compat_fmap. exact He.
+  - apply IHC. apply compat_bind. exact He.
   - apply compat_val.
     apply compat_lambda.
     apply IHC. exact He.
@@ -1928,6 +1968,42 @@ Proof.
   rewrite <- (bind_pure' (cplug C e2)).
   apply O_rel_o_elimO. exact He.
   apply G_rel_intro. iintros x. destruct x.
+Qed.
+
+(*
+Theorem ciu_equiv_soundness {V} (e1 e2 : expr V) :
+  ciu_equiv e1 e2 →
+  ctx_equiv e1 e2.
+Proof.
+Abort.
+*)
+
+Fixpoint rctx_to_ctxr {V} (R : rctx V) : ctxr V V :=
+  match R with
+  | rctx_hole => ctxr_hole
+  | rctx_app1 R e => ctxr_app1 (rctx_to_ctxr R) e
+  | rctx_app2 v R => ctxr_app2 v (rctx_to_ctxr R)
+  end.
+
+Lemma rctx_to_ctxr_correct {V} (R : rctx V) (e : expr V) :
+  crplug (rctx_to_ctxr R) e = rplug R e.
+Proof.
+  induction R.
+  - simpl. reflexivity.
+  - simpl. rewrite -> IHR. reflexivity.
+  - simpl. rewrite -> IHR. reflexivity.
+Qed.
+
+Theorem ciu_equiv_completeness {V} (e1 e2 : expr V) :
+  ctx_equiv e1 e2 →
+  ciu_equiv e1 e2.
+Proof.
+  unfold ctx_equiv, ciu_equiv.
+  intros He E γ.
+  rewrite <-2 ectx_to_rctx_correct.
+  rewrite <-2 rctx_to_ctxr_correct.
+  specialize (He (ctxr_bind γ (rctx_to_ctxr (ectx_to_rctx E)))).
+  simpl in He. exact He.
 Qed.
 
 (*
