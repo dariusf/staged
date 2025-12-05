@@ -314,6 +314,13 @@ Proof.
   exact (ectx_comp_rctx2_correct E rctx_hole e).
 Qed.
 
+Lemma rctx_to_ectx_correct {V} (R : rctx V) (e : expr V) :
+  plug (rctx_to_ectx R) e = rplug R e.
+Proof.
+  unfold rctx_to_ectx.
+  exact (ectx_comp_rctx1_correct ectx_hole R e).
+Qed.
+
 Lemma plug_eq_val_inv {V} E e (v : val V) :
   plug E e = v →
   E = ectx_hole ∧ e = v.
@@ -586,6 +593,10 @@ Proof. auto. Qed.
 Definition meta_ectx_comp {V} (M1 M2 : meta_ectx V) : meta_ectx V :=
   M2 ++ M1.
 
+Lemma fold_unfold_meta_ectx_comp {V} (M1 M2 : meta_ectx V) :
+  meta_ectx_comp M1 M2 = M2 ++ M1.
+Proof. auto. Qed.
+
 Lemma meta_plug_eq_val_inv {V} (M : meta_ectx V) (e : expr V) (v : val V) :
   meta_plug M e = v →
   M = [] ∧ e = v.
@@ -655,6 +666,99 @@ Proof. auto_bind_comp. Qed.
 #[global] Instance Bind_meta_ectx : Bind meta_ectx.
 Proof. constructor. exact @meta_ectx_bind_id. exact @meta_ectx_bind_comp. Qed.
 
+(** Outside-in meta context *)
+
+Definition meta_rctx V := list (rctx V).
+
+Fixpoint meta_rplug {V} (M : meta_rctx V) (e : expr V) : expr V :=
+  match M with
+  | [] => e
+  | R :: M => rplug R (e_reset (meta_rplug M e))
+  end.
+
+Definition meta_rctx_comp {V} : meta_rctx V → meta_rctx V → meta_rctx V :=
+  app.
+
+Lemma fold_unfold_meta_rctx_comp {V} (M1 M2 : meta_rctx V) :
+  meta_rctx_comp M1 M2 = M1 ++ M2.
+Proof. auto. Qed.
+
+Lemma meta_rplug_eq_val_inv {V} (M : meta_rctx V) (e : expr V) (v : val V) :
+  meta_rplug M e = v →
+  M = [] ∧ e = v.
+Proof.
+  intros H_eq.
+  destruct M as [| R M]; simpl in *.
+  - auto.
+  - apply rplug_eq_val_inv in H_eq as [_ H_absurd].
+    discriminate.
+Qed.
+
+Lemma meta_rctx_comp_correct {V} (M1 M2 : meta_rctx V) e :
+  meta_rplug (meta_rctx_comp M1 M2) e = meta_rplug M1 (meta_rplug M2 e).
+Proof.
+  induction M1 as [| R M1 IHM1].
+  - simpl. reflexivity.
+  - simpl. rewrite -> IHM1. reflexivity.
+Qed.
+
+Definition meta_ectx_to_meta_rctx {V} (M : meta_ectx V) : meta_rctx V :=
+  rev (map ectx_to_rctx M).
+
+Definition meta_rctx_to_meta_ectx {V} (M : meta_rctx V) : meta_ectx V :=
+  rev (map rctx_to_ectx M).
+
+Lemma meta_ectx_meta_rctx_bijection {V} (M : meta_ectx V) :
+  meta_rctx_to_meta_ectx (meta_ectx_to_meta_rctx M) = M.
+Proof.
+  unfold meta_ectx_to_meta_rctx, meta_rctx_to_meta_ectx.
+  rewrite -> map_rev.
+  rewrite -> rev_involutive.
+  rewrite -> map_map.
+  rewrite <- (List.map_id M) at 2.
+  apply map_ext. apply ectx_rctx_bijection.
+Qed.
+
+Lemma meta_rctx_meta_ectx_bijection {V} (M : meta_rctx V) :
+  meta_ectx_to_meta_rctx (meta_rctx_to_meta_ectx M) = M.
+Proof.
+  unfold meta_ectx_to_meta_rctx, meta_rctx_to_meta_ectx.
+  rewrite -> map_rev.
+  rewrite -> rev_involutive.
+  rewrite -> map_map.
+  rewrite <- (List.map_id M) at 2.
+  apply map_ext. apply rctx_ectx_bijection.
+Qed.
+
+Lemma meta_rctx_to_meta_ectx_correct {V} (M : meta_rctx V) (e : expr V) :
+  meta_plug (meta_rctx_to_meta_ectx M) e = meta_rplug M e.
+Proof.
+  unfold meta_rctx_to_meta_ectx.
+  induction M as [| R M IHM].
+  - simpl. reflexivity.
+  - simpl.
+    rewrite <- fold_unfold_meta_ectx_comp.
+    rewrite -> meta_ectx_comp_correct. simpl.
+    rewrite -> IHM.
+    rewrite -> rctx_to_ectx_correct.
+    reflexivity.
+Qed.
+
+Lemma meta_ectx_to_meta_rctx_correct {V} (M : meta_ectx V) (e : expr V) :
+  meta_rplug (meta_ectx_to_meta_rctx M) e = meta_plug M e.
+Proof.
+  revert e.
+  unfold meta_ectx_to_meta_rctx.
+  induction M as [| R M IHM]; intros e.
+  - simpl. reflexivity.
+  - simpl.
+    rewrite <- fold_unfold_meta_rctx_comp.
+    rewrite -> meta_rctx_comp_correct. simpl.
+    rewrite -> IHM.
+    rewrite -> ectx_to_rctx_correct.
+    reflexivity.
+Qed.
+
 (** Reduction *)
 
 Inductive base_step {V} : expr V → expr V → Prop :=
@@ -676,26 +780,6 @@ Inductive meta_contextual_step {V} : expr V → expr V → Prop :=
 | mcs_contextual (M : meta_ectx V) (e1 e2 : expr V) :
   contextual_step e1 e2 →
   meta_contextual_step (meta_plug M e1) (meta_plug M e2).
-
-(*
-Inductive contextual_step {V} : expr V → expr V → Prop :=
-| Ectx_beta_lambda MR R (e : expr (inc V)) (v : val V) :
-  contextual_step
-    (meta_plug MR (rplug R (e_app (v_lambda e) v)))
-    (meta_plug MR (rplug R (subst (Inc:=inc) e v)))
-| Ectx_shift MR R (e : expr (inc V)) :
-  contextual_step
-    (meta_plug MR (rplug R (e_shift e)))
-    (meta_plug MR (subst (Inc:=inc) e (v_cont R)))
-| Ectx_beta_cont MR R (R' : rctx V) (v : val V) :
-  contextual_step
-    (meta_plug MR (rplug R (e_app (v_cont R') v)))
-    (meta_plug MR (rplug R (e_reset (rplug R' v))))
-| Ectx_reset MR R (v : val V) :
-  contextual_step
-    (meta_plug MR (rplug R (e_reset v)))
-    (meta_plug MR (rplug R v)).
-*)
 
 Definition big_step {V} e (v : val V) :=
   rtc meta_contextual_step e v.
@@ -783,64 +867,149 @@ Lemma base_step_potential_redex {V} (e e' : expr V) :
   potential_redex e.
 Proof. inversion_clear 1; constructor. Qed.
 
-Lemma unique_rdecomposition {V} (R1 R2 : rctx V) e1 e2 :
-  potential_redex e1 →
-  potential_redex e2 →
-  rplug R1 e1 = rplug R2 e2 →
-  R1 = R2 ∧ e1 = e2.
+Fixpoint decompose {V} (e : expr V) : val V + (meta_rctx V * (rctx V * expr V)) :=
+  match e with
+  | e_val v => inl v
+  | e_app e1 e2 =>
+      inr
+        match decompose e1 with
+        | inl v1 =>
+            match decompose e2 with
+            | inl v2 => ([], (rctx_hole, e_app v1 v2))
+            | inr (M, p) =>
+                match M with
+                | [] => let (R, e2') := p in ([], (rctx_app2 v1 R, e2'))
+                | R :: M' => (rctx_app2 v1 R :: M', p)
+                end
+            end
+        | inr (M, p) =>
+            match M with
+            | [] => let (R, e1') := p in ([], (rctx_app1 R e2, e1'))
+            | R :: M' => (rctx_app1 R e2 :: M', p)
+            end
+        end
+  | e_shift e' => inr ([], (rctx_hole, e_shift e'))
+  | e_reset e' =>
+      inr
+        match decompose e' with
+        | inl v => ([], (rctx_hole, e_reset v))
+        | inr (M, p) => (rctx_hole :: M, p)
+        end
+  end.
+
+Lemma decompose_correct {V} (e : expr V) :
+  match decompose e with
+  | inl v => e_val v
+  | inr (M, (R, e')) => meta_rplug M (rplug R e')
+  end = e.
 Proof.
-  intros He1 He2.
-  revert R2.
-  induction R1; intros R2 Heq.
-  - destruct R2; simpl in *.
-    + auto.
-    + rewrite -> Heq in He1.
-      apply potential_redex_app_inv in He1 as (v1 & v2 & Hv1 & Hv2).
-      apply rplug_eq_val_inv in Hv1 as [_ ->].
-      contradict (not_potential_redex_val _ He2).
-    + rewrite -> Heq in He1.
-      apply potential_redex_app_inv in He1 as (v1 & v2 & Hv1 & Hv2).
-      apply rplug_eq_val_inv in Hv2 as [_ ->].
-      contradict (not_potential_redex_val _ He2).
-  - destruct R2; simpl in *.
-    + rewrite <- Heq in He2.
-      apply potential_redex_app_inv in He2 as (v1 & v2 & Hv1 & Hv2).
-      apply rplug_eq_val_inv in Hv1 as [_ ->].
-      contradict (not_potential_redex_val _ He1).
-    + injection Heq as Heq1 Heq2.
-      apply IHR1 in Heq1 as [Heq11 Heq12].
-      split; congruence.
-    + injection Heq as Heq1 Heq2.
-      apply rplug_eq_val_inv in Heq1 as [_ ->].
-      contradict (not_potential_redex_val _ He1).
-  - destruct R2; simpl in *.
-    + rewrite <- Heq in He2.
-      apply potential_redex_app_inv in He2 as (v1 & v2 & Hv1 & Hv2).
-      apply rplug_eq_val_inv in Hv2 as [_ ->].
-      contradict (not_potential_redex_val _ He1).
-    + injection Heq as Heq1 Heq2. symmetry in Heq1.
-      apply rplug_eq_val_inv in Heq1 as [_ ->].
-      contradict (not_potential_redex_val _ He2).
-    + injection Heq as Heq1 Heq2.
-      apply IHR1 in Heq2 as [Heq11 Heq12].
-      split; congruence.
+  induction e; simpl.
+  - reflexivity.
+  - destruct (decompose e1) as [v1 | (M & R & e1')].
+    + destruct (decompose e2) as [v2 | (M & R & e2')].
+      * simpl. congruence.
+      * destruct M as [| R' M'].
+        { simpl in *. congruence. }
+        { simpl in *. congruence. }
+    + destruct M as [| R' M'].
+      * simpl in *. congruence.
+      * simpl in *. congruence.
+  - reflexivity.
+  - destruct (decompose e) as [v | (M & R & e')].
+    + simpl in *. congruence.
+    + simpl in *. congruence.
 Qed.
 
-Lemma unique_decomposition {V} (E1 E2 : ectx V) e1 e2 :
+Lemma decompose_redex {V} (e : expr V) :
+  match decompose e with
+  | inl _ => True
+  | inr (_, (_, e')) => potential_redex e'
+  end.
+Proof.
+  induction e; simpl.
+  - exact I.
+  - destruct (decompose e1) as [v1 | (M & R & e1')].
+    + destruct (decompose e2) as [v2 | (M & R & e2')].
+      * simpl. constructor.
+      * destruct M as [| R' M'].
+        { exact IHe2. }
+        { exact IHe2. }
+    + destruct M as [| R' M'].
+      * exact IHe1.
+      * exact IHe1.
+  - constructor.
+  - destruct (decompose e) as [v | (M & R & e')].
+    + constructor.
+    + exact IHe.
+Qed.
+
+Lemma decompose_unique_nil {V} R (e : expr V) :
+  potential_redex e →
+  decompose (rplug R e) = inr ([], (R, e)).
+Proof.
+  intros He.
+  induction R as [| R IHR e' | v' R IHR]; simpl in *.
+  - inversion_clear He; simpl in *.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+  - rewrite -> IHR. reflexivity.
+  - rewrite -> IHR. reflexivity.
+Qed.
+
+Lemma decompose_unique_cons {V} R M p (e : expr V) :
+  decompose e = inr (M, p) →
+  decompose (rplug R (e_reset e)) = inr (R :: M, p).
+Proof.
+  intros He.
+  induction R as [| R IHR e' | v' R IHR]; simpl in *.
+  - rewrite -> He. reflexivity.
+  - rewrite -> IHR. reflexivity.
+  - rewrite -> IHR. reflexivity.
+Qed.
+
+Lemma decompose_unique {V} M R (e : expr V) :
+  potential_redex e →
+  decompose (meta_rplug M (rplug R e)) = inr (M, (R, e)).
+Proof.
+  intros He.
+  induction M.
+  - simpl. apply decompose_unique_nil. exact He.
+  - simpl. apply decompose_unique_cons. exact IHM.
+Qed.
+
+Lemma unique_rdecomposition {V} (M1 M2 : meta_rctx V) (R1 R2 : rctx V) e1 e2 :
   potential_redex e1 →
   potential_redex e2 →
-  plug E1 e1 = plug E2 e2 →
-  E1 = E2 ∧ e1 = e2.
+  meta_rplug M1 (rplug R1 e1) = meta_rplug M2 (rplug R2 e2) →
+  M1 = M2 ∧ R1 = R2 ∧ e1 = e2.
 Proof.
   intros He1 He2 Heq.
-  rewrite <- ectx_to_rctx_correct in Heq.
-  rewrite <- ectx_to_rctx_correct in Heq.
-  destruct (unique_rdecomposition _ _ _ _ He1 He2 Heq) as [Heq1 Heq2].
-  split.
-  - rewrite <- (ectx_rctx_bijection E1).
-    rewrite <- (ectx_rctx_bijection E2).
-    f_equal. exact Heq1.
-  - exact Heq2.
+  assert (H_decompose1 := decompose_unique M1 R1 e1 He1).
+  assert (H_decompose2 := decompose_unique M2 R2 e2 He2).
+  rewrite -> Heq in H_decompose1.
+  rewrite -> H_decompose1 in H_decompose2.
+  injection H_decompose2. auto.
+Qed.
+
+Lemma unique_decomposition {V}
+  (M1 M2 : meta_ectx V) (E1 E2 : ectx V) e1 e2 :
+  potential_redex e1 →
+  potential_redex e2 →
+  meta_plug M1 (plug E1 e1) = meta_plug M2 (plug E2 e2) →
+  M1 = M2 ∧ E1 = E2 ∧ e1 = e2.
+Proof.
+  intros He1 He2 Heq.
+  rewrite <- (ectx_rctx_bijection E1) in Heq |- *.
+  rewrite <- (ectx_rctx_bijection E2) in Heq |- *.
+  rewrite <- (meta_ectx_meta_rctx_bijection M1) in Heq |- *.
+  rewrite <- (meta_ectx_meta_rctx_bijection M2) in Heq |- *.
+  rewrite -> meta_rctx_to_meta_ectx_correct in Heq.
+  rewrite -> meta_rctx_to_meta_ectx_correct in Heq.
+  rewrite -> rctx_to_ectx_correct in Heq.
+  rewrite -> rctx_to_ectx_correct in Heq.
+  apply unique_rdecomposition in Heq as (HM & HE & He); auto.
+  repeat split; congruence.
 Qed.
 
 Lemma contextual_step_is_deterministic {V} (e1 e2 e3 : expr V) :
@@ -1782,8 +1951,6 @@ Proof.
     - apply compat_ectx_app1. exact IHE. apply fundamental_property_e.
     - apply compat_ectx_app2. apply fundamental_property_v. exact IHE. }
 Qed.
-
-Print Assumptions fundamental_property_v.
 
 (** General program contexts *)
 Inductive ctx : Set → Type :=
