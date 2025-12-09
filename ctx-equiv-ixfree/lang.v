@@ -1,4 +1,4 @@
-From stdpp Require Export relations.
+From stdpp Require Import relations.
 (** Note: both stdpp and Binding define `fmap`, but with different
     signature. What we want in this file is Binding's `fmap`, thus
     we Require Import Binding after stdpp *)
@@ -14,17 +14,23 @@ Local Close Scope stdpp_scope.
 Definition loc : Set := nat.
 
 Inductive expr (V : Set) : Set :=
-| ret (v : val V)
-| app (e1 e2 : expr V)
+| e_val (v : val V)
+| e_app (e1 e2 : expr V)
 
 with val (V : Set) : Set :=
 | v_var (x : V)
 | v_lambda (e : expr (inc V)).
 
-Arguments ret {V} v.
-Arguments app {V} e1 e2.
+Arguments e_val {V} v.
+Arguments e_app {V} e1 e2.
 Arguments v_var {V} x.
 Arguments v_lambda {V} e.
+
+Definition e_var {V : Set} (x : V) : expr V :=
+  e_val (v_var x).
+
+Definition e_lambda {V} (e : expr (inc V)) : expr V :=
+  e_val (v_lambda e).
 
 #[global]
 Instance SetPureCore_value : SetPureCore val :=
@@ -32,8 +38,8 @@ Instance SetPureCore_value : SetPureCore val :=
 
 Fixpoint emap {A B} (f : A [→] B) (e : expr A) : expr B :=
   match e with
-  | ret v => ret (vmap f v)
-  | app e1 e2 => app (emap f e1) (emap f e2)
+  | e_val v => e_val (vmap f v)
+  | e_app e1 e2 => e_app (emap f e1) (emap f e2)
   end
 
 with vmap {A B} (f : A [→] B) (v : val A) : val B :=
@@ -50,8 +56,8 @@ Instance FunctorCore_vmap : FunctorCore val := @vmap.
 
 Fixpoint ebind {A B} (f : A [⇒] B) (e : expr A) : expr B :=
   match e with
-  | ret v => ret (vbind f v)
-  | app e1 e2 => app (ebind f e1) (ebind f e2)
+  | e_val v => e_val (vbind f v)
+  | e_app e1 e2 => e_app (ebind f e1) (ebind f e2)
   end
 
 with vbind {A B} (f : A [⇒] B) (v : val A) : val B :=
@@ -66,7 +72,7 @@ Instance BindCore_ebind : BindCore expr := @ebind.
 #[global]
 Instance BindCore_vbind : BindCore val := @vbind.
 
-Coercion ret : val >-> expr.
+Coercion e_val : val >-> expr.
 
 (** Inside-out contexts, similar to a "reversed" list *)
 
@@ -108,8 +114,8 @@ Instance BindCore_ectx_bind : BindCore ectx := @ectx_bind.
 Fixpoint plug {V} (E : ectx V) (e : expr V) : expr V :=
   match E with
   | ectx_hole => e
-  | ectx_app1 E' e' => plug E' (app e e')
-  | ectx_app2 v E' => plug E' (app v e)
+  | ectx_app1 E' e' => plug E' (e_app e e')
+  | ectx_app2 v E' => plug E' (e_app v e)
   end.
 
 Lemma fold_unfold_plug_ectx_hole {V} (e : expr V) :
@@ -139,8 +145,8 @@ Proof.
   revert e.
   induction E2; intros e'.
   - simpl. reflexivity.
-  - simpl. rewrite -> (IHE2 (app e' e)). reflexivity.
-  - simpl. rewrite -> (IHE2 (app v e')). reflexivity.
+  - simpl. rewrite -> IHE2. reflexivity.
+  - simpl. rewrite -> IHE2. reflexivity.
 Qed.
 
 (** Outside-in evaluation contexts, similar to a normal list *)
@@ -178,8 +184,8 @@ Instance BindCore_rctx_bind : BindCore rctx := @rctx_bind.
 Fixpoint rplug {V} (R : rctx V) (e : expr V) : expr V :=
   match R with
   | rctx_hole => e
-  | rctx_app1 R' e' => app (rplug R' e) e'
-  | rctx_app2 v R' => app v (rplug R' e)
+  | rctx_app1 R' e' => e_app (rplug R' e) e'
+  | rctx_app2 v R' => e_app v (rplug R' e)
   end.
 
 (* similar to append of a normal list *)
@@ -356,8 +362,8 @@ Proof.
   revert e.
   induction E; intros e'.
   - term_simpl. reflexivity.
-  - term_simpl. rewrite -> (IHE (app e' e)). term_simpl. reflexivity.
-  - term_simpl. rewrite -> (IHE (app v e')). term_simpl. reflexivity.
+  - term_simpl. rewrite -> IHE. term_simpl. reflexivity.
+  - term_simpl. rewrite -> IHE. term_simpl. reflexivity.
 Qed.
 
 Lemma bind_plug {A B} (f : A [⇒] B) (E : ectx A) (e : expr A) :
@@ -366,8 +372,8 @@ Proof.
   revert e.
   induction E; intros e'.
   - term_simpl. reflexivity.
-  - term_simpl. rewrite -> (IHE (app e' e)). term_simpl. reflexivity.
-  - term_simpl. rewrite -> (IHE (app v e')). term_simpl. reflexivity.
+  - term_simpl. rewrite -> IHE. term_simpl. reflexivity.
+  - term_simpl. rewrite -> IHE. term_simpl. reflexivity.
 Qed.
 
 Lemma subst_plug {V} (E : ectx (inc V)) e v :
@@ -376,8 +382,8 @@ Proof.
   revert e.
   induction E as [| E IHE e' | v' E IHE]; intros e.
   - term_simpl. reflexivity.
-  - term_simpl. rewrite -> (IHE (app e e')). term_simpl. reflexivity.
-  - term_simpl. rewrite -> (IHE (app v' e)). term_simpl. reflexivity.
+  - term_simpl. rewrite -> IHE. term_simpl. reflexivity.
+  - term_simpl. rewrite -> IHE. term_simpl. reflexivity.
 Qed.
 
 #[global] Hint Rewrite @fmap_plug : term_simpl.
@@ -563,7 +569,7 @@ Qed.
 
 Inductive base_step {V} : expr V → expr V → Prop :=
 | Beta_step (e : expr (inc V)) (v : val V) :
-  base_step (app (v_lambda e) v) (subst (Inc:=inc) e v).
+  base_step (e_app (v_lambda e) v) (subst (Inc:=inc) e v).
 
 Inductive contextual_step {V} : expr V → expr V → Prop :=
 | Ectx_step E e1 e2 :
@@ -626,13 +632,13 @@ Proof.
 Qed.
 
 Inductive potential_redex {V} : expr V -> Prop :=
-| pr_app (v1 v2 : val V) : potential_redex (app v1 v2).
+| pr_app (v1 v2 : val V) : potential_redex (e_app v1 v2).
 
 Lemma not_potential_redex_val {V} (v : val V) : ¬ potential_redex v.
 Proof. inversion_clear 1. Qed.
 
 Lemma potential_redex_app_inv {V} e1 e2 :
-  potential_redex (app e1 e2) →
+  potential_redex (e_app e1 e2) →
   ∃ (v1 v2 : val V), e1 = v1 ∧ e2 = v2.
 Proof. inversion_clear 1. eauto. Qed.
 
@@ -754,7 +760,7 @@ Definition V_rel_pre (V_rel : val_rel) : val_rel :=
   λ v1 v2,
     ∀ᵢ u1 u2,
       ▷ V_rel u1 u2 →ᵢ
-      R_rel_pre V_rel (app v1 u1) (app v2 u2).
+      R_rel_pre V_rel (e_app v1 u1) (e_app v2 u2).
 
 Definition V_rel_fix := I_fix V_rel_pre.
 Definition V_rel := V_rel_pre V_rel_fix.
@@ -886,7 +892,7 @@ Proof. intros He. by apply O_rel_elim in He as []. Qed.
 Lemma V_rel_intro (v1 v2 : val ∅) n :
   (n ⊨ ∀ᵢ u1 u2,
          ▷ V_rel u1 u2 →ᵢ
-         R_rel (app v1 u1) (app v2 u2)) →
+         R_rel (e_app v1 u1) (e_app v2 u2)) →
   n ⊨ V_rel v1 v2.
 Proof.
   intros Hv.
@@ -902,7 +908,7 @@ Lemma V_rel_elim (v1 v2 : val ∅) n :
   n ⊨ V_rel v1 v2 →
   n ⊨ ∀ᵢ u1 u2,
         ▷ V_rel u1 u2 →ᵢ
-        R_rel (app v1 u1) (app v2 u2).
+        R_rel (e_app v1 u1) (e_app v2 u2).
 Proof.
   intros Hv.
   unfold V_rel, V_rel_pre in Hv.
@@ -916,7 +922,7 @@ Qed.
 Lemma V_rel_elimR (v1 v2 u1 u2 : val ∅) n :
   n ⊨ V_rel v1 v2 →
   n ⊨ ▷ V_rel u1 u2 →
-  n ⊨ R_rel (app v1 u1) (app v2 u2).
+  n ⊨ R_rel (e_app v1 u1) (e_app v2 u2).
 Proof.
   intros Hv Hu.
   apply V_rel_elim in Hv.
@@ -1118,7 +1124,7 @@ Qed.
 Lemma compat_app_closed_val (v1 v2 u1 u2 : val ∅) n :
   n ⊨ V_rel v1 v2 →
   n ⊨ V_rel u1 u2 →
-  n ⊨ E_rel (app v1 u1) (app v2 u2).
+  n ⊨ E_rel (e_app v1 u1) (e_app v2 u2).
 Proof.
   intros Hv Hu.
   apply E_rel_intro.
@@ -1132,7 +1138,7 @@ Qed.
 Lemma compat_app_closed e1 e2 e1' e2' n :
   n ⊨ E_rel e1 e2 →
   n ⊨ E_rel e1' e2' →
-  n ⊨ E_rel (app e1 e1') (app e2 e2').
+  n ⊨ E_rel (e_app e1 e1') (e_app e2 e2').
 Proof.
   intros He He'.
   apply E_rel_intro. iintros E1 E2 HE. term_simpl.
@@ -1167,7 +1173,7 @@ Qed.
 Lemma compat_app {V} (e1 e2 e1' e2' : expr V) n :
   n ⊨ E_rel_o e1 e2 →
   n ⊨ E_rel_o e1' e2' →
-  n ⊨ E_rel_o (app e1 e1') (app e2 e2').
+  n ⊨ E_rel_o (e_app e1 e1') (e_app e2 e2').
 Proof.
   intros He He'.
   apply E_rel_o_intro. iintros γ1 γ2 Hγ. term_simpl.
@@ -1345,8 +1351,8 @@ Fixpoint ciplug {V} (C : ctx V) : expr V → expr ∅ :=
   | ctx_fmap f C => λ e, ciplug C (fmap f e)
   | ctx_bind f C => λ e, ciplug C (bind f e)
   | ctx_lam C => λ e, ciplug C (v_lambda e)
-  | ctx_app1 C e2 => λ e, ciplug C (app e e2)
-  | ctx_app2 e1 C => λ e, ciplug C (app e1 e)
+  | ctx_app1 C e2 => λ e, ciplug C (e_app e e2)
+  | ctx_app2 e1 C => λ e, ciplug C (e_app e1 e)
   end.
 
 Inductive ctxr : Set → Set → Type :=
@@ -1364,8 +1370,8 @@ Fixpoint crplug {A B} (C : ctxr A B) : expr A → expr B :=
   | ctxr_fmap f C => λ e, fmap f (crplug C e)
   | ctxr_bind f C => λ e, bind f (crplug C e)
   | ctxr_lam C => λ e, v_lambda (crplug C e)
-  | ctxr_app1 C e2 => λ e, app (crplug C e) e2
-  | ctxr_app2 e1 C => λ e, app e1 (crplug C e)
+  | ctxr_app1 C e2 => λ e, e_app (crplug C e) e2
+  | ctxr_app2 e1 C => λ e, e_app e1 (crplug C e)
   end.
 
 Fixpoint ctxr_comp {A B C} (C1 : ctxr B C) : ctxr A B → ctxr A C :=
@@ -2026,4 +2032,88 @@ Proof.
   rewrite ->! ctxr_comp_correct in He. simpl in He.
   rewrite ->! ectx_to_ctxr_correct in He.
   exact He.
+Qed.
+
+Theorem E_rel_o_completeness {V} (e1 e2 : expr V) n :
+  ctx_equiv e1 e2 →
+  n ⊨ E_rel_o e1 e2.
+Proof.
+  intros He.
+  apply E_rel_o_completeness'.
+  apply ciu_equiv_completeness.
+  exact He.
+Qed.
+
+(** Auxilliary definitions and lemmas *)
+
+Definition e_rel_o {V} (e1 e2 : expr V) : Prop :=
+  ∀ n, n ⊨ E_rel_o e1 e2.
+
+Instance Reflexive_e_rel_o {V} : Reflexive (@e_rel_o V).
+Proof. unfold Reflexive, e_rel_o. by apply fundamental_property_e. Qed.
+
+Instance Symmetric_e_rel_o {V} : Symmetric (@e_rel_o V).
+Proof.
+  unfold Symmetric, e_rel_o.
+  intros x y Hxy n.
+  apply E_rel_o_completeness. symmetry.
+  by apply E_rel_o_soundness.
+Qed.
+
+Instance Transitive_e_rel_o {V} : Transitive (@e_rel_o V).
+Proof.
+  unfold Transitive, e_rel_o.
+  intros x y z Hxy Hyz n.
+  apply E_rel_o_completeness. etransitivity.
+  by apply E_rel_o_soundness.
+  by apply E_rel_o_soundness.
+Qed.
+
+Lemma terminates_contextual_step {V} (e e' : expr V) :
+  terminates e →
+  contextual_step e e' →
+  terminates e'.
+Proof.
+  unfold terminates, big_step.
+  intros [v H_steps] H_step.
+  exists v.
+  apply rtc_inv in H_steps.
+  destruct H_steps as [-> | (e'' & H_step' & H_steps')].
+  - by apply not_contextual_step_val in H_step.
+  - rewrite -> (contextual_step_is_deterministic _ _ _ H_step H_step').
+    exact H_steps'.
+Qed.
+
+Lemma ciu_approx_beta {V} (e : expr (inc V)) (v : val V) :
+  ciu_approx (e_app (v_lambda e) v) (subst e v).
+Proof.
+  unfold ciu_approx, obs_approx.
+  intros E γ H_terminates. term_simpl in H_terminates. term_simpl.
+  eapply terminates_contextual_step. exact H_terminates.
+  constructor. constructor.
+Qed.
+
+Lemma ciu_approx_unbeta {V} (e : expr (inc V)) (v : val V) :
+  ciu_approx (subst e v) (e_app (v_lambda e) v).
+Proof.
+  unfold ciu_approx, obs_approx.
+  intros E γ H_terminates. term_simpl in H_terminates. term_simpl.
+  eapply contextual_step_terminates; [| exact H_terminates].
+  constructor. constructor.
+Qed.
+
+Lemma ciu_equiv_beta {V} (e : expr (inc V)) (v : val V) :
+  ciu_equiv (e_app (v_lambda e) v) (subst e v).
+Proof.
+  apply ciu_equiv_intro_approx.
+  - apply ciu_approx_beta.
+  - apply ciu_approx_unbeta.
+Qed.
+
+Lemma e_rel_o_beta {V} (e : expr (inc V)) (v : val V) :
+  e_rel_o (e_app (v_lambda e) v) (subst e v).
+Proof.
+  unfold e_rel_o. intros n.
+  apply E_rel_o_completeness'.
+  apply ciu_equiv_beta.
 Qed.

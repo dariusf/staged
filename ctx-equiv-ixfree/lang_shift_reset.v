@@ -50,6 +50,12 @@ Arguments rctx_hole {V}.
 Arguments rctx_app1 {V} _ _.
 Arguments rctx_app2 {V} _ _.
 
+Definition e_var {V : Set} (x : V) :=
+  e_val (v_var x).
+
+Definition e_lambda {V} (e : expr (inc V)) :=
+  e_val (v_lambda e).
+
 Coercion e_val : val >-> expr.
 
 #[global]
@@ -2673,4 +2679,37 @@ Proof.
   rewrite ->! meta_ectx_to_ctxr_correct in He.
   rewrite ->! ectx_to_ctxr_correct in He.
   exact He.
+Qed.
+
+Theorem E_rel_o_completeness {V} (e1 e2 : expr V) n :
+  ctx_equiv e1 e2 →
+  n ⊨ E_rel_o e1 e2.
+Proof.
+  intros He.
+  apply E_rel_o_completeness'.
+  apply ciu_equiv_completeness.
+  exact He.
+Qed.
+
+Definition e_rel_o {V} (e1 e2 : expr V) : Prop :=
+  ∀ n, n ⊨ E_rel_o e1 e2.
+
+Instance Reflexive_e_rel_o {V} : Reflexive (@e_rel_o V).
+Proof. unfold Reflexive, e_rel_o. by apply fundamental_property_e. Qed.
+
+Instance Symmetric_e_rel_o {V} : Symmetric (@e_rel_o V).
+Proof.
+  unfold Symmetric, e_rel_o.
+  intros x y Hxy n.
+  apply E_rel_o_completeness. symmetry.
+  by apply E_rel_o_soundness.
+Qed.
+
+Instance Transitive_e_rel_o {V} : Transitive (@e_rel_o V).
+Proof.
+  unfold Transitive, e_rel_o.
+  intros x y z Hxy Hyz n.
+  apply E_rel_o_completeness. etransitivity.
+  by apply E_rel_o_soundness.
+  by apply E_rel_o_soundness.
 Qed.

@@ -1,8 +1,6 @@
-From Binding Require Import Lib Auto.
-Require Import Binding.Set.
 From IxFree Require Import Nat Lib.
-From CtxEquivIxFree Require Import lang.
-From Stdlib Require Import Program.Basics Morphisms.
+From CtxEquivIxFree Require Import lang_shift_reset.
+Import Inc.
 
 (** top level Proper instances (using ctx_equiv/ctx_approx) *)
 
@@ -11,7 +9,7 @@ Instance Proper_ctx_equiv {V} :
     (@ctx_equiv V ==> @ctx_equiv V ==> iff)
     (@ctx_equiv V).
 Proof.
-  unfold Proper, respectful, iff.
+  unfold flip, Proper, respectful, iff.
   intros a b Hab c d Hcd.
   split.
   - intros Hac.
@@ -38,34 +36,30 @@ Instance Proper_e_rel_o_app {V} :
 Proof.
   unfold Proper, e_rel_o, respectful.
   intros a b Hab c d Hcd n.
-  now apply compat_app.
+  by apply compat_app.
 Qed.
 
 Instance Proper_e_rel_o_lambda {V} :
   Proper (@e_rel_o (inc V) ==> @e_rel_o V) e_lambda.
 Proof.
-  unfold Proper, e_rel_o, respectful.
+  unfold Proper, e_rel_o, respectful, e_lambda.
   intros a b Hab n.
   apply compat_val.
-  now apply compat_lambda.
+  by apply compat_lambda.
 Qed.
 
-Example app_identity :
-  @e_rel_o (inc ∅)
-    (e_app (e_lambda (e_var &0)) (e_var &0))
-    (e_var &0).
+Instance Proper_e_rel_o_shift {V} :
+  Proper (@e_rel_o (inc V) ==> @e_rel_o V) e_shift.
 Proof.
-  unfold e_lambda, e_var.
-  assert (ly := @e_rel_o_beta (inc ∅) (v_var &0) (v_var &0)).
-  term_simpl in ly.
-  term_simpl. exact ly.
+  unfold Proper, e_rel_o, respectful.
+  intros a b Hab n.
+  by apply compat_shift.
 Qed.
 
-Example identity_alt :
-  @e_rel_o ∅
-    (e_lambda (e_app (v_lambda (v_var &0)) (v_var &0)))
-    (e_lambda (v_var &0)).
+Instance Proper_e_rel_o_reset {V} :
+  Proper (@e_rel_o V ==> @e_rel_o V) e_reset.
 Proof.
-  rewrite -> app_identity.
-  reflexivity.
+  unfold Proper, e_rel_o, respectful.
+  intros a b Hab n.
+  by apply compat_reset.
 Qed.
