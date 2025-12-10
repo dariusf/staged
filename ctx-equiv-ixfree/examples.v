@@ -1,4 +1,4 @@
-
+(*
 From CtxEquivIxFree Require Import lang.
 From CtxEquivIxFree Require Import propriety.
 From IxFree Require Import Lib Nat.
@@ -90,24 +90,10 @@ Abort. (* cannot be proven *)
 
 Definition l_rel e1 e2 : Prop := ∀ n, n ⊨ L_rel e1 e2.
 
-Definition nbigstep n e v := ∃ e', nsteps contextual_step n e e' ∧ to_val e' = Some v.
-Definition nterminates n e := ∃ v, nbigstep n e v.
-
 Lemma to_val_eq_Some e v :
   to_val e = Some v →
   e = ret v.
 Proof. destruct e; simpl; congruence. Qed.
-
-Lemma nterminates_zero e :
-  nterminates O e →
-  ∃ (v : val), e = v.
-Proof.
-  unfold nterminates, nbigstep.
-  intros (v & e' & Hnsteps & Heq).
-  inversion Hnsteps. subst.
-  apply to_val_eq_Some in Heq.
-  exists v. exact Heq.
-Qed.
 
 
 Lemma nterminates_succ e n :
@@ -210,8 +196,7 @@ Proof.
       * exact He1'.
 Qed.
 
-Lemma terminates_impl_nterminates e :
-  terminates e → ∃ n, nterminates n e.
+
 Proof.
   unfold terminates, nterminates.
   unfold bigstep, nbigstep.
@@ -552,4 +537,5 @@ Proof.
   rewrite -> He2.
   reflexivity.
 Qed.
+*)
 *)
