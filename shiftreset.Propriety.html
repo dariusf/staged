@@ -1,0 +1,1234 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Propriety</title>
+<meta name="description" content="Documentation of Coq module Propriety" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Propriety</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">Stdlib</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Classes.RelationClasses</span>.<br/>
+<span class="kwd">From</span> <span class="id">Stdlib</span> <span class="kwd">Require</span> <span class="id">Morphisms</span> <span class="id">Program.Basics</span>.<br/>
+<br/>
+<span class="kwd">From</span> <span class="id">ShiftReset</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Basics</span> <span class="id">ShiftFree</span>.<br/>
+<br/>
+<span class="id">Local</span> <span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">string_scope</span>.<br/>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Infix</span> <span class="string">"====&gt;"</span> := <span class="id">Morphisms.respectful</span> (<span class="kwd">at</span> <span class="id">level</span> 80, <span class="id">right</span> <span class="id">associativity</span>).<br/>
+<span class="kwd">Notation</span> <span class="id">Proper</span> := <span class="id">Morphisms.Proper</span>.<br/>
+<span class="kwd">Notation</span> <span class="id">respectful</span> := <span class="id">Morphisms.respectful</span>.<br/>
+<span class="kwd">Notation</span> <span class="id">impl</span> := <span class="id">Program.Basics.impl</span>.<br/>
+<span class="kwd">Notation</span> <span class="id">flip</span> := <span class="id">Basics.flip</span>.<br/>
+<br/>
+<div class="doc">Incantations for setoid rewriting </div>
+<span class="kwd">Section</span> <span class="id">Propriety</span>.<br/>
+<br/>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_entails_entails</span> : <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">flip</span> <span class="id">entails</span> ====&gt; <span class="id">entails</span> ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">flip</span>, <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>. <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Example</span> <span class="id">rewrite</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> \[1 = 1]) (<span class="id">ens_</span> \[2 = 2]) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> \[1 = 1]) <span class="id">empty</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_entails_bientails</span> : <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bientails</span> ====&gt; <span class="id">bientails</span> ====&gt; <span class="id">iff</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">bientails</span>, <span class="id">entails</span>, <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">H0</span>. <span class="id">apply</span> <span class="id">H1</span>. <span class="id">apply</span> <span class="id">H</span>. <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">H0</span>. <span class="id">apply</span> <span class="id">H1</span>. <span class="id">apply</span> <span class="id">H</span>. <span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_entails_gentails</span> : <span class="kwd">forall</span> <span class="id">n</span>, <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">flip</span> (<span class="id">gentails</span> <span class="id">n</span>) ====&gt; (<span class="id">gentails</span> <span class="id">n</span>) ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>, <span class="id">flip</span>, <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;this&nbsp;should&nbsp;not&nbsp;be&nbsp;provable&nbsp;*)</span><br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id">gentails1</span> <span class="id">f1</span> <span class="id">f2</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">n</span>, <span class="id">gentails</span> <span class="id">n</span> <span class="id">f1</span> <span class="id">f2</span>.<br/>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_entails_gentails</span> : <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">flip</span> <span class="id">gentails1</span> ====&gt; <span class="id">gentails1</span> ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>, <span class="id">flip</span>, <span class="id">entails</span>, <span class="id">gentails1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">R</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">specializes</span> <span class="id">H</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H3</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H0</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">auto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">specializes</span> <span class="id">H</span> (<span class="id">S</span> <span class="id">O</span>). <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H4</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destr</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> (<span class="id">S</span> <span class="id">O</span>). <span class="id">inverts</span> <span class="id">H0</span>. <span class="id">specializes</span> <span class="id">H6</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destr</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys_eq</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;this&nbsp;should&nbsp;not&nbsp;be&nbsp;provable,&nbsp;as&nbsp;entails&nbsp;does&nbsp;not&nbsp;allow<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;components&nbsp;of&nbsp;shift&nbsp;results&nbsp;to&nbsp;be&nbsp;weakened&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>. }<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_entails_under_bientails</span> : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">bientails</span> ====&gt; <span class="id">bientails</span> ====&gt; <span class="id">iff</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">entails_under</span> <span class="id">env</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">entails_under</span>, <span class="id">bientails</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">H0</span>. <span class="id">apply</span> <span class="id">H1</span>. <span class="id">apply</span> <span class="id">H</span>. <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">H0</span>. <span class="id">apply</span> <span class="id">H1</span>. <span class="id">apply</span> <span class="id">H</span>. <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_entails_under_entails</span> : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">flip</span> <span class="id">entails</span> ====&gt; <span class="id">entails</span> ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">entails_under</span> <span class="id">env</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">entails_under</span>, <span class="id">entails</span>, <span class="id">flip</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eauto</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_entails_under_entails_flip</span> : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">entails</span> ====&gt; <span class="id">flip</span> <span class="id">entails</span> ====&gt; <span class="id">flip</span> <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">entails_under</span> <span class="id">env</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">entails_under</span>, <span class="id">entails</span>, <span class="id">flip</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eauto</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_entails_under_entails_under</span> : <span class="kwd">forall</span> <span class="id">env</span>, <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">flip</span> (<span class="id">entails_under</span> <span class="id">env</span>) ====&gt; <span class="id">entails_under</span> <span class="id">env</span> ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">entails_under</span> <span class="id">env</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails_under</span>, <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>, <span class="id">flip</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">auto</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_entails_under_flip</span> : <span class="kwd">forall</span> <span class="id">env</span>, <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">entails_under</span> <span class="id">env</span> ====&gt; <span class="id">flip</span> (<span class="id">entails_under</span> <span class="id">env</span>) ====&gt; <span class="id">flip</span> <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">entails_under</span> <span class="id">env</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails_under</span>, <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>, <span class="id">flip</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">auto</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_gentails_entails</span> : <span class="kwd">forall</span> <span class="id">n</span>, <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">flip</span> <span class="id">entails</span> ====&gt; <span class="id">entails</span> ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">gentails</span> <span class="id">n</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>, <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>, <span class="id">flip</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">ge_base</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H3</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_gentails_gentails</span> : <span class="kwd">forall</span> <span class="id">n</span>, <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">flip</span> (<span class="id">gentails</span> <span class="id">n</span>) ====&gt; (<span class="id">gentails</span> <span class="id">n</span>) ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">gentails</span> <span class="id">n</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>, <span class="id">flip</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H</span>. <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">ge_base</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">H2</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H3</span>. <span class="id">destr</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. <span class="id">specializes</span> <span class="id">H0</span> <span class="id">H4</span>. <span class="id">destr</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_gentails_under_bientails</span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">bientails</span> ====&gt; <span class="id">bientails</span> ====&gt; <span class="id">iff</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">gentails_under</span> <span class="id">env</span> <span class="id">n</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">entails_under</span>, <span class="id">bientails</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">destruct</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">iff</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">applys</span> <span class="id">geu_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H0</span>. <span class="id">applys</span> <span class="id">H2</span>. <span class="id">applys</span>* <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">applys</span> <span class="id">geu_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H0</span>. <span class="id">applys</span> <span class="id">H2</span>. <span class="id">applys</span>* <span class="id">H</span>. } }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">iff</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">applys</span> <span class="id">geu_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">lets</span> <span class="id">H2</span>: <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H2</span> <span class="id">h1</span> <span class="id">h2</span> (<span class="id">shft</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span>) <span class="id">env</span> <span class="id">s2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H3</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H4</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">H0</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">applys</span> <span class="id">geu_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">lets</span> <span class="id">H2</span>: <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H2</span> <span class="id">h1</span> <span class="id">h2</span> (<span class="id">shft</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span>) <span class="id">env</span> <span class="id">s2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H2</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H4</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">H0</span>. } }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_gentails_under_entails</span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">flip</span> <span class="id">entails</span> ====&gt; <span class="id">entails</span> ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">gentails_under</span> <span class="id">env</span> <span class="id">n</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">entails_under</span>, <span class="id">entails</span>, <span class="id">flip</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">destruct</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">geu_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">geu_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H4</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_gentails_under_entails_under</span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">flip</span> (<span class="id">entails_under</span> <span class="id">env</span>) ====&gt; (<span class="id">entails_under</span> <span class="id">env</span>) ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">gentails_under</span> <span class="id">env</span> <span class="id">n</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">entails_under</span>, <span class="id">entails</span>, <span class="id">flip</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">destruct</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">geu_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">geu_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H4</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+<br/>
+<div class="doc">entails is proper wrt satisfies </div>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_satisfies_entails</span> : <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">entails</span> ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">satisfies</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>, <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">auto</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_satisfies_bientails</span> : <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">bientails</span> ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">satisfies</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">bientails</span>, <span class="id">entails</span>, <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">auto</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_satisfies_entails_under</span> : <span class="kwd">forall</span> <span class="id">env</span>, <span class="id">Proper</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">entails_under</span> <span class="id">env</span> ====&gt; <span class="id">impl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">satisfies</span> <span class="id">env</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails_under</span>, <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">auto</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_entails_l</span> : <span class="id">Proper</span> (<span class="id">entails</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">entails</span>) <span class="id">seq</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>; <span class="id">destr</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind_sh</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_entails_fail</span> : <span class="id">Proper</span> (<span class="id">entails</span> ====&gt; <span class="id">entails</span> ====&gt; <span class="id">entails</span>) <span class="id">seq</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>; <span class="id">destr</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">pose</span> <span class="id">proof</span> <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H2</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys_eq</span> <span class="id">H2</span>. <span class="id">clear</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">f_equal</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;the&nbsp;proof&nbsp;is&nbsp;stuck&nbsp;here&nbsp;because&nbsp;we&nbsp;want&nbsp;y0&nbsp;and&nbsp;x0&nbsp;to&nbsp;be&nbsp;related&nbsp;by<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;something&nbsp;weaker&nbsp;than&nbsp;equality&nbsp;(entailment),&nbsp;but&nbsp;the&nbsp;relation<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;between&nbsp;results&nbsp;in&nbsp;the&nbsp;semantics&nbsp;is&nbsp;equality&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;TODO&nbsp;what&nbsp;if&nbsp;we&nbsp;can&nbsp;assume&nbsp;shift-freedom&nbsp;to&nbsp;get&nbsp;rid&nbsp;of&nbsp;this&nbsp;case?&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_entails_sf</span> <span class="id">f</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">entails</span> ====&gt; <span class="id">entails</span>) (@<span class="id">seq</span> <span class="id">f</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>. 2: { <span class="id">no_shift</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_entails_under_sf</span> <span class="id">f1</span> : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">entails_under</span> <span class="id">env</span> ====&gt; (<span class="id">entails_under</span> <span class="id">env</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(@<span class="id">seq</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">entails_under</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> * <span class="id">Hsf</span> **.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;cannot&nbsp;use&nbsp;H&nbsp;*)</span><br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_entails_under_l</span> : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">entails_under</span> <span class="id">env</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">entails_under</span> <span class="id">env</span>) <span class="id">seq</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails_under</span>, <span class="id">respectful</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>; <span class="id">destr</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">eapply</span> <span class="id">s_bind_sh</span>. <span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_bientails_l</span> : <span class="id">Proper</span> (<span class="id">bientails</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">bientails</span>) <span class="id">seq</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">bientails</span>, <span class="id">respectful</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>; <span class="id">intros</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">pose</span> <span class="id">proof</span> <span class="id">Proper_seq_entails_l</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H2</span> <span class="id">H1</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id">H</span>. }<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">pose</span> <span class="id">proof</span> <span class="id">Proper_seq_entails_l</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H2</span> <span class="id">H1</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_sf</span> : <span class="kwd">forall</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">entails</span> ====&gt; <span class="id">entails</span>) (<span class="id">seq</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>; <span class="id">destr</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span>* <span class="id">s_seq</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H1</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_sf1</span> : <span class="kwd">forall</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">bientails</span> ====&gt; <span class="id">bientails</span>) (<span class="id">seq</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">bientails</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. 2: { <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H1</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* &lt;- <span class="id">H0</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. 2: { <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H1</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id">H0</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_sf2</span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> ((<span class="kwd">fun</span> <span class="id">f2</span> <span class="id">f3</span> =&gt; <span class="kwd">forall</span> <span class="id">env</span>, <span class="id">entails_under</span> <span class="id">env</span> <span class="id">f2</span> <span class="id">f3</span>) ====&gt; (<span class="kwd">fun</span> <span class="id">f2</span> <span class="id">f3</span> =&gt; <span class="kwd">forall</span> <span class="id">env</span>, <span class="id">entails_under</span> <span class="id">env</span> <span class="id">f2</span> <span class="id">f3</span>)) (<span class="id">seq</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="comment">(*&nbsp;Check&nbsp;respectful.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails_under</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;unfold&nbsp;Proper,&nbsp;entails_under.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. 2: { <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H1</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;apply*&nbsp;s_seq.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys_eq</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;admit.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;applys_eq&nbsp;H9.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;applys_eq&nbsp;H0.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;admit.&nbsp;*)</span><br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;apply*&nbsp;H0.&nbsp;&nbsp;*)</span><br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id">env_constant</span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span>, <span class="id">satisfies</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span> <span class="id">f</span> -&gt; <span class="id">s1</span> = <span class="id">s2</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Lemma</span> <span class="id">env_constant_ens</span> : <span class="kwd">forall</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">env_constant</span> (<span class="id">ens</span> <span class="id">Q</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">env_constant</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Lemma</span> <span class="id">env_constant_seq</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">env_constant</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">env_constant</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">env_constant</span> (<span class="id">f1</span>;; <span class="id">f2</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">env_constant</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>. 2: { <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H2</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">congruence</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Class</span> <span class="id">EnvConstant</span> <span class="id">f</span> : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">env_constant_pf</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span>, <span class="id">satisfies</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span> <span class="id">f</span> -&gt; <span class="id">s1</span> = <span class="id">s2</span> }.<br/>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">EnvConstantEns</span> : <span class="kwd">forall</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">EnvConstant</span> (<span class="id">ens</span> <span class="id">Q</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">constructor</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">env_constant_ens</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">EnvConstantSeq</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">EnvConstant</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">EnvConstant</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">EnvConstant</span> (<span class="id">f1</span>;; <span class="id">f2</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">apply</span> <span class="id">env_constant_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span>* <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span>* <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_seq_sf3</span> : <span class="kwd">forall</span> <span class="id">env</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">EnvConstant</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">entails_under</span> <span class="id">env</span> ====&gt; <span class="id">entails_under</span> <span class="id">env</span>) (<span class="id">seq</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails_under</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>. 2: { <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H2</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H0</span> <span class="kwd">as</span> [<span class="id">H0</span>]. <span class="id">specializes</span> <span class="id">H0</span> <span class="id">H2</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_entails_l</span> : <span class="id">Proper</span> (<span class="id">entails</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">entails</span>) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">subst</span>. <span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">specializes</span> <span class="id">H</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys_eq</span> <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2: { <span class="id">applys</span> <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">congruence</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_entails_under_l</span> : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">entails_under</span> <span class="id">env</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">entails_under</span> <span class="id">env</span>) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails_under</span>, <span class="id">respectful</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>* &lt;- <span class="id">H0</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">specializes</span> <span class="id">H</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys_eq</span> <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2: { <span class="id">applys</span> <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">congruence</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_bientails_left</span> : <span class="id">Proper</span> (<span class="id">bientails</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">bientails</span>) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">bientails</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>; <span class="id">intros</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">pose</span> <span class="id">proof</span> <span class="id">Proper_bind_entails_l</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H2</span> <span class="id">H1</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id">H</span>. }<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">pose</span> <span class="id">proof</span> <span class="id">Proper_bind_entails_l</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H2</span> <span class="id">H1</span>; <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Example</span> <span class="id">rewrite</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> \[1 = 1]) (<span class="id">ens_</span> \[2 = 2]) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> (<span class="id">ens_</span> \[1 = 1]) (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">empty</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">empty</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_bientails_r</span> <span class="id">f1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> <span class="id">eq</span> ====&gt; <span class="id">bientails</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(@<span class="id">bind</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>, <span class="id">bientails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind</span>. <span class="id">rewrite</span>* <span class="id">H</span> <span class="kwd">in</span> <span class="id">H9</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys_eq</span> <span class="id">s_bind_sh</span>. 2: { <span class="id">eassumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">f_equal</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">fun_ext_dep</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eauto</span>. } }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind</span>. <span class="id">rewrite</span>* <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys_eq</span> <span class="id">s_bind_sh</span>. 2: { <span class="id">eassumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">f_equal</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">fun_ext_dep</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eauto</span>. } }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_entails_under_r</span> <span class="id">f1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> <span class="id">eq</span> ====&gt; <span class="id">entails</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(@<span class="id">bind</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>, <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind</span>. <span class="id">rewrite</span>* <span class="id">H</span> <span class="kwd">in</span> <span class="id">H9</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys_eq</span> <span class="id">s_bind_sh</span>. 2: { <span class="id">eassumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">f_equal</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">fun_ext_dep</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_entails_sf</span> <span class="id">f1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> <span class="id">entails</span> ====&gt; <span class="id">entails</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(@<span class="id">bind</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>, <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> * <span class="id">Hsf</span> **.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;2: { <span class="id">destruct</span> <span class="id">Hsf</span> <span class="kwd">as</span> (<span class="id">Hsf</span>). <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H7</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_entails_entails_under_sf</span> <span class="id">f1</span> : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> <span class="id">entails</span> ====&gt; (<span class="id">entails_under</span> <span class="id">env</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(@<span class="id">bind</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>, <span class="id">entails_under</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> * <span class="id">Hsf</span> **.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;2: { <span class="id">destruct</span> <span class="id">Hsf</span> <span class="kwd">as</span> (<span class="id">Hsf</span>). <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H7</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eauto</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_entails_under_sf</span> <span class="id">f1</span> : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> (<span class="id">entails_under</span> <span class="id">env</span>) ====&gt; (<span class="id">entails_under</span> <span class="id">env</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(@<span class="id">bind</span> <span class="id">f1</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>, <span class="id">entails_under</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> * <span class="id">Hsf</span> **.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;2: { <span class="id">destruct</span> <span class="id">Hsf</span> <span class="kwd">as</span> (<span class="id">Hsf</span>). <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H7</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;cannot&nbsp;use&nbsp;H&nbsp;*)</span><br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Example</span> <span class="id">rewrite</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">empty_env</span> (<span class="id">ens_</span> \[1 = 1]) (<span class="id">ens_</span> \[2 = 2]) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">empty_env</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> <span class="id">empty</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">ens_</span> \[1 = 1]))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">empty</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;TODO&nbsp;this&nbsp;should&nbsp;work&nbsp;for&nbsp;unfolding&nbsp;on&nbsp;the&nbsp;right&nbsp;of&nbsp;a&nbsp;bind,&nbsp;but&nbsp;currently&nbsp;doesn't&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;Set&nbsp;Typeclasses&nbsp;Debug.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">Fail</span> <span class="id">setoid_rewrite</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Example</span> <span class="id">rewrite</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> \[1 = 1]) (<span class="id">ens_</span> \[2 = 2]) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> <span class="id">empty</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">ens_</span> \[1 = 1]))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">empty</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">setoid_rewrite</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_gentails</span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">gentails</span> <span class="id">n</span> ====&gt; <span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> (<span class="id">gentails</span> <span class="id">n</span>) ====&gt; (<span class="id">gentails</span> <span class="id">n</span>)) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">v0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">H</span> <span class="id">H3</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;already&nbsp;we&nbsp;see&nbsp;the&nbsp;capacities&nbsp;are&nbsp;wrong,&nbsp;as&nbsp;we&nbsp;don't&nbsp;have&nbsp;shifts&nbsp;in&nbsp;both&nbsp;sides&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;the&nbsp;shift&nbsp;is&nbsp;on&nbsp;the&nbsp;right&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;x&nbsp;is&nbsp;norm,&nbsp;but&nbsp;we&nbsp;only&nbsp;have&nbsp;x&nbsp;gentails_(S&nbsp;n)&nbsp;y&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;inverts&nbsp;H.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;seemingly&nbsp;cannot&nbsp;be&nbsp;proven&nbsp;without&nbsp;allowing&nbsp;the<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;operational&nbsp;semantics&nbsp;of&nbsp;bind&nbsp;to&nbsp;distribute&nbsp;the&nbsp;index?&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;the&nbsp;shift&nbsp;is&nbsp;on&nbsp;the&nbsp;left&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind_sh</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">IHn</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">a</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">a</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;we&nbsp;need&nbsp;x0&nbsp;gentails&nbsp;y0&nbsp;at&nbsp;n,&nbsp;but&nbsp;have&nbsp;it&nbsp;at&nbsp;S&nbsp;n&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_gentails</span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">n1</span> <span class="id">n2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">n</span> = (<span class="id">n1</span> + <span class="id">n2</span>)%<span class="id">nat</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">gentails</span> <span class="id">n1</span> ====&gt; <span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> (<span class="id">gentails</span> <span class="id">n2</span>) ====&gt; (<span class="id">gentails</span> <span class="id">n</span>)) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">symmetry</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">apply</span> <span class="id">Nat.eq_add_0</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">v0</span>. <span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;already&nbsp;we&nbsp;see&nbsp;the&nbsp;capacities&nbsp;are&nbsp;wrong,&nbsp;as&nbsp;we&nbsp;don't&nbsp;have&nbsp;shifts&nbsp;in&nbsp;both&nbsp;sides&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;the&nbsp;shift&nbsp;is&nbsp;on&nbsp;the&nbsp;right&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;n1&nbsp;must&nbsp;be&nbsp;0&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2: {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;we&nbsp;can't&nbsp;dismiss&nbsp;this&nbsp;case&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">Nat.add_0_l</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">subst</span> <span class="id">n2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">H11</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;the&nbsp;shift&nbsp;is&nbsp;on&nbsp;the&nbsp;left&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;n1&nbsp;must&nbsp;be&nbsp;nonzero&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;can't&nbsp;dismiss&nbsp;this&nbsp;case&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H2</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">Fail</span> <span class="id">applys</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">IHn</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_gentails</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">gentails1</span> ====&gt; <span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> (<span class="id">gentails1</span>) ====&gt; (<span class="id">gentails1</span>)) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>, <span class="id">gentails1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">v0</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H0</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;the&nbsp;IH&nbsp;doesn't&nbsp;let&nbsp;us&nbsp;progress&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_gentails_l</span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">gentails</span> <span class="id">n</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">gentails</span> <span class="id">n</span>) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;H&nbsp;is&nbsp;wrong&nbsp;already.&nbsp;x&nbsp;may&nbsp;not&nbsp;necc&nbsp;have&nbsp;shift.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;x&nbsp;returns&nbsp;norm&nbsp;but&nbsp;we&nbsp;have&nbsp;x&nbsp;&lt;=&nbsp;y&nbsp;at&nbsp;S&nbsp;n.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this&nbsp;points&nbsp;to&nbsp;needing&nbsp;to&nbsp;quantify&nbsp;over&nbsp;the&nbsp;first&nbsp;use&nbsp;of&nbsp;n.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H2</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">IHn</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_gentails_l</span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">gentails1</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">gentails</span> <span class="id">n</span>) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">gentails1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">fb</span> <span class="id">fk</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> (<span class="id">S</span> <span class="id">n</span>). <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">IHn</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">specializes</span> <span class="id">H2</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">Fail</span> <span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys_eq</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;IH&nbsp;is&nbsp;too&nbsp;strong&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_gentails_l</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">gentails1</span> ====&gt; <span class="id">eq</span> ====&gt; <span class="id">gentails1</span>) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">gentails1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">fb</span> <span class="id">fk</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> (<span class="id">S</span> <span class="id">n</span>). <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;IH&nbsp;is&nbsp;too&nbsp;strong,&nbsp;Proper&nbsp;fixes&nbsp;x&nbsp;and&nbsp;y&nbsp;already&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_gentails_r_sf</span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">ShiftFree</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> (<span class="id">gentails</span> <span class="id">n</span>) ====&gt; (<span class="id">gentails</span> <span class="id">n</span>)) (<span class="id">bind</span> <span class="id">f</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">v0</span>. <span class="id">inverts</span> <span class="id">H0</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;there&nbsp;are&nbsp;two&nbsp;ways&nbsp;in&nbsp;which&nbsp;a&nbsp;bind&nbsp;can&nbsp;produce&nbsp;a&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;shift&nbsp;on&nbsp;the&nbsp;right&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H2</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span> <span class="id">shift_free_pf</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_gentails</span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">gentails1</span> ====&gt; <span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> (<span class="id">gentails1</span>) ====&gt; (<span class="id">gentails</span> <span class="id">n</span>)) <span class="id">bind</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>, <span class="id">gentails1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">v0</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H0</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;now&nbsp;we&nbsp;have&nbsp;a&nbsp;better&nbsp;IH&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;shift&nbsp;on&nbsp;the&nbsp;right&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">O</span>. <span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">v</span> (<span class="id">S</span> <span class="id">n</span>). <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. <span class="id">specializes</span> <span class="id">H0</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;shift&nbsp;on&nbsp;the&nbsp;left&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> (<span class="id">S</span> <span class="id">n</span>). <span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;specializes&nbsp;H0&nbsp;v&nbsp;(S&nbsp;n).&nbsp;inverts&nbsp;H0&nbsp;as&nbsp;H0.&nbsp;specializes&nbsp;H0&nbsp;H10.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">IHn</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;we&nbsp;have&nbsp;this&nbsp;for&nbsp;n&nbsp;only,&nbsp;not&nbsp;all&nbsp;n...&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">auto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_bind_gentails_l</span> : <span class="kwd">forall</span> <span class="id">n</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">Morphisms.pointwise_relation</span> <span class="id">val</span> (<span class="id">gentails</span> <span class="id">n</span>) ====&gt; (<span class="id">gentails</span> <span class="id">n</span>)) (@<span class="id">bind</span> <span class="id">f</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">v0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="comment">(*&nbsp;the&nbsp;shift&nbsp;comes&nbsp;from&nbsp;the&nbsp;right&nbsp;side&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">zap</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="comment">(*&nbsp;the&nbsp;shift&nbsp;comes&nbsp;from&nbsp;the&nbsp;left&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">fb</span>. <span class="id">exs</span>. <span class="id">splits</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind_sh</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">reflexivity</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">IHn</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">a</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;we&nbsp;are&nbsp;stuck.&nbsp;we&nbsp;need&nbsp;to&nbsp;know&nbsp;that&nbsp;x&nbsp;and&nbsp;y&nbsp;(the&nbsp;right&nbsp;sides,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;after&nbsp;the&nbsp;continuations)&nbsp;are&nbsp;related&nbsp;after&nbsp;one&nbsp;shift,&nbsp;but<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;we&nbsp;instead&nbsp;have&nbsp;that&nbsp;they&nbsp;are&nbsp;related&nbsp;before&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Example</span> <span class="id">rewrite</span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">gentails</span> <span class="id">n</span> (<span class="id">ens_</span> \[1 = 1]) (<span class="id">ens_</span> \[2 = 2]) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">gentails</span> <span class="id">n</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> (<span class="id">ens_</span> \[1 = 1]) (<span class="kwd">fun</span> _ =&gt; <span class="id">empty</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">empty</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;TODO&nbsp;this&nbsp;should&nbsp;work&nbsp;for&nbsp;unfolding&nbsp;on&nbsp;the&nbsp;right&nbsp;of&nbsp;a&nbsp;bind,&nbsp;but&nbsp;currently&nbsp;doesn't&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;Set&nbsp;Typeclasses&nbsp;Debug.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">Fail</span> <span class="id">rewrite</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Example</span> <span class="id">rewrite</span> : <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">gentails</span> <span class="id">n</span> (<span class="id">ens_</span> \[1 = 1]) (<span class="id">ens_</span> \[2 = 2]) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">gentails</span> <span class="id">n</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> <span class="id">empty</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">ens_</span> \[1 = 1]))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">empty</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;Set&nbsp;Typeclasses&nbsp;Debug.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;Fail&nbsp;setoid_rewrite&nbsp;H.&nbsp;*)</span><br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_rs_entails</span> : <span class="id">Proper</span> (<span class="id">entails</span> ====&gt; <span class="id">entails</span>) <span class="id">rs</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>; <span class="id">destr</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_rs_sh</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_rs_val</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_rs_bientails</span> : <span class="id">Proper</span> (<span class="id">bientails</span> ====&gt; <span class="id">bientails</span>) <span class="id">rs</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">bientails</span>, <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">impl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>; <span class="id">subst</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">eapply</span> <span class="id">s_rs_sh</span>. <span class="id">apply</span> <span class="id">H</span>. <span class="id">exact</span> <span class="id">H0</span>. <span class="id">exact</span> <span class="id">H7</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H0</span>. <span class="id">apply</span> <span class="id">s_rs_val</span>. <span class="id">assumption</span>. } }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">eapply</span> <span class="id">s_rs_sh</span>. <span class="id">apply</span> <span class="id">H</span>. <span class="id">eauto</span>. <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H0</span>. <span class="id">apply</span> <span class="id">s_rs_val</span>. <span class="id">assumption</span>. } }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Example</span> <span class="id">rewrite</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">rs</span> (<span class="id">ens_</span> \[1 = 1])) (<span class="id">rs</span> (<span class="id">ens_</span> \[2 = 2])) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">bind</span> (<span class="id">rs</span> (<span class="id">ens_</span> \[1 = 1])) (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">empty</span>))) <span class="id">empty</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_rs_entails_under</span> : <span class="kwd">forall</span> <span class="id">s</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">entails_under</span> <span class="id">s</span> ====&gt; <span class="id">entails_under</span> <span class="id">s</span>) <span class="id">rs</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails_under</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>; <span class="id">destr</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">eapply</span> <span class="id">s_rs_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span>. <span class="id">eauto</span>. <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">s_rs_val</span>. <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_fex_entails_under</span> (<span class="id">A</span> : <span class="kwd">Type</span>) : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">Morphisms.pointwise_relation</span> <span class="id">A</span> (<span class="id">entails_under</span> <span class="id">env</span>) ====&gt; <span class="id">entails_under</span> <span class="id">env</span>) (@<span class="id">fex</span> <span class="id">A</span>).<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">respectful</span>, <span class="id">Morphisms.pointwise_relation</span>, <span class="id">entails_under</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. <span class="id">destr</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">constructor</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_req_entails</span> : <span class="id">Proper</span> (<span class="id">eq</span> ====&gt; <span class="id">entails</span> ====&gt; <span class="id">entails</span>) <span class="id">req</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails</span>, <span class="id">respectful</span>, <span class="id">flip</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">H</span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H5</span> <span class="id">H3</span> <span class="id">___</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_req_entails_under</span> : <span class="kwd">forall</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Proper</span> (<span class="id">eq</span> ====&gt; <span class="id">entails_under</span> <span class="id">env</span> ====&gt; <span class="id">entails_under</span> <span class="id">env</span>) <span class="id">req</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">entails_under</span>, <span class="id">respectful</span>, <span class="id">flip</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">H</span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H5</span> <span class="id">H3</span> <span class="id">___</span>.<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;#[<span class="id">global</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">Instance</span> <span class="id">Proper_req_bientails</span> : <span class="id">Proper</span> (<span class="id">eq</span> ====&gt; <span class="id">bientails</span> ====&gt; <span class="id">bientails</span>) <span class="id">req</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Proper</span>, <span class="id">bientails</span>, <span class="id">respectful</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>; <span class="id">intros</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">constructor</span>. <span class="id">intros</span> <span class="id">hp</span> <span class="id">hr</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">H</span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H5</span> <span class="id">H3</span> <span class="id">___</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H0</span>. <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">constructor</span>. <span class="id">intros</span> <span class="id">hp</span> <span class="id">hr</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H5</span> <span class="id">H3</span> <span class="id">___</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H0</span>. <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;Qed.</div></details>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Example</span> <span class="id">rewrite</span> : <span class="kwd">forall</span> <span class="id">l</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">empty_env</span> (<span class="id">ens_</span> \[1 = 1]) (<span class="id">ens_</span> \[2 = 2]) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">empty_env</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">rs</span> (<span class="id">bind</span> (<span class="id">req</span> (<span class="id">l</span>~~&gt;<span class="id">vint</span> 1) (<span class="id">ens_</span> (<span class="id">l</span>~~&gt;<span class="id">vint</span> 1);; <span class="id">ens_</span> \[1 = 1]))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> _ =&gt; <span class="id">empty</span>))) <span class="id">empty</span>.<br/>
+<details>
+&nbsp;&nbsp;<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;Abort.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id">Propriety</span>.<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>
