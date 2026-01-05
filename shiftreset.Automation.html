@@ -1,0 +1,412 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Automation</title>
+<meta name="description" content="Documentation of Coq module Automation" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Automation</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">ShiftReset</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Logic</span> <span class="id">Entl</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">funfold_hyp</span> <span class="id">H</span> <span class="id">env</span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id">entails_under_unk</span> <span class="id">env</span> <span class="id">f</span>) <span class="kwd">in</span> <span class="id">H</span>; [ <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> | ].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">funfold_</span> <span class="id">env</span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id">entails_under_unk</span> <span class="id">env</span> <span class="id">f</span>); [ <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> | ].<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"funfold"</span> <span class="id">constr</span>(<span class="id">env</span>) <span class="id">constr</span>(<span class="id">f</span>) := <span class="id">funfold_</span> <span class="id">env</span> <span class="id">f</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"funfold"</span> <span class="id">constr</span>(<span class="id">env</span>) <span class="id">constr</span>(<span class="id">f</span>) <span class="string">"in"</span> <span class="id">constr</span>(<span class="id">H</span>) := <span class="id">funfold_hyp</span> <span class="id">H</span> <span class="id">env</span> <span class="id">f</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">funfold1</span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> (?<span class="id">env</span> ?<span class="id">a</span> ?<span class="id">b</span>) _ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">entails_under_unk</span> (<span class="id">env</span> <span class="id">a</span> <span class="id">b</span>) <span class="id">f</span>); [ | <span class="id">try</span> <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> ]; <span class="id">simpl</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> (?<span class="id">env</span> ?<span class="id">a</span>) _ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">entails_under_unk</span> (<span class="id">env</span> <span class="id">a</span>) <span class="id">f</span>); [ | <span class="id">try</span> <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> ]; <span class="id">simpl</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> ?<span class="id">env</span> _ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">entails_under_unk</span> <span class="id">env</span> <span class="id">f</span>); [ | <span class="id">try</span> <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> ]; <span class="id">simpl</span><br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">gentails_under</span> (?<span class="id">env</span> ?<span class="id">a</span> ?<span class="id">b</span>) _ _ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">entails_under_unk</span> (<span class="id">env</span> <span class="id">a</span> <span class="id">b</span>) <span class="id">f</span>); [ | <span class="id">try</span> <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> ]; <span class="id">simpl</span><br/>
+&nbsp;&nbsp;| |- <span class="id">gentails_under</span> (?<span class="id">env</span> ?<span class="id">a</span>) _ _ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">entails_under_unk</span> (<span class="id">env</span> <span class="id">a</span>) <span class="id">f</span>); [ | <span class="id">try</span> <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> ]; <span class="id">simpl</span><br/>
+&nbsp;&nbsp;| |- <span class="id">gentails_under</span> ?<span class="id">env</span> _ _ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">entails_under_unk</span> <span class="id">env</span> <span class="id">f</span>); [ | <span class="id">try</span> <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> ]; <span class="id">simpl</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fintro</span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">∃</span> _, _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_ex_l</span>; <span class="id">intros</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ _ (<span class="id">∀</span> _, _) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_all_r</span>; <span class="id">intros</span> <span class="id">x</span><br/>
+<br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> (\<span class="kwd">exists</span> _, _)) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_ens_sl_ex</span>; <span class="id">fintro</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> (\<span class="kwd">exists</span> _, _);; _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_ens_sl_ex</span>; <span class="id">fintro</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">finst</span> <span class="id">a</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">rs</span> (<span class="id">∀</span> _, _)) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_rs_all</span>; <span class="id">finst</span> <span class="id">a</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">req</span> _ (<span class="id">∀</span> _, _)) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_req_all</span>; <span class="id">finst</span> <span class="id">a</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (_;; <span class="id">∀</span> _, _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_all_r</span>; <span class="id">shiftfree</span>; <span class="id">finst</span> <span class="id">a</span><br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ ((<span class="id">∀</span> _, _);; _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_seq_all_l</span>; <span class="kwd">exists</span> <span class="id">a</span><br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">∀</span> _, _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_all_l</span>; <span class="kwd">exists</span> <span class="id">a</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ _ (<span class="id">∃</span> _, _) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_ex_r</span>; <span class="kwd">exists</span> <span class="id">a</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ _ ((<span class="id">∃</span> _, _);; _) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_seq_ex_r</span>; <span class="id">try</span> <span class="kwd">exists</span> <span class="id">a</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Move assumptions to the Coq context.
+  This is the rough eqiuvalent of xpull from SLF.
+  While we're comparing, xchange is replaced with rewriting and the use of lemmas around the covariance of <span class="bracket"><span class="id">ens_</span></span>. </div>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rearrange_ens</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">P</span> (<span class="id">P1</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">H</span> \* \[<span class="id">P</span> /\ <span class="id">P1</span> <span class="id">r</span>]))<br/>
+&nbsp;&nbsp;(<span class="id">ens_</span> \[<span class="id">P</span>];; <span class="id">ens_</span> <span class="id">H</span>;; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P1</span> <span class="id">r</span>])).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>. }<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_pure_conj1</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">P1</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> : <span class="id">val</span> =&gt; \[<span class="id">P</span> <span class="id">r</span> /\ <span class="id">P1</span>]))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">seq</span> (<span class="id">ens_</span> \[<span class="id">P1</span>]) (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> : <span class="id">val</span> =&gt; \[<span class="id">P</span> <span class="id">r</span>]))).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_float_ens_void</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">f2</span>)) (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">rs</span> <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span>* <span class="id">red_rs_float1</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_reassoc_ens_void</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">f2</span> <span class="id">fk</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">f2</span>) <span class="id">fk</span>) (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">bind</span> <span class="id">f2</span> <span class="id">fk</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span>* <span class="id">norm_bind_seq_assoc</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fbiabduction</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_req_transpose</span>; [ | <span class="id">applys</span> <span class="id">b_pts_single</span> ];<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_req_pure_l</span>; [ | <span class="id">reflexivity</span> ];<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_ens_empty</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">freduction</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">red_init</span>;<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">rewrite</span> <span class="id">red_extend</span>;<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">red_rs_sh_elim</span>.<br/>
+<br/>
+<br/>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">staged_norm_old</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_rs_all</span> <span class="id">norm_req_all</span> <span class="id">norm_seq_all_r</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_bind_req</span> <span class="id">norm_bind_seq_assoc</span> <span class="id">norm_bind_disj</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_bind_all_l</span> <span class="id">norm_bind_ex_l</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_ex_r</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rs_seq_ex_r</span><br/>
+&nbsp;&nbsp;<span class="id">norm_ens_pure_ex</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rs_all</span> <span class="id">norm_seq_all_r</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rs_ex</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_ens_pure_conj</span><br/>
+&nbsp;&nbsp;<span class="id">norm_ens_void_hstar_pure_l</span><br/>
+&nbsp;&nbsp;<span class="id">norm_ens_void_hstar_pure_r</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_rs_req</span> <span class="id">norm_rs_disj</span> <span class="id">red_rs_float1</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_rs_ens</span> <span class="id">norm_bind_val</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_seq_empty_l</span><br/>
+<br/>
+<span class="kwd">using</span> <span class="id">shiftfree</span> : <span class="id">staged_norm_old</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fsimpl_old</span> := <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">staged_norm_old</span>.<br/>
+<br/>
+<div class="doc">Automation
+  The set of tactics shows the general strategy/decomposiiton of proof steps.
+  - <span class="bracket"><span class="id">fsimpl</span></span>: simplify. This is in charge of implicitly establishing a normal form for the left side of a sequent, which is <span class="bracket">(<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;)* (<span class="id">ens_</span> <span class="id">H</span>;)? <span class="id">f</span></span>. Simplification generally involves: applying easy simplifying rewrites, moving assumptions as far back as possible (to facilitate lifting into metalogic), moving an ens to the beginning to serve as the "spatial context"/"symbolic execution state", moving shift-free things out of resets, moving defun to the beginning. Will not move quantiifers, leaving open the possibility of handling them via heuristics based on position.
+  - <span class="bracket"><span class="id">funfold2</span></span>: unfold anonymous functions or discard a defun
+  - <span class="bracket"><span class="id">fspecialize</span></span>, <span class="bracket"><span class="id">fdestruct</span></span>, <span class="bracket"><span class="id">fexists</span></span>, <span class="bracket"><span class="id">fintros</span></span>: these are unfortunately-named, but deal with quantifiers on both sides of entailments
+  - <span class="bracket"><span class="id">freduction</span></span>, <span class="bracket"><span class="id">fbiabduction</span></span>: for specific scenarios, where there is a shift inside a reset, or an ens followed by req
+  - <span class="bracket"><span class="id">fentailment</span></span>: bridges to metalogic
+  - <span class="bracket"><span class="id">fleft</span></span>, <span class="bracket"><span class="id">fright</span></span>: for disjunction
+</div>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">staged_forall_r</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id">red_init</span><br/>
+<span class="kwd">using</span> <span class="id">shiftfree</span> : <span class="id">staged_forall_r</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fintros_rew</span> := <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">staged_forall_r</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fintros</span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;<span class="id">fintros_rew</span>;<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_all_r</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">entl_all_r</span><br/>
+&nbsp;&nbsp;]; <span class="id">intros</span> <span class="id">x</span>.<br/>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">staged_exists_r</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id">red_init</span><br/>
+<span class="kwd">using</span> <span class="id">shiftfree</span> : <span class="id">staged_exists_r</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fexists_rew</span> := <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">staged_exists_r</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fexists</span> <span class="id">a</span> := <span class="id">fexists_rew</span>;<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">entl_ex_r</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">entl_seq_ex_r</span><br/>
+&nbsp;&nbsp;]; <span class="kwd">exists</span> <span class="id">a</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fexists_old</span> <span class="id">a</span> := <span class="id">fexists_rew</span>;<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_ex_r</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_seq_ex_r</span><br/>
+&nbsp;&nbsp;]; <span class="kwd">exists</span> <span class="id">a</span>.<br/>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">staged_exists_l</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id">norm_bind_ex_l</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_ex_r</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rs_seq_ex_r</span><br/>
+&nbsp;&nbsp;<span class="id">norm_ens_pure_ex</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rs_ex</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_ens_sl_ex</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_ens_sl_ex</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_ex_l</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_defun_ex</span><br/>
+<span class="kwd">using</span> <span class="id">shiftfree</span> : <span class="id">staged_exists_l</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fdestruct_rew</span> := <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">staged_exists_l</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fdestruct</span> <span class="id">a</span> := <span class="id">fdestruct_rew</span>;<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">entl_ex_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">entl_seq_ex_l</span><br/>
+&nbsp;&nbsp;]; <span class="id">intros</span> <span class="id">a</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fdestruct_old</span> <span class="id">a</span> := <span class="id">fdestruct_rew</span>;<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_ex_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_seq_ex_l</span><br/>
+&nbsp;&nbsp;]; <span class="id">intros</span> <span class="id">a</span>.<br/>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">staged_forall_l</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id">norm_bind_all_l</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rs_all</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_all_r</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rs_all</span><br/>
+&nbsp;&nbsp;<span class="id">norm_req_all</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_all_r</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_defun_all</span><br/>
+<span class="kwd">using</span> <span class="id">shiftfree</span> : <span class="id">staged_forall_l</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fspecialize_rew</span> := <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">staged_forall_l</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fspecialize</span> <span class="id">x</span> := <span class="id">fspecialize_rew</span>;<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">entl_all_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_all_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_seq_all_l</span><br/>
+&nbsp;&nbsp;]; <span class="kwd">exists</span> <span class="id">x</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_defun_out</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> <span class="id">fk</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">f2</span>) <span class="id">fk</span>) (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">bind</span> <span class="id">f2</span> <span class="id">fk</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span>* <span class="id">norm_bind_seq_assoc</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_ens_void_out</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> <span class="id">f2</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">f2</span>) (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">ens_</span> <span class="id">H</span>;; <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_ens</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">staged_defun_out</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id">norm_bind_defun_out</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rs_seq_defun_out</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_defun_ens_void_out</span><br/>
+<span class="kwd">using</span> <span class="id">shiftfree</span> : <span class="id">staged_defun_out</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">move_defun_out</span> := <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">staged_defun_out</span>.<br/>
+<br/>
+<br/>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">staged_defun_in</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_defun_rs</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_defun_bind_l</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_defun_ens_void</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_defun_req</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_defun_skip_ens_void</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_bind_seq_defun_ens</span><br/>
+&nbsp;&nbsp;<span class="id">norm_bind_rs_seq_defun_ens</span><br/>
+<br/>
+<span class="kwd">using</span> <span class="id">shiftfree</span> : <span class="id">staged_defun_in</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">funfold2</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">staged_defun_in</span>;<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_defun_unk</span>; <span class="id">move_defun_out</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_defun_discard</span> | <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_defun_discard_id</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_defun_discard1</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_defun_discard_id1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;]; <span class="id">jauto</span><br/>
+&nbsp;&nbsp;].<br/>
+<br/>
+<div class="doc">keep in sync with <span class="bracket"><span class="id">staged_defun_in</span></span> </div>
+<span class="kwd">Ltac</span> <span class="id">move_one_defun_in</span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">norm_seq_defun_rs</span> <span class="id">f</span>) |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">norm_seq_defun_bind_l</span> <span class="id">f</span>) |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">norm_seq_defun_ens_void</span> <span class="id">f</span>) |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">norm_seq_defun_req</span> <span class="id">f</span>) |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">norm_seq_defun_skip_ens_void</span> <span class="id">f</span>) |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">norm_bind_seq_defun_ens</span> <span class="id">f</span>) |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">norm_bind_rs_seq_defun_ens</span> <span class="id">f</span>)<br/>
+&nbsp;&nbsp;].<br/>
+<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">funfold3</span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="id">move_one_defun_in</span> <span class="id">f</span>;<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_defun_unk</span>; <span class="id">move_defun_out</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_defun_discard1</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_defun_discard_id1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;]; <span class="id">jauto</span><br/>
+&nbsp;&nbsp;].<br/>
+<br/>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">staged_sl_ens</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+&nbsp;&nbsp;<span class="id">norm_ens_pure_conj1</span><br/>
+&nbsp;&nbsp;<span class="id">norm_ens_pure_conj</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rearrange_ens</span><br/>
+&nbsp;&nbsp;<span class="id">norm_ens_void_hstar_pure_l</span><br/>
+&nbsp;&nbsp;<span class="id">norm_ens_void_hstar_pure_r</span><br/>
+<span class="kwd">using</span> <span class="id">shiftfree</span> : <span class="id">staged_sl_ens</span>.<br/>
+<br/>
+<br/>
+<span class="id">Create</span> <span class="id">HintDb</span> <span class="id">staged_norm</span>.<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_reassoc_ens_void</span><br/>
+&nbsp;&nbsp;<span class="id">norm_bind_req</span><br/>
+&nbsp;&nbsp;<span class="id">norm_bind_disj</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_rs_req</span><br/>
+&nbsp;&nbsp;<span class="id">norm_rs_disj</span><br/>
+&nbsp;&nbsp;<span class="id">norm_float_ens_void</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">norm_rs_ens</span><br/>
+&nbsp;&nbsp;<span class="id">norm_bind_val</span><br/>
+&nbsp;&nbsp;<span class="id">norm_seq_empty_l</span><br/>
+<br/>
+<span class="kwd">using</span> <span class="id">shiftfree</span> : <span class="id">staged_norm</span>.<br/>
+<span class="kwd">Ltac</span> <span class="id">fsimpl</span> := <span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">staged_norm</span> <span class="id">staged_sl_ens</span>.<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fentailment</span> :=<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_seq_ens_pure_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_seq_defun_ens_pure_l</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_seq_ens_void_pure_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_seq_defun_ens_void_pure_l</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_ens_single</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_req_req</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_defun_req_req</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_req_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_defun_req_l</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entl_req_r</span><br/>
+&nbsp;&nbsp;].<br/>
+<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fentailment_old</span> :=<br/>
+&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_seq_ens_pure_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_seq_defun_ens_pure_l</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_seq_ens_void_pure_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_seq_defun_ens_void_pure_l</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_ens_single</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_req_req</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_defun_req_req</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_req_l</span> |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_defun_req_l</span> |<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_req_r</span><br/>
+&nbsp;&nbsp;].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fleft</span> := <span class="id">first</span> [ <span class="id">apply</span> <span class="id">entl_seq_disj_r_l</span> | <span class="id">apply</span> <span class="id">entl_disj_r_l</span> ].<br/>
+<span class="kwd">Ltac</span> <span class="id">fright</span> := <span class="id">first</span> [ <span class="id">apply</span> <span class="id">entl_seq_disj_r_r</span> | <span class="id">apply</span> <span class="id">entl_disj_r_r</span> ].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fleft_old</span> := <span class="id">first</span> [ <span class="id">apply</span> <span class="id">ent_seq_disj_r_l</span> | <span class="id">apply</span> <span class="id">ent_disj_r_l</span> ].<br/>
+<span class="kwd">Ltac</span> <span class="id">fright_old</span> := <span class="id">first</span> [ <span class="id">apply</span> <span class="id">ent_seq_disj_r_r</span> | <span class="id">apply</span> <span class="id">ent_disj_r_r</span> ].<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>
