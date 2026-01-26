@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module ExtraTactics</title>
+<meta name="description" content="Documentation of Coq module ExtraTactics" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module ExtraTactics</h1>
+<div class="coq">
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"ok"</span> := <span class="id">intuition</span> <span class="id">auto</span>; <span class="id">try</span> <span class="id">easy</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">inv</span> <span class="id">H</span> := <span class="id">inversion</span> <span class="id">H</span>; <span class="id">clear</span> <span class="id">H</span>; <span class="id">subst</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">destr</span> <span class="id">H</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">H</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">ex</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; _) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">L</span> := <span class="id">fresh</span> <span class="id">x</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">R</span> := <span class="id">fresh</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span> <span class="kwd">as</span> [<span class="id">L</span> <span class="id">R</span>]; <span class="id">destr</span> <span class="id">R</span><br/>
+&nbsp;&nbsp;| _ /\ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">L</span> := <span class="id">fresh</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">R</span> := <span class="id">fresh</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span> <span class="kwd">as</span> [<span class="id">L</span> <span class="id">R</span>]; <span class="id">destr</span> <span class="id">L</span>; <span class="id">destr</span> <span class="id">R</span><br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">idtac</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">forward_gen</span> <span class="id">H</span> <span class="id">tac</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">type</span> <span class="id">of</span> <span class="id">H</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="kwd">forall</span> (_ : ?<span class="id">X</span>), _ =&gt; <span class="kwd">let</span> <span class="id">H'</span> := <span class="id">fresh</span> <span class="kwd">in</span> <span class="id">assert</span> (<span class="id">H'</span>:<span class="id">X</span>) ; [<span class="id">tac</span>|<span class="id">specialize</span> (<span class="id">H</span> <span class="id">H'</span>); <span class="id">clear</span> <span class="id">H'</span>]<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"forward"</span> <span class="id">constr</span>(<span class="id">H</span>) := <span class="id">forward_gen</span> <span class="id">H</span> <span class="id">ltac</span>:(<span class="id">idtac</span>).<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"forward"</span> <span class="id">constr</span>(<span class="id">H</span>) <span class="string">"by"</span> <span class="id">tactic</span>(<span class="id">tac</span>) := <span class="id">forward_gen</span> <span class="id">H</span> <span class="id">tac</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">exs</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">ex</span> _ =&gt; <span class="id">eexists</span>; <span class="id">exs</span><br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">idtac</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">vacuity</span> := <span class="id">false</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"vacuous"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">vacuity</span>;<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">H</span>: _ |- _ =&gt; <span class="id">solve</span> [<span class="id">inversion</span> <span class="id">H</span>]<br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">fail</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

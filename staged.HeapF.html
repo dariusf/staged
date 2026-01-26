@@ -1,0 +1,783 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module HeapF</title>
+<meta name="description" content="Documentation of Coq module HeapF" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module HeapF</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id">LibString</span> <span class="id">LibCore</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id">LibSepTLCbuffer</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="id">LibSepSimpl</span>.<br/>
+<br/>
+<span class="kwd">From</span> <span class="id">Staged</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">LibFmap</span> <span class="id">ExtraTactics</span>.<br/>
+<br/>
+<span class="kwd">Module</span> <span class="kwd">Type</span> <span class="id">Params</span>.<br/>
+<br/>
+<span class="kwd">Parameter</span> <span class="id">value</span> : <span class="kwd">Type</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id">Params</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Module</span> <span class="id">HeapSetup</span> (<span class="id">V</span> : <span class="id">Params</span>).<br/>
+<br/>
+<span class="kwd">Import</span> <span class="id">V</span>.<br/>
+<span class="id">Local</span> <span class="kwd">Notation</span> <span class="id">val</span> := <span class="id">V.value</span>.<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">loc</span> : <span class="kwd">Type</span> := <span class="id">nat</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">null</span> : <span class="id">loc</span> := 0%<span class="id">nat</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">heap</span> : <span class="kwd">Type</span> := <span class="id">fmap</span> <span class="id">loc</span> <span class="id">val</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"h1 \u h2"</span> := (<span class="id">Fmap.union</span> <span class="id">h1</span> <span class="id">h2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 37, <span class="id">right</span> <span class="id">associativity</span>).<br/>
+<br/>
+<br/>
+<h1> Heap Predicates </h1>
+<br/>
+<div class="doc">We next define heap predicates and establish their properties. All this
+    material is wrapped in a module, allowing us to instantiate the functor from
+    chapter <span class="bracket"><span class="id">LibSepSimpl</span></span> that defines the tactic <span class="bracket"><span class="id">xsimpl</span></span>. </div>
+<span class="kwd">Module</span> <span class="id">SepSimplArgs</span>.<br/>
+<br/>
+<h2> Hprop and Entailment </h2>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">hprop_scope</span>.<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">hprop_scope</span>.<br/>
+<br/>
+<div class="doc">The type of heap predicates is named <span class="bracket"><span class="id">hprop</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hprop</span> := <span class="id">heap</span> -&gt; <span class="kwd">Prop</span>.<br/>
+<br/>
+<div class="doc">Implicit types for meta-variables. </div>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span> : <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">H</span> : <span class="id">hprop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">Q</span> : <span class="id">val</span>-&gt;<span class="id">hprop</span>.<br/>
+<br/>
+<div class="doc">Entailment for heap predicates, written <span class="bracket"><span class="id">H1</span> ==&gt; <span class="id">H2</span></span>. This entailment
+    is linear. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">himpl</span> (<span class="id">H1</span> <span class="id">H2</span>:<span class="id">hprop</span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">h</span>, <span class="id">H1</span> <span class="id">h</span> -&gt; <span class="id">H2</span> <span class="id">h</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"H1 ==&gt; H2"</span> := (<span class="id">himpl</span> <span class="id">H1</span> <span class="id">H2</span>) (<span class="kwd">at</span> <span class="id">level</span> 55) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<div class="doc">Entailment between postconditions, written <span class="bracket"><span class="id">Q1</span> ===&gt; <span class="id">Q2</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">qimpl</span> <span class="id">A</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> (<span class="id">v</span>:<span class="id">A</span>), <span class="id">Q1</span> <span class="id">v</span> ==&gt; <span class="id">Q2</span> <span class="id">v</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"Q1 ===&gt; Q2"</span> := (<span class="id">qimpl</span> <span class="id">Q1</span> <span class="id">Q2</span>) (<span class="kwd">at</span> <span class="id">level</span> 55) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<h2> Definition of Heap Predicates </h2>
+<br/>
+<div class="doc">The core heap predicates are defined next, together with the
+    associated notation:
+    - <span class="bracket">\[]</span> denotes the empty heap predicate
+    - <span class="bracket">\[<span class="id">P</span>]</span> denotes a pure fact
+    - <span class="bracket">\<span class="id">Top</span></span> denotes the true heap predicate (affine)
+    - <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span> denotes a singleton heap
+    - <span class="bracket"><span class="id">H1</span> \* <span class="id">H2</span></span> denotes the separating conjunction
+    - <span class="bracket"><span class="id">Q1</span> \*+ <span class="id">H2</span></span> denotes the separating conjunction extending a postcondition
+    - <span class="bracket">\<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">H</span></span> denotes an existential quantifier
+    - <span class="bracket">\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">H</span></span> denotes a universal quantifier
+    - <span class="bracket"><span class="id">H1</span> \-* <span class="id">H2</span></span> denotes a magic wand between heap predicates
+    - <span class="bracket"><span class="id">Q1</span> \--* <span class="id">Q2</span></span> denotes a magic wand between postconditions. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hempty</span> : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; (<span class="id">h</span> = <span class="id">Fmap.empty</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hsingle</span> (<span class="id">p</span>:<span class="id">loc</span>) (<span class="id">v</span>:<span class="id">val</span>) : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; (<span class="id">h</span> = <span class="id">Fmap.single</span> <span class="id">p</span> <span class="id">v</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hstar</span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id">hprop</span>) : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">exists</span> <span class="id">h1</span> <span class="id">h2</span>, <span class="id">H1</span> <span class="id">h1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id">H2</span> <span class="id">h2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id">Fmap.disjoint</span> <span class="id">h1</span> <span class="id">h2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/\ <span class="id">h</span> = <span class="id">Fmap.union</span> <span class="id">h1</span> <span class="id">h2</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hexists</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hforall</span> (<span class="id">A</span> : <span class="kwd">Type</span>) (<span class="id">J</span> : <span class="id">A</span> -&gt; <span class="id">hprop</span>) : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\[]"</span> := (<span class="id">hempty</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"p '~~&gt;' v"</span> := (<span class="id">hsingle</span> <span class="id">p</span> <span class="id">v</span>) (<span class="kwd">at</span> <span class="id">level</span> 32) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"H1 '\*' H2"</span> := (<span class="id">hstar</span> <span class="id">H1</span> <span class="id">H2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 41, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'\exists' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">hexists</span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id">hexists</span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '\exists' '/ '  x1  ..  xn , '/ '  H ']'"</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'\forall' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">hforall</span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id">hforall</span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '\forall' '/ '  x1  ..  xn , '/ '  H ']'"</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<div class="doc">The remaining operators are defined in terms of the preivous above,
+    rather than directly as functions over heaps. Doing so reduces the
+    amount of proofs, by allowing to better leverage the tactic <span class="bracket"><span class="id">xsimpl</span></span>. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hpure</span> (<span class="id">P</span>:<span class="kwd">Prop</span>) : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">p</span>:<span class="id">P</span>), \[].<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">htop</span> : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> (<span class="id">H</span>:<span class="id">hprop</span>), <span class="id">H</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hwand</span> (<span class="id">H1</span> <span class="id">H2</span> : <span class="id">hprop</span>) : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">exists</span> <span class="id">H0</span>, <span class="id">H0</span> \* <span class="id">hpure</span> ((<span class="id">H1</span> \* <span class="id">H0</span>) ==&gt; <span class="id">H2</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">qwand</span> <span class="id">A</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;\<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">hwand</span> (<span class="id">Q1</span> <span class="id">x</span>) (<span class="id">Q2</span> <span class="id">x</span>).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\[ P ]"</span> := (<span class="id">hpure</span> <span class="id">P</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 0, <span class="id">format</span> <span class="string">"\[ P ]"</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\Top"</span> := (<span class="id">htop</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"Q \*+ H"</span> := (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">hstar</span> (<span class="id">Q</span> <span class="id">x</span>) <span class="id">H</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 40) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"H1 \-* H2"</span> := (<span class="id">hwand</span> <span class="id">H1</span> <span class="id">H2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 43, <span class="id">right</span> <span class="id">associativity</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"Q1 \--* Q2"</span> := (<span class="id">qwand</span> <span class="id">Q1</span> <span class="id">Q2</span>)<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 43) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<h2> Basic Properties of Separation Logic Operators </h2>
+<br/>
+<h3> Tactic for Automation </h3>
+<br/>
+<div class="doc">We set up <span class="bracket"><span class="id">auto</span></span> to process goals of the form <span class="bracket"><span class="id">h1</span> = <span class="id">h2</span></span> by calling
+    <span class="bracket"><span class="id">fmap_eq</span></span>, which proves equality modulo associativity and commutativity. </div>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Extern</span> 1 (_ = _ :&gt; <span class="id">heap</span>) =&gt; <span class="id">fmap_eq</span>.<br/>
+<br/>
+<div class="doc">We also set up <span class="bracket"><span class="id">auto</span></span> to process goals of the form <span class="bracket"><span class="id">Fmap.disjoint</span> <span class="id">h1</span> <span class="id">h2</span></span>
+    by calling the tactic <span class="bracket"><span class="id">fmap_disjoint</span></span>, which essentially normalizes all
+    disjointness goals and hypotheses, split all conjunctions, and invokes
+    proof search with a base of hints specified in <span class="bracket"><span class="id">LibSepFmap.v</span></span>. </div>
+<br/>
+<span class="kwd">Import</span> <span class="id">Fmap.DisjointHints</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"fmap_disjoint_pre"</span> :=<br/>
+&nbsp;&nbsp;<span class="id">subst</span>; <span class="id">rew_disjoint</span>; <span class="id">jauto_set</span>.<br/>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Extern</span> 1 (<span class="id">Fmap.disjoint</span> _ _) =&gt; <span class="id">fmap_disjoint_pre</span>.<br/>
+<br/>
+<h3> Properties of <span class="bracket"><span class="id">himpl</span></span> and <span class="bracket"><span class="id">qimpl</span></span> </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_refl</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">himpl_refl</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_trans</span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> ==&gt; <span class="id">H2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H2</span> ==&gt; <span class="id">H3</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> ==&gt; <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">unfolds</span>* <span class="id">himpl</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_trans_r</span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H3</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span>* <span class="id">himpl_trans</span> <span class="id">M2</span> <span class="id">M1</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_antisym</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> ==&gt; <span class="id">H2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H2</span> ==&gt; <span class="id">H1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> = <span class="id">H2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id">pred_ext_1</span>. <span class="id">intros</span> <span class="id">h</span>. <span class="id">iff</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hprop_op_comm</span> : <span class="kwd">forall</span> (<span class="id">op</span>:<span class="id">hprop</span>-&gt;<span class="id">hprop</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>, <span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span> ==&gt; <span class="id">op</span> <span class="id">H2</span> <span class="id">H1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>, <span class="id">op</span> <span class="id">H1</span> <span class="id">H2</span> = <span class="id">op</span> <span class="id">H2</span> <span class="id">H1</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id">himpl_antisym</span>; <span class="id">applys</span> <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">qimpl_refl</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">Q</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;<span class="id">Q</span> ===&gt; <span class="id">Q</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">unfolds</span>*. Qed.</div></details>
+<br/>
+#[<span class="id">global</span>] <span class="kwd">Hint</span> <span class="id">Resolve</span> <span class="id">qimpl_refl</span>.<br/>
+<br/>
+<h3> Properties of <span class="bracket"><span class="id">hempty</span></span> </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hempty_intro</span> :<br/>
+&nbsp;&nbsp;\[] <span class="id">Fmap.empty</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfolds</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hempty_inv</span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\[] <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h</span> = <span class="id">Fmap.empty</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<h3> Properties of <span class="bracket"><span class="id">hstar</span></span> </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_intro</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">h1</span> <span class="id">h2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> <span class="id">h1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.disjoint</span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) (<span class="id">Fmap.union</span> <span class="id">h1</span> <span class="id">h2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="kwd">exists</span>~ <span class="id">h1</span> <span class="id">h2</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_inv</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">h1</span> <span class="id">h2</span>, <span class="id">H1</span> <span class="id">h1</span> /\ <span class="id">H2</span> <span class="id">h2</span> /\ <span class="id">Fmap.disjoint</span> <span class="id">h1</span> <span class="id">h2</span> /\ <span class="id">h</span> = <span class="id">Fmap.union</span> <span class="id">h1</span> <span class="id">h2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_comm</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H2</span> = <span class="id">H2</span> \* <span class="id">H1</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">hprop_op_comm</span>. <span class="id">unfold</span> <span class="id">hprop</span>, <span class="id">hstar</span>. <span class="id">intros</span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">h</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">rewrite</span>~ <span class="id">Fmap.union_comm_of_disjoint</span> <span class="kwd">in</span> <span class="id">U</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span>* <span class="id">h2</span> <span class="id">h1</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_assoc</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) \* <span class="id">H3</span> = <span class="id">H1</span> \* (<span class="id">H2</span> \* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>. <span class="id">applys</span> <span class="id">himpl_antisym</span>; <span class="id">intros</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h'</span>&amp;<span class="id">h3</span>&amp;(<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M3</span>&amp;<span class="id">M4</span>&amp;<span class="id">D'</span>&amp;<span class="id">U'</span>)&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">subst</span> <span class="id">h'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">h1</span> (<span class="id">h2</span> \+ <span class="id">h3</span>). <span class="id">splits</span>~. { <span class="id">applys</span>* <span class="id">hstar_intro</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h1</span>&amp;<span class="id">h'</span>&amp;<span class="id">M1</span>&amp;(<span class="id">h2</span>&amp;<span class="id">h3</span>&amp;<span class="id">M3</span>&amp;<span class="id">M4</span>&amp;<span class="id">D'</span>&amp;<span class="id">U'</span>)&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">subst</span> <span class="id">h'</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">h1</span> \+ <span class="id">h2</span>) <span class="id">h3</span>. <span class="id">splits</span>~. { <span class="id">applys</span>* <span class="id">hstar_intro</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hempty_l</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;\[] \* <span class="id">H</span> = <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">himpl_antisym</span>; <span class="id">intros</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">forwards</span> <span class="id">E</span>: <span class="id">hempty_inv</span> <span class="id">M1</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span>~ <span class="id">Fmap.union_empty_l</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">M</span>. <span class="kwd">exists</span> (<span class="id">Fmap.empty</span>:<span class="id">heap</span>) <span class="id">h</span>. <span class="id">splits</span>~. { <span class="id">applys</span> <span class="id">hempty_intro</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hempty_r</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> \* \[] = <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">neutral_r_of_comm_neutral_l</span>. <span class="id">applys</span>~ <span class="id">hstar_comm</span>. <span class="id">applys</span>~ <span class="id">hstar_hempty_l</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hexists</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="id">hexists</span> <span class="id">J</span>) \* <span class="id">H</span> = <span class="id">hexists</span> (<span class="kwd">fun</span> <span class="id">x</span> =&gt; (<span class="id">J</span> <span class="id">x</span>) \* <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">himpl_antisym</span>; <span class="id">intros</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;(<span class="id">x</span>&amp;<span class="id">M1</span>)&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="kwd">exists</span>~ <span class="id">x</span> <span class="id">h1</span> <span class="id">h2</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> (<span class="id">x</span>&amp;(<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>)). <span class="kwd">exists</span> <span class="id">h1</span> <span class="id">h2</span>. <span class="id">splits</span>~. { <span class="kwd">exists</span>~ <span class="id">x</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hforall</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">hforall</span> <span class="id">J</span>) \* <span class="id">H</span> ==&gt; <span class="id">hforall</span> (<span class="id">J</span> \*+ <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">M</span>. <span class="id">destruct</span> <span class="id">M</span> <span class="kwd">as</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">M1</span>&amp;<span class="id">M2</span>&amp;<span class="id">D</span>&amp;<span class="id">U</span>). <span class="id">intros</span> <span class="id">x</span>. <span class="kwd">exists</span>~ <span class="id">h1</span> <span class="id">h2</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_frame_l</span> : <span class="kwd">forall</span> <span class="id">H2</span> <span class="id">H1</span> <span class="id">H1'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H1'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1'</span> \* <span class="id">H2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">W</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;?). <span class="kwd">exists</span>* <span class="id">h1</span> <span class="id">h2</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_frame_r</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H2'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H2'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1</span> \* <span class="id">H2'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">do</span> 2 <span class="id">rewrite</span> (@<span class="id">hstar_comm</span> <span class="id">H1</span>). <span class="id">applys</span>~ <span class="id">himpl_frame_l</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_frame_lr</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H1'</span> <span class="id">H2</span> <span class="id">H2'</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H1'</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H2'</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) ==&gt; (<span class="id">H1'</span> \* <span class="id">H2'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id">himpl_trans</span>. <span class="id">applys</span>~ <span class="id">himpl_frame_l</span> <span class="id">M1</span>. <span class="id">applys</span>~ <span class="id">himpl_frame_r</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hstar_trans_l</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> \* <span class="id">H3</span> ==&gt; <span class="id">H4</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* <span class="id">H3</span> ==&gt; <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id">himpl_trans_r</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id">himpl_frame_l</span> <span class="id">M1</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hstar_trans_r</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span> <span class="id">H4</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H3</span> \* <span class="id">H2</span> ==&gt; <span class="id">H4</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H3</span> \* <span class="id">H1</span> ==&gt; <span class="id">H4</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M1</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id">himpl_trans_r</span> <span class="id">M2</span>. <span class="id">applys</span> <span class="id">himpl_frame_r</span> <span class="id">M1</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3>  Properties of <span class="bracket"><span class="id">hpure</span></span> </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hpure_intro</span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;\[<span class="id">P</span>] <span class="id">Fmap.empty</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="kwd">exists</span> <span class="id">M</span>. <span class="id">unfolds</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hpure_inv</span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\[<span class="id">P</span>] <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> /\ <span class="id">h</span> = <span class="id">Fmap.empty</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> (<span class="id">p</span>&amp;<span class="id">M</span>). <span class="id">split</span>~. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hpure_l</span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \* <span class="id">H</span>) <span class="id">h</span> = (<span class="id">P</span> /\ <span class="id">H</span> <span class="id">h</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id">prop_ext</span>. <span class="id">unfold</span> <span class="id">hpure</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_hexists</span>. <span class="id">rewrite</span>* <span class="id">hstar_hempty_l</span>.<br/>
+&nbsp;&nbsp;<span class="id">iff</span> (<span class="id">p</span>&amp;<span class="id">M</span>) (<span class="id">p</span>&amp;<span class="id">M</span>). { <span class="id">split</span>~. } { <span class="kwd">exists</span>~ <span class="id">p</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hpure_r</span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H</span> \* \[<span class="id">P</span>]) <span class="id">h</span> = (<span class="id">H</span> <span class="id">h</span> /\ <span class="id">P</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id">hstar_comm</span>. <span class="id">rewrite</span> <span class="id">hstar_hpure_l</span>. <span class="id">apply</span>* <span class="id">prop_ext</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hstar_hpure_r</span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span> <span class="id">H'</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id">H'</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (\[<span class="id">P</span>] \* <span class="id">H'</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">HP</span> <span class="id">W</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">K</span>. <span class="id">rewrite</span>* <span class="id">hstar_hpure_l</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hpure_inv_hempty</span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\[<span class="id">P</span>] <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> /\ \[] <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">rewrite</span> &lt;- <span class="id">hstar_hpure_l</span>. <span class="id">rewrite</span>~ <span class="id">hstar_hempty_r</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hpure_intro_hempty</span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\[] <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;\[<span class="id">P</span>] <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span> <span class="id">N</span>. <span class="id">rewrite</span> &lt;- (<span class="id">hstar_hempty_l</span> \[<span class="id">P</span>]). <span class="id">rewrite</span>~ <span class="id">hstar_hpure_r</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hempty_hpure</span> : <span class="kwd">forall</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;\[] ==&gt; \[<span class="id">P</span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">HP</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">Hh</span>. <span class="id">applys</span>* <span class="id">hpure_intro_hempty</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hstar_hpure_l</span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span> <span class="id">H'</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">H</span> ==&gt; <span class="id">H'</span>) -&gt;<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \* <span class="id">H</span>) ==&gt; <span class="id">H'</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W</span> <span class="id">Hh</span>. <span class="id">rewrite</span> <span class="id">hstar_hpure_l</span> <span class="kwd">in</span> <span class="id">Hh</span>. <span class="id">applys</span>* <span class="id">W</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hempty_eq_hpure_true</span> :<br/>
+&nbsp;&nbsp;\[] = \[<span class="id">True</span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">himpl_antisym</span>; <span class="id">intros</span> <span class="id">h</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">hpure_intro_hempty</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">forwards</span>*: <span class="id">hpure_inv_hempty</span> <span class="id">M</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hfalse_hstar_any</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;\[<span class="id">False</span>] \* <span class="id">H</span> = \[<span class="id">False</span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">himpl_antisym</span>; <span class="id">intros</span> <span class="id">h</span>; <span class="id">rewrite</span> <span class="id">hstar_hpure_l</span>; <span class="id">intros</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">false</span>*. } { <span class="id">lets</span>: <span class="id">hpure_inv_hempty</span> <span class="id">M</span>. <span class="id">false</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<h3> Properties of <span class="bracket"><span class="id">hexists</span></span> </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hexists_intro</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id">J</span> <span class="id">x</span> <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">hexists</span> <span class="id">J</span>) <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="kwd">exists</span>~ <span class="id">x</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hexists_inv</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="id">hexists</span> <span class="id">J</span>) <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">destruct</span> <span class="id">H</span> <span class="kwd">as</span> [<span class="id">x</span> <span class="id">H</span>]. <span class="kwd">exists</span>~ <span class="id">x</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hexists_l</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">H</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> ==&gt; <span class="id">H</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">hexists</span> <span class="id">J</span>) ==&gt; <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">W</span>. <span class="id">intros</span> <span class="id">h</span> (<span class="id">x</span>&amp;<span class="id">Hh</span>). <span class="id">applys</span>* <span class="id">W</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hexists_r</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">x</span>:<span class="id">A</span>) <span class="id">H</span> <span class="id">J</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H</span> ==&gt; <span class="id">J</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (<span class="id">hexists</span> <span class="id">J</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">W</span>. <span class="id">intros</span> <span class="id">h</span>. <span class="kwd">exists</span> <span class="id">x</span>. <span class="id">apply</span>~ <span class="id">W</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hexists</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J1</span> <span class="id">J2</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;<span class="id">J1</span> ===&gt; <span class="id">J2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">hexists</span> <span class="id">J1</span> ==&gt; <span class="id">hexists</span> <span class="id">J2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W</span>. <span class="id">applys</span> <span class="id">himpl_hexists_l</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">applys</span> <span class="id">himpl_hexists_r</span> <span class="id">W</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> Properties of <span class="bracket"><span class="id">hforall</span></span> </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hforall_intro</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">hforall</span> <span class="id">J</span>) <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span>* <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hforall_inv</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="id">hforall</span> <span class="id">J</span>) <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">J</span> <span class="id">x</span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span>* <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hforall_r</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">x</span>, <span class="id">H</span> ==&gt; <span class="id">J</span> <span class="id">x</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (<span class="id">hforall</span> <span class="id">J</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">Hh</span> <span class="id">x</span>. <span class="id">apply</span>~ <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hforall_l</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">x</span> (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(<span class="id">J</span> <span class="id">x</span> ==&gt; <span class="id">H</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">hforall</span> <span class="id">J</span>) ==&gt; <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">Hh</span>. <span class="id">apply</span>~ <span class="id">M</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hforall_specialize</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">J</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">hforall</span> <span class="id">J</span>) ==&gt; (<span class="id">J</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span>* <span class="id">himpl_hforall_l</span> <span class="id">x</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hforall</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">J1</span> <span class="id">J2</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;<span class="id">J1</span> ===&gt; <span class="id">J2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">hforall</span> <span class="id">J1</span> ==&gt; <span class="id">hforall</span> <span class="id">J2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">W</span>. <span class="id">applys</span> <span class="id">himpl_hforall_r</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">applys</span> <span class="id">himpl_hforall_l</span> <span class="id">W</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> Properties of <span class="bracket"><span class="id">hwand</span></span> </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hwand_equiv</span> : <span class="kwd">forall</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H0</span> ==&gt; <span class="id">H1</span> \-* <span class="id">H2</span>) &lt;-&gt; (<span class="id">H1</span> \* <span class="id">H0</span> ==&gt; <span class="id">H2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">hwand</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id">hstar_comm</span>. <span class="id">applys</span> <span class="id">himpl_hstar_trans_l</span> (<span class="id">rm</span> <span class="id">M</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_hexists</span>. <span class="id">applys</span> <span class="id">himpl_hexists_l</span>. <span class="id">intros</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id">hstar_comm</span> <span class="id">H</span>). <span class="id">rewrite</span> <span class="id">hstar_assoc</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id">hstar_comm</span> <span class="id">H</span> <span class="id">H1</span>). <span class="id">applys</span>~ <span class="id">himpl_hstar_hpure_l</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">himpl_hexists_r</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id">hstar_hempty_r</span> <span class="id">H0</span>) <span class="kwd">at</span> 1.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">himpl_frame_r</span>. <span class="id">applys</span> <span class="id">himpl_hempty_hpure</span> <span class="id">M</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hwand_r</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H2</span> \* <span class="id">H1</span> ==&gt; <span class="id">H3</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; (<span class="id">H2</span> \-* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">rewrite</span>~ <span class="id">hwand_equiv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hwand_r_inv</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; (<span class="id">H2</span> \-* <span class="id">H3</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> \* <span class="id">H1</span> ==&gt; <span class="id">H3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">rewrite</span>~ &lt;- <span class="id">hwand_equiv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hwand_cancel</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \* (<span class="id">H1</span> \-* <span class="id">H2</span>) ==&gt; <span class="id">H2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span> <span class="id">himpl_hwand_r_inv</span>. <span class="id">applys</span> <span class="id">himpl_refl</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id">hwand_cancel</span> : <span class="id">clear</span> <span class="id">implicits</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hempty_hwand_same</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;\[] ==&gt; (<span class="id">H</span> \-* <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">apply</span> <span class="id">himpl_hwand_r</span>. <span class="id">rewrite</span>~ <span class="id">hstar_hempty_r</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hwand_hempty_l</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;(\[] \-* <span class="id">H</span>) = <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">himpl_antisym</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> &lt;- <span class="id">hstar_hempty_l</span> <span class="kwd">at</span> 1. <span class="id">applys</span> <span class="id">hwand_cancel</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id">hwand_equiv</span>. <span class="id">rewrite</span>~ <span class="id">hstar_hempty_l</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hwand_hpure_l</span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt;<br/>
+&nbsp;&nbsp;(\[<span class="id">P</span>] \-* <span class="id">H</span>) = <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">HP</span>. <span class="id">applys</span> <span class="id">himpl_antisym</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">lets</span> <span class="id">K</span>: <span class="id">hwand_cancel</span> \[<span class="id">P</span>] <span class="id">H</span>. <span class="id">applys</span> <span class="id">himpl_trans_r</span> <span class="id">K</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">himpl_hstar_hpure_r</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> <span class="id">hwand_equiv</span>. <span class="id">applys</span>* <span class="id">himpl_hstar_hpure_l</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hwand_curry</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) \-* <span class="id">H3</span> ==&gt; <span class="id">H1</span> \-* (<span class="id">H2</span> \-* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id">himpl_hwand_r</span>. <span class="id">apply</span> <span class="id">himpl_hwand_r</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">hstar_assoc</span>. <span class="id">rewrite</span> (<span class="id">hstar_comm</span> <span class="id">H1</span> <span class="id">H2</span>).<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">hwand_cancel</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hwand_uncurry</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> \-* (<span class="id">H2</span> \-* <span class="id">H3</span>) ==&gt; (<span class="id">H1</span> \* <span class="id">H2</span>) \-* <span class="id">H3</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id">hwand_equiv</span>. <span class="id">rewrite</span> (<span class="id">hstar_comm</span> <span class="id">H1</span> <span class="id">H2</span>).<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_assoc</span>. <span class="id">applys</span> <span class="id">himpl_hstar_trans_r</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">hwand_cancel</span>. } { <span class="id">applys</span> <span class="id">hwand_cancel</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hwand_curry_eq</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \* <span class="id">H2</span>) \-* <span class="id">H3</span> = <span class="id">H1</span> \-* (<span class="id">H2</span> \-* <span class="id">H3</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">himpl_antisym</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">hwand_curry</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">hwand_uncurry</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hwand_inv</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">H1</span> \-* <span class="id">H2</span>) <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H1</span> <span class="id">h1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.disjoint</span> <span class="id">h1</span> <span class="id">h2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> (<span class="id">h1</span> \<span class="id">u</span> <span class="id">h2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M2</span> <span class="id">M1</span> <span class="id">D</span>. <span class="id">unfolds</span> <span class="id">hwand</span>. <span class="id">lets</span> (<span class="id">H0</span>&amp;<span class="id">M3</span>): <span class="id">hexists_inv</span> <span class="id">M2</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span> (<span class="id">h0</span>&amp;<span class="id">h3</span>&amp;<span class="id">P1</span>&amp;<span class="id">P3</span>&amp;<span class="id">D'</span>&amp;<span class="id">U</span>): <span class="id">hstar_inv</span> <span class="id">M3</span>. <span class="id">lets</span> (<span class="id">P4</span>&amp;<span class="id">E3</span>): <span class="id">hpure_inv</span> <span class="id">P3</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span> <span class="id">h2</span> <span class="id">h3</span>. <span class="id">rewrite</span> <span class="id">union_empty_r</span> <span class="kwd">in</span> *. <span class="id">applys</span> <span class="id">P4</span>. <span class="id">applys</span>* <span class="id">hstar_intro</span>.<br/>
+Qed.</div></details>
+<br/>
+<h3> Properties of qwand </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">qwand_equiv</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">A</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (<span class="id">Q1</span> \--* <span class="id">Q2</span>) &lt;-&gt; (<span class="id">Q1</span> \*+ <span class="id">H</span>) ===&gt; <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">qwand</span>. <span class="id">iff</span> <span class="id">M</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> <span class="id">x</span>. <span class="id">rewrite</span> <span class="id">hstar_comm</span>. <span class="id">applys</span> <span class="id">himpl_hstar_trans_l</span> (<span class="id">rm</span> <span class="id">M</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">himpl_trans</span>. <span class="id">applys</span> <span class="id">hstar_hforall</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">himpl_hforall_l</span> <span class="id">x</span>. <span class="id">rewrite</span> <span class="id">hstar_comm</span>. <span class="id">applys</span> <span class="id">hwand_cancel</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">himpl_hforall_r</span>. <span class="id">intros</span> <span class="id">x</span>. <span class="id">rewrite</span>* <span class="id">hwand_equiv</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">qwand_cancel</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ (<span class="id">Q1</span> \--* <span class="id">Q2</span>) ===&gt; <span class="id">Q2</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">rewrite</span> &lt;- <span class="id">qwand_equiv</span>. <span class="id">applys</span> <span class="id">qimpl_refl</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_qwand_r</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> \*+ <span class="id">H</span> ===&gt; <span class="id">Q2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; (<span class="id">Q1</span> \--* <span class="id">Q2</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">rewrite</span>~ <span class="id">qwand_equiv</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id">himpl_qwand_r</span> [<span class="id">A</span>].<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">qwand_specialize</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;(<span class="id">Q1</span> \--* <span class="id">Q2</span>) ==&gt; (<span class="id">Q1</span> <span class="id">x</span> \-* <span class="id">Q2</span> <span class="id">x</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">applys</span>* <span class="id">himpl_hforall_l</span> <span class="id">x</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id">qwand_specialize</span> [ <span class="id">A</span> ].<br/>
+<br/>
+<h3> Properties of <span class="bracket"><span class="id">htop</span></span> </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">htop_intro</span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;\<span class="id">Top</span> <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="kwd">exists</span>~ (=<span class="id">h</span>). Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_htop_r</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; \<span class="id">Top</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">intros</span> <span class="id">h</span> <span class="id">Hh</span>. <span class="id">applys</span>* <span class="id">htop_intro</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">htop_eq</span> :<br/>
+&nbsp;&nbsp;\<span class="id">Top</span> = (\<span class="kwd">exists</span> <span class="id">H</span>, <span class="id">H</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_htop_htop</span> :<br/>
+&nbsp;&nbsp;\<span class="id">Top</span> \* \<span class="id">Top</span> = \<span class="id">Top</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">himpl_antisym</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">himpl_htop_r</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">rewrite</span> &lt;- <span class="id">hstar_hempty_r</span> <span class="kwd">at</span> 1. <span class="id">applys</span> <span class="id">himpl_frame_r</span>. <span class="id">applys</span> <span class="id">himpl_htop_r</span>. }<br/>
+Qed.</div></details>
+<br/>
+<h3> Properties of <span class="bracket"><span class="id">hsingle</span></span> </h3>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hsingle_intro</span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>) (<span class="id">Fmap.single</span> <span class="id">p</span> <span class="id">v</span>).<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">intros</span>. <span class="id">hnfs</span>*. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hsingle_inv</span>: <span class="kwd">forall</span> <span class="id">p</span> <span class="id">v</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">v</span>) <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">h</span> = <span class="id">Fmap.single</span> <span class="id">p</span> <span class="id">v</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hsingle_same_loc</span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">w1</span> <span class="id">w2</span>,<br/>
+&nbsp;&nbsp;(<span class="id">p</span> ~~&gt; <span class="id">w1</span>) \* (<span class="id">p</span> ~~&gt; <span class="id">w2</span>) ==&gt; \[<span class="id">False</span>].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id">hsingle</span>. <span class="id">intros</span> <span class="id">h</span> (<span class="id">h1</span>&amp;<span class="id">h2</span>&amp;<span class="id">E1</span>&amp;<span class="id">E2</span>&amp;<span class="id">D</span>&amp;<span class="id">E</span>). <span class="id">false</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">applys</span>* <span class="id">Fmap.disjoint_single_single_same_inv</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Arguments</span> <span class="id">hstar_hsingle_same_loc</span> : <span class="id">clear</span> <span class="id">implicits</span>.<br/>
+<br/>
+<h3> Definition and Properties of <span class="bracket"><span class="id">haffine</span></span> and <span class="bracket"><span class="id">hgc</span></span> </h3>
+<br/>
+<span class="kwd">Definition</span> <span class="id">haffine</span> (<span class="id">H</span>:<span class="id">hprop</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">True</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">haffine_hany</span> : <span class="kwd">forall</span> (<span class="id">H</span>:<span class="id">hprop</span>),<br/>
+&nbsp;&nbsp;<span class="id">haffine</span> <span class="id">H</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">unfold</span> <span class="id">haffine</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">haffine_hempty</span> :<br/>
+&nbsp;&nbsp;<span class="id">haffine</span> \[].<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">applys</span> <span class="id">haffine_hany</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hgc</span> := <br/>
+&nbsp;&nbsp;<span class="id">htop</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"\GC"</span> := (<span class="id">hgc</span>) : <span class="id">hprop_scope</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">haffine_hgc</span> :<br/>
+&nbsp;&nbsp;<span class="id">haffine</span> \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">applys</span> <span class="id">haffine_hany</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">himpl_hgc_r</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">haffine</span> <span class="id">H</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H</span> ==&gt; \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id">himpl_htop_r</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hgc_hgc</span> :<br/>
+&nbsp;&nbsp;\<span class="id">GC</span> \* \<span class="id">GC</span> = \<span class="id">GC</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>. <span class="id">applys</span> <span class="id">hstar_htop_htop</span>. Qed.</div></details>
+<br/>
+<h3> Functor Instantiation to Obtain <span class="bracket"><span class="id">xsimpl</span></span> </h3>
+<br/>
+<span class="kwd">End</span> <span class="id">SepSimplArgs</span>.<br/>
+<br/>
+<div class="doc">We are now ready to instantiate the functor that defines <span class="bracket"><span class="id">xsimpl</span></span>.
+    Demos of <span class="bracket"><span class="id">xsimpl</span></span> are presented in chapter <span class="bracket"><span class="id">Himpl.v</span></span>. </div>
+<br/>
+<span class="kwd">Module</span> <span class="kwd">Export</span> <span class="id">HS</span> := <span class="id">LibSepSimpl.XsimplSetup</span>(<span class="id">SepSimplArgs</span>).<br/>
+<br/>
+<span class="kwd">Export</span> <span class="id">SepSimplArgs</span>.<br/>
+<br/>
+<div class="doc">From now on, all operators have opaque definitions. </div>
+<br/>
+<span class="id">Global</span> <span class="kwd">Opaque</span> <span class="id">hempty</span> <span class="id">hpure</span> <span class="id">hstar</span> <span class="id">hsingle</span> <span class="id">hexists</span> <span class="id">hforall</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">hwand</span> <span class="id">qwand</span> <span class="id">htop</span> <span class="id">hgc</span> <span class="id">haffine</span>.<br/>
+<br/>
+<div class="doc">At this point, the tactic <span class="bracket"><span class="id">xsimpl</span></span> is defined. There remains to customize
+    the tactic so that it recognizes the predicate <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span> in a special way
+    when performing simplifications. </div>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xsimpl_hook_hsingle</span> <span class="id">p</span> <span class="id">v</span></span> operates as part of <span class="bracket"><span class="id">xsimpl</span></span>.
+    The specification that follows makes sense only in the context of the
+    presentation of the invariants of <span class="bracket"><span class="id">xsimpl</span></span> described in <span class="bracket"><span class="id">LibSepSimpl.v</span></span>.
+    This tactic is invoked on goals of the form <span class="bracket"><span class="id">Xsimpl</span> (<span class="id">Hla</span>, <span class="id">Hlw</span>, <span class="id">Hlt</span>) <span class="id">HR</span></span>,
+    where <span class="bracket"><span class="id">Hla</span></span> is of the form <span class="bracket"><span class="id">H1</span> \* .. \* <span class="id">Hn</span> \* \[]</span>. The tactic
+    <span class="bracket"><span class="id">xsimpl_hook_hsingle</span> <span class="id">p</span> <span class="id">v</span></span> searches among the <span class="bracket"><span class="id">Hi</span></span> for a heap predicate
+    of the form <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v'</span></span>. If it finds one, it moves this <span class="bracket"><span class="id">Hi</span></span> to the front,
+    just before <span class="bracket"><span class="id">H1</span></span>. Then, it cancels it out with the <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span> that occurs
+    in <span class="bracket"><span class="id">HR</span></span>. Otherwise, the tactic fails. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">xsimpl_hook_hsingle</span> <span class="id">p</span> :=<br/>
+&nbsp;&nbsp;<span class="id">xsimpl_pick_st</span> <span class="id">ltac</span>:(<span class="kwd">fun</span> <span class="id">H'</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">H'</span> <span class="kwd">with</span> (<span class="id">hsingle</span> <span class="id">p</span> ?<span class="id">v'</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">constr</span>:(<span class="id">true</span>) <span class="kwd">end</span>);<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">xsimpl_lr_cancel_eq</span>;<br/>
+&nbsp;&nbsp;[ <span class="id">xsimpl_lr_cancel_eq_repr_post</span> <span class="id">tt</span> | ].<br/>
+<br/>
+<div class="doc">The tactic <span class="bracket"><span class="id">xsimpl_hook</span></span> handles cancellation of heap predicates of the
+    form <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">v</span></span>. It forces their cancellation against heap predicates of
+    the form <span class="bracket"><span class="id">p</span> ~~&gt; <span class="id">w</span></span>, by asserting the equality <span class="bracket"><span class="id">v</span> = <span class="id">w</span></span>. Note: this tactic
+    is later refined to also handle records. </div>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">xsimpl_hook</span> <span class="id">H</span> ::=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">H</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">hsingle</span> ?<span class="id">p</span> ?<span class="id">v</span> =&gt; <span class="id">xsimpl_hook_hsingle</span> <span class="id">p</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">One last hack is to improve the <span class="bracket"><span class="id">math</span></span> tactic so that it is able
+    to handle the <span class="bracket"><span class="id">val_int</span></span> coercion in goals and hypotheses of the
+    form <span class="bracket"><span class="id">val_int</span> ?<span class="id">n</span> = <span class="id">val_int</span> ?<span class="id">m</span></span>, and so that it is able to process
+    the well-founded relations <span class="bracket"><span class="id">dowto</span></span> and <span class="bracket"><span class="id">upto</span></span> for induction on
+    integers. </div>
+<br/>
+<br/>
+<h2> Specification of Record Operations </h2>
+<br/>
+<div class="doc">The chapter <span class="bracket"><span class="id">Struct</span></span> shows how to these specifications may be
+    realized. </div>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">k</span> : <span class="id">nat</span>.<br/>
+<br/>
+<h3> Representation of Records </h3>
+<br/>
+<div class="doc">A field name is implemented as a natural number </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">field</span> : <span class="kwd">Type</span> := <span class="id">nat</span>.<br/>
+<br/>
+<div class="doc">A record field is described as the pair of a field and a value stored
+    in that field. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hrecord_field</span> : <span class="kwd">Type</span> := (<span class="id">field</span> * <span class="id">val</span>).<br/>
+<br/>
+<div class="doc">A record consists of a list of fields. </div>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hrecord_fields</span> : <span class="kwd">Type</span> := <span class="id">list</span> <span class="id">hrecord_field</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">kvs</span> : <span class="id">hrecord_fields</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hpure_conj</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;(\[<span class="id">H1</span>] \* \[<span class="id">H2</span>]) = \[<span class="id">H1</span> /\ <span class="id">H2</span>].<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">fun_ext_dep</span>. <span class="id">intros</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_hpure_l</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">prop_ext</span>.<br/>
+&nbsp;&nbsp;<span class="id">split</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">H</span>. <span class="id">apply</span> <span class="id">hpure_inv</span> <span class="kwd">in</span> <span class="id">H0</span>. <span class="id">destruct</span> <span class="id">H0</span>. <span class="id">subst</span>. <span class="id">apply</span> <span class="id">hpure_intro</span>. <span class="id">intuition</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">hpure_inv</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">destruct</span> <span class="id">H</span> <span class="kwd">as</span> ((?&amp;?)&amp;?). <span class="id">subst</span>. <span class="id">intuition</span>. <span class="id">now</span> <span class="id">apply</span> <span class="id">hpure_intro</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_pure_post_pure</span> : <span class="kwd">forall</span> (<span class="id">P</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">P1</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">r</span>]) \*+ \[<span class="id">P1</span>] = (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">r</span> /\ <span class="id">P1</span>]).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">fun_ext_dep</span>. <span class="id">intros</span> <span class="id">h</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">hstar_hpure_conj</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">hinv</span> <span class="id">H</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">type</span> <span class="id">of</span> <span class="id">H</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| \[] _ =&gt; <span class="id">apply</span> <span class="id">hempty_inv</span> <span class="kwd">in</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| \[_] _ =&gt; <span class="id">apply</span> <span class="id">hpure_inv</span> <span class="kwd">in</span> <span class="id">H</span> <span class="kwd">as</span> (?&amp;?)<br/>
+&nbsp;&nbsp;| (_~~&gt;_) _ =&gt; <span class="id">apply</span> <span class="id">hsingle_inv</span> <span class="kwd">in</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| (_ \* _) _ =&gt; <span class="id">apply</span> <span class="id">hstar_inv</span> <span class="kwd">in</span> <span class="id">H</span> <span class="kwd">as</span> (?&amp;?&amp;?&amp;?&amp;?&amp;?)<br/>
+&nbsp;&nbsp;| (\[_] \* _) _ =&gt; <span class="id">rewrite</span> <span class="id">hstar_hpure_l</span><br/>
+&nbsp;&nbsp;| (_ \* \[_]) _ =&gt; <span class="id">rewrite</span> <span class="id">hstar_hpure_r</span><br/>
+&nbsp;&nbsp;| (<span class="id">hexists</span> _) _ =&gt; <span class="id">apply</span> <span class="id">hexists_inv</span> <span class="kwd">in</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">hintro</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- \[] _ =&gt; <span class="id">apply</span> <span class="id">hempty_intro</span><br/>
+&nbsp;&nbsp;| |- \[_] _ =&gt; <span class="id">apply</span> <span class="id">hpure_intro</span><br/>
+&nbsp;&nbsp;| |- (_ ~~&gt; _) _ =&gt; <span class="id">apply</span> <span class="id">hsingle_intro</span><br/>
+&nbsp;&nbsp;| |- (_ \* _) (_ \<span class="id">u</span> _) =&gt; <span class="id">apply</span> <span class="id">hstar_intro</span><br/>
+&nbsp;&nbsp;| |- (\[_] \* _) _ =&gt; <span class="id">rewrite</span> <span class="id">hstar_hpure_l</span><br/>
+&nbsp;&nbsp;| |- (_ \* \[_]) _ =&gt; <span class="id">rewrite</span> <span class="id">hstar_hpure_r</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">End</span> <span class="id">HeapSetup</span>.<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>
