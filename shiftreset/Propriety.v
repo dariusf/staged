@@ -1138,6 +1138,20 @@ Section Propriety.
   Qed.
 
   #[global]
+  Instance Proper_fall_entails_under (A : Type) : forall env,
+    Proper (Morphisms.pointwise_relation A (entails_under env) ====> entails_under env) (@fall A).
+  Proof.
+    unfold Proper, respectful, Morphisms.pointwise_relation, entails_under.
+    intros.
+    inverts H0 as H0. destr H0.
+    constructor.
+    intros b.
+    specializes H0 b.
+    apply H.
+    assumption.
+  Qed.
+
+  #[global]
   Instance Proper_req_entails : Proper (eq ====> entails ====> entails) req.
   Proof.
     unfold Proper, entails, respectful, flip.
