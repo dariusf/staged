@@ -1,0 +1,570 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Triples</title>
+<meta name="description" content="Documentation of Coq module Triples" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Triples</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">ShiftReset</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Logic</span>.<br/>
+<span class="id">Local</span> <span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">string_scope</span>.<br/>
+<br/>
+<span class="kwd">Inductive</span> <span class="id">eresult</span> : <span class="kwd">Type</span> :=<br/>
+&nbsp;&nbsp;| <span class="id">enorm</span> : <span class="id">val</span> -&gt; <span class="id">eresult</span><br/>
+&nbsp;&nbsp;| <span class="id">eshft</span> : (<span class="id">var</span> -&gt; <span class="id">expr</span>) -&gt; (<span class="id">val</span> -&gt; <span class="id">expr</span>) -&gt; <span class="id">eresult</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'eshft(' k ',' eb ',' x ',' ek ')'"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">eshft</span> <span class="id">k</span> <span class="id">eb</span> <span class="id">x</span> <span class="id">ek</span>) (<span class="kwd">at</span> <span class="id">level</span> 30, <span class="id">only</span> <span class="id">printing</span>,<br/>
+&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'eshft(' k ','  eb ','  x ','  ek ')'"</span> ).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">penv</span> := <span class="id">Fmap.fmap</span> <span class="id">var</span> (<span class="id">val</span> -&gt; <span class="id">expr</span>).<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">p</span> <span class="id">penv</span> : <span class="id">penv</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id">Inhab_pfun</span> : <span class="id">Inhab</span> (<span class="id">val</span> -&gt; <span class="id">expr</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">constructor</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="kwd">fun</span> <span class="id">a</span>:<span class="id">val</span> =&gt; <span class="id">pval</span> <span class="id">vunit</span>).<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">empty_penv</span> : <span class="id">penv</span> := <span class="id">Fmap.empty</span>.<br/>
+<br/>
+<span class="kwd">Coercion</span> <span class="id">pval</span> : <span class="id">val</span> &gt;-&gt; <span class="id">expr</span>.<br/>
+<span class="kwd">Coercion</span> <span class="id">pvar</span> : <span class="id">var</span> &gt;-&gt; <span class="id">expr</span>.<br/>
+<br/>
+<span class="kwd">Inductive</span> <span class="id">bigstep</span> : <span class="id">penv</span> -&gt; <span class="id">heap</span> -&gt; <span class="id">expr</span> -&gt; <span class="id">heap</span> -&gt; <span class="id">eresult</span> -&gt; <span class="kwd">Prop</span> :=<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pval</span> : <span class="kwd">forall</span> <span class="id">p1</span> <span class="id">h</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h</span> (<span class="id">pval</span> <span class="id">v</span>) <span class="id">h</span> (<span class="id">enorm</span> <span class="id">v</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pfun</span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">h</span> <span class="id">x</span> <span class="id">e</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p</span> <span class="id">h</span> (<span class="id">pfun</span> <span class="id">x</span> <span class="id">e</span>) <span class="id">h</span> (<span class="id">enorm</span> (<span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span>))<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_padd</span> : <span class="kwd">forall</span> <span class="id">p1</span> <span class="id">h</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">i1</span> <span class="id">i2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">vint</span> <span class="id">i1</span> = <span class="id">v1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">vint</span> <span class="id">i2</span> = <span class="id">v2</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h</span> (<span class="id">padd</span> (<span class="id">pval</span> <span class="id">v1</span>) (<span class="id">pval</span> <span class="id">v2</span>)) <span class="id">h</span> (<span class="id">enorm</span> (<span class="id">vint</span> (<span class="id">i1</span> + <span class="id">i2</span>)))<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pshift</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">p</span> (<span class="id">eb</span>:<span class="id">var</span>-&gt;<span class="id">expr</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p</span> <span class="id">h</span> (<span class="id">pshift</span> <span class="id">eb</span>) <span class="id">h</span> (<span class="id">eshft</span> <span class="id">eb</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">pval</span> <span class="id">v</span>))<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_plet</span> : <span class="kwd">forall</span> <span class="id">p1</span> <span class="id">h1</span> <span class="id">h3</span> <span class="id">h2</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span> <span class="id">v</span> <span class="id">Re</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> <span class="id">e1</span> <span class="id">h3</span> (<span class="id">enorm</span> <span class="id">v</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h3</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v</span> <span class="id">e2</span>) <span class="id">h2</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>) <span class="id">h2</span> <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_plet_sh</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">p1</span> (<span class="id">eb</span>:<span class="id">var</span>-&gt;<span class="id">expr</span>) (<span class="id">ek</span>:<span class="id">val</span>-&gt;<span class="id">expr</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> <span class="id">e1</span> <span class="id">h2</span> (<span class="id">eshft</span> <span class="id">eb</span> <span class="id">ek</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>) <span class="id">h2</span> (<span class="id">eshft</span> <span class="id">eb</span> (<span class="kwd">fun</span> <span class="id">y</span> =&gt; <span class="id">plet</span> <span class="id">x</span> (<span class="id">ek</span> <span class="id">y</span>) <span class="id">e2</span>))<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_papp_fun</span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">h</span> <span class="id">x</span> <span class="id">e</span> <span class="id">Re</span> <span class="id">p1</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">v1</span> = <span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v2</span> <span class="id">e</span>) <span class="id">h</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">v1</span>) (<span class="id">pval</span> <span class="id">v2</span>)) <span class="id">h</span> <span class="id">Re</span><br/>
+<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_papp_unk</span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">Re</span> (<span class="id">ef</span>:<span class="id">val</span>-&gt;<span class="id">expr</span>) (<span class="id">f</span>:<span class="id">var</span>) <span class="id">p1</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Fmap.read</span> <span class="id">p1</span> <span class="id">f</span> = <span class="id">ef</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> (<span class="id">ef</span> <span class="id">v</span>) <span class="id">h2</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> (<span class="id">papp</span> (<span class="id">pvar</span> <span class="id">f</span>) (<span class="id">pval</span> <span class="id">v</span>)) <span class="id">h2</span> <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_preset_val</span> : <span class="kwd">forall</span> <span class="id">p1</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">p</span> <span class="id">e</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> (<span class="id">enorm</span> <span class="id">v</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> (<span class="id">preset</span> <span class="id">e</span>) <span class="id">h2</span> (<span class="id">enorm</span> <span class="id">v</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_preset_sh</span> : <span class="kwd">forall</span> <span class="id">k</span> <span class="id">p1</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span> <span class="id">e</span> (<span class="id">eb</span>:<span class="id">var</span>-&gt;<span class="id">expr</span>) (<span class="id">ek</span>:<span class="id">val</span>-&gt;<span class="id">expr</span>) <span class="id">Re</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h3</span> (<span class="id">eshft</span> <span class="id">eb</span> <span class="id">ek</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> (<span class="id">Fmap.update</span> <span class="id">p1</span> <span class="id">k</span> <span class="id">ek</span>) <span class="id">h3</span> (<span class="id">eb</span> <span class="id">k</span>) <span class="id">h2</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> (<span class="id">preset</span> <span class="id">e</span>) <span class="id">h2</span> <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;.<br/>
+<br/>
+<br/>
+<span class="kwd">Module</span> <span class="id">BigStepExamples</span>.<br/>
+<br/>
+<span class="kwd">Example</span> <span class="id">e1_shift</span> : <span class="kwd">exists</span> <span class="id">Re</span>,<br/>
+&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">empty_penv</span> <span class="id">empty_heap</span> (<span class="id">pshift</span> (<span class="kwd">fun</span> <span class="id">k</span> =&gt; <span class="id">pval</span> (<span class="id">vint</span> 1)))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">empty_heap</span> <span class="id">Re</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">eexists</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">eval_pshift</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;Show&nbsp;Proof.&nbsp;*)</span><br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Example</span> <span class="id">e2_shift_reset</span> : <span class="kwd">forall</span> (<span class="id">k1</span>:<span class="id">var</span>), <span class="kwd">exists</span> <span class="id">Re</span>,<br/>
+&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">empty_penv</span> <span class="id">empty_heap</span> (<span class="id">preset</span> (<span class="id">pshift</span> (<span class="kwd">fun</span> <span class="id">k</span> =&gt; <span class="id">papp</span> <span class="id">k</span> (<span class="id">pval</span> (<span class="id">vint</span> 1)))))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">empty_heap</span> <span class="id">Re</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">eexists</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">eval_preset_sh</span> <span class="id">k1</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">eval_pshift</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">eval_papp_unk</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">fmap_read_update</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">eval_pval</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;Show&nbsp;Proof.&nbsp;*)</span><br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Example</span> <span class="id">e3_shift_k_k</span> : <span class="kwd">forall</span> (<span class="id">k</span>:<span class="id">var</span>), <span class="kwd">exists</span> <span class="id">Re</span>,<br/>
+&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">empty_penv</span> <span class="id">empty_heap</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">plet</span> <span class="string">"x2"</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">preset</span> (<span class="id">plet</span> <span class="string">"x1"</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">pshift</span> (<span class="kwd">fun</span> <span class="id">k</span> =&gt; <span class="id">pfun</span> <span class="string">"x"</span> (<span class="id">papp</span> <span class="id">k</span> (<span class="id">pvar</span> <span class="string">"x"</span>))))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">padd</span> 1 (<span class="id">pvar</span> <span class="string">"x1"</span>))))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">papp</span> (<span class="id">pvar</span> <span class="string">"x2"</span>) 1))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">empty_heap</span> <span class="id">Re</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">eexists</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">eval_plet</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">eval_preset_sh</span> <span class="id">k</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;we&nbsp;have&nbsp;to&nbsp;name&nbsp;the&nbsp;binders&nbsp;of&nbsp;the&nbsp;new&nbsp;functions&nbsp;created&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">eval_plet_sh</span>. <span class="id">applys_eq</span> <span class="id">eval_pshift</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">simpl</span>. <span class="id">applys</span> <span class="id">eval_pfun</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">eval_papp_fun</span>. <span class="id">reflexivity</span>. <span class="id">simpl</span>.<br/>
+Abort.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id">BigStepExamples</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">" '[' p1 ','  h1  '|'  e ']'  '~~&gt;'  '[' p2 ','  h2  '|'  Re ']'"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">bigstep</span> <span class="id">p1</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">p2</span> <span class="id">h2</span> <span class="id">Re</span>) (<span class="kwd">at</span> <span class="id">level</span> 30, <span class="id">only</span> <span class="id">printing</span>).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'pshift' k '.' e"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">pshift</span> <span class="id">k</span> <span class="id">e</span>) (<span class="kwd">at</span> <span class="id">level</span> 30, <span class="id">only</span> <span class="id">printing</span>,<br/>
+&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'pshift'  k '.'  e"</span> ).<br/>
+<br/>
+<br/>
+<span class="kwd">Inductive</span> <span class="id">spec_assert_valid_under</span> <span class="id">penv</span> (<span class="id">env</span>:<span class="id">senv</span>) : <span class="id">expr</span> -&gt; <span class="id">flow</span> -&gt; <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;| <span class="id">sav_base</span>: <span class="kwd">forall</span> <span class="id">e</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> (<span class="id">eb</span>:<span class="id">var</span>-&gt;<span class="id">expr</span>) (<span class="id">ek</span>:<span class="id">val</span>-&gt;<span class="id">expr</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">not</span> (<span class="id">bigstep</span> <span class="id">penv</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> (<span class="id">eshft</span> <span class="id">eb</span> <span class="id">ek</span>))) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">penv</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> (<span class="id">enorm</span> <span class="id">v</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">satisfies</span> <span class="id">env</span> <span class="id">env</span> <span class="id">h1</span> <span class="id">h2</span> (<span class="id">norm</span> <span class="id">v</span>) <span class="id">f</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> <span class="id">e</span> <span class="id">f</span><br/>
+<br/>
+| <span class="id">sav_shift</span>: <span class="kwd">forall</span> <span class="id">e</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">v</span>, <span class="id">not</span> (<span class="id">bigstep</span> <span class="id">penv</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> (<span class="id">enorm</span> <span class="id">v</span>))) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> (<span class="id">eb</span>:<span class="id">var</span>-&gt;<span class="id">expr</span>) (<span class="id">ek</span>:<span class="id">val</span>-&gt;<span class="id">expr</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">penv</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> (<span class="id">eshft</span> <span class="id">eb</span> <span class="id">ek</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">k</span> (<span class="id">fb</span>:<span class="id">flow</span>) (<span class="id">fk</span>:<span class="id">val</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">satisfies</span> <span class="id">env</span> <span class="id">env</span> <span class="id">h1</span> <span class="id">h2</span> (<span class="id">shft</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span>) <span class="id">f</span> /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> (<span class="id">eb</span> <span class="id">k</span>) <span class="id">fb</span> /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> (<span class="id">ek</span> <span class="id">v</span>) (<span class="id">fk</span> <span class="id">v</span>))) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> <span class="id">e</span> <span class="id">f</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">spec_assert_valid_under_ind1</span> :<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">penv</span> <span class="id">env</span> (<span class="id">P</span>:<span class="id">expr</span>-&gt;<span class="id">flow</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">e</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">eb</span> <span class="id">ek</span>, ~ <span class="id">bigstep</span> <span class="id">penv</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> (<span class="id">eshft</span> <span class="id">eb</span> <span class="id">ek</span>)) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">penv</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> (<span class="id">enorm</span> <span class="id">v</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">satisfies</span> <span class="id">env</span> <span class="id">env</span> <span class="id">h1</span> <span class="id">h2</span> (<span class="id">norm</span> <span class="id">v</span>) <span class="id">f</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">P</span> <span class="id">e</span> <span class="id">f</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">e</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">v</span>, ~ <span class="id">bigstep</span> <span class="id">penv</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> (<span class="id">enorm</span> <span class="id">v</span>)) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">eb</span> <span class="id">ek</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">penv</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> (<span class="id">eshft</span> <span class="id">eb</span> <span class="id">ek</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span>, <span class="id">satisfies</span> <span class="id">env</span> <span class="id">env</span> <span class="id">h1</span> <span class="id">h2</span> (<span class="id">shft</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span>) <span class="id">f</span> /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> (<span class="id">eb</span> <span class="id">k</span>) <span class="id">fb</span>) /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">P</span> (<span class="id">eb</span> <span class="id">k</span>) <span class="id">fb</span>) /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> (<span class="id">ek</span> <span class="id">v</span>) (<span class="id">fk</span> <span class="id">v</span>)) /\<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">P</span> (<span class="id">ek</span> <span class="id">v</span>) (<span class="id">fk</span> <span class="id">v</span>))) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">P</span> <span class="id">e</span> <span class="id">f</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">e</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> <span class="id">e</span> <span class="id">f</span> -&gt; <span class="id">P</span> <span class="id">e</span> <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span> * <span class="id">Hbase</span> <span class="id">Hrec</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">fix</span> <span class="id">ind</span> 3.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;- <span class="id">eauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id">apply</span>* <span class="id">Hrec</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destr</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">spec_assert_valid</span> <span class="id">e</span> <span class="id">f</span> : <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">penv</span> <span class="id">env</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> <span class="id">e</span> <span class="id">f</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">pval_sound</span>: <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid</span> (<span class="id">pval</span> <span class="id">v</span>) (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">v</span>])).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">spec_assert_valid</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_base</span>. { <span class="id">introv</span> <span class="id">H</span>. <span class="id">false_invert</span> <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;<span class="id">exs</span>. <span class="id">intuition</span>. <span class="id">hintro</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;<span class="id">fmap_eq</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">papp_unk_sound</span>: <span class="kwd">forall</span> <span class="id">penv</span> (<span class="id">env</span>:<span class="id">senv</span>) (<span class="id">f</span>:<span class="id">var</span>) <span class="id">v</span> (<span class="id">ef</span>:<span class="id">val</span>-&gt;<span class="id">expr</span>) (<span class="id">f1</span>:<span class="id">val</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">Fmap.read</span> <span class="id">penv</span> <span class="id">f</span> = <span class="id">ef</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.read</span> <span class="id">env</span> <span class="id">f</span> = <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> (<span class="id">ef</span> <span class="id">v</span>) (<span class="id">f1</span> <span class="id">v</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> (<span class="id">papp</span> <span class="id">f</span> <span class="id">v</span>) (<span class="id">unk</span> <span class="id">f</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">spec_assert_valid</span>. <span class="id">intros</span> * ? ? <span class="id">He</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">He</span> <span class="kwd">as</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">Hne</span> <span class="id">He</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_base</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">rewrite</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H1</span>. <span class="id">false</span> <span class="id">Hne</span> <span class="id">H1</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> * <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">Hb</span> <span class="kwd">as</span>. <span class="id">intros</span> <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">He</span> <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_unk</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> * <span class="id">Hne</span> <span class="id">He</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_shift</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span> <span class="id">H2</span>. <span class="id">rewrite</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H1</span>. <span class="id">false</span> <span class="id">Hne</span> <span class="id">H1</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span> * <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">Hb</span> <span class="kwd">as</span> <span class="id">H3</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">He</span> <span class="id">H3</span>. <span class="id">destruct</span> <span class="id">He</span> <span class="kwd">as</span> (<span class="id">fk</span>&amp;<span class="id">fb</span>&amp;<span class="id">rb</span>&amp;?&amp;?).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exs</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">split</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_unk</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">papp_sound</span>: <span class="kwd">forall</span> <span class="id">x</span> <span class="id">e</span> (<span class="id">v</span>:<span class="id">val</span>) <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v</span> <span class="id">e</span>) <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid</span> (<span class="id">papp</span> (<span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span>) <span class="id">v</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">spec_assert_valid</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> * <span class="id">He</span> <span class="id">penv</span> <span class="id">env</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">He</span> <span class="id">penv</span> <span class="id">env</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">He</span> <span class="kwd">as</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">Hne</span> <span class="id">He</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;no&nbsp;shift&nbsp;in&nbsp;the&nbsp;body&nbsp;of&nbsp;the&nbsp;fn&nbsp;being&nbsp;applied&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_base</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span> * <span class="id">H</span>. <span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span> <span class="id">H1</span>. <span class="id">injects</span> <span class="id">H</span>. <span class="id">false</span> <span class="id">Hne</span> <span class="id">H1</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span> <span class="id">H1</span>. <span class="id">injects</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">He</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span> * <span class="id">Hne</span> <span class="id">He</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_shift</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span> <span class="id">H1</span>. <span class="id">injects</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span> <span class="id">Hne</span> <span class="id">H1</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span> <span class="id">H1</span>. <span class="id">injects</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">He</span> <span class="id">H1</span>. <span class="id">destr</span> <span class="id">He</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exs</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+&nbsp;&nbsp;}<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">plet_sound</span>: <span class="kwd">forall</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span> <span class="id">f1</span> (<span class="id">f2</span>:<span class="id">val</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid</span> <span class="id">e1</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">spec_assert_valid</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v</span> <span class="id">e2</span>) (<span class="id">f2</span> <span class="id">v</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>) (<span class="id">bind</span> <span class="id">f1</span> <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">spec_assert_valid</span>. <span class="id">introv</span> <span class="id">He1</span> <span class="id">He2</span>. <span class="id">intros</span>. <span class="id">specializes</span> <span class="id">He1</span> <span class="id">penv0</span> <span class="id">env</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">He1</span> <span class="kwd">as</span>.<br/>
+&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;e1&nbsp;has&nbsp;no&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hne1</span> <span class="id">Hb1</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;if&nbsp;i&nbsp;am&nbsp;able&nbsp;to&nbsp;predict,&nbsp;this&nbsp;is&nbsp;all&nbsp;good&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;applys&nbsp;sav_shift.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;intros.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;inverts&nbsp;H.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;specializes&nbsp;He2&nbsp;v&nbsp;penv0&nbsp;env.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;inverts&nbsp;He2.&nbsp;{&nbsp;false&nbsp;H&nbsp;H8.&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;specializes&nbsp;H0&nbsp;H8.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;destr&nbsp;H0.&nbsp;exists&nbsp;fb&nbsp;fk.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;splits*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;applys&nbsp;s_bind.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;specializes&nbsp;Hb1&nbsp;H7.&nbsp;eassumption.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;assumption.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;false&nbsp;Hne1&nbsp;H6.&nbsp;}&nbsp;*)</span><br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">He2</span> <span class="id">penv0</span> <span class="id">env</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">He2</span> <span class="kwd">as</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;e2&nbsp;has&nbsp;no&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hne2</span> <span class="id">Hb2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_base</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;false&nbsp;Hne2&nbsp;H8.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys_eq</span> <span class="id">Hne2</span>. <span class="id">applys_eq</span> <span class="id">H8</span>. <span class="id">f_equal</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">Fail</span> <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;cyclic&nbsp;dependency,&nbsp;we&nbsp;need&nbsp;to&nbsp;know&nbsp;how&nbsp;e2&nbsp;evaluates&nbsp;to&nbsp;choose&nbsp;shift&nbsp;or&nbsp;no&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;supply&nbsp;v&nbsp;-&gt;&nbsp;invert&nbsp;He2&nbsp;-&gt;&nbsp;reason&nbsp;backwards&nbsp;-&gt;&nbsp;supply&nbsp;v&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;e2&nbsp;has&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hne2</span> <span class="id">Hb2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;e1&nbsp;has&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hne1</span> <span class="id">Hb1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_shift</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">introv</span> <span class="id">H</span>. <span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H1</span>. <span class="id">false</span> <span class="id">Hne1</span> <span class="id">H1</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span> <span class="id">Hne1</span> <span class="id">H7</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;specializes&nbsp;He2&nbsp;v&nbsp;penv0&nbsp;env.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inverts&nbsp;He2&nbsp;as.&nbsp;{&nbsp;<span class="comment">(*&nbsp;e2&nbsp;has&nbsp;no&nbsp;shift&nbsp;*)</span>&nbsp;introv&nbsp;Hne2&nbsp;Hb2.&nbsp;false&nbsp;Hne2&nbsp;H8.&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;<span class="comment">(*&nbsp;e2&nbsp;has&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;false&nbsp;Hne1&nbsp;H7.&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;e1&nbsp;has&nbsp;a&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">Hb1</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">Hb1</span> <span class="kwd">as</span> (<span class="id">fb</span>&amp;<span class="id">fk</span>&amp;?&amp;?&amp;?&amp;?).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exs</span>. <span class="id">splits</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_bind_sh</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">specializes</span> <span class="id">H1</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;simpl.&nbsp;case_if.&nbsp;clear&nbsp;C.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;assert&nbsp;(x&lt;&gt;x0)&nbsp;as&nbsp;?.&nbsp;admit.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;case_if.&nbsp;clear&nbsp;H2&nbsp;C.&nbsp;*)</span><br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;prove&nbsp;the&nbsp;continuation&nbsp;satisfies&nbsp;triple&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;need&nbsp;the&nbsp;induction&nbsp;hypothesis&nbsp;for&nbsp;ek&nbsp;and&nbsp;e2&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">admit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;}<br/>
+Abort.</div></details>
+<br/>
+<span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Coq.Program.Equality</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">plet_sound_aux</span>: <span class="kwd">forall</span> <span class="id">penv</span> <span class="id">env</span> <span class="id">x</span> <span class="id">v</span> (<span class="id">ek</span>:<span class="id">val</span>-&gt;<span class="id">expr</span>) (<span class="id">fk</span>:<span class="id">val</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> (<span class="id">ek</span> <span class="id">v</span>) (<span class="id">fk</span> <span class="id">v</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid_under</span> <span class="id">penv</span> <span class="id">env</span> (<span class="id">plet</span> <span class="id">x</span> (<span class="id">ek</span> <span class="id">v</span>) (<span class="id">padd</span> (<span class="id">pvar</span> <span class="id">x</span>) 1))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;((<span class="kwd">fun</span> <span class="id">r1</span> =&gt; <span class="id">bind</span> (<span class="id">fk</span> <span class="id">r1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="kwd">exists</span> <span class="id">i</span> : <span class="id">int</span>, <span class="id">x</span> = <span class="id">i</span> /\ <span class="id">r</span> = <span class="id">i</span> + 1])))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">H</span> <span class="kwd">using</span> <span class="id">spec_assert_valid_under_ind1</span>.<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;ek&nbsp;has&nbsp;no&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_base</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">false_invert</span> <span class="id">H10</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">false</span> <span class="id">H</span> <span class="id">H8</span>. } }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>. <span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">case_if</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_bind</span> <span class="id">H0</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">injects</span> <span class="id">H8</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exs</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">hintro</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">i1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fmap_eq</span>. }<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;ek&nbsp;has&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_shift</span>. { <span class="id">introv</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">false</span> <span class="id">H</span> <span class="id">H9</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>. { <span class="id">false</span> <span class="id">H</span> <span class="id">H9</span>. } <span class="id">clear</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destr</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exs</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_bind_sh</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">eauto</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">plet_sound_test</span>: <span class="kwd">forall</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span> <span class="id">f1</span> (<span class="id">f2</span>:<span class="id">val</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid</span> <span class="id">e1</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">spec_assert_valid</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v</span> <span class="id">e2</span>) (<span class="id">f2</span> <span class="id">v</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>) (<span class="id">bind</span> <span class="id">f1</span> <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">spec_assert_valid</span>. <span class="id">introv</span> <span class="id">He1</span> <span class="id">He2</span>. <span class="id">intros</span>. <span class="id">specializes</span> <span class="id">He1</span> <span class="id">penv0</span> <span class="id">env</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">x</span> = <span class="string">"x"</span>) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">e1</span> = <span class="id">pshift</span> (<span class="kwd">fun</span> <span class="id">k</span> =&gt; <span class="id">papp</span> (<span class="id">pvar</span> <span class="id">k</span>) 1)) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">f1</span> = <span class="id">sh</span> <span class="string">"k"</span> (<span class="id">unk</span> <span class="string">"k"</span> 1)) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">e2</span> = <span class="id">padd</span> (<span class="id">pvar</span> <span class="string">"x"</span>) 1) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">f2</span> = (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="kwd">exists</span> <span class="id">i</span>, <span class="id">x</span> = <span class="id">vint</span> <span class="id">i</span> /\ <span class="id">r</span> = <span class="id">i</span> + 1]))) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">He1</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">sav_base</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">introv</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">false_invert</span> <span class="id">H9</span>. <span class="id">false</span> <span class="id">H</span> <span class="id">H8</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">false_invert</span> <span class="id">H9</span>. } }<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_shift</span>. { <span class="id">intros</span>. <span class="id">introv</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H9</span>. }<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>. { <span class="id">false_invert</span> <span class="id">H9</span>. }<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">clear</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">destr</span> <span class="id">H0</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">exs</span>. <span class="id">splits</span>.<br/>
+<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>.<br/>
+<br/>
+&nbsp;&nbsp;- <span class="id">assumption</span>.<br/>
+<br/>
+&nbsp;&nbsp;-<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">pose</span> <span class="id">proof</span> <span class="id">plet_sound_aux</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">penv0</span> <span class="id">env</span> <span class="id">v</span> <span class="id">H2</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;specializes&nbsp;H1&nbsp;fk.&nbsp;*)</span><br/>
+<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;v&nbsp;H2.&nbsp;*)</span><br/>
+<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;specializes&nbsp;H1&nbsp;v.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;specializes&nbsp;H1&nbsp;H0.&nbsp;*)</span><br/>
+<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;-&nbsp;intros.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;specializes&nbsp;He2&nbsp;v&nbsp;penv0&nbsp;env.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;simpl&nbsp;in&nbsp;He2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;specializes&nbsp;H2&nbsp;v.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;see&nbsp;whether&nbsp;ek&nbsp;has&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;inverts&nbsp;H2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;ek&nbsp;has&nbsp;no&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;applys&nbsp;sav_base.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;intros.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;introv&nbsp;H2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inverts&nbsp;H2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;false_invert&nbsp;H13.&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;false&nbsp;H1&nbsp;H11.&nbsp;}&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;intros.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inverts&nbsp;H2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;specializes&nbsp;H3&nbsp;H12.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;applys&nbsp;s_bind&nbsp;H3.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;simpl&nbsp;in&nbsp;H13.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inverts&nbsp;H13.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;injects&nbsp;H11.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;applys&nbsp;s_ens.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exs.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;splits*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;hintro.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Set&nbsp;Printing&nbsp;Coercions.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exists&nbsp;i1.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;splits*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fmap_eq.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;ek&nbsp;has&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;applys&nbsp;sav_shift.&nbsp;{&nbsp;introv&nbsp;H2.&nbsp;inverts&nbsp;H2.&nbsp;false&nbsp;H1&nbsp;H12.&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;intros.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inverts&nbsp;H2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;simpl&nbsp;in&nbsp;H13.&nbsp;inverts&nbsp;H13.&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;specializes&nbsp;H3&nbsp;H11.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;destr&nbsp;H3.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exs.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;splits.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;applys&nbsp;s_bind_sh.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;applys&nbsp;H2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;assumption.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;intros.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;induction?&nbsp;*)</span><br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admit.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;*)</span><br/>
+Abort.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">plet_sound_test</span>: <span class="kwd">forall</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span> <span class="id">f1</span> (<span class="id">f2</span>:<span class="id">val</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid</span> <span class="id">e1</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">spec_assert_valid</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v</span> <span class="id">e2</span>) (<span class="id">f2</span> <span class="id">v</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">spec_assert_valid</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>) (<span class="id">bind</span> <span class="id">f1</span> <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">spec_assert_valid</span>. <span class="id">introv</span> <span class="id">He1</span> <span class="id">He2</span>. <span class="id">intros</span>. <span class="id">specializes</span> <span class="id">He1</span> <span class="id">penv0</span> <span class="id">env</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">x</span> = <span class="string">"x"</span>) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">e1</span> = 1) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">f1</span> = <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = 1])) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">e2</span> = <span class="id">padd</span> (<span class="id">pvar</span> <span class="string">"x"</span>) 1) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">assert</span> (<span class="id">f2</span> = (<span class="kwd">fun</span> <span class="id">x</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="kwd">exists</span> <span class="id">i</span>, <span class="id">x</span> = <span class="id">vint</span> <span class="id">i</span> /\ <span class="id">r</span> = <span class="id">i</span> + 1]))) <span class="kwd">as</span> ?. <span class="id">admit</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">He1</span>.<br/>
+&nbsp;&nbsp;2: { <span class="id">applys</span> <span class="id">sav_shift</span>. <span class="id">intros</span>. <span class="id">introv</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">false</span> <span class="id">H</span> <span class="id">H9</span>. <span class="id">intros</span>. <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H10</span>. <span class="id">inverts</span> <span class="id">H8</span>. }<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">sav_base</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">introv</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H1</span>. <span class="id">inverts</span> <span class="id">H10</span>. <span class="id">inverts</span> <span class="id">H8</span>. }<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">He2</span> <span class="id">v0</span> <span class="id">penv0</span> <span class="id">env</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span> <span class="kwd">in</span> <span class="id">He2</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">He2</span>. 2: { <span class="id">false</span> <span class="id">H1</span> <span class="id">H10</span>. }<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_bind</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">H2</span>.<br/>
+<br/>
+Abort.</div></details>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

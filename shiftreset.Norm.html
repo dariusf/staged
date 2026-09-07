@@ -1,0 +1,1376 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Norm</title>
+<meta name="description" content="Documentation of Coq module Norm" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Norm</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">ShiftReset</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Basics</span> <span class="id">ShiftFree</span> <span class="id">Satisfies</span> <span class="id">Propriety</span> <span class="id">Reduction</span> <span class="id">ReductionOld</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">a</span> <span class="id">v</span> <span class="id">r</span> : <span class="id">val</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">f</span> : <span class="id">flow</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">fk</span> : <span class="id">val</span> -&gt; <span class="id">flow</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">s</span> : <span class="id">senv</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">u</span> : <span class="id">ufun</span>.<br/>
+<br/>
+<h1> Entailment, entailment sequent, normalization </h1>
+<span class="kwd">Lemma</span> <span class="id">norm_reassoc</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">req</span> <span class="id">H</span> <span class="id">f1</span>;; <span class="id">f2</span>) (<span class="id">req</span> <span class="id">H</span> (<span class="id">f1</span>;; <span class="id">f2</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;2: { <span class="comment">(*&nbsp;handle&nbsp;shift.&nbsp;it&nbsp;may&nbsp;be&nbsp;possible&nbsp;to&nbsp;relax&nbsp;this&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H4</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;apply&nbsp;H0&nbsp;in&nbsp;H1.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;false.&nbsp;*)</span><br/>
+&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;destr&nbsp;H1.&nbsp;*)</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;find&nbsp;out&nbsp;about&nbsp;req&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span> <span class="id">hp</span> <span class="id">hr</span>. <span class="id">intros</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;prove&nbsp;the&nbsp;req&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H4</span> <span class="id">hp</span> <span class="id">hr</span> <span class="id">H2</span> <span class="id">___</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span> <span class="id">h3</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">ent_seq_defun_both</span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">x</span> <span class="id">uf</span> <span class="id">f2</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> (<span class="id">Fmap.update</span> <span class="id">s</span> <span class="id">x</span> <span class="id">uf</span>) <span class="id">f1</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">s</span> (<span class="id">defun</span> <span class="id">x</span> <span class="id">uf</span>;; <span class="id">f1</span>) (<span class="id">defun</span> <span class="id">x</span> <span class="id">uf</span>;; <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails_under</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. 2: { <span class="id">no_shift</span>. }<br/>
+&nbsp;&nbsp;<span class="id">pose</span> <span class="id">proof</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">entails_under_seq_defun_idem</span> : <span class="kwd">forall</span> <span class="id">s</span> <span class="id">x</span> <span class="id">uf</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;<span class="id">Fmap.indom</span> <span class="id">s</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.read</span> <span class="id">s</span> <span class="id">x</span> = <span class="id">uf</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">s</span> (<span class="id">defun</span> <span class="id">x</span> <span class="id">uf</span>;; <span class="id">f1</span>) <span class="id">f1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails_under</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>. 2: { <span class="id">no_shift</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span>: <span class="id">update_idem</span> <span class="id">H</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H1</span> <span class="kwd">in</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_ens_void_split</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> (<span class="id">H1</span> \* <span class="id">H2</span>)) (<span class="id">ens_</span> <span class="id">H1</span>;; <span class="id">ens_</span> <span class="id">H2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">apply</span> <span class="id">satisfies_ens_ens_void_split</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_ens_void_combine</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> <span class="id">H1</span>;; <span class="id">ens_</span> <span class="id">H2</span>) (<span class="id">ens_</span> (<span class="id">H1</span> \* <span class="id">H2</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>; <span class="id">apply</span> <span class="id">satisfies_ens_ens_void_combine</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_ens_void</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">ens_</span> (<span class="id">H1</span> \* <span class="id">H2</span>)) (<span class="id">ens_</span> <span class="id">H1</span>;; <span class="id">ens_</span> <span class="id">H2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>; <span class="id">split</span>.<br/>
+&nbsp;&nbsp;- <span class="id">apply</span> <span class="id">norm_ens_ens_void_split</span>.<br/>
+&nbsp;&nbsp;- <span class="id">apply</span> <span class="id">norm_ens_ens_void_combine</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">entails_under_unk</span> : <span class="kwd">forall</span> <span class="id">s</span> (<span class="id">x</span>:<span class="id">var</span>) <span class="id">a</span> <span class="id">uf</span>,<br/>
+&nbsp;&nbsp;<span class="id">Fmap.read</span> <span class="id">s</span> <span class="id">x</span> = <span class="id">uf</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">s</span> (<span class="id">unk</span> <span class="id">x</span> <span class="id">a</span>) (<span class="id">uf</span> <span class="id">a</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails_under</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">unk_inv</span>.<br/>
+&nbsp;&nbsp;<span class="id">exact</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_rs</span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">r</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">rs</span> <span class="id">f</span>)) (<span class="id">rs</span> <span class="id">f</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">false</span> <span class="id">sf_rs</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_assoc_sf</span>: <span class="kwd">forall</span> <span class="id">f</span> <span class="id">fk</span> <span class="id">fk1</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">bind</span> <span class="id">f</span> <span class="id">fk</span>) <span class="id">fk1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> <span class="id">f</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">bind</span> (<span class="id">fk</span> <span class="id">r</span>) <span class="id">fk1</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span> * <span class="id">Hsf</span> * <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_bind</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span> <span class="id">H9</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_bind</span> <span class="id">H7</span>. <span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="comment">(*&nbsp;we&nbsp;are&nbsp;stuck&nbsp;as&nbsp;entails&nbsp;does&nbsp;not&nbsp;let&nbsp;us<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;reassociate&nbsp;the&nbsp;continuation&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span> <span class="id">Hsf</span> <span class="id">H4</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_assoc_sf_conv</span>: <span class="kwd">forall</span> <span class="id">f</span> <span class="id">fk</span> <span class="id">fk1</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> <span class="id">f</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">bind</span> (<span class="id">fk</span> <span class="id">r</span>) <span class="id">fk1</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> (<span class="id">bind</span> <span class="id">f</span> <span class="id">fk</span>) <span class="id">fk1</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span> * <span class="id">Hsf</span> <span class="id">Hsf2</span> * <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_bind</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_bind</span> <span class="id">H7</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_bind_sh</span>. <span class="id">applys</span>* <span class="id">s_bind</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;need&nbsp;to&nbsp;predict&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span> <span class="id">Hsf</span> <span class="id">H6</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_assoc_sf_equiv</span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">fk</span> <span class="id">fk1</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">bind</span> (<span class="id">bind</span> <span class="id">f</span> <span class="id">fk</span>) <span class="id">fk1</span>) (<span class="id">bind</span> <span class="id">f</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">bind</span> (<span class="id">fk</span> <span class="id">r</span>) <span class="id">fk1</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">bientails</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">f</span> <span class="id">fk</span> <span class="id">fk1</span> <span class="id">H_shift_free</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span> <span class="id">s1</span> <span class="id">s2</span>.<br/>
+&nbsp;&nbsp;<span class="id">split</span>.<br/>
+&nbsp;&nbsp;- <span class="id">exact</span> (<span class="id">norm_bind_assoc_sf</span> <span class="id">f</span> <span class="id">fk</span> <span class="id">fk1</span> <span class="id">H_shift_free</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span>).<br/>
+&nbsp;&nbsp;- <span class="id">exact</span> (<span class="id">norm_bind_assoc_sf_conv</span> <span class="id">f</span> <span class="id">fk</span> <span class="id">fk1</span> <span class="id">H_shift_free</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span>).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_assoc1</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">f1</span>;; (<span class="id">f2</span>;; <span class="id">f3</span>)) ((<span class="id">f1</span>;; <span class="id">f2</span>);; <span class="id">f3</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hsf1</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">norm_bind_assoc_sf_conv</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_assoc2</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> ((<span class="id">f1</span>;; <span class="id">f2</span>);; <span class="id">f3</span>) (<span class="id">f1</span>;; (<span class="id">f2</span>;; <span class="id">f3</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hsf1</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">norm_bind_assoc_sf</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_assoc_sf</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">f1</span>;; <span class="id">f2</span>;; <span class="id">f3</span>) ((<span class="id">f1</span>;; <span class="id">f2</span>);; <span class="id">f3</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hsf1</span>. <span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span>* <span class="id">norm_seq_assoc1</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span>* <span class="id">norm_seq_assoc2</span> <span class="id">H</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Compare with <span class="bracket"><span class="id">norm_bind_assoc_sf</span></span>.
+  Where we apply the IH shows where we need to reassociate
+  the continuation. When the other arguments have shifts, we don't
+  actually need to reassociate.
+  Consider how these evaluate:
+  Sh(...); f2; f3 ⊑ (Sh(...); f2); f3
+  L: shft(..., λ x. id; f2; f3)
+  R: shft(..., λ x. (id; f2); f3)
+</div>
+<span class="kwd">Lemma</span> <span class="id">gnorm_bind_assoc</span>: <span class="kwd">forall</span> <span class="id">n</span> <span class="id">f</span> <span class="id">fk</span> <span class="id">fk1</span>,<br/>
+&nbsp;&nbsp;<span class="id">gentails</span> <span class="id">n</span> (<span class="id">bind</span> (<span class="id">bind</span> <span class="id">f</span> <span class="id">fk</span>) <span class="id">fk1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> <span class="id">f</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">bind</span> (<span class="id">fk</span> <span class="id">r</span>) <span class="id">fk1</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">fb</span> <span class="id">fk0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">reflexivity</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="kwd">exists</span> <span class="id">fb</span>. <span class="id">exs</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">reflexivity</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="kwd">exists</span> <span class="id">fb</span>. <span class="id">exs</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">intros</span>. <span class="id">simpl</span>. <span class="id">applys</span> <span class="id">IHn</span>. } } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_pure_l</span> : <span class="kwd">forall</span> <span class="id">p</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">p</span> <span class="id">r</span>]);; <span class="id">f</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. 2: { <span class="id">no_shift</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_pure</span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt; <span class="id">entails</span> (<span class="id">ens_</span> \[<span class="id">P</span>];; <span class="id">f</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>. 2: <span class="id">no_shift</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>; <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_empty_l</span> : <span class="kwd">forall</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">empty</span>;; <span class="id">f</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">inverts</span>* <span class="id">H</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">no_shift</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_seq</span> <span class="id">H</span>. <span class="id">applys</span>* <span class="id">empty_intro</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_ens_req</span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">f1</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">f1</span>) <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> <span class="id">f1</span> (<span class="id">req</span> <span class="id">H</span> <span class="id">f</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_ens</span>. <span class="kwd">exists</span> <span class="id">vunit</span> <span class="id">hp</span>. <span class="id">heaps</span>. <span class="id">subst</span>*.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_ens_void_l</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">ens</span> <span class="id">Q</span>) (<span class="id">ens</span> (<span class="id">Q</span> \*+ <span class="id">H</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. 2: { <span class="id">no_shift</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destr</span> <span class="id">H0</span>. <span class="id">hinv</span> <span class="id">H0</span>. <span class="id">hinv</span> <span class="id">H0</span>. <span class="id">injects</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span> <span class="kwd">as</span> <span class="id">H8</span>. <span class="id">destr</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">v</span> (<span class="id">h4</span> \<span class="id">u</span> <span class="id">x0</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">rew_fmap</span> *.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">hstar_intro</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. <span class="id">destr</span> <span class="id">H0</span>. <span class="id">hinv</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">vunit</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">x0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">hintro</span>. <span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">constructor</span>. <span class="kwd">exists</span> <span class="id">v</span> <span class="id">x</span>. <span class="id">jauto</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_req_sep_combine</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">req</span> <span class="id">H1</span> (<span class="id">req</span> <span class="id">H2</span> <span class="id">f</span>)) (<span class="id">req</span> (<span class="id">H1</span> \* <span class="id">H2</span>) <span class="id">f</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;contravariance&nbsp;means&nbsp;we&nbsp;start&nbsp;reasoning&nbsp;from&nbsp;the&nbsp;assumptions&nbsp;in&nbsp;the&nbsp;goal&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">hb</span> <span class="id">hr</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">hstar_inv</span> <span class="kwd">in</span> <span class="id">H0</span> <span class="kwd">as</span> (<span class="id">hH1</span>&amp;<span class="id">hH2</span>&amp;?&amp;?&amp;?&amp;?).<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;start&nbsp;reasoning&nbsp;forward&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H14</span>.<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>: (<span class="id">H14</span> <span class="id">hH1</span> (<span class="id">hr</span> \<span class="id">u</span> <span class="id">hH2</span>) <span class="id">H0</span>).<br/>
+&nbsp;&nbsp;<span class="id">fmap_eq</span>.<br/>
+&nbsp;&nbsp;<span class="id">fmap_disjoint</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H16</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H16</span> <span class="id">hr</span> <span class="id">H5</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_req_sep_split</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">req</span> (<span class="id">H1</span> \* <span class="id">H2</span>) <span class="id">f</span>) (<span class="id">req</span> <span class="id">H1</span> (<span class="id">req</span> <span class="id">H2</span> <span class="id">f</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">hH1</span> <span class="id">hH2r</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">hH2</span> <span class="id">hr</span>. <span class="id">intros</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H14</span>.<br/>
+&nbsp;&nbsp;<span class="id">specialize</span> (<span class="id">H14</span> (<span class="id">hH1</span> \<span class="id">u</span> <span class="id">hH2</span>) <span class="id">hr</span> <span class="id">ltac</span>:(<span class="id">apply</span> <span class="id">hstar_intro</span>; <span class="id">auto</span>)).<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>: <span class="id">H14</span>.<br/>
+&nbsp;&nbsp;<span class="id">fmap_eq</span>.<br/>
+&nbsp;&nbsp;<span class="id">fmap_disjoint</span>.<br/>
+&nbsp;&nbsp;<span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_req_req</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">req</span> (<span class="id">H1</span> \* <span class="id">H2</span>) <span class="id">f</span>) (<span class="id">req</span> <span class="id">H1</span> (<span class="id">req</span> <span class="id">H2</span> <span class="id">f</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">split</span>.<br/>
+&nbsp;&nbsp;- <span class="id">apply</span> <span class="id">norm_req_sep_split</span>.<br/>
+&nbsp;&nbsp;- <span class="id">apply</span> <span class="id">norm_req_sep_combine</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_req</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">req</span> <span class="id">H</span> <span class="id">f</span>)) (<span class="id">req</span> <span class="id">H</span> (<span class="id">rs</span> <span class="id">f</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">eapply</span> <span class="id">s_rs_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H11</span>. <span class="id">specializes</span> <span class="id">H11</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H10</span>. <span class="id">specializes</span> <span class="id">H10</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">s_rs_val</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_seq_ens</span> : <span class="kwd">forall</span> <span class="id">Q</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">ens</span> <span class="id">Q</span>;; <span class="id">f</span>)) (<span class="id">ens</span> <span class="id">Q</span>;; (<span class="id">rs</span> <span class="id">f</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">red_skip</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">sf_ens</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_seq_ens_void</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">f</span>)) (<span class="id">ens_</span> <span class="id">H</span>;; (<span class="id">rs</span> <span class="id">f</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">red_skip</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">sf_ens</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_req_emp</span> : <span class="kwd">forall</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">req</span> \[] <span class="id">f</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">split</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">req_empty_inv</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">req_empty_intro</span>. <span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">entails_ens_seq</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H1</span> ==&gt; <span class="id">H2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> <span class="id">f1</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> <span class="id">H1</span>;; <span class="id">f1</span>) (<span class="id">ens_</span> <span class="id">H2</span>;; <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H3</span> <span class="kwd">as</span> <span class="id">H3</span>; <span class="id">no_shift</span>. <span class="id">destr</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span>: <span class="id">satisfies_ens_void</span> <span class="id">H</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span> <span class="id">h3</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">entails_req1</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> <span class="id">f1</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">req</span> <span class="id">H1</span> <span class="id">f1</span>) (<span class="id">req</span> <span class="id">H2</span> <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H14</span> <span class="id">hr</span> <span class="id">H4</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">entails_seq</span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> <span class="id">f1</span> <span class="id">f2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">f</span>;; <span class="id">f1</span>) (<span class="id">f</span>;; <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. 2: { <span class="id">apply</span> <span class="id">H</span> <span class="kwd">in</span> <span class="id">H1</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">s_seq</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_ens_empty</span> : <span class="kwd">forall</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">ens_</span> \[];; <span class="id">f</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">bientails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>; <span class="id">no_shift</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">hinv</span> <span class="id">H</span>. <span class="id">hinv</span> <span class="id">H</span>. <span class="id">hinv</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">rew_fmap</span> *. }<br/>
+&nbsp;&nbsp;{ <span class="id">eapply</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">ens_void_empty_intro</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_ens_sl_ex</span>: <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">c</span>:<span class="id">A</span>-&gt;<span class="id">hprop</span>) <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> (\<span class="kwd">exists</span> <span class="id">b</span>, <span class="id">c</span> <span class="id">b</span>);; <span class="id">f</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">∃</span> <span class="id">b</span>, <span class="id">ens_</span> (<span class="id">c</span> <span class="id">b</span>);; <span class="id">f</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. 2: <span class="id">no_shift</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">hinv</span> <span class="id">H</span>. <span class="id">hinv</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">hexists_inv</span> <span class="kwd">in</span> <span class="id">H2</span>. <span class="id">destr</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="kwd">exists</span> <span class="id">x1</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span> <span class="id">s3</span> (<span class="id">h1</span> \<span class="id">u</span> <span class="id">x0</span>) <span class="id">vunit</span>.<br/>
+&nbsp;&nbsp;- <span class="id">constructor</span>. <span class="id">exs</span>. <span class="id">splits</span>*. <span class="id">hintro</span>; <span class="id">jauto</span>.<br/>
+&nbsp;&nbsp;- <span class="id">subst</span>. <span class="id">rew_fmap</span> *.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_all_r</span>: <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">flow</span>) <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">f1</span>;; (<span class="id">∀</span> <span class="id">x</span>:<span class="id">A</span>, <span class="id">f</span> <span class="id">x</span>)) (<span class="id">∀</span> <span class="id">x</span>:<span class="id">A</span>, <span class="id">f1</span>;; <span class="id">f</span> <span class="id">x</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">Hsf</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>. 2: { <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fall</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>. <span class="id">specializes</span> <span class="id">H5</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_ex</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">ctx</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">∃</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">ctx</span> <span class="id">x</span>)) (<span class="id">∃</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">rs</span> (<span class="id">ctx</span> <span class="id">x</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">constructor</span>. <span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_rs_sh</span>; <span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">constructor</span>. <span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_all</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">ctx</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">∀</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">ctx</span> <span class="id">x</span>)) (<span class="id">∀</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">rs</span> (<span class="id">ctx</span> <span class="id">x</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">constructor</span>. <span class="id">intros</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_rs_sh</span>; <span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">constructor</span>. <span class="id">intros</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_req_all</span> : <span class="kwd">forall</span> <span class="id">H</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">fctx</span>:<span class="id">A</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">req</span> <span class="id">H</span> (<span class="id">∀</span> <span class="id">b</span>, <span class="id">fctx</span> <span class="id">b</span>)) (<span class="id">∀</span> <span class="id">b</span>, <span class="id">req</span> <span class="id">H</span> (<span class="id">fctx</span> <span class="id">b</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fall</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>. <span class="id">specializes</span> <span class="id">H11</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H11</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_req_pure_l</span> : <span class="kwd">forall</span> <span class="id">P</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt; <span class="id">bientails</span> (<span class="id">req</span> \[<span class="id">P</span>] <span class="id">f</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">bientails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">req_pure_inv</span> <span class="kwd">in</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">req_pure_intro</span>. <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_ex_l</span> : <span class="kwd">forall</span> <span class="id">f1</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">fctx</span>:<span class="id">A</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">entails</span> ((<span class="id">∃</span> <span class="id">b</span>, <span class="id">fctx</span> <span class="id">b</span>);; <span class="id">f1</span>) (<span class="id">∃</span> <span class="id">b</span>, <span class="id">fctx</span> <span class="id">b</span>;; <span class="id">f1</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H7</span>. <span class="id">destr</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fex</span>. <span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H6</span>. <span class="id">destr</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fex</span>. <span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_ex_r</span>: <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">flow</span>) <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">f1</span>;; (<span class="id">∃</span> <span class="id">x</span>:<span class="id">A</span>, <span class="id">f</span> <span class="id">x</span>)) (<span class="id">∃</span> <span class="id">x</span>:<span class="id">A</span>, <span class="id">f1</span>;; <span class="id">f</span> <span class="id">x</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">Hsf</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>. 2: { <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>. <span class="id">destr</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fex</span>. <span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_seq_ex_r</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">A</span> (<span class="id">fctx</span>:<span class="id">A</span> -&gt; <span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">f1</span>;; (<span class="id">∃</span> <span class="id">b</span>, <span class="id">fctx</span> <span class="id">b</span>)))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">∃</span> <span class="id">b</span>, <span class="id">rs</span> (<span class="id">f1</span>;; (<span class="id">fctx</span> <span class="id">b</span>))).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_ex_r</span>.<br/>
+&nbsp;&nbsp;2: { <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;<span class="id">lets</span> <span class="id">H1</span>: <span class="id">norm_rs_ex</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">A</span> (<span class="kwd">fun</span> <span class="id">b</span> =&gt; <span class="id">f1</span>;; <span class="id">fctx</span> <span class="id">b</span>).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_seq_distr</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">f1</span>;; <span class="id">f2</span>)) (<span class="id">rs</span> <span class="id">f1</span>;; <span class="id">rs</span> <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;f1;;&nbsp;f2&nbsp;has&nbsp;a&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;2: { <span class="id">false</span> <span class="id">H</span> <span class="id">H0</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_rs_val</span>. <span class="id">eassumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_rs_sh</span>. <span class="id">eassumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_ens_void_swap</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">ens</span> <span class="id">Q</span>;; <span class="id">ens_</span> <span class="id">H</span>;; <span class="id">f</span>) (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">ens</span> <span class="id">Q</span>;; <span class="id">f</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span>. 2: { <span class="id">inverts</span> <span class="id">H7</span>. <span class="id">destr</span> <span class="id">H6</span>. <span class="id">discriminate</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>. <span class="id">destr</span> <span class="id">H6</span>. <span class="id">injects</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>. 2: { <span class="id">inverts</span> <span class="id">H10</span>. <span class="id">destr</span> <span class="id">H9</span>. <span class="id">discriminate</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H11</span>. <span class="id">destr</span> <span class="id">H9</span>. <span class="id">injects</span> <span class="id">H0</span>. <span class="id">hinv</span> <span class="id">H3</span>. <span class="id">hinv</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="kwd">exists</span> <span class="id">vunit</span> <span class="id">x0</span>. <span class="id">splits</span>*. <span class="id">hintro</span>. <span class="id">splits</span>*. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span> <span class="id">H12</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="kwd">exists</span> <span class="id">v0</span> <span class="id">h0</span>. <span class="id">splits</span>*. } }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span>. 2: { <span class="id">inverts</span> <span class="id">H7</span>. <span class="id">destr</span> <span class="id">H6</span>. <span class="id">discriminate</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>. <span class="id">destr</span> <span class="id">H6</span>. <span class="id">injects</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>. 2: { <span class="id">inverts</span> <span class="id">H10</span>. <span class="id">destr</span> <span class="id">H9</span>. <span class="id">discriminate</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H11</span>. <span class="id">destr</span> <span class="id">H9</span>. <span class="id">injects</span> <span class="id">H0</span>. <span class="id">hinv</span> <span class="id">H1</span>. <span class="id">hinv</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="kwd">exists</span> <span class="id">v1</span> <span class="id">h5</span>. <span class="id">splits</span>*. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span> <span class="id">H12</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="kwd">exists</span> <span class="id">vunit</span> <span class="id">x0</span>. <span class="id">splits</span>*. <span class="id">hintro</span>. <span class="id">splits</span>*. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_seq</span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">fk</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">det</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">flow_res</span> <span class="id">f</span> <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> <span class="id">f</span> <span class="id">fk</span>) (<span class="id">f</span>;; <span class="id">fk</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">flow_res</span>, <span class="id">entails</span>. <span class="id">intros</span> * <span class="id">Hsf</span> <span class="id">Hd</span> <span class="id">Hfr</span> * <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: { <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">Hfr</span> <span class="id">s1</span> <span class="id">s3</span> <span class="id">h1</span> <span class="id">h3</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">Hd</span> <span class="id">H7</span> <span class="id">Hfr</span>. <span class="id">injects</span> <span class="id">Hd</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_seq1</span> : <span class="kwd">forall</span> <span class="id">f</span> <span class="id">fk</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">flow_res1</span> <span class="id">f</span> <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> <span class="id">f</span> <span class="id">fk</span>) (<span class="id">f</span>;; <span class="id">fk</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span> * <span class="id">Hsf</span> <span class="id">Hfr</span> * <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: { <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">Hfr</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span> <span class="id">H7</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Similar to <span class="bracket"><span class="id">norm_seq_assoc</span></span>.
+  We only need one <span class="bracket"><span class="id">shift_free</span></span> premise here
+  because we're rewriting only in one direction. </div>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_seq_assoc</span> : <span class="kwd">forall</span> <span class="id">fk</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">f1</span>;; <span class="id">f2</span>) <span class="id">fk</span>) (<span class="id">f1</span>;; <span class="id">bind</span> <span class="id">f2</span> <span class="id">fk</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span> * <span class="id">Hsf1</span> * <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_seq</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">false</span> <span class="id">Hsf1</span> <span class="id">H4</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_val</span> : <span class="kwd">forall</span> <span class="id">fk</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">v</span>])) <span class="id">fk</span>) (<span class="id">fk</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span> * <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: { <span class="id">false</span> <span class="id">sf_ens</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>. <span class="id">destr</span> <span class="id">H5</span>. <span class="id">injects</span> <span class="id">H</span>. <span class="id">hinv</span> <span class="id">H0</span>. <span class="id">subst</span>. <span class="id">rew_fmap</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_disj_val</span> : <span class="kwd">forall</span> <span class="id">fk</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">v1</span> \/ <span class="id">r</span> = <span class="id">v2</span>])) <span class="id">fk</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">disj</span> (<span class="id">fk</span> <span class="id">v1</span>) (<span class="id">fk</span> <span class="id">v2</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span> * <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: { <span class="id">false</span> <span class="id">sf_ens</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>; <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;- <span class="id">apply</span>* <span class="id">s_disj_l</span>.<br/>
+&nbsp;&nbsp;- <span class="id">apply</span>* <span class="id">s_disj_r</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_ens_void</span> : <span class="kwd">forall</span> <span class="id">fk</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">ens_</span> <span class="id">H</span>) <span class="id">fk</span>) (<span class="id">seq</span> (<span class="id">ens_</span> <span class="id">H</span>) (<span class="id">fk</span> <span class="id">vunit</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span> * <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">pose</span> <span class="id">proof</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>. <span class="id">destr</span> <span class="id">H7</span>. <span class="id">hinv</span> <span class="id">H2</span>. <span class="id">hinv</span> <span class="id">H2</span>. <span class="id">injects</span> <span class="id">H1</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">false</span> <span class="id">sf_ens_</span> <span class="id">H7</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_req</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">f</span> <span class="id">fk</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">req</span> <span class="id">H</span> <span class="id">f</span>) <span class="id">fk</span>) (<span class="id">req</span> <span class="id">H</span> (<span class="id">bind</span> <span class="id">f</span> <span class="id">fk</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span> * <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;2: { <span class="id">inverts</span> <span class="id">H10</span>. <span class="id">specializes</span> <span class="id">H11</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>. <span class="id">applys</span>* <span class="id">s_bind_sh</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H11</span>. <span class="id">specializes</span> <span class="id">H10</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_disj</span>: <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">fk</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">disj</span> <span class="id">f1</span> <span class="id">f2</span>) <span class="id">fk</span>) (<span class="id">disj</span> (<span class="id">bind</span> <span class="id">f1</span> <span class="id">fk</span>) (<span class="id">bind</span> <span class="id">f2</span> <span class="id">fk</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_disj_l</span>. <span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_disj_r</span>. <span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_disj_l</span>. <span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_disj_r</span>. <span class="id">applys</span>* <span class="id">s_bind_sh</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_disj</span>: <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">disj</span> <span class="id">f1</span> <span class="id">f2</span>)) (<span class="id">disj</span> (<span class="id">rs</span> <span class="id">f1</span>) (<span class="id">rs</span> <span class="id">f2</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">red_rs_float2</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_disj_r</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> <span class="id">f3</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">f1</span>;; <span class="id">disj</span> <span class="id">f2</span> <span class="id">f3</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">disj</span> (<span class="id">f1</span>;; <span class="id">f2</span>) (<span class="id">f1</span>;; <span class="id">f3</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">Hsf</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: { <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_disj_l</span>; <span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_disj_r</span>; <span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_ens_ens_pure</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">ens_</span> \[<span class="id">P</span>]) (<span class="id">ens_</span> \[<span class="id">P</span>];; <span class="id">ens_</span> <span class="id">H</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>. 2: <span class="id">no_shift</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>; <span class="id">applys</span> <span class="id">s_ens</span>; <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_all_l</span> : <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">fk1</span>:<span class="id">A</span>-&gt;<span class="id">flow</span>) <span class="id">fk</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">∀</span> (<span class="id">b</span>:<span class="id">A</span>), <span class="id">fk1</span> <span class="id">b</span>) <span class="id">fk</span>) (<span class="id">∀</span> (<span class="id">b</span>:<span class="id">A</span>), <span class="id">bind</span> (<span class="id">fk1</span> <span class="id">b</span>) <span class="id">fk</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H7</span>. <span class="id">applys</span> <span class="id">s_fall</span>. <span class="id">intros</span> <span class="id">b</span>. <span class="id">specializes</span> <span class="id">H5</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H6</span>. <span class="id">applys</span> <span class="id">s_fall</span>. <span class="id">intros</span> <span class="id">b</span>. <span class="id">specializes</span> <span class="id">H5</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_ex_l</span> : <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">fk1</span>:<span class="id">A</span>-&gt;<span class="id">flow</span>) <span class="id">fk</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">∃</span> (<span class="id">b</span>:<span class="id">A</span>), <span class="id">fk1</span> <span class="id">b</span>) <span class="id">fk</span>) (<span class="id">∃</span> (<span class="id">b</span>:<span class="id">A</span>), <span class="id">bind</span> (<span class="id">fk1</span> <span class="id">b</span>) <span class="id">fk</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H7</span>. <span class="id">applys</span> <span class="id">s_fex</span>. <span class="id">destruct</span> <span class="id">H5</span> <span class="kwd">as</span> (<span class="id">b</span>&amp;?). <span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H6</span>. <span class="id">applys</span> <span class="id">s_fex</span>. <span class="id">destruct</span> <span class="id">H5</span> <span class="kwd">as</span> (<span class="id">b</span>&amp;?). <span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind_sh</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_all_r1</span> : <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) <span class="id">f</span> (<span class="id">fk</span>:<span class="id">A</span>-&gt;<span class="id">val</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> <span class="id">f</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">∀</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">fk</span> <span class="id">x</span> <span class="id">r</span>)) (<span class="id">∀</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">bind</span> <span class="id">f</span> (<span class="id">fk</span> <span class="id">x</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">Hsf</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: { <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fall</span>. <span class="id">intros</span> <span class="id">b</span>. <span class="id">specializes</span> <span class="id">H5</span> <span class="id">b</span>. <span class="id">apply</span>* <span class="id">s_bind</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_all_r</span>: <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) <span class="id">f1</span> (<span class="id">f2</span>:<span class="id">A</span>-&gt;<span class="id">val</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> <span class="id">f1</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">∀</span> <span class="id">x</span>, <span class="id">f2</span> <span class="id">x</span> <span class="id">r</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">∀</span> <span class="id">x</span>, <span class="id">bind</span> <span class="id">f1</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">f2</span> <span class="id">x</span> <span class="id">r</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">Hsf</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fall</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>. <span class="id">specializes</span> <span class="id">H5</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_ex_r</span> : <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) <span class="id">f</span> (<span class="id">fk</span>:<span class="id">A</span>-&gt;<span class="id">val</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> <span class="id">f</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">∃</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">fk</span> <span class="id">x</span> <span class="id">r</span>)) (<span class="id">∃</span> (<span class="id">x</span>:<span class="id">A</span>), <span class="id">bind</span> <span class="id">f</span> (<span class="id">fk</span> <span class="id">x</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">Hsf</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: { <span class="id">false</span> <span class="id">Hsf</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fex</span>. <span class="id">destruct</span> <span class="id">H5</span> <span class="kwd">as</span> (<span class="id">b</span>&amp;?). <span class="kwd">exists</span> <span class="id">b</span>. <span class="id">apply</span>* <span class="id">s_bind</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_seq_def</span>: <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> <span class="id">f1</span> (<span class="kwd">fun</span> _ =&gt; <span class="id">f2</span>)) (<span class="id">f1</span>;; <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">fold</span> (<span class="id">f1</span>;; <span class="id">f2</span>).<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_pure_conj</span>: <span class="kwd">forall</span> (<span class="id">P</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) (<span class="id">P1</span>:<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">entails</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P1</span> /\ <span class="id">P</span> <span class="id">r</span>]))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> \[<span class="id">P1</span>];; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">r</span>])).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens_</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_void_hstar_pure_l</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> (\[<span class="id">P</span>] \* <span class="id">H</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> \[<span class="id">P</span>];; <span class="id">ens_</span> <span class="id">H</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_ens_</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_void_hstar_pure_r</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> (<span class="id">H</span> \* \[<span class="id">P</span>]))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> \[<span class="id">P</span>];; <span class="id">ens_</span> <span class="id">H</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_ens_</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_pure_ex</span>: <span class="kwd">forall</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="id">val</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">entails</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="kwd">exists</span> <span class="id">b</span>, <span class="id">P</span> <span class="id">b</span> <span class="id">r</span>]))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">∃</span> <span class="id">b</span>, <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">b</span> <span class="id">r</span>])).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fex</span>. <span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_defun_discard_id</span>: <span class="kwd">forall</span> <span class="id">s</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span>,<br/>
+&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> <span class="id">s</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">s</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">discard</span> <span class="id">f</span>) <span class="id">empty</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails_under</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>. 2: <span class="id">no_shift</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span>* <span class="id">remove_update</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">empty_intro</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_defun_discard_id1</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">discard</span> <span class="id">f</span>) <span class="id">empty</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id">remove_update</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">empty_intro</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_discard</span>: <span class="kwd">forall</span> <span class="id">s</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> <span class="id">s</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">s</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">discard</span> <span class="id">f</span>;; <span class="id">f1</span>) <span class="id">f1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id">norm_seq_assoc_sf</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id">norm_defun_discard_id</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_empty_l</span>.<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_discard1</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">discard</span> <span class="id">f</span>;; <span class="id">f1</span>) <span class="id">f1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id">norm_seq_assoc_sf</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span>* <span class="id">norm_defun_discard_id1</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_empty_l</span>.<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_ens_void</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">ens_</span> <span class="id">H</span>) (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_rs</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">f1</span> <span class="id">u</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">rs</span> <span class="id">f1</span>) (<span class="id">rs</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">f1</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_rs_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_bind_l</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">f1</span> <span class="id">fk</span> <span class="id">u</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">bind</span> <span class="id">f1</span> <span class="id">fk</span>) (<span class="id">bind</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">f1</span>) <span class="id">fk</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_seq_defun_ens</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">Q</span> <span class="id">fk</span> <span class="id">u</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">ens</span> <span class="id">Q</span>) <span class="id">fk</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> (<span class="id">ens</span> <span class="id">Q</span>) (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">fk</span> <span class="id">r</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span>* <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span>* <span class="id">H6</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_rs_seq_defun_ens</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">Q</span> <span class="id">fk</span> <span class="id">u</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">rs</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">ens</span> <span class="id">Q</span>)) <span class="id">fk</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">bind</span> (<span class="id">rs</span> (<span class="id">ens</span> <span class="id">Q</span>)) (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">fk</span> <span class="id">r</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span>* <span class="id">H7</span>. { <span class="id">inverts</span>* <span class="id">H0</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span>* <span class="id">H6</span>. { <span class="id">inverts</span>* <span class="id">H0</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_req</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> <span class="id">f1</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">req</span> <span class="id">H</span> <span class="id">f1</span>) (<span class="id">req</span> <span class="id">H</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">f1</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>. 2: <span class="id">no_shift</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>. <span class="id">specializes</span> <span class="id">H12</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_disj_defun_l</span>: <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">disj</span> <span class="id">f1</span> <span class="id">f2</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">disj</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">f1</span>) (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">f2</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: <span class="id">no_shift</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_disj_l</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_disj_r</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_unk</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">unk</span> <span class="id">f</span> <span class="id">v</span>) (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">u</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: <span class="id">no_shift</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+&nbsp;&nbsp;- <span class="id">rewrite</span>* <span class="id">fmap_read_update</span> <span class="kwd">in</span> <span class="id">H9</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_ignore_res_l</span>: <span class="kwd">forall</span> <span class="id">v</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">v</span>]);; <span class="id">f</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>. <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_seq_past_pure_sf</span>: <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">fk</span> <span class="id">P</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">r</span>])) (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">f1</span>;; <span class="id">fk</span> <span class="id">r</span>))<br/>
+&nbsp;&nbsp;(<span class="id">f1</span>;; (<span class="id">bind</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">r</span>])) <span class="id">fk</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">Hsf</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_ens_req</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">fk</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">r</span>])) (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">req</span> <span class="id">H</span> (<span class="id">fk</span> <span class="id">r</span>)))<br/>
+&nbsp;&nbsp;(<span class="id">req</span> <span class="id">H</span> (<span class="id">bind</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">r</span>])) <span class="id">fk</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>. <span class="id">specializes</span> <span class="id">H13</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_void_pure_swap</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">P</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">ens_</span> \[<span class="id">P</span>];; <span class="id">f</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> \[<span class="id">P</span>];; <span class="id">ens_</span> <span class="id">H</span>;; <span class="id">f</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_hstar_pure_r</span>: <span class="kwd">forall</span> <span class="id">H</span> (<span class="id">P</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">H</span> \* \[<span class="id">P</span> <span class="id">r</span>])) (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">r</span>])).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_trivial_sf</span>: <span class="kwd">forall</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> <span class="id">f1</span> (<span class="kwd">fun</span> <span class="id">r2</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r1</span> =&gt; \[<span class="id">r1</span> = <span class="id">r2</span>]))) <span class="id">f1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">Hsf</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>. <span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">ent_bind_ens_pure_l</span>: <span class="kwd">forall</span> <span class="id">s</span> <span class="id">P</span> <span class="id">fk</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">r</span>, <span class="id">P</span> <span class="id">r</span> -&gt; <span class="id">entails_under</span> <span class="id">s</span> (<span class="id">fk</span> <span class="id">r</span>) <span class="id">f</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> <span class="id">s</span> (<span class="id">bind</span> (<span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">P</span> <span class="id">r</span>])) <span class="id">fk</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails_under</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">gnorm_bind_trivial</span>: <span class="kwd">forall</span> <span class="id">n</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;<span class="id">gentails</span> <span class="id">n</span> (<span class="id">bind</span> <span class="id">f1</span> (<span class="kwd">fun</span> <span class="id">r2</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r1</span> =&gt; \[<span class="id">r1</span> = <span class="id">r2</span>]))) <span class="id">f1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">n</span>. <span class="id">induction</span> <span class="id">n</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_base</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>. <span class="id">heaps</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">ge_shift</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">fb</span> <span class="id">fk0</span>. <span class="id">splits</span>*. <span class="id">reflexivity</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_skip_ens_void</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> <span class="id">H</span> <span class="id">f1</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">ens_</span> <span class="id">H</span>;; <span class="id">f1</span>) (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">f1</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>. <span class="id">applys</span>* <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>. <span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_all</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">∀</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>) (<span class="id">∀</span> <span class="id">x</span>, <span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">P</span> <span class="id">x</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span> <span class="kwd">as</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fall</span>. <span class="id">intros</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H8</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>. <span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_ens</span>: <span class="kwd">forall</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">rs</span> (<span class="id">ens</span> <span class="id">Q</span>)) (<span class="id">ens</span> <span class="id">Q</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">red_rs_ens</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_seq_defun_ex</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">u</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">P</span>:<span class="id">A</span>-&gt;<span class="id">flow</span>),<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">∃</span> <span class="id">x</span>, <span class="id">P</span> <span class="id">x</span>) (<span class="id">∃</span> <span class="id">x</span>, <span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">P</span> <span class="id">x</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span> <span class="kwd">as</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fex</span>. <span class="id">destruct</span> <span class="id">H8</span> <span class="kwd">as</span> (<span class="id">b</span>&amp;<span class="id">H8</span>).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>. <span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_rs_seq_defun_out</span>: <span class="kwd">forall</span> (<span class="id">f</span>:<span class="id">var</span>) <span class="id">f1</span> <span class="id">u</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">f1</span>)) (<span class="id">defun</span> <span class="id">f</span> <span class="id">u</span>;; <span class="id">rs</span> <span class="id">f1</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span>* <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_rs_sh</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span>* <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_defun</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_rs_val</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_intersect_l</span>: <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">intersect</span> <span class="id">f1</span> <span class="id">f2</span>) <span class="id">f1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_intersect_r</span>: <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">intersect</span> <span class="id">f1</span> <span class="id">f2</span>) <span class="id">f2</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span>* <span class="id">H</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_bind_seq_ex</span>: <span class="kwd">forall</span> <span class="id">f</span> <span class="id">fk</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> <span class="id">f</span> <span class="id">fk</span>) (<span class="id">f</span>;; <span class="id">∃</span> <span class="id">x</span>, <span class="id">fk</span> <span class="id">x</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">introv</span> <span class="id">Hsf</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span>* <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_fex</span>. <span class="kwd">exists</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">no_shift</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_empty_r</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">ens_</span> <span class="id">H</span>;; <span class="id">empty</span>) (<span class="id">ens_</span> <span class="id">H</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">bientails</span>.<br/>
+&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>. 2: { <span class="id">no_shift</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H9</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">heaps</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destr</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_bind</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">empty</span>. <span class="id">applys</span> <span class="id">s_ens</span>. <span class="id">heaps</span>. }<br/>
+Qed.</div></details>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Reduction</title>
+<meta name="description" content="Documentation of Coq module Reduction" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Reduction</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">ShiftReset</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Basics</span> <span class="id">ShiftFree</span>.<br/>
+<br/>
+<h1> New reduction rules </h1>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_init</span> : <span class="kwd">forall</span> <span class="id">fb</span> <span class="id">k</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">sh</span> <span class="id">k</span> <span class="id">fb</span>) (<span class="id">shc</span> <span class="id">k</span> <span class="id">fb</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">v</span>]))).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">sh</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">entails_refl</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_extend</span> : <span class="kwd">forall</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span> <span class="id">fk1</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">bind</span> (<span class="id">shc</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span>) <span class="id">fk1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">shc</span> <span class="id">k</span> <span class="id">fb</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">bind</span> (<span class="id">fk</span> <span class="id">v</span>) <span class="id">fk1</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_shc</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_rs_float1</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">f1</span>;; <span class="id">f2</span>)) (<span class="id">f1</span>;; <span class="id">rs</span> <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hsf</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>; <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;if&nbsp;either&nbsp;f1&nbsp;or&nbsp;f2&nbsp;produce&nbsp;a&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="comment">(*&nbsp;f2&nbsp;produces&nbsp;a&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exact</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_rs_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exact</span> <span class="id">H8</span>. <span class="id">eassumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="comment">(*&nbsp;f1&nbsp;cannot&nbsp;produce&nbsp;a&nbsp;shift&nbsp;as&nbsp;it&nbsp;is&nbsp;shift-free&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">Hsf</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;if&nbsp;f1&nbsp;returns&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exact</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_rs_float2</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">disj</span> <span class="id">f1</span> <span class="id">f2</span>)) (<span class="id">disj</span> (<span class="id">rs</span> <span class="id">f1</span>) (<span class="id">rs</span> <span class="id">f2</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_disj_l</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_rs_sh</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_disj_r</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_rs_sh</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_disj_l</span>. <span class="id">applys</span>* <span class="id">s_rs_val</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">s_disj_r</span>. <span class="id">applys</span>* <span class="id">s_rs_val</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_rs_elim</span> : <span class="kwd">forall</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">rs</span> <span class="id">f</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hsf</span>. <span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span>* <span class="id">H</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span>* <span class="id">R</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_rs_val</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_rs_ens</span> : <span class="kwd">forall</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">rs</span> (<span class="id">ens</span> <span class="id">Q</span>)) (<span class="id">ens</span> <span class="id">Q</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">red_rs_elim</span>. <span class="id">shiftfree</span>. <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">applys</span> <span class="id">red_rs_elim</span>. <span class="id">shiftfree</span>. <span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_rs_sh_elim</span> : <span class="kwd">forall</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">shc</span> <span class="id">k</span> <span class="id">fb</span> <span class="id">fk</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">defun</span> <span class="id">k</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">rs</span> (<span class="id">fk</span> <span class="id">v</span>));; <span class="id">rs</span> <span class="id">fb</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. 2: { <span class="id">false_invert</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;body&nbsp;has&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>. { <span class="id">applys</span>* <span class="id">s_defun</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_rs_sh</span>. }<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;body&nbsp;has&nbsp;no&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span>. { <span class="id">applys</span>* <span class="id">s_defun</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_rs_val</span>. }<br/>
+Qed.</div></details>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>
