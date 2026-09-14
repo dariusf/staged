@@ -1,0 +1,1682 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Logic</title><script src="coq2html.js"></script>
+<meta name="description" content="Documentation of Coq module Logic" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Logic</h1>
+<div class="coq">
+<span class="kwd">From</span> <span class="id">Stdlib</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Classes.RelationClasses</span>.<br/>
+<span class="kwd">From</span> <span class="id">Stdlib</span> <span class="kwd">Require</span> <span class="id">Morphisms</span> <span class="id">Program.Basics</span>.<br/>
+<br/>
+<span class="kwd">Set</span> <span class="id">Warnings</span> <span class="string">"-notation-incompatible-prefix"</span>.<br/>
+<span class="kwd">From</span> <span class="id">Staged</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id">HeapF</span>.<br/>
+<span class="kwd">Set</span> <span class="id">Warnings</span> <span class="string">"notation-incompatible-prefix"</span>.<br/>
+<span class="kwd">From</span> <span class="id">Staged</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id">LibFmap</span>.<br/>
+<span class="kwd">From</span> <span class="id">Staged</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id">ExtraTactics</span>.<br/>
+<br/>
+<span class="id">Local</span> <span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">string_scope</span>.<br/>
+<span class="id">Local</span> <span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">Z_scope</span>.<br/>
+<span class="id">Local</span> <span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">list_scope</span>.<br/>
+<br/>
+<span class="kwd">Set</span> <span class="kwd">Implicit</span> <span class="kwd">Arguments</span>.<br/>
+<br/>
+<h1> Programs </h1>
+<span class="kwd">Definition</span> <span class="id">var</span> : <span class="kwd">Type</span> := <span class="id">string</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">var_eq</span> := <span class="id">String.string_dec</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">loc</span> := <span class="id">nat</span>.<br/>
+<br/>
+<div class="doc">Runtime representation of types, for match and type testing/casts.
+  Very lossy - for example, list only checks that the topmost constructor is nil
+  or cons, and arrows cannot talk about the arity, or types of arguments and
+  return value. </div>
+<span class="kwd">Inductive</span> <span class="id">tag</span> :=<br/>
+&nbsp;&nbsp;| <span class="id">tag_int</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_bool</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_str</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_arrow</span> <br/>
+&nbsp;&nbsp;| <span class="id">tag_nil</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_cons</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_list</span>.<br/>
+<br/>
+<span class="kwd">Inductive</span> <span class="id">val</span> :=<br/>
+&nbsp;&nbsp;| <span class="id">vunit</span> : <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vint</span> : <span class="id">Z</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vfun</span> : <span class="id">var</span> -&gt; <span class="id">expr</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vfix</span> : <span class="id">var</span> -&gt; <span class="id">var</span> -&gt; <span class="id">expr</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vloc</span> : <span class="id">loc</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vstr</span> : <span class="id">string</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vbool</span> : <span class="id">bool</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vconstr0</span> : <span class="id">string</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vconstr1</span> : <span class="id">string</span> -&gt; <span class="id">val</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vconstr2</span> : <span class="id">string</span> -&gt; <span class="id">val</span> -&gt; <span class="id">val</span> -&gt; <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">verr</span> : <span class="id">val</span><br/>
+&nbsp;&nbsp;| <span class="id">vabort</span> : <span class="id">val</span><br/>
+<br/>
+<span class="kwd">with</span> <span class="id">expr</span> : <span class="kwd">Type</span> :=<br/>
+&nbsp;&nbsp;| <span class="id">pvar</span> (<span class="id">x</span>: <span class="id">var</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pval</span> (<span class="id">v</span>: <span class="id">val</span>)<br/>
+&nbsp;&nbsp;| <span class="id">plet</span> (<span class="id">x</span>: <span class="id">var</span>) (<span class="id">e1</span> <span class="id">e2</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pif</span> (<span class="id">b</span>: <span class="id">expr</span>) (<span class="id">e1</span>: <span class="id">expr</span>) (<span class="id">e2</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pmatch</span> (<span class="id">e</span>: <span class="id">expr</span>) (<span class="id">cases</span>: <span class="id">list</span> (<span class="id">tag</span> * <span class="id">expr</span>))<br/>
+&nbsp;&nbsp;| <span class="id">papp</span> (<span class="id">x</span>: <span class="id">expr</span>) (<span class="id">a</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pfun</span> (<span class="id">x</span>: <span class="id">var</span>) (<span class="id">e</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pfix</span> (<span class="id">f</span>: <span class="id">var</span>) (<span class="id">x</span>: <span class="id">var</span>) (<span class="id">e</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pfst</span> (<span class="id">t</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">psnd</span> (<span class="id">t</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pminus</span> (<span class="id">x</span> <span class="id">y</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">padd</span> (<span class="id">x</span> <span class="id">y</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">ptypetest</span> (<span class="id">tag</span>: <span class="id">tag</span>) (<span class="id">e</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">passert</span> (<span class="id">b</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pref</span> (<span class="id">v</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pderef</span> (<span class="id">v</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;| <span class="id">passign</span> (<span class="id">x</span>: <span class="id">expr</span>) (<span class="id">v</span>: <span class="id">expr</span>)<br/>
+&nbsp;&nbsp;.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">e</span>: <span class="id">expr</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">r</span> <span class="id">v</span>: <span class="id">val</span>.<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Instance</span> <span class="id">Inhab_val</span> : <span class="id">Inhab</span> <span class="id">val</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">constructor</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">vunit</span>.<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id">subst</span> (<span class="id">y</span>:<span class="id">var</span>) (<span class="id">w</span>:<span class="id">val</span>) (<span class="id">e</span>:<span class="id">expr</span>) : <span class="id">expr</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">aux</span> <span class="id">t</span> := <span class="id">subst</span> <span class="id">y</span> <span class="id">w</span> <span class="id">t</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">sub_case</span> <span class="id">c</span> := <span class="kwd">match</span> <span class="id">c</span> <span class="kwd">with</span> | (<span class="id">tag</span>, <span class="id">eb</span>) =&gt; (<span class="id">tag</span>, <span class="id">aux</span> <span class="id">eb</span>) <span class="kwd">end</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">if_y_eq</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> := <span class="kwd">if</span> <span class="id">var_eq</span> <span class="id">x</span> <span class="id">y</span> <span class="kwd">then</span> <span class="id">t1</span> <span class="kwd">else</span> <span class="id">t2</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">e</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">pval</span> <span class="id">v</span> =&gt; <span class="id">pval</span> <span class="id">v</span><br/>
+&nbsp;&nbsp;| <span class="id">padd</span> <span class="id">e1</span> <span class="id">e2</span> =&gt; <span class="id">padd</span> (<span class="id">aux</span> <span class="id">e1</span>) (<span class="id">aux</span> <span class="id">e2</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pminus</span> <span class="id">e1</span> <span class="id">e2</span> =&gt; <span class="id">pminus</span> (<span class="id">aux</span> <span class="id">e1</span>) (<span class="id">aux</span> <span class="id">e2</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pfst</span> <span class="id">e</span> =&gt; <span class="id">pfst</span> (<span class="id">aux</span> <span class="id">e</span>)<br/>
+&nbsp;&nbsp;| <span class="id">psnd</span> <span class="id">e</span> =&gt; <span class="id">psnd</span> (<span class="id">aux</span> <span class="id">e</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pvar</span> <span class="id">x</span> =&gt; <span class="id">if_y_eq</span> <span class="id">x</span> (<span class="id">pval</span> <span class="id">w</span>) <span class="id">e</span><br/>
+&nbsp;&nbsp;| <span class="id">passert</span> <span class="id">e</span> =&gt; <span class="id">passert</span> (<span class="id">aux</span> <span class="id">e</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pderef</span> <span class="id">e</span> =&gt; <span class="id">pderef</span> (<span class="id">aux</span> <span class="id">e</span>)<br/>
+&nbsp;&nbsp;| <span class="id">passign</span> <span class="id">e1</span> <span class="id">e2</span> =&gt; <span class="id">passign</span> (<span class="id">aux</span> <span class="id">e1</span>) (<span class="id">aux</span> <span class="id">e2</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pref</span> <span class="id">e</span> =&gt; <span class="id">pref</span> (<span class="id">aux</span> <span class="id">e</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pfun</span> <span class="id">x</span> <span class="id">t1</span> =&gt; <span class="id">pfun</span> <span class="id">x</span> (<span class="id">if_y_eq</span> <span class="id">x</span> <span class="id">t1</span> (<span class="id">aux</span> <span class="id">t1</span>))<br/>
+&nbsp;&nbsp;| <span class="id">pfix</span> <span class="id">f</span> <span class="id">x</span> <span class="id">t1</span> =&gt; <span class="id">pfix</span> <span class="id">f</span> <span class="id">x</span> (<span class="id">if_y_eq</span> <span class="id">f</span> <span class="id">t1</span> (<span class="id">if_y_eq</span> <span class="id">x</span> <span class="id">t1</span> (<span class="id">aux</span> <span class="id">t1</span>)))<br/>
+&nbsp;&nbsp;| <span class="id">papp</span> <span class="id">e1</span> <span class="id">e2</span> =&gt; <span class="id">papp</span> (<span class="id">aux</span> <span class="id">e1</span>) (<span class="id">aux</span> <span class="id">e2</span>)<br/>
+&nbsp;&nbsp;| <span class="id">ptypetest</span> <span class="id">tag</span> <span class="id">e</span> =&gt; <span class="id">ptypetest</span> <span class="id">tag</span> (<span class="id">aux</span> <span class="id">e</span>)<br/>
+&nbsp;&nbsp;| <span class="id">plet</span> <span class="id">x</span> <span class="id">t1</span> <span class="id">t2</span> =&gt; <span class="id">plet</span> <span class="id">x</span> (<span class="id">aux</span> <span class="id">t1</span>) (<span class="id">if_y_eq</span> <span class="id">x</span> <span class="id">t2</span> (<span class="id">aux</span> <span class="id">t2</span>))<br/>
+&nbsp;&nbsp;| <span class="id">pif</span> <span class="id">t0</span> <span class="id">t1</span> <span class="id">t2</span> =&gt; <span class="id">pif</span> (<span class="id">aux</span> <span class="id">t0</span>) (<span class="id">aux</span> <span class="id">t1</span>) (<span class="id">aux</span> <span class="id">t2</span>)<br/>
+&nbsp;&nbsp;| <span class="id">pmatch</span> <span class="id">e</span> <span class="id">cases</span> =&gt; <span class="id">pmatch</span> (<span class="id">aux</span> <span class="id">e</span>) (<span class="id">List.map</span> <span class="id">sub_case</span> <span class="id">cases</span>)<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">vcons</span> <span class="id">a</span> <span class="id">b</span> : <span class="id">val</span> := <span class="id">vconstr2</span> <span class="string">"cons"</span> <span class="id">a</span> <span class="id">b</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">vnil</span> : <span class="id">val</span> := <span class="id">vconstr0</span> <span class="string">"nil"</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> : <span class="id">bool</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">tag</span>, <span class="id">v</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_int</span>, <span class="id">vint</span> _ =&gt; <span class="id">true</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_bool</span>, <span class="id">vbool</span> _ =&gt; <span class="id">true</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_str</span>, <span class="id">vstr</span> _ =&gt; <span class="id">true</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_nil</span>, <span class="id">vconstr0</span> <span class="string">"nil"</span> =&gt; <span class="id">true</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_cons</span>, <span class="id">vconstr2</span> <span class="string">"cons"</span> _ _ =&gt; <span class="id">true</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_list</span>, <span class="id">vconstr0</span> <span class="string">"nil"</span> =&gt; <span class="id">true</span><br/>
+&nbsp;&nbsp;| <span class="id">tag_list</span>, <span class="id">vconstr2</span> <span class="string">"cons"</span> _ _ =&gt; <span class="id">true</span><br/>
+&nbsp;&nbsp;| _, _ =&gt; <span class="id">false</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">ptypecast</span> <span class="id">tag</span> (<span class="id">v</span>:<span class="id">val</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">plet</span> <span class="string">"_ok"</span> (<span class="id">ptypetest</span> <span class="id">tag</span> (<span class="id">pval</span> <span class="id">v</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">pif</span> (<span class="id">pvar</span> <span class="string">"_ok"</span>) (<span class="id">pval</span> <span class="id">v</span>) (<span class="id">pval</span> <span class="id">vabort</span>)).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">pletcast</span> <span class="id">x</span> <span class="id">tag</span> <span class="id">e1</span> <span class="id">e2</span> : <span class="id">expr</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">plet</span> <span class="string">"_xb"</span> (<span class="id">ptypetest</span> <span class="id">tag</span> (<span class="id">pvar</span> <span class="id">x</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">pif</span> (<span class="id">pvar</span> <span class="string">"_xb"</span>) <span class="id">e2</span> (<span class="id">pval</span> <span class="id">vabort</span>)))).<br/>
+<br/>
+<span class="kwd">Module</span> <span class="id">Val</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">Definition</span> <span class="id">value</span> := <span class="id">val</span>.<br/>
+<span class="kwd">End</span> <span class="id">Val</span>.<br/>
+<br/>
+<span class="kwd">Module</span> <span class="kwd">Export</span> <span class="id">Heap</span> := <span class="id">HeapF.HeapSetup</span> <span class="id">Val</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">empty_heap</span> : <span class="id">heap</span> := <span class="id">Fmap.empty</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">h</span>: <span class="id">heap</span>.<br/>
+<br/>
+<span class="kwd">Inductive</span> <span class="id">bigstep</span> : <span class="id">heap</span> -&gt; <span class="id">expr</span> -&gt; <span class="id">heap</span> -&gt; <span class="id">val</span> -&gt; <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;| <span class="id">eval_pval</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">pval</span> <span class="id">v</span>) <span class="id">h</span> <span class="id">v</span><br/>
+<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_plet</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h3</span> <span class="id">h2</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span> <span class="id">v</span> <span class="id">Re</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> <span class="id">e1</span> <span class="id">h3</span> <span class="id">v</span> -&gt; <span class="id">v</span> &lt;&gt; <span class="id">vabort</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h3</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v</span> <span class="id">e2</span>) <span class="id">h2</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>) <span class="id">h2</span> <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_plet_abort</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> <span class="id">e1</span> <span class="id">h2</span> <span class="id">v</span> -&gt; <span class="id">v</span> = <span class="id">vabort</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>) <span class="id">h2</span> <span class="id">v</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_padd</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">padd</span> (<span class="id">pval</span> (<span class="id">vint</span> <span class="id">x</span>)) (<span class="id">pval</span> (<span class="id">vint</span> <span class="id">y</span>))) <span class="id">h</span> (<span class="id">vint</span> (<span class="id">x</span> + <span class="id">y</span>))<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pminus</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">pminus</span> (<span class="id">pval</span> (<span class="id">vint</span> <span class="id">x</span>)) (<span class="id">pval</span> (<span class="id">vint</span> <span class="id">y</span>))) <span class="id">h</span> (<span class="id">vint</span> (<span class="id">x</span> - <span class="id">y</span>))<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pfst1</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">h</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">pfst</span> (<span class="id">pval</span> (<span class="id">vconstr1</span> <span class="id">x</span> <span class="id">v</span>))) <span class="id">h</span> <span class="id">v</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pfst2</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">h</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">pfst</span> (<span class="id">pval</span> (<span class="id">vconstr2</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span>))) <span class="id">h</span> <span class="id">v1</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_psnd2</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">h</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">psnd</span> (<span class="id">pval</span> (<span class="id">vconstr2</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span>))) <span class="id">h</span> <span class="id">v2</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pfun</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">e</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">pfun</span> <span class="id">x</span> <span class="id">e</span>) <span class="id">h</span> (<span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pfix</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">x</span> <span class="id">e</span> <span class="id">xf</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">pfix</span> <span class="id">xf</span> <span class="id">x</span> <span class="id">e</span>) <span class="id">h</span> (<span class="id">vfix</span> <span class="id">xf</span> <span class="id">x</span> <span class="id">e</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_app_fun</span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">h</span> <span class="id">x</span> <span class="id">e</span> <span class="id">Re</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">v1</span> = <span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v2</span> <span class="id">e</span>) <span class="id">h</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">v1</span>) (<span class="id">pval</span> <span class="id">v2</span>)) <span class="id">h</span> <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_app_fix</span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">h</span> <span class="id">x</span> <span class="id">e</span> <span class="id">Re</span> <span class="id">xf</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">v1</span> = <span class="id">vfix</span> <span class="id">xf</span> <span class="id">x</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v2</span> (<span class="id">subst</span> <span class="id">xf</span> <span class="id">v1</span> <span class="id">e</span>)) <span class="id">h</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">v1</span>) (<span class="id">pval</span> <span class="id">v2</span>)) <span class="id">h</span> <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pif_true</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">Re</span> <span class="id">e1</span> <span class="id">e2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> <span class="id">e1</span> <span class="id">h2</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> (<span class="id">pif</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">true</span>)) <span class="id">e1</span> <span class="id">e2</span>) <span class="id">h2</span> <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pif_false</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">Re</span> <span class="id">e1</span> <span class="id">e2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> <span class="id">e2</span> <span class="id">h2</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> (<span class="id">pif</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">false</span>)) <span class="id">e1</span> <span class="id">e2</span>) <span class="id">h2</span> <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pref</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">v</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> <span class="id">h</span> <span class="id">p</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">pref</span> (<span class="id">pval</span> <span class="id">v</span>)) (<span class="id">Fmap.update</span> <span class="id">h</span> <span class="id">p</span> <span class="id">v</span>) (<span class="id">vloc</span> <span class="id">p</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pderef</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">p</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Fmap.indom</span> <span class="id">h</span> <span class="id">p</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">pderef</span> (<span class="id">pval</span> (<span class="id">vloc</span> <span class="id">p</span>))) <span class="id">h</span> (<span class="id">Fmap.read</span> <span class="id">h</span> <span class="id">p</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_passign</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">p</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Fmap.indom</span> <span class="id">h</span> <span class="id">p</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">passign</span> (<span class="id">pval</span> (<span class="id">vloc</span> <span class="id">p</span>)) (<span class="id">pval</span> <span class="id">v</span>)) (<span class="id">Fmap.update</span> <span class="id">h</span> <span class="id">p</span> <span class="id">v</span>) <span class="id">vunit</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_passert</span> : <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">passert</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">true</span>))) <span class="id">h</span> <span class="id">vunit</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_ptypetest</span> : <span class="kwd">forall</span> <span class="id">h</span> <span class="id">tag</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h</span> (<span class="id">ptypetest</span> <span class="id">tag</span> (<span class="id">pval</span> <span class="id">v</span>)) <span class="id">h</span> (<span class="id">vbool</span> (<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span>))<br/>
+<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pmatch</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">v</span> <span class="id">tag</span> <span class="id">eb</span> <span class="id">cs</span> <span class="id">r</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">true</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> <span class="id">eb</span> <span class="id">h2</span> <span class="id">r</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> (<span class="id">pmatch</span> (<span class="id">pval</span> <span class="id">v</span>) ((<span class="id">tag</span>, <span class="id">eb</span>)::<span class="id">cs</span>)) <span class="id">h2</span> <span class="id">r</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">eval_pmatch_skip</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">v</span> <span class="id">tag</span> <span class="id">eb</span> <span class="id">cs</span> <span class="id">r</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">false</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> (<span class="id">pmatch</span> (<span class="id">pval</span> <span class="id">v</span>) <span class="id">cs</span>) <span class="id">h2</span> <span class="id">r</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> (<span class="id">pmatch</span> (<span class="id">pval</span> <span class="id">v</span>) ((<span class="id">tag</span>, <span class="id">eb</span>)::<span class="id">cs</span>)) <span class="id">h2</span> <span class="id">r</span><br/>
+<br/>
+&nbsp;&nbsp;.<br/>
+<br/>
+<span class="kwd">Example</span> <span class="id">e1_let</span>: <span class="kwd">exists</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">empty_heap</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">plet</span> <span class="string">"x"</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">false</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">pvar</span> <span class="string">"x"</span>)) <span class="id">h</span> (<span class="id">vbool</span> <span class="id">false</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">empty_heap</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">eval_plet</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">eval_pval</span>.<br/>
+&nbsp;&nbsp;- <span class="id">unfold</span> <span class="id">not</span>. <span class="id">intros</span>. <span class="id">discriminate</span>.<br/>
+&nbsp;&nbsp;- <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">eval_pval</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Example</span> <span class="id">e1</span>: <span class="kwd">exists</span> <span class="id">h</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">empty_heap</span> (<span class="id">pref</span> (<span class="id">pval</span> (<span class="id">vint</span> 2))) <span class="id">h</span> <span class="id">v</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">Fmap.single</span> (1%<span class="id">nat</span>) (<span class="id">vint</span> 2)).<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> (<span class="id">vloc</span> (1%<span class="id">nat</span>)).<br/>
+&nbsp;&nbsp;<span class="id">applys_eq</span> <span class="id">eval_pref</span>.<br/>
+&nbsp;&nbsp;- <span class="id">unfold</span> <span class="id">Fmap.update</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fmap_eq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">fmap_indom_empty</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Inductive</span> <span class="id">bigstep_pure</span> : <span class="id">expr</span> -&gt; <span class="id">val</span> -&gt; <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;| <span class="id">pure_pval</span> : <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pval</span> <span class="id">v</span>) <span class="id">v</span><br/>
+<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_plet</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span> <span class="id">v</span> <span class="id">Re</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> <span class="id">e1</span> <span class="id">v</span> -&gt; <span class="id">v</span> &lt;&gt; <span class="id">vabort</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v</span> <span class="id">e2</span>) <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>) <span class="id">Re</span><br/>
+<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_padd</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">padd</span> (<span class="id">pval</span> (<span class="id">vint</span> <span class="id">x</span>)) (<span class="id">pval</span> (<span class="id">vint</span> <span class="id">y</span>))) (<span class="id">vint</span> (<span class="id">x</span> + <span class="id">y</span>))<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_pminus</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pminus</span> (<span class="id">pval</span> (<span class="id">vint</span> <span class="id">x</span>)) (<span class="id">pval</span> (<span class="id">vint</span> <span class="id">y</span>))) (<span class="id">vint</span> (<span class="id">x</span> - <span class="id">y</span>))<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_pfst1</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pfst</span> (<span class="id">pval</span> (<span class="id">vconstr1</span> <span class="id">x</span> <span class="id">v</span>))) <span class="id">v</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_pfst2</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pfst</span> (<span class="id">pval</span> (<span class="id">vconstr2</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span>))) <span class="id">v1</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_psnd2</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">psnd</span> (<span class="id">pval</span> (<span class="id">vconstr2</span> <span class="id">x</span> <span class="id">v1</span> <span class="id">v2</span>))) <span class="id">v2</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_pfun</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">e</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pfun</span> <span class="id">x</span> <span class="id">e</span>) (<span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_pfix</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">e</span> <span class="id">xf</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pfix</span> <span class="id">xf</span> <span class="id">x</span> <span class="id">e</span>) (<span class="id">vfix</span> <span class="id">xf</span> <span class="id">x</span> <span class="id">e</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_app_fun</span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">x</span> <span class="id">e</span> <span class="id">Re</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">v1</span> = <span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v2</span> <span class="id">e</span>) <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">v1</span>) (<span class="id">pval</span> <span class="id">v2</span>)) <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_app_fix</span> : <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">x</span> <span class="id">e</span> <span class="id">Re</span> <span class="id">xf</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">v1</span> = <span class="id">vfix</span> <span class="id">xf</span> <span class="id">x</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v2</span> (<span class="id">subst</span> <span class="id">xf</span> <span class="id">v1</span> <span class="id">e</span>)) <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">v1</span>) (<span class="id">pval</span> <span class="id">v2</span>)) <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_pif_true</span> : <span class="kwd">forall</span> <span class="id">Re</span> <span class="id">e1</span> <span class="id">e2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> <span class="id">e1</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pif</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">true</span>)) <span class="id">e1</span> <span class="id">e2</span>) <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_pif_false</span> : <span class="kwd">forall</span> <span class="id">Re</span> <span class="id">e1</span> <span class="id">e2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> <span class="id">e2</span> <span class="id">Re</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pif</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">false</span>)) <span class="id">e1</span> <span class="id">e2</span>) <span class="id">Re</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_passert</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">passert</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">true</span>))) <span class="id">vunit</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_ptypetest</span> : <span class="kwd">forall</span> <span class="id">tag</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">ptypetest</span> <span class="id">tag</span> (<span class="id">pval</span> <span class="id">v</span>)) (<span class="id">vbool</span> (<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span>))<br/>
+<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_pmatch</span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">tag</span> <span class="id">eb</span> <span class="id">cs</span> <span class="id">r</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">true</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> <span class="id">eb</span> <span class="id">r</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pmatch</span> (<span class="id">pval</span> <span class="id">v</span>) ((<span class="id">tag</span>, <span class="id">eb</span>)::<span class="id">cs</span>)) <span class="id">r</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">pure_pmatch_skip</span> : <span class="kwd">forall</span> <span class="id">v</span> <span class="id">tag</span> <span class="id">eb</span> <span class="id">cs</span> <span class="id">r</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">false</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pmatch</span> (<span class="id">pval</span> <span class="id">v</span>) <span class="id">cs</span>) <span class="id">r</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep_pure</span> (<span class="id">pmatch</span> (<span class="id">pval</span> <span class="id">v</span>) ((<span class="id">tag</span>, <span class="id">eb</span>)::<span class="id">cs</span>)) <span class="id">r</span><br/>
+<br/>
+&nbsp;&nbsp;.<br/>
+<br/>
+<h1> Types </h1>
+<span class="kwd">Definition</span> <span class="id">type</span> := <span class="id">val</span> -&gt; <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">t</span>: <span class="id">type</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tsingle</span> <span class="id">v1</span> : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">v</span> = <span class="id">v1</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">terr</span> : <span class="id">type</span> := <span class="id">tsingle</span> <span class="id">verr</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">tabort</span> : <span class="id">type</span> := <span class="id">tsingle</span> <span class="id">vabort</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">ttop</span> : <span class="id">type</span> := <span class="kwd">fun</span> _ =&gt; <span class="id">True</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">tbot</span> : <span class="id">type</span> := <span class="kwd">fun</span> _ =&gt; <span class="id">False</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">tintersect</span> <span class="id">t1</span> <span class="id">t2</span> : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">t1</span> <span class="id">v</span> /\ <span class="id">t2</span> <span class="id">v</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">tunion</span> <span class="id">t1</span> <span class="id">t2</span> : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">t1</span> <span class="id">v</span> \/ <span class="id">t2</span> <span class="id">v</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">tnot</span> <span class="id">t</span> : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">not</span> (<span class="id">t</span> <span class="id">v</span>).<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">has_type</span> (<span class="id">l</span>:<span class="id">loc</span>) (<span class="id">v</span>:<span class="id">val</span>) : <span class="id">hprop</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">fun</span> <span class="id">h</span> =&gt; <span class="id">Fmap.read</span> <span class="id">h</span> <span class="id">l</span> = <span class="id">v</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">weakening</span>: <span class="kwd">forall</span> <span class="id">l</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">l</span>~~&gt;<span class="id">v</span> ==&gt; <span class="id">has_type</span> <span class="id">l</span> <span class="id">v</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id">has_type</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">himpl</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">hsingle_inv</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">Fmap.read_single</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hsingle_has_type_same_loc</span>: <span class="kwd">forall</span> <span class="id">l</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">l</span>~~&gt;<span class="id">v</span> \* <span class="id">has_type</span> <span class="id">l</span> <span class="id">v</span> ==&gt; \[<span class="id">False</span>].<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="comment">(*&nbsp;proof&nbsp;can&nbsp;be&nbsp;similar&nbsp;to&nbsp;this&nbsp;lemma&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;Check&nbsp;hstar_hsingle_same_loc.&nbsp;*)</span><br/>
+Abort.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hsingle_duplicable</span>: <span class="kwd">forall</span> <span class="id">l</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">has_type</span> <span class="id">l</span> <span class="id">v</span> = <span class="id">has_type</span> <span class="id">l</span> <span class="id">v</span> \* <span class="id">has_type</span> <span class="id">l</span> <span class="id">v</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="comment">(*&nbsp;this&nbsp;is&nbsp;probably&nbsp;not&nbsp;true,&nbsp;unless&nbsp;pure&nbsp;conj&nbsp;is&nbsp;lifted&nbsp;to&nbsp;hprop?&nbsp;*)</span><br/>
+Abort.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hstar_hsingle_emp</span>: <span class="kwd">forall</span> <span class="id">l</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">has_type</span> <span class="id">l</span> <span class="id">v</span> \* \[] = <span class="id">has_type</span> <span class="id">l</span> <span class="id">v</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">apply</span> <span class="id">hstar_hempty_r</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tint</span> : <span class="id">type</span> := <span class="id">tunion</span> <span class="id">terr</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="kwd">exists</span> <span class="id">i</span>, <span class="id">v</span> = <span class="id">vint</span> <span class="id">i</span>).<br/>
+<span class="kwd">Definition</span> <span class="id">tbool</span> : <span class="id">type</span> := <span class="id">tunion</span> <span class="id">terr</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="kwd">exists</span> <span class="id">b</span>, <span class="id">v</span> = <span class="id">vbool</span> <span class="id">b</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tforall</span> <span class="id">A</span> (<span class="id">f</span>:<span class="id">A</span> -&gt; <span class="id">type</span>) : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">v</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">x</span>:<span class="id">A</span>, (<span class="id">f</span> <span class="id">x</span>) <span class="id">v</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">texists</span> <span class="id">A</span> (<span class="id">f</span>:<span class="id">A</span> -&gt; <span class="id">type</span>) : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">v</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">x</span>:<span class="id">A</span>, (<span class="id">f</span> <span class="id">x</span>) <span class="id">v</span>.<br/>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">typ_scope</span>.<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">typ_scope</span>.<br/>
+<span class="id">Bind</span> <span class="kwd">Scope</span> <span class="id">typ_scope</span> <span class="kwd">with</span> <span class="id">type</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'∃' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">texists</span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id">texists</span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'"</span>) : <span class="id">typ_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'∀' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">tforall</span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id">tforall</span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'"</span>) : <span class="id">typ_scope</span>.<br/>
+<br/>
+<div class="doc">The type of finite lists. can be coinductive to be infinite.
+  non-inductive recursive types are ignored for now. </div>
+<span class="kwd">Inductive</span> <span class="id">tlist</span> : <span class="id">type</span> -&gt; <span class="id">val</span> -&gt; <span class="kwd">Prop</span> :=<br/>
+&nbsp;&nbsp;| <span class="id">tlist_err</span> : <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">tlist</span> <span class="id">t</span> <span class="id">verr</span><br/>
+&nbsp;&nbsp;| <span class="id">tlist_nil</span> : <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">tlist</span> <span class="id">t</span> <span class="id">vnil</span><br/>
+&nbsp;&nbsp;| <span class="id">tlist_cons</span> : <span class="kwd">forall</span> <span class="id">vh</span> <span class="id">vt</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">t</span> <span class="id">vh</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">tlist</span> <span class="id">t</span> <span class="id">vt</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">tlist</span> <span class="id">t</span> (<span class="id">vcons</span> <span class="id">vh</span> <span class="id">vt</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tnil</span> : <span class="id">type</span> := <span class="id">tunion</span> <span class="id">terr</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="id">v</span> = <span class="id">vnil</span>).<br/>
+<span class="kwd">Definition</span> <span class="id">tcons</span> <span class="id">t1</span> <span class="id">t2</span> : <span class="id">type</span> :=<br/>
+&nbsp;&nbsp;<span class="id">tunion</span> <span class="id">terr</span> (<span class="kwd">fun</span> <span class="id">v</span> =&gt; <span class="kwd">exists</span> <span class="id">v1</span> <span class="id">v2</span>, <span class="id">v</span> = <span class="id">vcons</span> <span class="id">v1</span> <span class="id">v2</span> /\ <span class="id">t1</span> <span class="id">v1</span> /\ <span class="id">t2</span> <span class="id">v2</span>).<br/>
+<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tany_nonconstructive</span> : <span class="id">type</span> := <span class="id">tnot</span> <span class="id">tabort</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">tany</span> : <span class="id">type</span> :=<br/>
+&nbsp;&nbsp;<span class="id">∀</span> <span class="id">t</span> <span class="id">t1</span> <span class="id">t2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">tunion</span> <span class="id">tint</span> (<span class="id">tunion</span> <span class="id">tbool</span> (<span class="id">tunion</span> (<span class="id">tlist</span> <span class="id">t</span>) (<span class="id">tunion</span> (<span class="id">tcons</span> <span class="id">t1</span> <span class="id">t2</span>) <span class="id">tnil</span>))).<br/>
+<br/>
+<div class="doc">Unary logical relation on expressions </div>
+<span class="kwd">Notation</span> <span class="id">E</span> <span class="id">t</span> := (<span class="kwd">fun</span> <span class="id">e</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">r</span>, <span class="id">bigstep_pure</span> <span class="id">e</span> <span class="id">r</span> -&gt; <span class="id">t</span> <span class="id">r</span>).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="id">E_heap</span> <span class="id">t</span> := (<span class="kwd">fun</span> <span class="id">e</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span>, <span class="id">bigstep</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> <span class="id">r</span> -&gt; <span class="id">t</span> <span class="id">r</span>).<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="id">is_fn</span> <span class="id">vf</span> :=<br/>
+&nbsp;&nbsp;(<span class="kwd">exists</span> <span class="id">xf</span> <span class="id">x</span> <span class="id">e</span>, <span class="id">vf</span> = <span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span> \/ <span class="id">vf</span> = <span class="id">vfix</span> <span class="id">xf</span> <span class="id">x</span> <span class="id">e</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tarrow</span> <span class="id">t1</span> <span class="id">t2</span> : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">vf</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="id">is_fn</span> <span class="id">vf</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">t1</span> <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">E</span> <span class="id">t2</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">vf</span>) (<span class="id">pval</span> <span class="id">v</span>)).<br/>
+<br/>
+<div class="doc">Dependent arrow </div>
+<span class="kwd">Definition</span> <span class="id">tdarrow</span> <span class="id">v</span> <span class="id">t1</span> <span class="id">t2</span> : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">vf</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="id">is_fn</span> <span class="id">vf</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">t1</span> <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">E</span> <span class="id">t2</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">vf</span>) (<span class="id">pval</span> <span class="id">v</span>)).<br/>
+<br/>
+<div class="doc">All values are of type top </div>
+<span class="kwd">Lemma</span> <span class="id">ttop_intro</span>: <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">ttop</span> <span class="id">v</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">ttop</span>. <span class="id">jauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tbot_inv</span>: <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">not</span> (<span class="id">tbot</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">jauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">terr_intro</span>:<br/>
+&nbsp;&nbsp;<span class="id">terr</span> <span class="id">verr</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">terr</span>, <span class="id">tsingle</span>.<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tsingle_inv</span>: <span class="kwd">forall</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;<span class="id">tsingle</span> <span class="id">v1</span> <span class="id">v2</span> -&gt; <span class="id">v1</span> = <span class="id">v2</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tsingle</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">congruence</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tsingle_intro</span>: <span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">tsingle</span> <span class="id">v</span> <span class="id">v</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tsingle</span>.<br/>
+&nbsp;&nbsp;<span class="id">congruence</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tabort_intro</span>:<br/>
+&nbsp;&nbsp;<span class="id">tabort</span> <span class="id">vabort</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tabort</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">tsingle_intro</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tint_intro</span>: <span class="kwd">forall</span> <span class="id">n</span>,<br/>
+&nbsp;&nbsp;<span class="id">tint</span> (<span class="id">vint</span> <span class="id">n</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tint</span>.<br/>
+&nbsp;&nbsp;<span class="id">right</span>.<br/>
+&nbsp;&nbsp;<span class="id">jauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tcons_intro</span>: <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">v1</span> <span class="id">v2</span>,<br/>
+&nbsp;&nbsp;<span class="id">t1</span> <span class="id">v1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">t2</span> <span class="id">v2</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">tcons</span> <span class="id">t1</span> <span class="id">t2</span>) (<span class="id">vcons</span> <span class="id">v1</span> <span class="id">v2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id">tcons</span>.<br/>
+&nbsp;&nbsp;<span class="id">right</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">v1</span> <span class="id">v2</span>.<br/>
+&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+Qed.</div></details>
+<br/>
+<h1> Subtyping </h1>
+<span class="kwd">Definition</span> <span class="id">subtype</span> <span class="id">t1</span> <span class="id">t2</span> := <span class="kwd">forall</span> <span class="id">v</span>, <span class="id">t1</span> <span class="id">v</span> -&gt; <span class="id">t2</span> <span class="id">v</span>.<br/>
+<span class="kwd">Notation</span> <span class="string">"t1 '&lt;:' t2"</span> := (<span class="id">subtype</span> <span class="id">t1</span> <span class="id">t2</span>) (<span class="kwd">at</span> <span class="id">level</span> 40).<br/>
+<br/>
+<span class="kwd">Instance</span> <span class="id">subtype_refl</span> : <span class="id">Reflexive</span> <span class="id">subtype</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">unfold</span> <span class="id">Reflexive</span>, <span class="id">subtype</span>. <span class="id">intros</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Instance</span> <span class="id">subtype_trans</span> : <span class="id">Transitive</span> <span class="id">subtype</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">unfold</span> <span class="id">Transitive</span>, <span class="id">subtype</span>. <span class="id">intros</span>. <span class="id">auto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Instance</span> <span class="id">subtype_preorder</span> : <span class="id">PreOrder</span> <span class="id">subtype</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">constructor</span>. <span class="id">apply</span> <span class="id">subtype_refl</span>. <span class="id">apply</span> <span class="id">subtype_trans</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">equiv</span> <span class="id">t1</span> <span class="id">t2</span> := <span class="kwd">forall</span> <span class="id">v</span>, <span class="id">t1</span> <span class="id">v</span> &lt;-&gt; <span class="id">t2</span> <span class="id">v</span>.<br/>
+<br/>
+<span class="kwd">Instance</span> <span class="id">equiv_refl</span> : <span class="id">Reflexive</span> <span class="id">equiv</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">unfold</span> <span class="id">Reflexive</span>, <span class="id">equiv</span>. <span class="id">jauto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Instance</span> <span class="id">equiv_trans</span> : <span class="id">Transitive</span> <span class="id">equiv</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">unfold</span> <span class="id">Transitive</span>, <span class="id">equiv</span>. <span class="id">intros</span>. <span class="id">split</span>; <span class="id">rewrite</span> <span class="id">H</span>, <span class="id">H0</span>; <span class="id">jauto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Instance</span> <span class="id">equiv_sym</span> : <span class="id">Symmetric</span> <span class="id">equiv</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">unfold</span> <span class="id">Symmetric</span>, <span class="id">equiv</span>. <span class="id">intros</span>. <span class="id">split</span>; <span class="id">rewrite</span> <span class="id">H</span>; <span class="id">jauto</span>. Qed.</div></details>
+<br/>
+<span class="kwd">Instance</span> <span class="id">equiv_equiv</span> : <span class="id">Equivalence</span> <span class="id">equiv</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+ <span class="id">constructor</span>. <span class="id">apply</span> <span class="id">equiv_refl</span>. <span class="id">apply</span> <span class="id">equiv_sym</span>. <span class="id">apply</span> <span class="id">equiv_trans</span>. Qed.</div></details>
+<br/>
+<h1> Properties of subtyping </h1>
+<span class="kwd">Lemma</span> <span class="id">function_variance</span>: <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">t3</span> <span class="id">t4</span>,<br/>
+&nbsp;&nbsp;<span class="id">t3</span> &lt;: <span class="id">t1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">t2</span> &lt;: <span class="id">t4</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">tarrow</span> <span class="id">t1</span> <span class="id">t2</span> &lt;: <span class="id">tarrow</span> <span class="id">t3</span> <span class="id">t4</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">subtype</span>, <span class="id">tarrow</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">The standard subsumption rule is a consequence of the semantic definition. </div>
+<span class="kwd">Lemma</span> <span class="id">subsumption</span>: <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">t1</span> <span class="id">v</span> -&gt; <span class="id">t1</span> &lt;: <span class="id">t2</span> -&gt; <span class="id">t2</span> <span class="id">v</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">subtype</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">subtype_bot</span>: <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id">tbot</span> &lt;: <span class="id">t</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tbot</span>, <span class="id">subtype</span>. <span class="id">intros</span>. <span class="id">false</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">subtype_top</span>: <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id">t</span> &lt;: <span class="id">ttop</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">ttop</span>, <span class="id">subtype</span>. <span class="id">constructor</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">subtype_terr_tany</span>:<br/>
+&nbsp;&nbsp;<span class="id">terr</span> &lt;: <span class="id">tany</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">terr</span>, <span class="id">tany</span>, <span class="id">subtype</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tforall</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tunion</span>. <span class="id">left</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tint</span>. <span class="id">left</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">subtype_terr_tlist</span>: <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id">terr</span> &lt;: <span class="id">tlist</span> <span class="id">t</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">terr</span>, <span class="id">subtype</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">tsingle_inv</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">subst</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">tlist_err</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">top is the annihilator of union </div>
+<span class="kwd">Lemma</span> <span class="id">tunion_ttop</span>: <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id">equiv</span> (<span class="id">tunion</span> <span class="id">ttop</span> <span class="id">t</span>) <span class="id">ttop</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">ttop</span>. <span class="id">eauto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">tunion</span>, <span class="id">ttop</span>. <span class="id">eauto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tintersect_tbot</span>: <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id">equiv</span> (<span class="id">tintersect</span> <span class="id">tbot</span> <span class="id">t</span>) <span class="id">tbot</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tbot</span>, <span class="id">tintersect</span>. <span class="id">intros</span>. <span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">destr</span> <span class="id">H</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">false</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Module</span> <span class="id">Examples</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">id</span> := <span class="id">vfun</span> <span class="string">"x"</span> (<span class="id">pvar</span> <span class="string">"x"</span>).<br/>
+<span class="kwd">Definition</span> <span class="id">id_type1</span> : <span class="id">type</span> := <span class="id">∀</span> <span class="id">t</span>, <span class="id">tarrow</span> <span class="id">t</span> <span class="id">t</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">id_type2</span> : <span class="id">type</span> := <span class="id">∀</span> <span class="id">v</span>, <span class="id">tdarrow</span> <span class="id">v</span> <span class="id">ttop</span> (<span class="id">tsingle</span> <span class="id">v</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">id_has_type1</span> : <span class="id">id_type1</span> <span class="id">id</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">id</span>, <span class="id">id_type1</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tforall</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">injects</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H5</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. <span class="comment">(*&nbsp;this&nbsp;is&nbsp;the&nbsp;key&nbsp;step&nbsp;*)</span> }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">id_has_type2</span> : <span class="id">id_type2</span> <span class="id">id</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">id</span>, <span class="id">id_type2</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tforall</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tdarrow</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tsingle</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;injects&nbsp;H.&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;- <span class="id">injects</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H5</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">reflexivity</span>. <span class="comment">(*&nbsp;note&nbsp;the&nbsp;difference!&nbsp;*)</span><br/>
+&nbsp;&nbsp;- <span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">End</span> <span class="id">Examples</span>.<br/>
+<br/>
+<h1> Variance and mutability </h1>
+<br/>
+<div class="doc">These two disjuncts are included in the infinite set of disjuncts of the supertypes of t1 </div>
+<span class="kwd">Lemma</span> <span class="id">contra_disjuncts</span>: <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;(<span class="id">tunion</span> <span class="id">ttop</span> <span class="id">t1</span>) <span class="id">v</span> -&gt; (<span class="kwd">exists</span> <span class="id">t2</span>, <span class="id">t1</span> &lt;: <span class="id">t2</span> /\ <span class="id">t2</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tunion</span>, <span class="id">ttop</span>, <span class="id">subtype</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;- <span class="kwd">exists</span> <span class="id">ttop</span>. <span class="id">jauto</span>.<br/>
+&nbsp;&nbsp;- <span class="kwd">exists</span> <span class="id">t1</span>. <span class="id">jauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">contra_is_top</span>: <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">ttop</span> <span class="id">v</span> &lt;-&gt; (<span class="kwd">exists</span> <span class="id">t2</span>, <span class="id">t1</span> &lt;: <span class="id">t2</span> /\ <span class="id">t2</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="kwd">exists</span> <span class="id">ttop</span>. <span class="id">hint</span> <span class="id">subtype_top</span>. <span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">destr</span> <span class="id">H</span>. <span class="id">apply</span> <span class="id">ttop_intro</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tcov</span> : <span class="id">type</span> -&gt; <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">t1</span> <span class="id">v</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">t2</span>, <span class="id">t2</span> &lt;: <span class="id">t1</span> -&gt; <span class="id">t2</span> <span class="id">v</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">tcontra</span> : <span class="id">type</span> -&gt; <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">t1</span> <span class="id">v</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">t2</span>, <span class="id">t1</span> &lt;: <span class="id">t2</span> -&gt; <span class="id">t2</span> <span class="id">v</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">tinv</span> : <span class="id">type</span> -&gt; <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">t1</span> <span class="id">v</span> =&gt; <span class="id">t1</span> <span class="id">v</span>.<br/>
+<span class="kwd">Definition</span> <span class="id">twild</span> : <span class="id">type</span> := <span class="id">ttop</span>.<br/>
+<br/>
+<span class="kwd">Example</span> <span class="id">ex_list</span>: (<span class="id">tlist</span> <span class="id">tint</span>) (<span class="id">vcons</span> (<span class="id">vint</span> 1) (<span class="id">vcons</span> (<span class="id">vint</span> 2) <span class="id">vnil</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">tlist_cons</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tint</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tunion</span>. <span class="id">right</span>.<br/>
+&nbsp;&nbsp;<span class="id">eexists</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">tlist_cons</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tint</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tunion</span>. <span class="id">right</span>.<br/>
+&nbsp;&nbsp;<span class="id">eexists</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">tlist_nil</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">subtype_cov</span>: <span class="kwd">forall</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id">t</span> &lt;: <span class="id">tcov</span> <span class="id">t</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">subtype</span>, <span class="id">tcov</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<h1> Program specifications </h1>
+<br/>
+<span class="kwd">Definition</span> <span class="id">postcond</span> := <span class="id">val</span> -&gt; <span class="id">hprop</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">P</span>: <span class="kwd">Prop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">H</span>: <span class="id">hprop</span>.<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">Q</span>: <span class="id">postcond</span>.<br/>
+<br/>
+<span class="kwd">Inductive</span> <span class="id">spec</span> :=<br/>
+&nbsp;&nbsp;| <span class="id">req</span> : <span class="id">hprop</span> -&gt; <span class="id">spec</span> -&gt; <span class="id">spec</span><br/>
+&nbsp;&nbsp;| <span class="id">ens</span> : <span class="id">postcond</span> -&gt; <span class="id">spec</span><br/>
+&nbsp;&nbsp;| <span class="id">sexists</span> : <span class="kwd">forall</span> <span class="id">A</span>, (<span class="id">A</span> -&gt; <span class="id">spec</span>) -&gt; <span class="id">spec</span><br/>
+&nbsp;&nbsp;| <span class="id">sforall</span> : <span class="kwd">forall</span> <span class="id">A</span>, (<span class="id">A</span> -&gt; <span class="id">spec</span>) -&gt; <span class="id">spec</span><br/>
+&nbsp;&nbsp;| <span class="id">sintersect</span> : <span class="id">spec</span> -&gt; <span class="id">spec</span> -&gt; <span class="id">spec</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">s</span>: <span class="id">spec</span>.<br/>
+<br/>
+<span class="id">Declare</span> <span class="kwd">Scope</span> <span class="id">spec_scope</span>.<br/>
+<span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">spec_scope</span>.<br/>
+<span class="id">Bind</span> <span class="kwd">Scope</span> <span class="id">spec_scope</span> <span class="kwd">with</span> <span class="id">spec</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'∃' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">texists</span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id">texists</span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '∃' '/ '  x1  ..  xn , '/ '  H ']'"</span>) : <span class="id">spec_scope</span>.<br/>
+<br/>
+<span class="kwd">Notation</span> <span class="string">"'∀' x1 .. xn , H"</span> :=<br/>
+&nbsp;&nbsp;(<span class="id">tforall</span> (<span class="kwd">fun</span> <span class="id">x1</span> =&gt; .. (<span class="id">tforall</span> (<span class="kwd">fun</span> <span class="id">xn</span> =&gt; <span class="id">H</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="kwd">at</span> <span class="id">level</span> 39, <span class="id">x1</span> <span class="id">binder</span>, <span class="id">H</span> <span class="kwd">at</span> <span class="id">level</span> 50, <span class="id">right</span> <span class="id">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id">format</span> <span class="string">"'[' '∀' '/ '  x1  ..  xn , '/ '  H ']'"</span>) : <span class="id">spec_scope</span>.<br/>
+<br/>
+<span class="kwd">Inductive</span> <span class="id">spec_satisfies</span> : <span class="id">heap</span> -&gt; <span class="id">heap</span> -&gt; <span class="id">val</span> -&gt; <span class="id">spec</span> -&gt; <span class="kwd">Prop</span> :=<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">s_req</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">s</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">hp</span> <span class="id">hr</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">H</span> <span class="id">hp</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">h1</span> = <span class="id">Fmap.union</span> <span class="id">hr</span> <span class="id">hp</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Fmap.disjoint</span> <span class="id">hr</span> <span class="id">hp</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">hr</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">s</span>) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (<span class="id">req</span> <span class="id">H</span> <span class="id">s</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">s_ens</span> : <span class="kwd">forall</span> <span class="id">Q</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">h3</span> <span class="id">r</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Q</span> <span class="id">r</span> <span class="id">h3</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">h2</span> = <span class="id">Fmap.union</span> <span class="id">h1</span> <span class="id">h3</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">Fmap.disjoint</span> <span class="id">h1</span> <span class="id">h3</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (<span class="id">ens</span> <span class="id">Q</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">s_ex</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">spec</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">exists</span> (<span class="id">b</span>:<span class="id">A</span>), <span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (<span class="id">f</span> <span class="id">b</span>)) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (@<span class="id">sexists</span> <span class="id">A</span> <span class="id">f</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">s_all</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (<span class="id">A</span>:<span class="kwd">Type</span>) (<span class="id">f</span>:<span class="id">A</span>-&gt;<span class="id">spec</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">forall</span> (<span class="id">b</span>:<span class="id">A</span>), <span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (<span class="id">f</span> <span class="id">b</span>)) -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (@<span class="id">sforall</span> <span class="id">A</span> <span class="id">f</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">s_intersect</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">s1</span> <span class="id">s2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">s1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">s2</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (<span class="id">sintersect</span> <span class="id">s1</span> <span class="id">s2</span>)<br/>
+&nbsp;&nbsp;.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">subsumes</span> <span class="id">s1</span> <span class="id">s2</span> := <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span>,<br/>
+&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">s1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">s2</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">ens_</span> <span class="id">H</span> := <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">r</span> = <span class="id">vunit</span>] \* <span class="id">H</span>).<br/>
+<span class="kwd">Definition</span> <span class="id">empty</span> := <span class="id">ens_</span> \[<span class="id">True</span>].<br/>
+<span class="kwd">Notation</span> <span class="id">req_</span> <span class="id">H</span> := (<span class="id">req</span> <span class="id">H</span> <span class="id">empty</span>).<br/>
+<br/>
+<br/>
+<span class="kwd">Fixpoint</span> <span class="id">scase_</span> <span class="id">P</span> <span class="id">v</span> (<span class="id">cases</span>:<span class="id">list</span> ((<span class="id">val</span> -&gt; <span class="kwd">Prop</span>) * <span class="id">spec</span>)) : <span class="id">spec</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">cases</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">nil</span> =&gt; <span class="id">empty</span><br/>
+&nbsp;&nbsp;| (<span class="id">p</span>, <span class="id">s</span>) :: <span class="id">cs</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">sintersect</span> (<span class="id">req</span> \[<span class="id">p</span> <span class="id">v</span> /\ <span class="id">not</span> <span class="id">P</span>] <span class="id">s</span>) (<span class="id">scase_</span> (<span class="id">p</span> <span class="id">v</span> /\ <span class="id">P</span>) <span class="id">v</span> <span class="id">cs</span>)<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">scase</span> <span class="id">v</span> (<span class="id">cases</span>:<span class="id">list</span> ((<span class="id">val</span> -&gt; <span class="kwd">Prop</span>) * <span class="id">spec</span>)) : <span class="id">spec</span> :=<br/>
+&nbsp;&nbsp;<span class="id">scase_</span> <span class="id">True</span> <span class="id">v</span> <span class="id">cases</span>.<br/>
+<br/>
+<h1> Introduction/inversion lemmas, and other properties of specs </h1>
+<span class="kwd">Lemma</span> <span class="id">req_pure_intro</span> : <span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">P</span> <span class="id">s</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">s</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> (<span class="id">req</span> \[<span class="id">P</span>] <span class="id">s</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">hinv</span> <span class="id">H0</span>. <span class="id">subst</span>. <span class="id">rew_fmap</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">H</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">empty_intro</span>: <span class="kwd">forall</span> <span class="id">h</span>,<br/>
+&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h</span> <span class="id">h</span> <span class="id">vunit</span> <span class="id">empty</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">empty</span>. <span class="id">intros</span>. <span class="id">eapply</span> <span class="id">s_ens</span>.<br/>
+&nbsp;&nbsp;<span class="id">hintro</span>. <span class="id">splits</span>*. <span class="id">hintro</span>. <span class="id">all</span>: <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<h1> Semantics of program specs </h1>
+<span class="kwd">Definition</span> <span class="id">program_has_spec</span> (<span class="id">s</span>:<span class="id">spec</span>) (<span class="id">e</span>:<span class="id">expr</span>) :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> <span class="id">r</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">spec_satisfies</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">r</span> <span class="id">s</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">program_has_spec_assert</span>: <span class="kwd">forall</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;<span class="id">program_has_spec</span> (<span class="id">req_</span> \[<span class="id">b</span> = <span class="id">true</span>])<br/>
+&nbsp;&nbsp;&nbsp;(<span class="id">passert</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">b</span>))).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">program_has_spec</span>. <span class="id">introv</span> <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">Hb</span> <span class="kwd">as</span> <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">req_pure_intro</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">empty_intro</span>.<br/>
+Qed.</div></details>
+<br/>
+<h1> Semantics of triples </h1>
+<span class="kwd">Definition</span> <span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">e</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">h1</span>, <span class="id">H</span> <span class="id">h1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">h2</span> <span class="id">r</span>, <span class="id">bigstep</span> <span class="id">h1</span> <span class="id">e</span> <span class="id">h2</span> <span class="id">r</span> -&gt; <span class="id">Q</span> <span class="id">r</span> <span class="id">h2</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">pure_triple</span> <span class="id">P</span> (<span class="id">Q</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">e</span> :=<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt; <span class="kwd">forall</span> <span class="id">r</span>, <span class="id">bigstep_pure</span> <span class="id">e</span> <span class="id">r</span> -&gt; <span class="id">Q</span> <span class="id">r</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">pure_triple_heap</span> <span class="id">P</span> (<span class="id">Q</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">e</span> :=<br/>
+&nbsp;&nbsp;<span class="id">P</span> -&gt; <span class="kwd">forall</span> <span class="id">r</span>, <span class="id">bigstep</span> <span class="id">empty_heap</span> <span class="id">e</span> <span class="id">empty_heap</span> <span class="id">r</span> -&gt; <span class="id">Q</span> <span class="id">r</span>.<br/>
+<br/>
+<h1> Relation to pure triples </h1>
+<span class="kwd">Definition</span> <span class="id">triple_to_pure_triple</span> : <span class="kwd">forall</span> <span class="id">P</span> (<span class="id">Q</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">e</span>,<br/>
+&nbsp;&nbsp;<span class="id">triple</span> \[<span class="id">P</span>] (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">Q</span> <span class="id">r</span>]) <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple_heap</span> <span class="id">P</span> <span class="id">Q</span> <span class="id">e</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple_heap</span>, <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">empty_heap</span>.<br/>
+&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H</span>. <span class="id">hintro</span>. <span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">hinv</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">pure_triple_to_triple</span> : <span class="kwd">forall</span> <span class="id">P</span> (<span class="id">Q</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">e</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple_heap</span> <span class="id">P</span> <span class="id">Q</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> \[<span class="id">P</span>] (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">Q</span> <span class="id">r</span>]) <span class="id">e</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple_heap</span>, <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">hinv</span> <span class="id">H0</span>. <span class="id">subst</span> <span class="id">h1</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H0</span> <span class="id">r</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;for&nbsp;arbitrary&nbsp;e,&nbsp;we&nbsp;cannot&nbsp;ensure&nbsp;that&nbsp;the&nbsp;heap&nbsp;after&nbsp;execution&nbsp;is&nbsp;empty.&nbsp;pure&nbsp;triples&nbsp;only&nbsp;describe&nbsp;programs&nbsp;which&nbsp;don't&nbsp;use&nbsp;heap&nbsp;operations.&nbsp;*)</span><br/>
+Abort.</div></details>
+<br/>
+<h1> Structural rules </h1>
+<div class="doc">Triple subsumption, or the rule of consequence </div>
+<span class="kwd">Lemma</span> <span class="id">triple_conseq</span>: <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Q1</span> <span class="id">Q2</span> <span class="id">e</span>,<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H1</span> <span class="id">Q1</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">H2</span> ==&gt; <span class="id">H1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Q1</span> ===&gt; <span class="id">Q2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H2</span> <span class="id">Q2</span> <span class="id">e</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H0</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span>~ <span class="id">H3</span> <span class="id">H</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">This rule is only true in Hoare logic. In separation logic it requires frame inference, which the semantic <span class="bracket">==&gt;</span> does not do. </div>
+<span class="kwd">Lemma</span> <span class="id">stronger_triple_subsumption</span>: <span class="kwd">forall</span> <span class="id">P1</span> <span class="id">P2</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">e</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P2</span> <span class="id">Q2</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P1</span> -&gt; <span class="id">P2</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">r</span>, <span class="id">Q2</span> <span class="id">r</span> /\ <span class="id">P1</span> -&gt; <span class="id">Q1</span> <span class="id">r</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P1</span> <span class="id">Q1</span> <span class="id">e</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H0</span> <span class="id">H3</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_extract_pure_r</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">P</span> <span class="id">Q</span> <span class="id">e</span>,<br/>
+&nbsp;&nbsp;(<span class="id">P</span> -&gt; <span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">e</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> (<span class="id">H</span> \* \[<span class="id">P</span>]) <span class="id">Q</span> <span class="id">e</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">hinv</span> <span class="id">H1</span>. <span class="id">hinv</span> <span class="id">H3</span>. <span class="id">subst</span>. <span class="id">rew_fmap</span> *.<br/>
+Qed.</div></details>
+<br/>
+<h1> Triples for program constructs </h1>
+<span class="kwd">Lemma</span> <span class="id">triple_val</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">H</span> \* \[<span class="id">r</span> = <span class="id">v</span>])<br/>
+&nbsp;&nbsp;&nbsp;(<span class="id">pval</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">hintro</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_err</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">H</span> \* \[<span class="id">r</span> = <span class="id">verr</span>])<br/>
+&nbsp;&nbsp;&nbsp;(<span class="id">pval</span> <span class="id">verr</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">triple_val</span> <span class="id">verr</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_abort</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">H</span> \* \[<span class="id">r</span> = <span class="id">vabort</span>])<br/>
+&nbsp;&nbsp;&nbsp;(<span class="id">pval</span> <span class="id">vabort</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">applys</span> <span class="id">triple_val</span> <span class="id">vabort</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Why is the statement of this rule this way?
+  In the value case, the use of Q1 in the precondition allows us to know what value e1 returns.
+  In the abort case, we don't have a triple, but still need a way to assume what e1 returns - hence the use of an entailment, to put the assumption back in positive position.
+  Suppose we used an equality with Q2. As the equality is in negative position, we would then have to prove the equality, without knowledge of what e1 returns. </div>
+<span class="kwd">Lemma</span> <span class="id">triple_plet</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q1</span> <span class="id">Q2</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>,<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> <span class="id">Q1</span> <span class="id">e1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">v</span> &lt;&gt; <span class="id">vabort</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">triple</span> (<span class="id">Q1</span> <span class="id">v</span>) <span class="id">Q2</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v</span> <span class="id">e2</span>)) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">v</span> = <span class="id">vabort</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">Q1</span> <span class="id">v</span> \* \[<span class="id">r</span> = <span class="id">vabort</span>]) ===&gt; <span class="id">Q2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> <span class="id">Q2</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H4</span> <span class="kwd">as</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">specializes</span> <span class="id">H0</span> <span class="id">H3</span> <span class="id">H4</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">clear</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H3</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H2</span> <span class="id">vabort</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H2</span> <span class="kwd">by</span> <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">hintro</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>*. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_pif_true</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">e1</span> <span class="id">e2</span>,<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">e1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> (<span class="id">pif</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">true</span>)) <span class="id">e1</span> <span class="id">e2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_pif_false</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">e1</span> <span class="id">e2</span>,<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">e2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> (<span class="id">pif</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">false</span>)) <span class="id">e1</span> <span class="id">e2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">This combined rule also works </div>
+<span class="kwd">Lemma</span> <span class="id">triple_pif</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">e1</span> <span class="id">e2</span> (<span class="id">b</span>:<span class="id">bool</span>),<br/>
+&nbsp;&nbsp;(<span class="id">b</span> = <span class="id">true</span> -&gt; <span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">e1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">b</span> = <span class="id">false</span> -&gt; <span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> <span class="id">e2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> (<span class="id">pif</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">b</span>)) <span class="id">e1</span> <span class="id">e2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">b</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;- <span class="id">inverts</span> <span class="id">H3</span> <span class="kwd">as</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;- <span class="id">inverts</span> <span class="id">H3</span> <span class="kwd">as</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">H3</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_ptypetest</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">tag</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">H</span> \* \[<span class="id">r</span> = <span class="id">vbool</span> (<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span>)])<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ptypetest</span> <span class="id">tag</span> (<span class="id">pval</span> <span class="id">v</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">hintro</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">jauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Use triples in the proof instead of unfolding everything </div>
+<span class="kwd">Lemma</span> <span class="id">triple_ptypecast_success</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">tag</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">true</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">H</span> \* \[<span class="id">r</span> = <span class="id">v</span>])<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ptypecast</span> <span class="id">tag</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">ptypecast</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">triple_plet</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">triple_ptypetest</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">triple_extract_pure_r</span>. <span class="id">intros</span>. <span class="id">subst</span>. <span class="id">rewrite</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">triple_pif_true</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">triple_val</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">xsimpl</span>. } <span class="comment">(*&nbsp;vacuous;&nbsp;abort&nbsp;cannot&nbsp;happen&nbsp;as&nbsp;result&nbsp;is&nbsp;bool&nbsp;*)</span><br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_ptypecast_failure</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">tag</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">false</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">H</span> \* \[<span class="id">r</span> = <span class="id">vabort</span>])<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ptypecast</span> <span class="id">tag</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">ptypecast</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">triple_plet</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">triple_ptypetest</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">triple_extract_pure_r</span>. <span class="id">intros</span>. <span class="id">subst</span>. <span class="id">rewrite</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">triple_pif_false</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">triple_val</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">intros</span>. <span class="id">xsimpl</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_ptypecast_failure1</span>: <span class="kwd">forall</span> <span class="id">H</span> <span class="id">tag</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">false</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">H</span> \* \[<span class="id">r</span> = <span class="id">vabort</span>])<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ptypecast</span> <span class="id">tag</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">hintro</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H10</span> <span class="kwd">as</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H10</span> <span class="kwd">as</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>*. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">triple_pmatch</span>: <span class="kwd">forall</span> <span class="id">v</span> <span class="id">cases</span> <span class="id">H</span> <span class="id">Q</span>,<br/>
+&nbsp;&nbsp;<span class="id">Forall</span> (<span class="kwd">fun</span> <span class="id">c</span> =&gt; <span class="kwd">match</span> <span class="id">c</span> <span class="kwd">with</span> | (<span class="id">tag</span>, <span class="id">eb</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">triple</span> (<span class="id">H</span> \* \[<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">true</span>]) <span class="id">Q</span> <span class="id">eb</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span>) <span class="id">cases</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">triple</span> <span class="id">H</span> <span class="id">Q</span> (<span class="id">pmatch</span> (<span class="id">pval</span> <span class="id">v</span>) <span class="id">cases</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">x</span> <span class="kwd">as</span> [<span class="id">tag</span> <span class="id">eb</span>]. <span class="id">clear</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">triple</span> <span class="kwd">in</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">hintro</span>. <span class="id">jauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">triple</span> <span class="kwd">in</span> <span class="id">IHForall</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">IHForall</span> <span class="id">H1</span> <span class="id">H10</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<h1> Pure triples </h1>
+<span class="kwd">Lemma</span> <span class="id">pure_triple_val</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">P</span> /\ <span class="id">r</span> = <span class="id">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;(<span class="id">pval</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">This also subsumes the Var2 rule, which says that variables can be renamed </div>
+<span class="kwd">Lemma</span> <span class="id">type_triple_val</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">t</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">t</span> <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">P</span> /\ <span class="id">t</span> <span class="id">r</span>)<br/>
+&nbsp;&nbsp;&nbsp;(<span class="id">pval</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">lets</span>: <span class="id">pure_triple_val</span> <span class="id">P</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H2</span>. <span class="id">subst</span> <span class="id">r</span>.<br/>
+&nbsp;&nbsp;<span class="id">jauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">This does not require the typical <span class="bracket"><span class="id">mod</span>(<span class="id">e</span>) <span class="id">∩</span> <span class="id">free</span>(<span class="id">P</span>) = \<span class="id">emptyset</span></span>
+  because of immutability. </div>
+<span class="kwd">Lemma</span> <span class="id">type_triple_constancy</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">P1</span> (<span class="id">Q1</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">e</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P1</span> <span class="id">Q1</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> (<span class="id">P1</span> /\ <span class="id">P</span>) (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">P</span> /\ <span class="id">Q1</span> <span class="id">r</span>) <span class="id">e</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">type_triple_conseq</span>: <span class="kwd">forall</span> <span class="id">P1</span> <span class="id">P2</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">e</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P1</span> <span class="id">Q1</span> <span class="id">e</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">P2</span> -&gt; <span class="id">P1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">Q1</span> <span class="id">v</span> -&gt; <span class="id">Q2</span> <span class="id">v</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P2</span> <span class="id">Q2</span> <span class="id">e</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">jauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">type_triple_var1</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">P</span> /\ <span class="id">tsingle</span> <span class="id">v</span> <span class="id">r</span>) (<span class="id">pval</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id">tsingle_intro</span>.<br/>
+&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">We do not annotate function values with specifications to avoid impredicativity, relying instead on there being a universally-quantified lemma in the context for us to instantiate. </div>
+<span class="kwd">Lemma</span> <span class="id">type_triple_call</span>: <span class="kwd">forall</span> <span class="id">P</span> (<span class="id">Q</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">vf</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">is_fn</span> <span class="id">vf</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">pure_triple</span> <span class="id">P</span> <span class="id">Q</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">vf</span>) (<span class="id">pval</span> <span class="id">v</span>))) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">P</span> /\ <span class="id">Q</span> <span class="id">r</span>) (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">vf</span>) (<span class="id">pval</span> <span class="id">v</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">type_triple_pif</span>: <span class="kwd">forall</span> <span class="id">P</span> (<span class="id">Q</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">e1</span> <span class="id">e2</span> (<span class="id">b</span>:<span class="id">bool</span>),<br/>
+&nbsp;&nbsp;(<span class="id">b</span> = <span class="id">true</span> -&gt; <span class="id">pure_triple</span> <span class="id">P</span> <span class="id">Q</span> <span class="id">e1</span>) -&gt;<br/>
+&nbsp;&nbsp;(<span class="id">b</span> = <span class="id">false</span> -&gt; <span class="id">pure_triple</span> <span class="id">P</span> <span class="id">Q</span> <span class="id">e2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> <span class="id">Q</span> (<span class="id">pif</span> (<span class="id">pval</span> (<span class="id">vbool</span> <span class="id">b</span>)) <span class="id">e1</span> <span class="id">e2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">b</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;- <span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;- <span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">type_triple_plet</span>: <span class="kwd">forall</span> <span class="id">P</span> (<span class="id">Q1</span> <span class="id">Q2</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>) <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> <span class="id">Q1</span> <span class="id">e1</span> -&gt;<br/>
+&nbsp;&nbsp;(<span class="kwd">forall</span> <span class="id">v</span>, <span class="id">pure_triple</span> (<span class="id">Q1</span> <span class="id">v</span>) <span class="id">Q2</span> (<span class="id">subst</span> <span class="id">x</span> <span class="id">v</span> <span class="id">e2</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> <span class="id">Q2</span> (<span class="id">plet</span> <span class="id">x</span> <span class="id">e1</span> <span class="id">e2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span> <span class="id">H2</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">type_triple_ptypetest</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">tag</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">P</span> /\ <span class="id">r</span> = <span class="id">vbool</span> (<span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ptypetest</span> <span class="id">tag</span> (<span class="id">pval</span> <span class="id">v</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">splits</span>*.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">type_triple_cast</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">v</span> <span class="id">tag</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">P</span> /\ <span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">true</span>) \/<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">P</span> /\ <span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">false</span> /\ <span class="id">tabort</span> <span class="id">r</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ptypecast</span> <span class="id">tag</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">ptypecast</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">type_triple_plet</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">type_triple_ptypetest</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;can't&nbsp;use&nbsp;if&nbsp;triple&nbsp;as&nbsp;that&nbsp;doesn't&nbsp;produce&nbsp;a&nbsp;disjunctive&nbsp;post-state.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;back&nbsp;to&nbsp;semantic&nbsp;reasoning.&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">interpret_tag</span> <span class="id">tag0</span> <span class="id">v</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">left</span>. <span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">H</span>. <span class="id">subst</span> <span class="id">v0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">hint</span> <span class="id">tabort_intro</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">right</span>. <span class="id">jauto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">type_triple_cast_sem</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">v</span> <span class="id">tag</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">P</span> /\ <span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">true</span>) \/<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">P</span> /\ <span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">false</span> /\ <span class="id">tabort</span> <span class="id">r</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ptypecast</span> <span class="id">tag</span> <span class="id">v</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H6</span> <span class="kwd">as</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">left</span>. <span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">right</span>. <span class="id">inverts</span> <span class="id">H6</span> <span class="kwd">as</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">hint</span> <span class="id">tabort_intro</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">jauto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">type_triple_match</span>: <span class="kwd">forall</span> <span class="id">v</span> <span class="id">cases</span> <span class="id">P</span> (<span class="id">Q</span>:<span class="id">val</span>-&gt;<span class="kwd">Prop</span>),<br/>
+&nbsp;&nbsp;<span class="id">Forall</span> (<span class="kwd">fun</span> <span class="id">c</span> =&gt; <span class="kwd">match</span> <span class="id">c</span> <span class="kwd">with</span> | (<span class="id">tag</span>, <span class="id">eb</span>) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">pure_triple</span> (<span class="id">P</span> /\ <span class="id">interpret_tag</span> <span class="id">tag</span> <span class="id">v</span> = <span class="id">true</span>) <span class="id">Q</span> <span class="id">eb</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">end</span>) <span class="id">cases</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> <span class="id">Q</span> (<span class="id">pmatch</span> (<span class="id">pval</span> <span class="id">v</span>) <span class="id">cases</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">x</span> <span class="kwd">as</span> [<span class="id">tag</span> <span class="id">eb</span>].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">pure_triple</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">jauto</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- <span class="id">assumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">pure_triple</span> <span class="kwd">in</span> <span class="id">IHForall</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">IHForall</span> <span class="id">H1</span> <span class="id">H8</span>. } }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">In this formalization, constructors are already in ANF, and we only model
+  the types of nil and cons. We thus only prove this constructor case for the
+  cons type/value. </div>
+<span class="kwd">Lemma</span> <span class="id">type_triple_constr</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">v1</span> <span class="id">v2</span> <span class="id">t1</span> <span class="id">t2</span>,<br/>
+&nbsp;&nbsp;<span class="id">t1</span> <span class="id">v1</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">t2</span> <span class="id">v2</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">P</span> /\ <span class="id">tcons</span> <span class="id">t1</span> <span class="id">t2</span> <span class="id">r</span>) (<span class="id">pval</span> (<span class="id">vcons</span> <span class="id">v1</span> <span class="id">v2</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">hint</span> <span class="id">tcons_intro</span>.<br/>
+&nbsp;&nbsp;<span class="id">jauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Lambdas are not annotated with specs to avoid impredicativity.
+  The strongest thing we can prove is that they have a singleton type. </div>
+<span class="kwd">Lemma</span> <span class="id">type_triple_lambda</span>: <span class="kwd">forall</span> <span class="id">P</span> <span class="id">x</span> <span class="id">e</span>,<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> <span class="id">P</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">P</span> /\ <span class="id">tsingle</span> (<span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span>) <span class="id">r</span>) (<span class="id">pval</span> (<span class="id">vfun</span> <span class="id">x</span> <span class="id">e</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">pure_triple_val</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Arrow type in terms of Hoare triple </div>
+<span class="kwd">Definition</span> <span class="id">tarrow_</span> <span class="id">t1</span> <span class="id">t2</span> : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">vf</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="id">is_fn</span> <span class="id">vf</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">pure_triple</span> (<span class="id">t1</span> <span class="id">v</span>) (<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">t2</span> <span class="id">r</span>) (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">vf</span>) (<span class="id">pval</span> <span class="id">v</span>)).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tarrow_heap_</span> <span class="id">t1</span> <span class="id">t2</span> : <span class="id">type</span> := <span class="kwd">fun</span> <span class="id">vf</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="id">is_fn</span> <span class="id">vf</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">forall</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">triple</span> \[<span class="id">t1</span> <span class="id">v</span>] (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">t2</span> <span class="id">r</span>]) (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">vf</span>) (<span class="id">pval</span> <span class="id">v</span>)).<br/>
+<br/>
+<div class="doc">Type assertions talk about strictly fewer executions. </div>
+<span class="kwd">Lemma</span> <span class="id">tarrow_triple</span>: <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span>,<br/>
+&nbsp;&nbsp;<span class="id">tarrow</span> <span class="id">t1</span> <span class="id">t2</span> &lt;: <span class="id">tarrow_</span> <span class="id">t1</span> <span class="id">t2</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>, <span class="id">tarrow_</span>. <span class="id">unfold</span> <span class="id">subtype</span>, <span class="id">pure_triple</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H0</span> <span class="id">H1</span>.<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">This would not be provable if we had heaps in the big-step semantics, but since we don't, it's fine. </div>
+<span class="kwd">Lemma</span> <span class="id">tarrow_triple_conv</span>: <span class="kwd">forall</span> <span class="id">t1</span> <span class="id">t2</span>,<br/>
+&nbsp;&nbsp;<span class="id">tarrow_</span> <span class="id">t1</span> <span class="id">t2</span> &lt;: <span class="id">tarrow</span> <span class="id">t1</span> <span class="id">t2</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>, <span class="id">tarrow_</span>. <span class="id">unfold</span> <span class="id">subtype</span>, <span class="id">pure_triple</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">r</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tail</span> := <span class="id">vfun</span> <span class="string">"x"</span><br/>
+&nbsp;&nbsp;(<span class="id">pmatch</span> (<span class="id">pvar</span> <span class="string">"x"</span>) (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">tag_nil</span>, <span class="id">pval</span> <span class="id">verr</span>) ::<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">tag_cons</span>, (<span class="id">plet</span> <span class="string">"y"</span> (<span class="id">psnd</span> (<span class="id">pvar</span> <span class="string">"x"</span>)) (<span class="id">pvar</span> <span class="string">"y"</span>))) ::<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">nil</span>)).<br/>
+<br/>
+<span class="kwd">Example</span> <span class="id">ex_tail</span>: <span class="kwd">exists</span> <span class="id">r</span>,<br/>
+&nbsp;&nbsp;<span class="id">bigstep</span> <span class="id">empty_heap</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">tail</span>) (<span class="id">pval</span> (<span class="id">vcons</span> (<span class="id">vint</span> 1) <span class="id">vnil</span>))) <span class="id">empty_heap</span> <span class="id">r</span> /\ <span class="id">r</span> = <span class="id">vnil</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tail</span>. <span class="id">simpl</span>. <span class="id">eexists</span>.<br/>
+&nbsp;&nbsp;<span class="id">split</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">eapply</span> <span class="id">eval_app_fun</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">eval_pmatch_skip</span>. <span class="id">simpl</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">eval_pmatch</span>. <span class="id">simpl</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">eval_plet</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">eval_psnd2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">vnil</span>, <span class="id">not</span>. <span class="id">intros</span>. <span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">eval_pval</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">reflexivity</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tail_sp1</span> := <span class="id">∀</span> <span class="id">t</span>, <span class="id">tarrow</span> (<span class="id">tlist</span> <span class="id">t</span>) (<span class="id">tlist</span> <span class="id">t</span>).<br/>
+<span class="kwd">Definition</span> <span class="id">tail_sp2</span> := <span class="id">∀</span> <span class="id">t</span>, <span class="id">tarrow</span> (<span class="id">tlist</span> <span class="id">t</span>) (<span class="id">tunion</span> (<span class="id">tlist</span> <span class="id">t</span>) <span class="id">tabort</span>).<br/>
+<span class="kwd">Definition</span> <span class="id">tail_sp3</span> := <span class="id">∀</span> <span class="id">t</span>, <span class="id">tarrow</span> (<span class="id">tcons</span> <span class="id">t</span> (<span class="id">tlist</span> <span class="id">t</span>)) (<span class="id">tlist</span> <span class="id">t</span>).<br/>
+<span class="kwd">Definition</span> <span class="id">tail_sp4</span> := <span class="id">∀</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id">tintersect</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">tarrow</span> (<span class="id">tnot</span> (<span class="id">tcons</span> <span class="id">t</span> (<span class="id">tlist</span> <span class="id">t</span>))) <span class="id">tabort</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">tarrow</span> (<span class="id">tcons</span> <span class="id">t</span> (<span class="id">tlist</span> <span class="id">t</span>)) (<span class="id">tlist</span> <span class="id">t</span>)).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tail_sp5</span> := <span class="id">∀</span> <span class="id">t</span>,<br/>
+&nbsp;&nbsp;<span class="id">tintersect</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">tarrow</span> (<span class="id">tcons</span> <span class="id">t</span> (<span class="id">tlist</span> <span class="id">t</span>)) (<span class="id">tlist</span> <span class="id">t</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">tarrow</span> <span class="id">tnil</span> <span class="id">terr</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tail_sp6</span> := <span class="id">∀</span> <span class="id">t</span> (<span class="id">ys</span>:<span class="id">type</span>),<br/>
+&nbsp;&nbsp;<span class="id">tintersect</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">tarrow</span> (<span class="id">tcons</span> <span class="id">t</span> <span class="id">ys</span>) <span class="id">ys</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">tarrow</span> (<span class="id">tnot</span> (<span class="id">tcons</span> <span class="id">t</span> <span class="id">ys</span>)) <span class="id">terr</span>).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">tail_sp7</span> := <span class="id">tarrow</span> <span class="id">tany</span> <span class="id">tany</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tail_sp1_sp7</span>:<br/>
+&nbsp;&nbsp;<span class="id">tail_sp1</span> &lt;: <span class="id">tail_sp7</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">subtype</span>, <span class="id">tail_sp1</span>, <span class="id">tail_sp7</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">tany</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>. <span class="id">intros</span>. <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;we&nbsp;now&nbsp;have&nbsp;to&nbsp;prove&nbsp;that&nbsp;given&nbsp;v0:Any,&nbsp;v0:List&nbsp;Any&nbsp;*)</span><br/>
+Abort.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tail_sp6_sp7</span>:<br/>
+&nbsp;&nbsp;<span class="id">tail_sp6</span> &lt;: <span class="id">tail_sp7</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">subtype</span>, <span class="id">tail_sp6</span>, <span class="id">tail_sp7</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">tany</span> <span class="id">tany</span>. <span class="id">destruct</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">classic</span> (<span class="id">tcons</span> <span class="id">tany</span> <span class="id">tany</span> <span class="id">v0</span>)).<br/>
+&nbsp;&nbsp;- <span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;- <span class="id">specializes</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>~ <span class="id">subtype_terr_tany</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tail_sp6_sp1</span>:<br/>
+&nbsp;&nbsp;<span class="id">tail_sp6</span> &lt;: <span class="id">tail_sp1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">subtype</span>, <span class="id">tail_sp6</span>, <span class="id">tail_sp1</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tforall</span>. <span class="id">intros</span> <span class="id">t1</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">t1</span> (<span class="id">tlist</span> <span class="id">t1</span>). <span class="id">destruct</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">classic</span> (<span class="id">tcons</span> <span class="id">t1</span> (<span class="id">tlist</span> <span class="id">t1</span>) <span class="id">v0</span>)).<br/>
+&nbsp;&nbsp;- <span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span> <span class="id">H4</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;- <span class="id">specializes</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H4</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>~ <span class="id">subtype_terr_tlist</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tail_sp4_sp2</span>:<br/>
+&nbsp;&nbsp;<span class="id">tail_sp4</span> &lt;: <span class="id">tail_sp2</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">subtype</span>, <span class="id">tail_sp4</span>, <span class="id">tail_sp2</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tforall</span>. <span class="id">intros</span> <span class="id">t1</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">t1</span>. <span class="id">destruct</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">classic</span> (<span class="id">tcons</span> <span class="id">t1</span> (<span class="id">tlist</span> <span class="id">t1</span>) <span class="id">v0</span>)).<br/>
+&nbsp;&nbsp;- <span class="id">specializes</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H4</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">left</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;- <span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span> <span class="id">H4</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">right</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">tail_sp4_sp3</span>:<br/>
+&nbsp;&nbsp;<span class="id">tail_sp4</span> &lt;: <span class="id">tail_sp3</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">subtype</span>, <span class="id">tail_sp4</span>, <span class="id">tail_sp3</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tforall</span>. <span class="id">intros</span> <span class="id">t1</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">t1</span>. <span class="id">destruct</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">classic</span> (<span class="id">tcons</span> <span class="id">t1</span> (<span class="id">tlist</span> <span class="id">t1</span>) <span class="id">v0</span>)).<br/>
+&nbsp;&nbsp;- <span class="id">specializes</span> <span class="id">H0</span> <span class="id">H1</span> <span class="id">H4</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;- <span class="id">specializes</span> <span class="id">H</span> <span class="id">H1</span> <span class="id">H4</span> <span class="id">H3</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">apply</span> := <span class="id">vfun</span> <span class="string">"f"</span> (<span class="id">pfun</span> <span class="string">"x"</span> (<span class="id">papp</span> (<span class="id">pvar</span> <span class="string">"f"</span>) (<span class="id">pvar</span> <span class="string">"x"</span>))).<br/>
+<span class="kwd">Definition</span> <span class="id">apply_type1</span> := <span class="id">∀</span> <span class="id">a</span> <span class="id">b</span>, <span class="id">tarrow</span> (<span class="id">tarrow</span> <span class="id">a</span> <span class="id">b</span>) (<span class="id">tarrow</span> <span class="id">a</span> <span class="id">b</span>).<br/>
+<span class="kwd">Definition</span> <span class="id">apply_type2</span> := <span class="id">∀</span> <span class="id">b</span> <span class="id">x</span>, <span class="id">tarrow</span> (<span class="id">tarrow</span> (<span class="id">tsingle</span> <span class="id">x</span>) <span class="id">b</span>) (<span class="id">tdarrow</span> <span class="id">x</span> <span class="id">ttop</span> <span class="id">b</span>).<br/>
+<span class="kwd">Definition</span> <span class="id">apply_spec</span> := <span class="kwd">forall</span> (<span class="id">f</span> <span class="id">x</span>:<span class="id">val</span>) (<span class="id">b</span>:<span class="id">type</span>),<br/>
+&nbsp;&nbsp;<span class="id">pure_triple</span> (<span class="id">is_fn</span> <span class="id">f</span> /\ (<span class="id">tarrow</span> (<span class="id">tsingle</span> <span class="id">x</span>) <span class="id">b</span>) <span class="id">f</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">r</span> =&gt; <span class="id">b</span> <span class="id">r</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">plet</span> <span class="string">"applyf"</span> (<span class="id">papp</span> (<span class="id">pval</span> <span class="id">apply</span>) (<span class="id">pval</span> <span class="id">f</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">papp</span> (<span class="id">pvar</span> <span class="string">"applyf"</span>) (<span class="id">pval</span> <span class="id">x</span>))).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">apply_has_type1</span>:<br/>
+&nbsp;&nbsp;<span class="id">apply_type1</span> <span class="id">apply</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">apply_type1</span>, <span class="id">apply</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tforall</span>. <span class="id">intros</span> <span class="id">a</span> <span class="id">b</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;assume&nbsp;v,&nbsp;the&nbsp;value&nbsp;eventually&nbsp;bound&nbsp;to&nbsp;f,&nbsp;has&nbsp;function&nbsp;type.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;then&nbsp;confirm&nbsp;using&nbsp;the&nbsp;big-step&nbsp;semantics.&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span> <span class="kwd">at</span> 1. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. 2: { <span class="id">invert</span> <span class="id">H1</span>. } <span class="id">injects</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H5</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;<span class="id">clear</span> <span class="id">H</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;do&nbsp;the&nbsp;same&nbsp;for&nbsp;v0/x&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>. 2: { <span class="id">invert</span> <span class="id">H2</span>. } <span class="id">injects</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">clear</span> <span class="id">H</span>. <span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H6</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;we&nbsp;know&nbsp;v&nbsp;is&nbsp;of&nbsp;function&nbsp;type,&nbsp;so&nbsp;we&nbsp;have&nbsp;to&nbsp;handle<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;both&nbsp;cases&nbsp;when&nbsp;using&nbsp;the&nbsp;big-step&nbsp;semantics&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H6</span> <span class="kwd">as</span> <span class="id">H6</span>.<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">tarrow</span> <span class="kwd">in</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H0</span>. <span class="kwd">exists</span> <span class="string">"_"</span>. <span class="id">exs</span>. <span class="id">left</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">pure_app_fun</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>. }<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">tarrow</span> <span class="kwd">in</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H0</span>. <span class="id">exs</span>. <span class="id">right</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">pure_app_fix</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">apply_has_type2</span>:<br/>
+&nbsp;&nbsp;<span class="id">apply_type2</span> <span class="id">apply</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">apply_type2</span>, <span class="id">apply</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tforall</span>. <span class="id">intros</span> <span class="id">b</span> <span class="id">x</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;assume&nbsp;v,&nbsp;the&nbsp;value&nbsp;eventually&nbsp;bound&nbsp;to&nbsp;f,&nbsp;has&nbsp;function&nbsp;type.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;then&nbsp;confirm&nbsp;using&nbsp;the&nbsp;big-step&nbsp;semantics.&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span> <span class="kwd">at</span> 1. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. 2: { <span class="id">invert</span> <span class="id">H1</span>. } <span class="id">injects</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H5</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;<span class="id">clear</span> <span class="id">H</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;do&nbsp;the&nbsp;same&nbsp;for&nbsp;v0/x&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tdarrow</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H2</span> <span class="kwd">as</span> <span class="id">H2</span>. 2: { <span class="id">invert</span> <span class="id">H2</span>. } <span class="id">injects</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H6</span>. <span class="id">clear</span> <span class="id">H</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;we&nbsp;know&nbsp;v&nbsp;is&nbsp;of&nbsp;function&nbsp;type,&nbsp;so&nbsp;we&nbsp;have&nbsp;to&nbsp;handle<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;both&nbsp;cases&nbsp;when&nbsp;using&nbsp;the&nbsp;big-step&nbsp;semantics&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H6</span> <span class="kwd">as</span> <span class="id">H6</span>.<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">tarrow</span>, <span class="id">tsingle</span> <span class="kwd">in</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H0</span>. <span class="kwd">exists</span> <span class="string">"_"</span>. <span class="id">exs</span>. <span class="id">left</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H0</span> <span class="kwd">by</span> <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">r</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">pure_app_fun</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>. }<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">tarrow</span>, <span class="id">tsingle</span> <span class="kwd">in</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H0</span>. <span class="id">exs</span>. <span class="id">right</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">x</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H0</span> <span class="kwd">by</span> <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H0</span> <span class="id">r</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">pure_app_fix</span>. <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">apply_has_spec</span>:<br/>
+&nbsp;&nbsp;<span class="id">apply_spec</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">apply_spec</span>, <span class="id">apply</span>. <span class="id">unfold</span> <span class="id">pure_triple</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;use&nbsp;the&nbsp;arrow&nbsp;type.&nbsp;given&nbsp;f&nbsp;is&nbsp;a&nbsp;function,&nbsp;and&nbsp;we&nbsp;supply&nbsp;the&nbsp;singleton,&nbsp;we&nbsp;know&nbsp;the&nbsp;result&nbsp;is&nbsp;of&nbsp;b&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>, <span class="id">tsingle</span> <span class="kwd">in</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H1</span> <span class="id">H</span> <span class="id">x</span>. <span class="id">forward</span> <span class="id">H1</span> <span class="kwd">by</span> <span class="id">reflexivity</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;H0&nbsp;is&nbsp;the&nbsp;execution&nbsp;of&nbsp;e1,&nbsp;which&nbsp;applies&nbsp;apply&nbsp;to&nbsp;f.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;H9&nbsp;is&nbsp;e2,&nbsp;which&nbsp;applies&nbsp;the&nbsp;result&nbsp;to&nbsp;x.&nbsp;*)</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. 2: { <span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. } <span class="id">injects</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span> <span class="kwd">as</span> <span class="id">H7</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;now&nbsp;we&nbsp;know&nbsp;that&nbsp;e1&nbsp;returned&nbsp;a&nbsp;function.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;continue&nbsp;symbolically&nbsp;executing&nbsp;e2.&nbsp;*)</span><br/>
+&nbsp;&nbsp;2: { <span class="id">invert</span> <span class="id">H5</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H5</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;<span class="id">eauto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Definition</span> <span class="id">length_list</span> := <span class="id">vfix</span> <span class="string">"length"</span> <span class="string">"xs"</span><br/>
+&nbsp;&nbsp;(<span class="id">pmatch</span> (<span class="id">pvar</span> <span class="string">"xs"</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;((<span class="id">tag_nil</span>, <span class="id">pval</span> (<span class="id">vint</span> 0)) ::<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">tag_cons</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">plet</span> <span class="string">"tail"</span> (<span class="id">psnd</span> (<span class="id">pvar</span> <span class="string">"xs"</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">plet</span> <span class="string">"r1"</span> (<span class="id">papp</span> (<span class="id">pvar</span> <span class="string">"length"</span>) (<span class="id">pvar</span> <span class="string">"tail"</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">padd</span> (<span class="id">pval</span> (<span class="id">vint</span> 1)) (<span class="id">pvar</span> <span class="string">"r1"</span>)))) ::<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">nil</span>)).<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">length_list_type</span> := <span class="id">∀</span> <span class="id">t</span>, <span class="id">tarrow</span> (<span class="id">tlist</span> <span class="id">t</span>) <span class="id">tint</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">length_list_has_type</span>:<br/>
+&nbsp;&nbsp;<span class="id">length_list_type</span> <span class="id">length_list</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">length_list_type</span>, <span class="id">length_list</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tforall</span>. <span class="id">intros</span> <span class="id">t</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">tarrow</span>. <span class="id">intros</span> _ <span class="id">v</span> <span class="id">Ht</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;induction&nbsp;on&nbsp;the&nbsp;structure&nbsp;of&nbsp;the&nbsp;type&nbsp;of&nbsp;the&nbsp;input&nbsp;list&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">Ht</span>; <span class="id">intros</span> * <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;err&nbsp;base&nbsp;case&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">Hb</span> <span class="kwd">as</span> <span class="id">Hb</span>. { <span class="id">inverts</span> <span class="id">Hb</span> <span class="kwd">as</span> <span class="id">Hb</span>. } <span class="id">injects</span> <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H3</span> <span class="kwd">as</span> <span class="id">H3</span>. { <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H5</span> <span class="kwd">as</span> <span class="id">H5</span>. { <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H6</span> <span class="kwd">as</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;empty&nbsp;list&nbsp;base&nbsp;case&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">Hb</span> <span class="kwd">as</span> <span class="id">Hb</span>. { <span class="id">inverts</span> <span class="id">Hb</span> <span class="kwd">as</span> <span class="id">Hb</span>. } <span class="id">injects</span> <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H3</span> <span class="kwd">as</span> <span class="id">H3</span>. 2: { <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H5</span> <span class="kwd">as</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">tint_intro</span>. }<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;inductive&nbsp;case&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">Hb</span> <span class="kwd">as</span> <span class="id">Hb</span>. { <span class="id">inverts</span> <span class="id">Hb</span> <span class="kwd">as</span> <span class="id">Hb</span>. } <span class="id">injects</span> <span class="id">Hb</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H4</span> <span class="kwd">as</span> <span class="id">H4</span>. { <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H6</span> <span class="kwd">as</span> <span class="id">H6</span>. 2: { <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">clear</span> <span class="id">H4</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span> <span class="kwd">as</span> <span class="id">H7</span>. <span class="id">simpl</span> <span class="kwd">in</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H6</span> <span class="kwd">as</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;recursive&nbsp;call&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="comment">(*&nbsp;if&nbsp;it&nbsp;doesn't&nbsp;abort&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">clear</span> <span class="id">H5</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H8</span> <span class="kwd">as</span> <span class="id">H8</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span> <span class="kwd">as</span> <span class="id">H7</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">IHHt</span> <span class="id">H6</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">IHHt</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">tint_intro</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">tint_intro</span>. } }<br/>
+Qed.</div></details>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

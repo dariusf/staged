@@ -1,0 +1,268 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module LibFmap</title>
+<meta name="description" content="Documentation of Coq module LibFmap" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module LibFmap</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">LibCore</span>.<br/>
+<span class="kwd">From</span> <span class="id">SLF</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id">LibSepFmap</span>.<br/>
+<br/>
+<span class="kwd">Module</span> <span class="id">Fmap</span> := <span class="id">LibSepFmap</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">fmap_disjoint_indom</span> : <span class="kwd">forall</span> (<span class="id">A</span> <span class="id">B</span>: <span class="kwd">Type</span>) (<span class="id">h1</span> <span class="id">h2</span> : <span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span>) <span class="id">x</span>,<br/>
+&nbsp;&nbsp;<span class="id">disjoint</span> <span class="id">h1</span> <span class="id">h2</span> -&gt; <span class="id">indom</span> <span class="id">h1</span> <span class="id">x</span> -&gt; ~ <span class="id">indom</span> <span class="id">h2</span> <span class="id">x</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">not</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> (<span class="id">disjoint_inv_not_indom_both</span> <span class="id">H</span> <span class="id">H0</span>).<br/>
+&nbsp;&nbsp;<span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">fmap_indom_empty</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">k</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;~ <span class="id">indom</span> (@<span class="id">empty</span> <span class="id">A</span> <span class="id">B</span>) <span class="id">k</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">not</span>; <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">hnf</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">empty</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">fmap_read_update</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> {<span class="id">IB</span>:<span class="id">Inhab</span> <span class="id">B</span>} (<span class="id">k</span>:<span class="id">A</span>) (<span class="id">v</span>:<span class="id">B</span>) <span class="id">m</span>,<br/>
+&nbsp;&nbsp;<span class="id">read</span> (<span class="id">update</span> <span class="id">m</span> <span class="id">k</span> <span class="id">v</span>) <span class="id">k</span> = <span class="id">v</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">update</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">read_union_l</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">read_single</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">indom_single</span>.<br/>
+Qed.</div></details>
+<br/>
+<br/>
+#[<span class="id">global</span>]<br/>
+<span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id">fmap_read_update</span> : <span class="id">rew_fmap</span> <span class="id">rew_fmap_for_fmap_eq</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">fmap_not_indom_of_neq</span> : <span class="kwd">forall</span> (<span class="id">A</span> <span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">a</span> <span class="id">b</span>:<span class="id">A</span>) (<span class="id">v</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id">a</span> &lt;&gt; <span class="id">b</span> -&gt; ~ <span class="id">Fmap.indom</span> (<span class="id">Fmap.single</span> <span class="id">a</span> <span class="id">v</span>) <span class="id">b</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">not</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id">Fmap.indom_single_eq</span> <span class="id">a</span> <span class="id">b</span> <span class="id">v</span>) <span class="kwd">in</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">contradiction</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">not_indom_empty</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> (<span class="id">x</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> (@<span class="id">Fmap.empty</span> <span class="id">A</span> <span class="id">B</span>) <span class="id">x</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">indom</span>, <span class="id">map_indom</span>, <span class="id">empty</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span>.<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">not_indom_union</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">s1</span> <span class="id">s2</span>:<span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">x</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> <span class="id">s1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> <span class="id">s2</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> (<span class="id">s1</span> \+ <span class="id">s2</span>) <span class="id">x</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">indom</span>, <span class="id">map_indom</span>, <span class="id">union</span>, <span class="id">map_union</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_logic</span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">Fmap.fmap_data</span> <span class="id">s1</span> <span class="id">x</span>); <span class="id">auto</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">not_indom_update</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">s1</span>:<span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">x</span> <span class="id">x1</span>:<span class="id">A</span>) (<span class="id">v</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> <span class="id">s1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x</span> &lt;&gt; <span class="id">x1</span> -&gt;<br/>
+&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> (<span class="id">Fmap.update</span> <span class="id">s1</span> <span class="id">x1</span> <span class="id">v</span>) <span class="id">x</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">update</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">not_indom_union</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">not</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">indom</span>, <span class="id">single</span>, <span class="id">map_indom</span> <span class="kwd">in</span> *.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simpls</span> *.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">case_if</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">solve_not_indom</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rew_fmap</span>; <span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- ~ <span class="id">Fmap.indom</span> (<span class="id">Fmap.update</span> _ _ _) _ =&gt; <span class="id">unfold</span> <span class="id">Fmap.update</span>; <span class="id">solve_not_indom</span><br/>
+&nbsp;&nbsp;| |- ~ <span class="id">Fmap.indom</span> (<span class="id">Fmap.single</span> _ _ ) _ =&gt; <span class="id">unfold</span> <span class="id">not</span>; <span class="id">rewrite</span> <span class="id">Fmap.indom_single_eq</span>; <span class="id">intros</span>; <span class="id">false</span><br/>
+&nbsp;&nbsp;| |- ~ <span class="id">Fmap.indom</span> <span class="id">Fmap.empty</span> _ =&gt; <span class="id">apply</span> <span class="id">not_indom_empty</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">resolve_fn_in_env</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">Fmap.read</span> (<span class="id">Fmap.update</span> _ ?<span class="id">k</span> _) ?<span class="id">k</span> = _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">fmap_read_update</span>; [<span class="id">reflexivity</span> | <span class="id">solve_not_indom</span>]<br/>
+&nbsp;&nbsp;| |- <span class="id">Fmap.read</span> (<span class="id">Fmap.update</span> _ _ _) _ = _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Fmap.update</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">Fmap.read_union_l</span>; [<span class="id">resolve_fn_in_env</span> | <span class="id">apply</span> <span class="id">Fmap.indom_single</span>] |<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">Fmap.read_union_r</span>; [<span class="id">resolve_fn_in_env</span> | <span class="id">solve_not_indom</span>]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;]<br/>
+&nbsp;&nbsp;| |- <span class="id">Fmap.read</span> (<span class="id">Fmap.single</span> ?<span class="id">k</span> _) ?<span class="id">k</span> = _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">Fmap.read_single</span>; <span class="id">reflexivity</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">remove_union_single_l</span> : <span class="kwd">forall</span> (<span class="id">A</span> <span class="id">B</span>:<span class="kwd">Type</span>) <span class="id">h</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">v</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;~ <span class="id">indom</span> <span class="id">h</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">remove</span> (<span class="id">union</span> (<span class="id">single</span> <span class="id">x</span> <span class="id">v</span>) <span class="id">h</span>) <span class="id">x</span> = <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">M</span>. <span class="id">applys</span> <span class="id">fmap_extens</span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">remove</span>, <span class="id">map_remove</span>, <span class="id">union</span>, <span class="id">map_union</span>, <span class="id">single</span>. <span class="id">simpls</span>. <span class="id">case_if</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">destruct</span> <span class="id">h</span> <span class="kwd">as</span> [<span class="id">f</span> <span class="id">F</span>]. <span class="id">unfolds</span> <span class="id">indom</span>, <span class="id">map_indom</span>. <span class="id">simpls</span>. <span class="id">subst</span>. <span class="id">rew_logic</span>~ <span class="kwd">in</span> <span class="id">M</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">case_if</span>~. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">remove_update</span> : <span class="kwd">forall</span> (<span class="id">A</span> <span class="id">B</span>:<span class="kwd">Type</span>) <span class="id">h</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">v</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;~ <span class="id">indom</span> <span class="id">h</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">remove</span> (<span class="id">update</span> <span class="id">h</span> <span class="id">x</span> <span class="id">v</span>) <span class="id">x</span> = <span class="id">h</span>.<br/>
+<span class="kwd">Proof</span> <span class="kwd">using</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">update</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">remove_union_single_l</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">remove_not_indom</span> : <span class="kwd">forall</span> (<span class="id">A</span> <span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">h</span>:<span class="id">Fmap.fmap</span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">x</span>:<span class="id">A</span>),<br/>
+&nbsp;&nbsp;~ <span class="id">Fmap.indom</span> <span class="id">h</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.remove</span> <span class="id">h</span> <span class="id">x</span> = <span class="id">h</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">fmap_extens</span>. <span class="id">intros</span> <span class="id">y</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">remove</span>, <span class="id">map_remove</span>. <span class="id">simpls</span>. <span class="id">case_if</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">unfolds</span> <span class="id">indom</span>, <span class="id">map_indom</span>. <span class="id">rew_logic</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">subst</span>~. }<br/>
+&nbsp;&nbsp;{ <span class="id">auto</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">update_idem</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> {<span class="id">IB</span>:<span class="id">Inhab</span> <span class="id">B</span>} <span class="id">s</span> (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">v</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id">Fmap.indom</span> <span class="id">s</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.read</span> <span class="id">s</span> <span class="id">x</span> = <span class="id">v</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.update</span> <span class="id">s</span> <span class="id">x</span> <span class="id">v</span> = <span class="id">s</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">update</span>, <span class="id">indom</span>, <span class="id">read</span>, <span class="id">map_indom</span>, <span class="id">single</span>, <span class="id">union</span>, <span class="id">map_union</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">fmap_extens</span>. <span class="id">intros</span> <span class="id">y</span>. <span class="id">simpls</span>. <span class="id">case_if</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">Fmap.fmap_data</span> <span class="id">s</span> <span class="id">y</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">reflexivity</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">disjoint_single_neq</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">x1</span> <span class="id">x2</span>:<span class="id">A</span>) (<span class="id">u1</span> <span class="id">u2</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id">Fmap.disjoint</span> (<span class="id">Fmap.single</span> <span class="id">x1</span> <span class="id">u1</span>) (<span class="id">Fmap.single</span> <span class="id">x2</span> <span class="id">u2</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">x1</span> &lt;&gt; <span class="id">x2</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">disjoint</span>, <span class="id">single</span>, <span class="id">map_disjoint</span>. <span class="id">intros</span>. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">x1</span>.<br/>
+&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span>; <span class="id">case_if</span>.<br/>
+&nbsp;&nbsp;<span class="id">congruence</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">indom_update</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">s1</span>:<span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">u</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id">Fmap.indom</span> (<span class="id">Fmap.update</span> <span class="id">s1</span> <span class="id">x</span> <span class="id">u</span>) <span class="id">x</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">Fmap.indom_union_l</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">Fmap.indom_single</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">cancel_update_remove</span> : <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">B</span>:<span class="kwd">Type</span>) {<span class="id">IB</span>:<span class="id">Inhab</span> <span class="id">B</span>} (<span class="id">s1</span>:<span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">x</span>:<span class="id">A</span>) (<span class="id">u</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id">Fmap.indom</span> <span class="id">s1</span> <span class="id">x</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.read</span> <span class="id">s1</span> <span class="id">x</span> = <span class="id">u</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.update</span> (<span class="id">Fmap.remove</span> <span class="id">s1</span> <span class="id">x</span>) <span class="id">x</span> <span class="id">u</span> = <span class="id">s1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">update</span>, <span class="id">remove</span>, <span class="id">single</span>, <span class="id">read</span>, <span class="id">indom</span>, <span class="id">map_indom</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">fmap_extens</span>. <span class="id">intros</span> <span class="id">y</span>. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">map_union</span>, <span class="id">map_remove</span>.<br/>
+&nbsp;&nbsp;<span class="id">case_if</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">subst</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> (<span class="id">Fmap.fmap_data</span> <span class="id">s1</span> <span class="id">y</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rew_logic</span> *. }<br/>
+&nbsp;&nbsp;{ <span class="id">case_if</span>. <span class="id">reflexivity</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">update_precedence</span>: <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">s</span>:<span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span>) (<span class="id">x</span>: <span class="id">A</span>) (<span class="id">v</span> <span class="id">v1</span>:<span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id">Fmap.update</span> (<span class="id">Fmap.update</span> <span class="id">s</span> <span class="id">x</span> <span class="id">v</span>) <span class="id">x</span> <span class="id">v1</span> = <span class="id">Fmap.update</span> <span class="id">s</span> <span class="id">x</span> <span class="id">v1</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">Fmap.update</span>, <span class="id">single</span>, <span class="id">Fmap.union</span>, <span class="id">Fmap.map_union</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">fmap_extens</span>. <span class="id">intros</span> <span class="id">y</span>. <span class="id">simpls</span>.<br/>
+&nbsp;&nbsp;<span class="id">case_if</span>; <span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">update_update_idem</span>: <span class="kwd">forall</span> <span class="id">A</span> (<span class="id">B</span>:<span class="kwd">Type</span>) (<span class="id">s</span>:<span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span>) <span class="id">x</span> <span class="id">v</span>,<br/>
+&nbsp;&nbsp;<span class="id">Fmap.update</span> (<span class="id">Fmap.update</span> <span class="id">s</span> <span class="id">x</span> <span class="id">v</span>) <span class="id">x</span> <span class="id">v</span> = <span class="id">Fmap.update</span> <span class="id">s</span> <span class="id">x</span> <span class="id">v</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">update_precedence</span> <span class="id">v</span> <span class="id">v</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">fmap_update_read</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> {<span class="id">IB</span>:<span class="id">Inhab</span> <span class="id">B</span>} (<span class="id">k</span>:<span class="id">A</span>) (<span class="id">m</span>:<span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id">indom</span> <span class="id">m</span> <span class="id">k</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">update</span> <span class="id">m</span> <span class="id">k</span> (<span class="id">read</span> <span class="id">m</span> <span class="id">k</span>) = <span class="id">m</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id">update</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">Fmap.update_eq_union_single</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">update_idem</span>.<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">update_inv</span> : <span class="kwd">forall</span> <span class="id">A</span> <span class="id">B</span> {<span class="id">IB</span>:<span class="id">Inhab</span> <span class="id">B</span>} (<span class="id">k</span>:<span class="id">A</span>) (<span class="id">v</span>:<span class="id">B</span>) (<span class="id">m</span>:<span class="id">fmap</span> <span class="id">A</span> <span class="id">B</span>),<br/>
+&nbsp;&nbsp;<span class="id">update</span> <span class="id">m</span> <span class="id">k</span> <span class="id">v</span> = <span class="id">union</span> (<span class="id">single</span> <span class="id">k</span> <span class="id">v</span>) <span class="id">m</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">unfold</span> <span class="id">update</span>.<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

@@ -1,0 +1,233 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Biab</title>
+<meta name="description" content="Documentation of Coq module Biab" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Biab</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">ShiftReset</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Basics</span> <span class="id">Norm</span> <span class="id">Satisfies</span> <span class="id">ShiftFree</span> <span class="id">Propriety</span>.<br/>
+<br/>
+<span class="kwd">Implicit</span> <span class="id">Types</span> <span class="id">H</span> : <span class="id">hprop</span>.<br/>
+<br/>
+<h1> Biabduction </h1>
+<br/>
+<span class="kwd">Inductive</span> <span class="id">biab</span> : <span class="id">hprop</span> -&gt; <span class="id">hprop</span> -&gt; <span class="id">hprop</span> -&gt; <span class="id">hprop</span> -&gt; <span class="kwd">Prop</span> :=<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">b_trivial</span> : <span class="kwd">forall</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">biab</span> \[] <span class="id">H</span> <span class="id">H</span> \[]<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">b_base_empty</span> : <span class="kwd">forall</span> <span class="id">Hf</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">biab</span> \[] <span class="id">Hf</span> \[] <span class="id">Hf</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">b_pts_match</span> : <span class="kwd">forall</span> <span class="id">a</span> <span class="id">b</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Ha</span> <span class="id">Hf</span> <span class="id">l</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">biab</span> <span class="id">Ha</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Hf</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">biab</span> (\[<span class="id">a</span>=<span class="id">b</span>] \* <span class="id">Ha</span>) (<span class="id">l</span>~~&gt;<span class="id">a</span> \* <span class="id">H1</span>) (<span class="id">l</span>~~&gt;<span class="id">b</span> \* <span class="id">H2</span>) <span class="id">Hf</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">b_any_match</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Ha</span> <span class="id">Hf</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">biab</span> <span class="id">Ha</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Hf</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">biab</span> <span class="id">Ha</span> (<span class="id">H</span> \* <span class="id">H1</span>) (<span class="id">H</span> \* <span class="id">H2</span>) <span class="id">Hf</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">b_pts_diff</span> : <span class="kwd">forall</span> <span class="id">a</span> <span class="id">b</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Ha</span> <span class="id">Hf</span> <span class="id">l1</span> <span class="id">l2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">biab</span> <span class="id">Ha</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Hf</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">biab</span> (<span class="id">l2</span>~~&gt;<span class="id">b</span> \* <span class="id">Ha</span>) (<span class="id">l1</span>~~&gt;<span class="id">a</span> \* <span class="id">H1</span>) (<span class="id">l2</span>~~&gt;<span class="id">b</span> \* <span class="id">H2</span>) (<span class="id">l1</span>~~&gt;<span class="id">a</span> \* <span class="id">Hf</span>).<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">b_pts_single</span> : <span class="kwd">forall</span> <span class="id">l</span> <span class="id">a</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;<span class="id">biab</span> \[<span class="id">a</span>=<span class="id">b</span>] (<span class="id">l</span>~~&gt;<span class="id">a</span>) (<span class="id">l</span>~~&gt;<span class="id">b</span>) \[].<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id">hstar_hempty_r</span> (<span class="id">l</span>~~&gt;<span class="id">a</span>)).<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id">hstar_hempty_r</span> (<span class="id">l</span>~~&gt;<span class="id">b</span>)).<br/>
+&nbsp;&nbsp;<span class="id">applys_eq</span> <span class="id">b_pts_match</span>.<br/>
+&nbsp;&nbsp;<span class="id">instantiate</span> (1 := \[]).<br/>
+&nbsp;&nbsp;<span class="id">xsimpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">intuition</span>.<br/>
+&nbsp;&nbsp;<span class="id">intuition</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_base_empty</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">ens_reduce_frame</span> : <span class="kwd">forall</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h</span> <span class="id">hf</span> <span class="id">R</span> <span class="id">H</span>,<br/>
+&nbsp;&nbsp;<span class="id">H</span> <span class="id">h</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">Fmap.disjoint</span> <span class="id">h</span> (<span class="id">hf</span> \<span class="id">u</span> <span class="id">h1</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">satisfies</span> <span class="id">s1</span> <span class="id">s2</span> (<span class="id">hf</span> \<span class="id">u</span> <span class="id">h1</span>) (<span class="id">hf</span> \<span class="id">u</span> <span class="id">h1</span> \<span class="id">u</span> <span class="id">h</span>) <span class="id">R</span> (<span class="id">ens_</span> <span class="id">H</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">satisfies</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> (<span class="id">h1</span> \<span class="id">u</span> <span class="id">h</span>) <span class="id">R</span> (<span class="id">ens_</span> <span class="id">H</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H0</span> <span class="id">Hd</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H1</span> <span class="kwd">as</span> <span class="id">H1</span>. <span class="id">destr</span> <span class="id">H1</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_hpure_l</span> <span class="kwd">in</span> <span class="id">H1</span>. <span class="id">destr</span> <span class="id">H1</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">constructor</span>. <span class="kwd">exists</span> <span class="id">v</span>. <span class="kwd">exists</span> <span class="id">h3</span>.<br/>
+&nbsp;&nbsp;<span class="id">intuition</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_hpure_l</span>. <span class="id">intuition</span>.<br/>
+&nbsp;&nbsp;<span class="id">fmap_eq</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">forwards</span>: <span class="id">Fmap.union_eq_inv_of_disjoint</span> (<span class="id">hf</span> \<span class="id">u</span> <span class="id">h1</span>) <span class="id">h</span> <span class="id">h3</span>.<br/>
+&nbsp;&nbsp;<span class="id">fmap_disjoint</span>.<br/>
+&nbsp;&nbsp;<span class="id">fmap_disjoint</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">asserts_rewrite</span> (<span class="id">h</span> \<span class="id">u</span> <span class="id">hf</span> \<span class="id">u</span> <span class="id">h1</span> = <span class="id">hf</span> \<span class="id">u</span> <span class="id">h1</span> \<span class="id">u</span> <span class="id">h</span>). <span class="id">fmap_eq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">asserts_rewrite</span> (<span class="id">h3</span> \<span class="id">u</span> <span class="id">hf</span> \<span class="id">u</span> <span class="id">h1</span> = (<span class="id">hf</span> \<span class="id">u</span> <span class="id">h1</span>) \<span class="id">u</span> <span class="id">h3</span>). <span class="id">fmap_eq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">assumption</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">transpose_pts_diff</span> : <span class="kwd">forall</span> <span class="id">Ha</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Hf</span> <span class="id">f</span> (<span class="id">x</span> <span class="id">y</span>:<span class="id">loc</span>) (<span class="id">a</span> <span class="id">b</span>:<span class="id">val</span>),<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> <span class="id">H1</span>;; <span class="id">req</span> <span class="id">H2</span> <span class="id">f</span>) (<span class="id">req</span> <span class="id">Ha</span> (<span class="id">ens_</span> <span class="id">Hf</span>;; <span class="id">f</span>)) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> (<span class="id">x</span> ~~&gt; <span class="id">a</span> \* <span class="id">H1</span>);; <span class="id">req</span> (<span class="id">y</span> ~~&gt; <span class="id">b</span> \* <span class="id">H2</span>) <span class="id">f</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">req</span> (<span class="id">y</span> ~~&gt; <span class="id">b</span> \* <span class="id">Ha</span>) (<span class="id">ens_</span> (<span class="id">x</span> ~~&gt; <span class="id">a</span> \* <span class="id">Hf</span>);; <span class="id">f</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="comment">(*&nbsp;the&nbsp;idea&nbsp;of&nbsp;this&nbsp;proof&nbsp;is&nbsp;to&nbsp;demonstrate&nbsp;that&nbsp;we&nbsp;can&nbsp;commute&nbsp;adding&nbsp;x~~&gt;a&nbsp;and&nbsp;removing&nbsp;y~~&gt;b,&nbsp;by&nbsp;showing&nbsp;that:&nbsp;we&nbsp;can&nbsp;start&nbsp;from&nbsp;a&nbsp;heap&nbsp;without&nbsp;x~~&gt;a&nbsp;(using&nbsp;the&nbsp;lemma&nbsp;ens_reduce_frame),&nbsp;perform&nbsp;the&nbsp;operations,&nbsp;and&nbsp;arrive&nbsp;at&nbsp;the&nbsp;same&nbsp;result.&nbsp;*)</span><br/>
+<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>; <span class="id">no_shift</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;extract&nbsp;everything&nbsp;we&nbsp;can&nbsp;first.&nbsp;start&nbsp;with&nbsp;x-&gt;a&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_ens_void</span> <span class="kwd">in</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>. <span class="id">destr</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="id">hinv</span> <span class="id">H0</span>. <span class="id">hinv</span> <span class="id">H0</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;and&nbsp;y-&gt;b&nbsp;and&nbsp;Ha&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_req_req</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_req</span>. <span class="id">intros</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;now,&nbsp;start&nbsp;supplying&nbsp;stuff.&nbsp;x-&gt;a&nbsp;is&nbsp;easy&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_ens_void</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">norm_seq_assoc_sf</span>; <span class="id">shiftfree</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span> (<span class="id">hr0</span> \<span class="id">u</span> <span class="id">x1</span>) <span class="id">vunit</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_ens</span>. <span class="kwd">exists</span> <span class="id">vunit</span> <span class="id">x1</span>. <span class="id">splits</span>*. <span class="id">hintro</span>. <span class="id">jauto</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;supply&nbsp;y-&gt;b.&nbsp;to&nbsp;do&nbsp;this,&nbsp;we&nbsp;need&nbsp;to&nbsp;find&nbsp;h3-h(y-&gt;b).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;h3&nbsp;=&nbsp;h(H1)&nbsp;+&nbsp;h0<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;h(H1)&nbsp;+&nbsp;h(x-&gt;a)&nbsp;+&nbsp;h1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;h(H1)&nbsp;+&nbsp;h(x-&gt;a)&nbsp;+&nbsp;hr&nbsp;+&nbsp;h(y-&gt;b)<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;h3&nbsp;-&nbsp;h(y-&gt;b)&nbsp;=&nbsp;h(H1)&nbsp;+&nbsp;h(x-&gt;a)&nbsp;+&nbsp;hr<br/>
+&nbsp;&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">pose</span> <span class="id">proof</span> <span class="id">H11</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H11</span> <span class="kwd">as</span> <span class="id">H11</span>. <span class="id">destr</span> <span class="id">H11</span>. <span class="id">hinv</span> <span class="id">H11</span>. <span class="id">hinv</span> <span class="id">H11</span>. <span class="comment">(*&nbsp;find&nbsp;out&nbsp;h(H1)&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_req_req</span> <span class="kwd">in</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H10</span> <span class="kwd">as</span> <span class="id">H32</span>. <span class="id">specializes</span> <span class="id">H32</span> <span class="id">hp</span> (<span class="id">x1</span> \<span class="id">u</span> <span class="id">hr</span> \<span class="id">u</span> <span class="id">x3</span>) <span class="id">H12</span>.<br/>
+&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H32</span> <span class="kwd">by</span> <span class="id">fmap_eq</span>. <span class="id">forward</span> <span class="id">H32</span> <span class="kwd">by</span> <span class="id">fmap_disjoint</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;now&nbsp;we&nbsp;are&nbsp;trying&nbsp;to&nbsp;supply&nbsp;the&nbsp;premise&nbsp;of&nbsp;H.&nbsp;to&nbsp;do&nbsp;this<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;we&nbsp;need&nbsp;to&nbsp;remove&nbsp;h(y-&gt;2)&nbsp;from&nbsp;both&nbsp;sides&nbsp;of&nbsp;H10.&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;subst.&nbsp;rew_fmap&nbsp;*.&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">subst</span> <span class="id">h0</span> <span class="id">h3</span> <span class="id">h1</span> <span class="id">h5</span>. <span class="id">lets</span>: <span class="id">ens_reduce_frame</span> (<span class="id">hr</span> \<span class="id">u</span> <span class="id">h4</span>) <span class="id">x3</span> <span class="id">hp</span> <span class="id">H21</span>.<br/>
+&nbsp;&nbsp;<span class="id">forward</span> <span class="id">H4</span> <span class="kwd">by</span> <span class="id">fmap_disjoint</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H4</span>. <span class="id">applys_eq</span> <span class="id">H18</span>. <span class="id">fmap_eq</span>. <span class="id">fmap_eq</span>.<br/>
+&nbsp;&nbsp;<span class="id">clear</span> <span class="id">H18</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;finally,&nbsp;we&nbsp;can&nbsp;use&nbsp;H.&nbsp;build&nbsp;a&nbsp;seq&nbsp;to&nbsp;do&nbsp;that&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">lets</span> <span class="id">H13</span>: <span class="id">s_seq</span> <span class="id">H4</span>. <span class="id">specializes</span> <span class="id">H13</span>. <span class="id">applys_eq</span> <span class="id">H32</span>. <span class="id">fmap_eq</span>. <span class="id">clear</span> <span class="id">H4</span> <span class="id">H32</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">H13</span>. <span class="id">clear</span> <span class="id">H13</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;Ha&nbsp;is&nbsp;in&nbsp;the&nbsp;way,&nbsp;but&nbsp;otherwise&nbsp;we&nbsp;are&nbsp;done&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">subst</span>. <span class="id">rew_fmap</span> *.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H13</span>.<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H13</span> <span class="id">hp0</span> <span class="id">H15</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">biab_single_h</span> : <span class="kwd">forall</span> <span class="id">H</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">satisfies</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span> (<span class="id">ens_</span> (<span class="id">H</span> \* <span class="id">H1</span>);; <span class="id">req</span> (<span class="id">H</span> \* <span class="id">H2</span>) <span class="id">f</span>) -&gt;<br/>
+&nbsp;&nbsp;<span class="id">satisfies</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span> (<span class="id">ens_</span> <span class="id">H1</span>;; <span class="id">req</span> <span class="id">H2</span> <span class="id">f</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>; <span class="id">no_shift</span>. <span class="id">destr</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;ens&nbsp;adds&nbsp;a&nbsp;location&nbsp;to&nbsp;the&nbsp;heap&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H0</span> <span class="kwd">as</span> <span class="id">H0</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;use&nbsp;that&nbsp;to&nbsp;figure&nbsp;out&nbsp;what&nbsp;is&nbsp;in&nbsp;h3&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">destr</span> <span class="id">H0</span>. <span class="id">hinv</span> <span class="id">H0</span>. <span class="id">hinv</span> <span class="id">H0</span>. <span class="id">hinv</span> <span class="id">H5</span>. <span class="id">subst</span> <span class="id">h0</span> <span class="id">h3</span> <span class="id">x0</span> <span class="id">x</span>. <span class="id">rew_fmap</span> *.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;prove&nbsp;just&nbsp;the&nbsp;first&nbsp;part&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_req_req</span> <span class="kwd">in</span> <span class="id">H10</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H10</span> <span class="kwd">as</span> <span class="id">H10</span>. <span class="id">specializes</span> <span class="id">H10</span> <span class="id">x1</span> (<span class="id">h1</span> \<span class="id">u</span> <span class="id">x2</span>) <span class="id">___</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">s_seq</span> (<span class="id">h1</span> \<span class="id">u</span> <span class="id">x2</span>) <span class="id">vunit</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">constructor</span>. <span class="kwd">exists</span> <span class="id">vunit</span>. <span class="kwd">exists</span> <span class="id">x2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">splits</span>*. <span class="id">hintro</span>; <span class="id">jauto</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<div class="doc">Biabduction for a single location. </div>
+<span class="kwd">Lemma</span> <span class="id">biab_single</span> : <span class="kwd">forall</span> (<span class="id">x</span>:<span class="id">loc</span>) (<span class="id">a</span>:<span class="id">val</span>) <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">satisfies</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span> (<span class="id">ens_</span> (<span class="id">x</span>~~&gt;<span class="id">a</span> \* <span class="id">H1</span>);; <span class="id">req</span> (<span class="id">x</span>~~&gt;<span class="id">a</span> \* <span class="id">H2</span>) <span class="id">f</span>)-&gt;<br/>
+&nbsp;&nbsp;<span class="id">satisfies</span> <span class="id">s1</span> <span class="id">s2</span> <span class="id">h1</span> <span class="id">h2</span> <span class="id">R</span> (<span class="id">ens_</span> <span class="id">H1</span>;; <span class="id">req</span> <span class="id">H2</span> <span class="id">f</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">biab_single_h</span> (<span class="id">x</span>~~&gt;<span class="id">a</span>).<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">norm_ens_req_transpose</span> : <span class="kwd">forall</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Ha</span> <span class="id">Hf</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">biab</span> <span class="id">Ha</span> <span class="id">H1</span> <span class="id">H2</span> <span class="id">Hf</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> <span class="id">H1</span>;; <span class="id">req</span> <span class="id">H2</span> <span class="id">f</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">req</span> <span class="id">Ha</span> (<span class="id">ens_</span> <span class="id">Hf</span>;; <span class="id">f</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hbi</span>.<br/>
+&nbsp;&nbsp;<span class="id">induction</span> <span class="id">Hbi</span>.<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;trivial&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ens_req_inv</span> <span class="kwd">in</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_req_emp</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_ens_empty</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;base&nbsp;case&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">fold</span> <span class="id">entails</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_req_emp</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">pose</span> <span class="id">proof</span> <span class="id">entails_ens_seq</span>. <span class="id">specializes</span> <span class="id">H</span> <span class="id">Hf</span> <span class="id">Hf</span> <span class="id">H2</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_req_emp</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entails_refl</span>. }<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;b_pts_match&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;use&nbsp;the&nbsp;req&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_req_req</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">constructor</span>. <span class="id">intros</span>. <span class="id">hinv</span> <span class="id">H0</span>. <span class="id">subst</span>. <span class="id">rew_fmap</span>.<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> (<span class="id">IHHbi</span> <span class="id">s1</span> <span class="id">s2</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span> <span class="id">biab_single</span> <span class="id">H</span>. }<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;b_any_match&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">IHHbi</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">biab_single_h</span> <span class="id">H</span>. }<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;b_pts_diff&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">introv</span> <span class="id">H3</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">pose</span> <span class="id">proof</span> <span class="id">transpose_pts_diff</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> <span class="id">IHHbi</span> <span class="id">H3</span>. }<br/>
+Qed.</div></details>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

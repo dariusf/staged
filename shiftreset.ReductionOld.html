@@ -1,0 +1,107 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module ReductionOld</title>
+<meta name="description" content="Documentation of Coq module ReductionOld" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module ReductionOld</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">ShiftReset</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Basics</span> <span class="id">ShiftFree</span>.<br/>
+<br/>
+<h1> Reduction rules </h1>
+<span class="kwd">Lemma</span> <span class="id">red_normal</span> : <span class="kwd">forall</span> <span class="id">f</span>,<br/>
+&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f</span> -&gt;<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> <span class="id">f</span>) <span class="id">f</span>.<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hsf</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>; <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;this&nbsp;case&nbsp;cannot&nbsp;be&nbsp;as&nbsp;f&nbsp;is&nbsp;shift-free&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">Hsf</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_skip</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">rs</span> (<span class="id">f1</span>;; <span class="id">f2</span>)) (<span class="id">f1</span>;; <span class="id">rs</span> <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hsf</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>; <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;if&nbsp;either&nbsp;f1&nbsp;or&nbsp;f2&nbsp;produce&nbsp;a&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="comment">(*&nbsp;f2&nbsp;produces&nbsp;a&nbsp;shift&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exact</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_rs_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exact</span> <span class="id">H8</span>. <span class="id">eassumption</span>. }<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="comment">(*&nbsp;f1&nbsp;cannot&nbsp;produce&nbsp;a&nbsp;shift&nbsp;as&nbsp;it&nbsp;is&nbsp;shift-free&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">Hsf</span> <span class="kwd">in</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">false</span>. } }<br/>
+&nbsp;&nbsp;{ <span class="comment">(*&nbsp;if&nbsp;f1&nbsp;returns&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. <span class="id">destr</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eapply</span> <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">exact</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">assumption</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_skip_conv</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">f1</span>;; <span class="id">rs</span> <span class="id">f2</span>) (<span class="id">rs</span> (<span class="id">f1</span>;; <span class="id">f2</span>)).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hsf</span>. <span class="id">unfold</span> <span class="id">entails</span>. <span class="id">intros</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. 2: { <span class="id">apply</span> <span class="id">Hsf</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span> <span class="kwd">as</span> <span class="id">H7</span>.<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="id">eapply</span> <span class="id">s_rs_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">s_seq</span>. }<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">red_skip2</span> : <span class="kwd">forall</span> <span class="id">f1</span> <span class="id">f2</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">shift_free</span> <span class="id">f1</span> -&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">bientails</span> (<span class="id">rs</span> (<span class="id">f1</span>;; <span class="id">f2</span>)) (<span class="id">f1</span>;; <span class="id">rs</span> <span class="id">f2</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">introv</span> <span class="id">Hsf</span>.<br/>
+&nbsp;&nbsp;<span class="id">unfold</span> <span class="id">bientails</span>. <span class="id">iff</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span>* <span class="id">red_skip</span>. }<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span> <span class="kwd">as</span> <span class="id">H</span>. 2: { <span class="id">apply</span> <span class="id">Hsf</span> <span class="kwd">in</span> <span class="id">H</span>. <span class="id">false</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H7</span> <span class="kwd">as</span> <span class="id">H7</span>.<br/>
+<br/>
+&nbsp;&nbsp;{ <span class="id">eapply</span> <span class="id">s_rs_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">s_seq</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">eassumption</span>. }<br/>
+&nbsp;&nbsp;{ <span class="id">apply</span> <span class="id">s_rs_val</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span>* <span class="id">s_seq</span>. }<br/>
+Qed.</div></details>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

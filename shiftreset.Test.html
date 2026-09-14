@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Test</title>
+<meta name="description" content="Documentation of Coq module Test" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Test</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">ShiftReset</span> <span class="kwd">Require</span> <span class="kwd">Export</span> <span class="id">Logic</span>.<br/>
+<br/>
+<span class="id">Local</span> <span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">string_scope</span>.<br/>
+<br/>
+<span class="kwd">Example</span> <span class="id">ex_rewrite_right1</span>:<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> (<span class="id">Fmap.update</span> <span class="id">empty_env</span> <span class="string">"k"</span> (<span class="kwd">fun</span> <span class="id">a</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">a</span> = <span class="id">r</span>])))<br/>
+&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> \[<span class="id">True</span>];; <span class="id">unk</span> <span class="string">"k"</span> (<span class="id">vint</span> 1)) (<span class="id">ens_</span> \[<span class="id">True</span>]).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="comment">(*&nbsp;funfold1&nbsp;"k".&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">pose</span> <span class="id">proof</span> (@<span class="id">entails_under_unk</span> (<span class="id">Fmap.update</span> <span class="id">empty_env</span> <span class="string">"k"</span> (<span class="kwd">fun</span> <span class="id">a</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">a</span> = <span class="id">r</span>]))) <span class="string">"k"</span>).<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> (<span class="id">vint</span> 1) <span class="id">___</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_fmap</span>.<br/>
+<br/>
+Abort.</div></details>
+<br/>
+<span class="kwd">Example</span> <span class="id">ex_rewrite_right1</span>:<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> (<span class="id">Fmap.update</span> <span class="id">empty_env</span> <span class="string">"k"</span> (<span class="kwd">fun</span> <span class="id">a</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">a</span> = <span class="id">r</span>])))<br/>
+&nbsp;&nbsp;&nbsp;(<span class="id">unk</span> <span class="string">"k"</span> (<span class="id">vint</span> 1);; <span class="id">ens_</span> \[<span class="id">True</span>]) (<span class="id">ens_</span> \[<span class="id">True</span>]).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="comment">(*&nbsp;funfold1&nbsp;"k".&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">pose</span> <span class="id">proof</span> (@<span class="id">entails_under_unk</span> (<span class="id">Fmap.update</span> <span class="id">empty_env</span> <span class="string">"k"</span> (<span class="kwd">fun</span> <span class="id">a</span> =&gt; <span class="id">ens</span> (<span class="kwd">fun</span> <span class="id">r</span> =&gt; \[<span class="id">a</span> = <span class="id">r</span>]))) <span class="string">"k"</span>).<br/>
+&nbsp;&nbsp;<span class="id">specializes</span> <span class="id">H</span> (<span class="id">vint</span> 1) <span class="id">___</span>.<br/>
+<br/>
+<span class="comment">(*&nbsp;Set&nbsp;Typeclasses&nbsp;Debug.&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;setoid_rewrite&nbsp;H.&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">rew_fmap</span>.<br/>
+<br/>
+Abort.</div></details>
+<br/>
+<span class="kwd">Example</span> <span class="id">ex_gentails_non_shift_free</span>:<br/>
+&nbsp;&nbsp;<span class="id">gentails</span> 1%<span class="id">nat</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;((<span class="id">sh</span> <span class="string">"k"</span> <span class="id">empty</span>;; <span class="id">empty</span>);; <span class="id">empty</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">sh</span> <span class="string">"k"</span> <span class="id">empty</span>;; <span class="id">empty</span>;; <span class="id">empty</span>).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">applys</span> <span class="id">ge_shift</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H</span>. { <span class="id">inverts</span> <span class="id">H7</span>. <span class="id">false_invert</span> <span class="id">H6</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H5</span>. { <span class="id">false_invert</span> <span class="id">H7</span>. }<br/>
+&nbsp;&nbsp;<span class="id">inverts</span> <span class="id">H4</span>.<br/>
+&nbsp;&nbsp;<span class="kwd">exists</span> <span class="id">empty</span>.<br/>
+&nbsp;&nbsp;<span class="id">exs</span>.<br/>
+&nbsp;&nbsp;<span class="id">splits</span>.<br/>
+&nbsp;&nbsp;- <span class="id">applys</span> <span class="id">s_bind_sh</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">applys</span>* <span class="id">s_sh</span>.<br/>
+&nbsp;&nbsp;- <span class="id">reflexivity</span>.<br/>
+&nbsp;&nbsp;- <span class="id">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_bind_assoc_sf</span>; <span class="id">shiftfree</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+<br/>
+<span class="kwd">Example</span> <span class="id">ex_biab</span>: <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">i</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails</span> (<span class="id">ens_</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> 3 \* <span class="id">y</span>~~&gt;<span class="id">vint</span> 2);; <span class="id">req_</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">i</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">req</span> \[<span class="id">i</span> = 3] (<span class="id">ens_</span> (<span class="id">y</span>~~&gt;<span class="id">vint</span> 2))).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_req_transpose</span>.<br/>
+&nbsp;&nbsp;2: {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id">hstar_hempty_r</span> (<span class="id">x</span>~~&gt;<span class="id">i</span>)).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_pts_match</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_base_empty</span>. }<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">entails_req1</span>.<br/>
+&nbsp;&nbsp;<span class="id">xsimpl</span>. <span class="id">symmetry</span>. <span class="id">f_equal</span>. <span class="id">assumption</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_empty_r</span>.<br/>
+&nbsp;&nbsp;<span class="id">reflexivity</span>.<br/>
+Qed.</div></details>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

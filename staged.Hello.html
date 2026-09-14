@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Hello</title><script src="coq2html.js"></script>
+<meta name="description" content="Documentation of Coq module Hello" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Hello</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">Staged</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Logic</span> <span class="id">Automation</span>.<br/>
+<span class="id">Local</span> <span class="kwd">Open</span> <span class="kwd">Scope</span> <span class="id">string_scope</span>.<br/>
+<br/>
+<h1> Basic example </h1>
+<span class="kwd">Definition</span> <span class="id">hello</span> : <span class="id">ufun</span> := <span class="kwd">fun</span> <span class="id">args</span> <span class="id">res</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">args</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">vtup</span> (<span class="id">vstr</span> <span class="id">f</span>) (<span class="id">vtup</span> (<span class="id">vloc</span> <span class="id">x</span>) (<span class="id">vloc</span> <span class="id">y</span>)) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">∀</span> <span class="id">a</span>, <span class="id">req</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">a</span>) (<span class="id">ens_</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> (<span class="id">a</span>+1));;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">∃</span> <span class="id">r</span>, <span class="id">unk</span> <span class="id">f</span> (<span class="id">vloc</span> <span class="id">y</span>) (<span class="id">vint</span> <span class="id">r</span>);;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">∀</span> <span class="id">b</span> <span class="id">b1</span>, <span class="id">req</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">b</span> \* <span class="id">y</span>~~&gt;<span class="id">vint</span> <span class="id">b1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">b</span> \* <span class="id">y</span>~~&gt;<span class="id">res</span> \* \[<span class="id">res</span> = <span class="id">vint</span> (<span class="id">b</span>+<span class="id">r</span>)])))<br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">empty</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hello_env</span> (<span class="id">x</span> <span class="id">y</span>:<span class="id">loc</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">Fmap.update</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">Fmap.single</span> <span class="string">"f"</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">y</span> <span class="id">r</span> =&gt; <span class="id">∀</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">req</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">b</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> ((<span class="id">x</span>~~&gt;<span class="id">vint</span> (<span class="id">b</span>+1) \* \[<span class="id">r</span> = <span class="id">vint</span> 0])))))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"hello"</span> <span class="id">hello</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hello_capture</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">res</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> (<span class="id">hello_env</span> <span class="id">x</span> <span class="id">y</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">unk</span> <span class="string">"hello"</span> (<span class="id">vtup</span> (<span class="id">vstr</span> <span class="string">"f"</span>) (<span class="id">vtup</span> (<span class="id">vloc</span> <span class="id">x</span>) (<span class="id">vloc</span> <span class="id">y</span>))) <span class="id">res</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">∀</span> <span class="id">a</span> <span class="id">b</span>, <span class="id">req</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">a</span> \* <span class="id">y</span>~~&gt;<span class="id">vint</span> <span class="id">b</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> (<span class="id">a</span>+2) \* <span class="id">y</span>~~&gt;<span class="id">res</span> \* \[<span class="id">res</span> = <span class="id">vint</span> (<span class="id">a</span>+2)]))).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span> <span class="id">x</span> <span class="id">y</span> <span class="id">res</span>.<br/>
+&nbsp;&nbsp;<span class="id">funfold1</span> <span class="string">"hello"</span>.<br/>
+&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">fintro</span> <span class="id">a</span>.<br/>
+&nbsp;&nbsp;<span class="id">fintro</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;<span class="id">finst</span> <span class="id">a</span>.<br/>
+&nbsp;&nbsp;<span class="id">fassume</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id">norm_ens_req_transpose</span>).<br/>
+&nbsp;&nbsp;2: { <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id">hstar_hempty_r</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">a</span>)) <span class="kwd">at</span> 2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_pts_match</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_base_empty</span>.<br/>
+&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;norm.&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;prove&nbsp;trivial&nbsp;reqs&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_hempty_r</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_req_l</span>. <span class="id">reflexivity</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;combine&nbsp;everything&nbsp;into&nbsp;the&nbsp;SL&nbsp;context&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_assoc</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_ens_void_combine</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;rewrite&nbsp;under&nbsp;the&nbsp;existential&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id">ent_ex_seq_unk</span> (<span class="id">hello_env</span> <span class="id">x</span> <span class="id">y</span>)).<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">hello_env</span>. <span class="id">resolve_fn_in_env</span>. }<br/>
+&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;intro&nbsp;the&nbsp;existential,&nbsp;and&nbsp;specialize&nbsp;the&nbsp;forall&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">fintro</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_forall_distr_r</span>.<br/>
+&nbsp;&nbsp;<span class="id">finst</span> (<span class="id">a</span> + 1).<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_reassoc</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> (<span class="id">norm_ens_req_transpose</span>).<br/>
+&nbsp;&nbsp;2: { <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_comm</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id">hstar_hempty_r</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> (<span class="id">a</span> + 1))) <span class="kwd">at</span> 2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_pts_match</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_base_empty</span>.<br/>
+&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;norm&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_hempty_r</span>. <span class="id">apply</span> <span class="id">ent_req_l</span>. <span class="id">reflexivity</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;move&nbsp;the&nbsp;pure&nbsp;assumption&nbsp;up...&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_ens_void_split</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_assoc</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_assoc</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_ens_void_combine</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_ens_pure_comm</span>.<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- <span class="id">norm_seq_assoc</span>.<br/>
+&nbsp;&nbsp;<span class="id">fassume</span> <span class="id">H</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;instantiate&nbsp;before&nbsp;biabduction&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">finst</span> (<span class="id">a</span> + 2).<br/>
+&nbsp;&nbsp;<span class="id">finst</span> <span class="id">b</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_req_transpose</span>.<br/>
+&nbsp;&nbsp;2: {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_comm</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_pts_match</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_pts_single</span>.<br/>
+&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;dispatch&nbsp;trivial&nbsp;req&nbsp;again&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_hpure_conj</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_req_l</span>.<br/>
+&nbsp;&nbsp;{ <span class="id">split</span>. <span class="id">f_equal</span>. <span class="id">math</span>. <span class="id">reflexivity</span>. }<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_ens_empty</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;close&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_ens_single</span>.<br/>
+&nbsp;&nbsp;<span class="id">injects</span> <span class="id">H</span>.<br/>
+&nbsp;&nbsp;<span class="id">xsimpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">intros</span>. <span class="id">rewrite</span> <span class="id">H</span>. <span class="id">f_equal</span>. <span class="id">math</span>.<br/>
+Qed.</div></details>
+<br/>
+<h1> Preventing the use of an <span class="bracket"><span class="id">f</span></span> that captures <span class="bracket"><span class="id">x</span></span> </h1>
+<span class="kwd">Definition</span> <span class="id">hello1</span> : <span class="id">ufun</span> := <span class="kwd">fun</span> <span class="id">args</span> <span class="id">res</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">args</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| <span class="id">vtup</span> (<span class="id">vstr</span> <span class="id">f</span>) (<span class="id">vtup</span> (<span class="id">vloc</span> <span class="id">x</span>) (<span class="id">vloc</span> <span class="id">y</span>)) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">∀</span> <span class="id">a</span>, <span class="id">req</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">a</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">∃</span> <span class="id">r</span>, <span class="id">unk</span> <span class="id">f</span> (<span class="id">vloc</span> <span class="id">y</span>) (<span class="id">vint</span> <span class="id">r</span>);;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">∀</span> <span class="id">b1</span>, <span class="id">req</span> (<span class="id">y</span>~~&gt;<span class="id">vint</span> <span class="id">b1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> (<span class="id">a</span>+1) \* <span class="id">y</span>~~&gt;<span class="id">res</span> \* \[<span class="id">res</span> = <span class="id">vint</span> (<span class="id">a</span>+1+<span class="id">r</span>)])))<br/>
+&nbsp;&nbsp;| _ =&gt; <span class="id">empty</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Definition</span> <span class="id">hello_env1</span> (<span class="id">x</span> <span class="id">y</span>:<span class="id">loc</span>) :=<br/>
+&nbsp;&nbsp;<span class="id">Fmap.update</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">Fmap.single</span> <span class="string">"f"</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="kwd">fun</span> <span class="id">y</span> <span class="id">r</span> =&gt; <span class="id">∀</span> <span class="id">b</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">req</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">b</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> ((<span class="id">x</span>~~&gt;<span class="id">vint</span> (<span class="id">b</span>+1) \* \[<span class="id">r</span> = <span class="id">vint</span> 0])))))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"hello"</span> <span class="id">hello1</span>.<br/>
+<br/>
+<span class="kwd">Lemma</span> <span class="id">hello_capture1</span> : <span class="kwd">forall</span> <span class="id">x</span> <span class="id">y</span> <span class="id">res</span>,<br/>
+&nbsp;&nbsp;<span class="id">entails_under</span> (<span class="id">hello_env1</span> <span class="id">x</span> <span class="id">y</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">unk</span> <span class="string">"hello"</span> (<span class="id">vtup</span> (<span class="id">vstr</span> <span class="string">"f"</span>) (<span class="id">vtup</span> (<span class="id">vloc</span> <span class="id">x</span>) (<span class="id">vloc</span> <span class="id">y</span>))) <span class="id">res</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">∀</span> <span class="id">a</span> <span class="id">b</span>, <span class="id">req</span> (<span class="id">x</span>~~&gt;<span class="id">vint</span> <span class="id">a</span> \* <span class="id">y</span>~~&gt;<span class="id">vint</span> <span class="id">b</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id">ens_</span> \[<span class="id">True</span>])).<br/>
+<details>
+<summary class="toggleproof">Proof.</summary>
+<div class="proofscript">
+&nbsp;&nbsp;<span class="id">intros</span>.<br/>
+&nbsp;&nbsp;<span class="id">fintro</span> <span class="id">a</span>.<br/>
+&nbsp;&nbsp;<span class="id">fintro</span> <span class="id">b</span>.<br/>
+&nbsp;&nbsp;<span class="id">fassume</span>.<br/>
+&nbsp;&nbsp;<span class="id">funfold1</span> <span class="string">"hello"</span>. <span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">finst</span> <span class="id">a</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_ens_req_transpose</span>.<br/>
+&nbsp;&nbsp;2: {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;rewrite&nbsp;hstar_comm.&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> &lt;- (<span class="id">hstar_hempty_r</span> (<span class="id">x</span> ~~&gt; <span class="id">vint</span> <span class="id">a</span>)) <span class="kwd">at</span> 2.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_pts_match</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">b_base_empty</span>.<br/>
+&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;norm&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">hstar_hempty_r</span>.<br/>
+&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_req_l</span>. <span class="id">reflexivity</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id">ent_ex_seq_unk</span> (<span class="id">hello_env1</span> <span class="id">x</span> <span class="id">y</span>) <span class="string">"f"</span>).<br/>
+&nbsp;&nbsp;{ <span class="id">unfold</span> <span class="id">hello_env1</span>. <span class="id">resolve_fn_in_env</span>. }<br/>
+&nbsp;&nbsp;<span class="id">simpl</span>.<br/>
+&nbsp;&nbsp;<span class="id">fintro</span> <span class="id">v</span>.<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;f&nbsp;cannot&nbsp;capture&nbsp;x&nbsp;*)</span><br/>
+Abort.</div></details>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>

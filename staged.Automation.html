@@ -1,0 +1,146 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Module Automation</title>
+<meta name="description" content="Documentation of Coq module Automation" />
+<link href="coq2html.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+<h1 class="title">Module Automation</h1>
+<div class="coq">
+<br/>
+<span class="kwd">From</span> <span class="id">Staged</span> <span class="kwd">Require</span> <span class="kwd">Import</span> <span class="id">Logic</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">funfold_hyp</span> <span class="id">H</span> <span class="id">env</span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id">ent_unk</span> <span class="id">env</span> <span class="id">f</span>) <span class="kwd">in</span> <span class="id">H</span>; [ <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> | ].<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">funfold_</span> <span class="id">env</span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="id">rewrites</span> (&gt;&gt; <span class="id">ent_unk</span> <span class="id">env</span> <span class="id">f</span>); [ <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> | ].<br/>
+<br/>
+<span class="id">Global</span> <span class="kwd">Hint</span> <span class="id">Rewrite</span> <span class="id">norm_seq_ens_empty</span> <span class="id">norm_seq_exists_distr_l</span> <span class="id">norm_seq_forall_distr_l</span> <span class="id">norm_reassoc</span> : <span class="id">norm_db</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">norm</span> :=<br/>
+&nbsp;&nbsp;<span class="id">autorewrite</span> <span class="kwd">with</span> <span class="id">norm_db</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"funfold"</span> <span class="id">constr</span>(<span class="id">env</span>) <span class="id">constr</span>(<span class="id">f</span>) := <span class="id">funfold_</span> <span class="id">env</span> <span class="id">f</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"funfold"</span> <span class="id">constr</span>(<span class="id">env</span>) <span class="id">constr</span>(<span class="id">f</span>) <span class="string">"in"</span> <span class="id">constr</span>(<span class="id">H</span>) := <span class="id">funfold_hyp</span> <span class="id">H</span> <span class="id">env</span> <span class="id">f</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">funfold1</span> <span class="id">f</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> (?<span class="id">env</span> ?<span class="id">a</span> ?<span class="id">b</span>) _ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">ent_unk</span> (<span class="id">env</span> <span class="id">a</span> <span class="id">b</span>) <span class="id">f</span>); [ | <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> ]<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> (?<span class="id">env</span> ?<span class="id">a</span>) _ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">ent_unk</span> (<span class="id">env</span> <span class="id">a</span>) <span class="id">f</span>); [ | <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> ]<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> ?<span class="id">env</span> _ _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> (@<span class="id">ent_unk</span> <span class="id">env</span> <span class="id">f</span>); [ | <span class="id">unfold</span> <span class="id">env</span>; <span class="id">resolve_fn_in_env</span> ]<br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fintro</span> <span class="id">x</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">∃</span> _, _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_ex_l</span>; <span class="id">intros</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ _ (<span class="id">∀</span> _, _) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_all_r</span>; <span class="id">intros</span> <span class="id">x</span><br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> _;; <span class="id">∃</span> _, _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_exists_distr_l</span>; <span class="id">fintro</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> _;; <span class="id">∃</span> _, _;; _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_exists_distr_l</span>; <span class="id">fintro</span> <span class="id">x</span><br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> (\<span class="kwd">exists</span> _, _)) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">ent_seq_ens_sl_ex</span>; <span class="id">fintro</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> (\<span class="kwd">exists</span> _, _);; _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">ent_seq_ens_sl_ex</span>; <span class="id">fintro</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">finst</span> <span class="id">a</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> _;; <span class="id">∀</span> _, _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_forall_distr_l</span>; <span class="id">finst</span> <span class="id">a</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> _;; <span class="id">∀</span> _, _;; _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_forall_distr_l</span>; <span class="id">finst</span> <span class="id">a</span><br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ ((<span class="id">∀</span> _, _);; _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_seq_all_l</span>; <span class="kwd">exists</span> <span class="id">a</span><br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">∀</span> _, _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_all_l</span>; <span class="kwd">exists</span> <span class="id">a</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ _ (<span class="id">∃</span> _, _) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_ex_r</span>; <span class="kwd">exists</span> <span class="id">a</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<div class="doc">Move assumptions to the Coq context.
+  This is the rough eqiuvalent of xpull from SLF.
+  While we're comparing, xchange is replaced with rewriting and the use of lemmas around the covariance of <span class="bracket"><span class="id">ens_</span></span>. </div>
+<span class="kwd">Ltac</span> <span class="id">fassume_</span> <span class="id">H</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> \[_]) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_ens_l</span>; <span class="id">intros</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> \[_];; _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_seq_ens_l</span>; <span class="id">intros</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ _ (<span class="id">req</span> \[_] _) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_req_r</span>; <span class="id">apply</span> <span class="id">ent_seq_ens_l</span>; <span class="id">intros</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">fassume_req</span> :=<br/>
+&nbsp;&nbsp;<span class="id">lazymatch</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ _ (<span class="id">req</span> _ _) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">apply</span> <span class="id">ent_req_r</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"fassume"</span> <span class="id">simple_intropattern</span>(<span class="id">p</span>) := <span class="id">fassume_</span> <span class="id">p</span>.<br/>
+<span class="kwd">Tactic</span> <span class="kwd">Notation</span> <span class="string">"fassume"</span> := <span class="id">fassume_req</span>.<br/>
+<br/>
+<span class="kwd">Ltac</span> <span class="id">ent_step</span> :=<br/>
+&nbsp;&nbsp;<span class="kwd">match</span> <span class="id">goal</span> <span class="kwd">with</span><br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">disj</span> _ _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_disj_l</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">fex</span> (<span class="kwd">fun</span> <span class="id">y</span> =&gt; _)) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">x</span> := <span class="id">fresh</span> <span class="id">y</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_ex_l</span>; <span class="id">intros</span> <span class="id">x</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">fex</span> (<span class="kwd">fun</span> _ =&gt; _);; _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">norm_seq_exists_distr_r</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> \[_];; _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kwd">let</span> <span class="id">H</span> := <span class="id">fresh</span> <span class="string">"H"</span> <span class="kwd">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_seq_ens_l</span>; <span class="id">intros</span> <span class="id">H</span>; <span class="id">destr</span> <span class="id">H</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">IH</span>: <span class="id">context</span>[<span class="id">entails_under</span> ?<span class="id">env</span> (<span class="id">unk</span> _ _ _) _] |-<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">context</span>[<span class="id">unk</span> ?<span class="id">f</span> _ _] =&gt;<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">first</span> [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">rewrite</span> <span class="id">IH</span>; [ | <span class="id">subst</span>; <span class="id">auto</span> ]<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;]<br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> ?<span class="id">env</span> (<span class="id">unk</span> ?<span class="id">f</span> _ _) _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">funfold</span> <span class="id">env</span> <span class="id">f</span>; <span class="id">simpl</span><br/>
+<br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ _ (<span class="id">fex</span> (<span class="kwd">fun</span> _ =&gt; _)) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_ex_r</span>; <span class="id">eexists</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> \[_]) (<span class="id">ens_</span> \[_]) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_ens_single_pure</span>; <span class="id">subst</span>; <span class="id">intuition</span><br/>
+&nbsp;&nbsp;| |- <span class="id">entails_under</span> _ (<span class="id">ens_</span> _) (<span class="id">ens_</span> _) =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">simple</span> <span class="id">apply</span> <span class="id">ent_ens_single</span>; <span class="id">xsimpl</span>; <span class="id">subst</span>; <span class="id">intuition</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id">H</span>: _ /\ _ |- _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">destruct</span> <span class="id">H</span><br/>
+&nbsp;&nbsp;| _: ?<span class="id">v</span> = ?<span class="id">w</span> |- _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">first</span> [<span class="id">subst</span> <span class="id">v</span> | <span class="id">subst</span> <span class="id">w</span>]<br/>
+<br/>
+&nbsp;&nbsp;| |- _ = _ =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">solve</span> [<span class="id">simpl</span>; <span class="id">simple</span> <span class="id">apply</span> <span class="id">eq_refl</span>]<br/>
+<br/>
+&nbsp;&nbsp;| |- ?<span class="id">g</span> =&gt; <span class="id">idtac</span> <span class="string">"no match"</span>; <span class="id">idtac</span> <span class="id">g</span>; <span class="id">fail</span><br/>
+&nbsp;&nbsp;<span class="kwd">end</span>.<br/>
+<br/>
+&nbsp;&nbsp;<span class="kwd">Ltac</span> <span class="id">solve_entailment</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id">repeat</span> <span class="id">ent_step</span>.<br/>
+
+</div>
+<div class="footer"><hr/>Generated by <a href="https://github.com/xavierleroy/coq2html/">coq2html</a></div>
+</body>
+</html>
